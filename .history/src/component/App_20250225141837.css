@@ -1,0 +1,119 @@
+.container {
+  display: flex;
+  padding: 20px;
+}
+
+.left-panel {
+  flex: 1;
+  margin-right: 20px;
+}
+
+.right-panel {
+  flex: 2;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+}
+
+.controls button, .person-input button {
+  margin: 5px;
+}
+
+.person-input {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.people-list ul {
+  list-style-type: none;
+  padding: 0;
+}
+
+.people-list li {
+  margin-bottom: 10px;
+}
+
+.delete-btn {
+  margin-left: 10px;
+}
+
+.toggle-groups button {
+  margin-top: 20px;
+}
+
+.tableContainer{
+  position: relative;
+  display: flex;
+  width: 450px;
+  height: 450px;
+  background-color: aqua;
+  justify-content: space-between;
+  align-items: center;
+  text-align: center;
+  flex-direction: column;
+  /* border-radius: 50%; */
+  overflow: hidden;
+}
+
+.table {
+  /* position: relative; */
+  margin: 20px;
+  width: 200px;
+  height: 200px;
+  border: 2px solid #3498db;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.table-top {
+  position: relative;
+  top: -15%;
+  left: -15%;
+  /* /* width: 250px; */
+  /* height: 250px; */ 
+}
+
+.chair {
+  position: absolute;
+  top: 25%;
+  left: 25%;
+  width: 60px;
+  height: 60px;
+  background-image: url('../../public/stul.png');
+  /* background-color: #3498db; */
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 50%;
+  font-size: 12px;
+  text-align: center;
+  transform-origin: 0 0;
+}
+
+.new-table {
+  width: 100px;
+  height: 100px;
+  background-color: lightgray;
+  margin: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 14px;
+  border: 2px dashed #3498db;
+  position: relative;
+}
+
+.group {
+  padding: 10px;
+  border: 1px solid black;
+  margin-bottom: 10px;
+  cursor: move;
+}
+
+.group h4 {
+  margin: 0;
+}
