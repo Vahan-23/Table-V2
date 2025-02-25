@@ -154,7 +154,7 @@ const SeatingArrangement = () => {
                         {showGroups && (
                             <div className="group-list">
 
-                                <h3>Группы для перетаскивания: </h3>
+                                <h3>Группы для перетаскивания:</h3>
                                 {renderGroups()}
                                 <div className="controls">
                                     <button onClick={() => setZoom((z) => Math.min(z + 0.1, 2))}>+</button>
@@ -374,46 +374,27 @@ const Group = ({ group, groupName, setDraggingGroup }) => {
 
 
 const NewTable = ({ draggingGroup, setTables, setDraggingGroup }) => {
-    const [{ isOver }, drop] = useDrop({
+    const [, drop] = useDrop({
         accept: 'GROUP',
         drop: (item) => {
-            // Ensure the group isn't too large
             if (item.group.length <= 12) {
                 const newTable = {
-                    id: Date.now(), // Unique ID for the table
-                    people: item.group, // Assign the dropped group to the table
-                    chairCount: item.group.length, // Number of chairs is equal to the group size
+                    id: Date.now(),
+                    people: item.group,
                 };
-
-                // Add the new table to the state
                 setTables((prevTables) => [...prevTables, newTable]);
             } else {
                 alert('Новый стол не может содержать больше 12 человек!');
             }
-
-            // Reset the dragging group after the drop
             setDraggingGroup(null);
         },
-        collect: (monitor) => ({
-            isOver: monitor.isOver(), // Determine if the area is being hovered
-        }),
     });
 
     return (
-        <div
-            ref={drop}
-            className={`new-table ${isOver ? 'hovered' : ''}`} // Add a visual effect when hovered
-            style={{
-                border: '2px dashed gray',
-                padding: '20px',
-                textAlign: 'center',
-                backgroundColor: isOver ? '#e0e0e0' : '#f5f5f5',
-            }}
-        >
+        <div ref={drop} className="new-table">
             Перетащите группу сюда, чтобы создать новый стол
         </div>
     );
 };
-
 
 export default SeatingArrangement;

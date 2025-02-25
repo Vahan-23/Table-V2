@@ -154,7 +154,7 @@ const SeatingArrangement = () => {
                         {showGroups && (
                             <div className="group-list">
 
-                                <h3>Группы для перетаскивания: </h3>
+                                <h3>Группы для перетаскивания:</h3>
                                 {renderGroups()}
                                 <div className="controls">
                                     <button onClick={() => setZoom((z) => Math.min(z + 0.1, 2))}>+</button>

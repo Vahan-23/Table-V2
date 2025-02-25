@@ -101,13 +101,6 @@ const SeatingArrangement = () => {
             <div className="container">
                 <div className="left-panel">
                     <div className="controls">
-                    <input
-                            type="number"
-                            value={chairCount}
-                            onChange={handleChairCountChange}
-                            min="1"
-                            placeholder="Количество стульев на столе"
-                        />
                         <button onClick={handleAddTable}>Добавить стол</button>
                         <button onClick={loadSavedTables}>Загрузить сохранённые группы</button>
                         <button onClick={saveTables}>Сохранить группы</button>
@@ -154,7 +147,7 @@ const SeatingArrangement = () => {
                         {showGroups && (
                             <div className="group-list">
 
-                                <h3>Группы для перетаскивания: </h3>
+                                <h3>Группы для перетаскивания:</h3>
                                 {renderGroups()}
                                 <div className="controls">
                                     <button onClick={() => setZoom((z) => Math.min(z + 0.1, 2))}>+</button>
@@ -175,7 +168,6 @@ const SeatingArrangement = () => {
                     draggingGroup={draggingGroup}
                     setDraggingGroup={setDraggingGroup}
                     people={people} // Pass the `people` prop here
-                    
                 />
             ))}
 
@@ -220,7 +212,7 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
     const [, drop] = useDrop({
         accept: 'GROUP',
         drop: (item) => {
-            if (table.people.length + item.group.length <= table.chairCount) { // Используем chairCount стола
+            if (table.people.length + item.group.length <= 12) {
                 setTables((prevTables) =>
                     prevTables.map((t) =>
                         t.id === table.id
@@ -230,7 +222,7 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
                 );
                 setDraggingGroup(null);
             } else {
-                alert(`На столе не может быть больше ${table.chairCount} человек!`);
+                alert('На столе не может быть больше 12 человек!');
             }
         },
     });
@@ -259,12 +251,13 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
     });
 
     const chairs = [];
-    const angleStep = 360 / table.chairCount; // Используем chairCount стола
+    const maxChairs = 12;
+    const angleStep = 360 / maxChairs;
     const radius = 140;
-    
+
     const peopleOnTable = table.people || [];
 
-    for (let i = 0; i < table.chairCount; i++) { // Здесь также используем chairCount
+    for (let i = 0; i < maxChairs; i++) {
         const angle = angleStep * i;
         const xPosition = radius * Math.cos((angle * Math.PI) / 180);
         const yPosition = radius * Math.sin((angle * Math.PI) / 180);
@@ -290,7 +283,7 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
             left: `calc(50% + ${xPosition}px)`,
             top: `calc(50% + ${yPosition}px)`,
         };
-        
+
         if (angle >= 0 && angle < 90) {
             chairStyle.transform = `rotate(${angle + 90}deg)`;
         } else if (angle >= 90 && angle < 180) {
@@ -312,11 +305,10 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
             </div>
         );
     }
-    
 
     return (
         <div ref={drop} className="tableContainer">
-            <h3>Стол {table.id} (Стульев: {table.chairCount})</h3> {/* Отображаем количество стульев */}
+            <h3>Стол {table.id}</h3>
             <div className="table">
                 <div className="table-top">
                     {chairs}
@@ -342,7 +334,6 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
         </div>
     );
 };
-
 
 
 
@@ -374,46 +365,27 @@ const Group = ({ group, groupName, setDraggingGroup }) => {
 
 
 const NewTable = ({ draggingGroup, setTables, setDraggingGroup }) => {
-    const [{ isOver }, drop] = useDrop({
+    const [, drop] = useDrop({
         accept: 'GROUP',
         drop: (item) => {
-            // Ensure the group isn't too large
             if (item.group.length <= 12) {
                 const newTable = {
-                    id: Date.now(), // Unique ID for the table
-                    people: item.group, // Assign the dropped group to the table
-                    chairCount: item.group.length, // Number of chairs is equal to the group size
+                    id: Date.now(),
+                    people: item.group,
                 };
-
-                // Add the new table to the state
                 setTables((prevTables) => [...prevTables, newTable]);
             } else {
                 alert('Новый стол не может содержать больше 12 человек!');
             }
-
-            // Reset the dragging group after the drop
             setDraggingGroup(null);
         },
-        collect: (monitor) => ({
-            isOver: monitor.isOver(), // Determine if the area is being hovered
-        }),
     });
 
     return (
-        <div
-            ref={drop}
-            className={`new-table ${isOver ? 'hovered' : ''}`} // Add a visual effect when hovered
-            style={{
-                border: '2px dashed gray',
-                padding: '20px',
-                textAlign: 'center',
-                backgroundColor: isOver ? '#e0e0e0' : '#f5f5f5',
-            }}
-        >
+        <div ref={drop} className="new-table">
             Перетащите группу сюда, чтобы создать новый стол
         </div>
     );
 };
-
 
 export default SeatingArrangement;
