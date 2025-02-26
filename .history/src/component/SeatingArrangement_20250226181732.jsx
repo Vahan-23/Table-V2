@@ -21,20 +21,8 @@ const SeatingArrangement = () => {
 
 
     // Функция для генерации препопуляции 20 групп (от 2 до 7 человек в каждой)
-// Функция для генерации препопуляции 20 групп (от 2 до 7 человек в каждой)
 const getSeedData = () => {
-    const newPeople = [];
-    for (let group = 1; group <= 20; group++) {
-      // Генерируем случайное число людей для группы от 2 до 7
-      const groupSize = Math.floor(Math.random() * 6) + 2;
-      for (let i = 1; i <= groupSize; i++) {
-        newPeople.push({
-          name: `Человек ${group}-${i}`,
-          group: group.toString(), // группа в виде строки
-        });
-      }
-    }
-    return newPeople;
+    return [ {"name": "Liam", "group": "1"}, {"name": "Noah", "group": "1"}, {"name": "Sophia", "group": "1"}, {"name": "Olivia", "group": "1"}, {"name": "Ethan", "group": "1"}, {"name": "Aiden", "group": "1"}, {"name": "Mia", "group": "2"}, {"name": "Lucas", "group": "2"}, {"name": "Emma", "group": "2"}, {"name": "Jackson", "group": "2"}, {"name": "Isabella", "group": "2"}, {"name": "Mason", "group": "2"}, {"name": "James", "group": "3"}, {"name": "Alexander", "group": "3"}, {"name": "Charlotte", "group": "3"}, {"name": "Benjamin", "group": "3"}, {"name": "Amelia", "group": "3"}, {"name": "Henry", "group": "3"}, {"name": "Madison", "group": "4"}, {"name": "Ava", "group": "4"}, {"name": "Matthew", "group": "4"}, {"name": "Sebastian", "group": "4"}, {"name": "Scarlett", "group": "4"}, {"name": "Lily", "group": "4"}, {"name": "Samuel", "group": "5"}, {"name": "David", "group": "5"}, {"name": "William", "group": "5"}, {"name": "Victoria", "group": "5"}, {"name": "Zoe", "group": "5"}, {"name": "Gabriel", "group": "5"}, {"name": "Ella", "group": "6"}, {"name": "Carter", "group": "6"}, {"name": "Grace", "group": "6"}, {"name": "Daniel", "group": "6"}, {"name": "Jack", "group": "6"}, {"name": "Levi", "group": "6"}, {"name": "Benjamin", "group": "7"}, {"name": "Jack", "group": "7"}, {"name": "Harper", "group": "7"}, {"name": "Owen", "group": "7"}, {"name": "Daniel", "group": "7"}, {"name": "Victoria", "group": "7"}, {"name": "Jack", "group": "8"}, {"name": "Sophia", "group": "8"}, {"name": "Matthew", "group": "8"}, {"name": "Nathan", "group": "8"}, {"name": "Lucas", "group": "8"}, {"name": "Oliver", "group": "8"}, {"name": "Lily", "group": "9"}, {"name": "Ella", "group": "9"}, {"name": "Nathaniel", "group": "9"}, {"name": "Benjamin", "group": "9"}, {"name": "Andrew", "group": "9"}, {"name": "Samuel", "group": "9"}, {"name": "Amelia", "group": "10"}, {"name": "Emily", "group": "10"}, {"name": "Joshua", "group": "10"}, {"name": "James", "group": "10"}, {"name": "Henry", "group": "10"}, {"name": "Madeline", "group": "10"}, {"name": "Harper", "group": "11"}, {"name": "Ella", "group": "11"}, {"name": "Leo", "group": "11"}, {"name": "Eli", "group": "11"}, {"name": "Zoe", "group": "11"}, {"name": "Maya", "group": "11"}, {"name": "Aria", "group": "12"}, {"name": "Lucas", "group": "12"}, {"name": "Chloe", "group": "12"}, {"name": "Samuel", "group": "12"}, {"name": "Madeline", "group": "12"}, {"name": "Grayson", "group": "12"}, {"name": "Oliver", "group": "13"}, {"name": "Emma", "group": "13"}, {"name": "Sophia", "group": "13"}, {"name": "Jackson", "group": "13"}, {"name": "Liam", "group": "13"}, {"name": "Ethan", "group": "13"}, {"name": "Liam", "group": "14"}, {"name": "Lucas", "group": "14"}, {"name": "Mason", "group": "14"}, {"name": "Chloe", "group": "14"}, {"name": "Ella", "group": "14"}, {"name": "Levi", "group": "14"}, {"name": "Mia", "group": "15"}, {"name": "Henry", "group": "15"}, {"name": "Ella", "group": "15"}, {"name": "Alexander", "group": "15"}, {"name": "Zoe", "group": "15"}, {"name": "Amelia", "group": "15"}, {"name": "David", "group": "16"}, {"name": "Chloe", "group": "16"}, {"name": "Mason", "group": "16"}, {"name": "Charlotte", "group": "16"}, {"name": "Benjamin", "group": "16"}, {"name": "Grace", "group": "16"}, {"name": "Jackson", "group": "17"}, {"name": "Sophie", "group": "17"}, {"name": "Olivia", "group": "17"}, {"name": "Sophia", "group": "17"}, {"name": "Liam", "group": "17"}, {"name": "Emma", "group": "17"}, {"name": "Mia", "group": "18"}, {"name": "Luca", "group": "18"}, {"name": "David", "group": "18"}, {"name": "Sophie", "group": "18"}, {"name": "Isaiah", "group": "18"}, {"name": "Levi", "group": "18"}, {"name": "Zoe", "group": "19"}, {"name": "Henry", "group": "19"}, {"name": "Olivia", "group": "19"}, {"name": "Samuel", "group": "19"}, {"name": "Lucas", "group": "19"}, {"name": "Benjamin", "group": "19"}, {"name": "Charlotte", "group": "20"}, {"name": "Amelia", "group": "20"}, {"name": "Sebastian", "group": "20"}, {"name": "Victoria", "group": "20"}, {"name": "Jackson", "group": "20"}, {"name": "Levi", "group": "20"} ];
   };
 
     const UnseatedPeopleList = ({ people, tables }) => {
@@ -366,8 +354,7 @@ const getSeedData = () => {
                                     <button className="secondary-btn" onClick={loadSavedTables}>Загрузить столы</button>
                                     <button className="secondary-btn" onClick={saveTables}>Сохранить столы</button>
                                     <button className="secondary-btn" onClick={savePeople}>Сохранить людей</button>
-                                    <button className="secondary-btn" onClick={() => setPeople(getSeedData())}>SEED DATA</button>
-                                    <button className="secondary-btn" onClick={() => setPeople([])}>CLEAR DATA</button>
+                                    <button className="secondary-btn" onClick={savePeople}>Сохранить людей</button>
                                 </div>
 
                                 <div className="zoom-controls">

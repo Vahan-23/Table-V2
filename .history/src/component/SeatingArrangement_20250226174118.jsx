@@ -19,24 +19,6 @@ const SeatingArrangement = () => {
     const [isRemoveMode, setIsRemoveMode] = useState(false);
     const [personToRemove, setPersonToRemove] = useState(null);
 
-
-    // Функция для генерации препопуляции 20 групп (от 2 до 7 человек в каждой)
-// Функция для генерации препопуляции 20 групп (от 2 до 7 человек в каждой)
-const getSeedData = () => {
-    const newPeople = [];
-    for (let group = 1; group <= 20; group++) {
-      // Генерируем случайное число людей для группы от 2 до 7
-      const groupSize = Math.floor(Math.random() * 6) + 2;
-      for (let i = 1; i <= groupSize; i++) {
-        newPeople.push({
-          name: `Человек ${group}-${i}`,
-          group: group.toString(), // группа в виде строки
-        });
-      }
-    }
-    return newPeople;
-  };
-
     const UnseatedPeopleList = ({ people, tables }) => {
         // Фильтруем людей, которые не сидят за столами
         const unseatedPeople = people.filter((person) => {
@@ -286,14 +268,9 @@ const getSeedData = () => {
                 };
 
                 // Create a new array with the updated table at the front
-                // const newTables = [...prevTables];
-                // newTables.splice(currentTableIndex, 1); // Remove the current table
-                
-                // return [updatedTable, ...newTables]; // Add the updated table at the front
-
                 const newTables = [...prevTables];
-                newTables.splice(currentTableIndex, 1, updatedTable);
-                return newTables;
+                newTables.splice(currentTableIndex, 1); // Remove the current table
+                return [updatedTable, ...newTables]; // Add the updated table at the front
             });
 
             setPeople((prevPeople) =>
@@ -366,8 +343,6 @@ const getSeedData = () => {
                                     <button className="secondary-btn" onClick={loadSavedTables}>Загрузить столы</button>
                                     <button className="secondary-btn" onClick={saveTables}>Сохранить столы</button>
                                     <button className="secondary-btn" onClick={savePeople}>Сохранить людей</button>
-                                    <button className="secondary-btn" onClick={() => setPeople(getSeedData())}>SEED DATA</button>
-                                    <button className="secondary-btn" onClick={() => setPeople([])}>CLEAR DATA</button>
                                 </div>
 
                                 <div className="zoom-controls">

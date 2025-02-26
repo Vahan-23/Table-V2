@@ -96,7 +96,7 @@ const getSeedData = () => {
     };
 
     const handleDeletePerson = (personName) => {
-        setPeople(people.filter((person) => person.name !== personName));
+        setPeople(people.filter((person) => person.name !== personName).sort());
     };
 
     const handleAddTable = () => {

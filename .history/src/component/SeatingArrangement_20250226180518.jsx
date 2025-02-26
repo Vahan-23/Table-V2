@@ -21,8 +21,7 @@ const SeatingArrangement = () => {
 
 
     // Функция для генерации препопуляции 20 групп (от 2 до 7 человек в каждой)
-// Функция для генерации препопуляции 20 групп (от 2 до 7 человек в каждой)
-const getSeedData = () => {
+const generatePrepopulatedPeople = () => {
     const newPeople = [];
     for (let group = 1; group <= 20; group++) {
       // Генерируем случайное число людей для группы от 2 до 7
@@ -36,7 +35,13 @@ const getSeedData = () => {
     }
     return newPeople;
   };
-
+  
+  // Пример использования: установка предварительно сгенерированных людей при монтировании компонента
+  useEffect(() => {
+    const prepopulatedPeople = generatePrepopulatedPeople();
+    setPeople(prepopulatedPeople);
+  }, []);
+  
     const UnseatedPeopleList = ({ people, tables }) => {
         // Фильтруем людей, которые не сидят за столами
         const unseatedPeople = people.filter((person) => {
@@ -366,8 +371,6 @@ const getSeedData = () => {
                                     <button className="secondary-btn" onClick={loadSavedTables}>Загрузить столы</button>
                                     <button className="secondary-btn" onClick={saveTables}>Сохранить столы</button>
                                     <button className="secondary-btn" onClick={savePeople}>Сохранить людей</button>
-                                    <button className="secondary-btn" onClick={() => setPeople(getSeedData())}>SEED DATA</button>
-                                    <button className="secondary-btn" onClick={() => setPeople([])}>CLEAR DATA</button>
                                 </div>
 
                                 <div className="zoom-controls">

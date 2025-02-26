@@ -121,7 +121,7 @@ const getSeedData = () => {
                             newPeople.push(person);
                         }
                     });
-                    return newPeople;
+                    return newPeople.sort();
                 });
             }
 

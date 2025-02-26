@@ -19,30 +19,12 @@ const SeatingArrangement = () => {
     const [isRemoveMode, setIsRemoveMode] = useState(false);
     const [personToRemove, setPersonToRemove] = useState(null);
 
-
-    // Функция для генерации препопуляции 20 групп (от 2 до 7 человек в каждой)
-// Функция для генерации препопуляции 20 групп (от 2 до 7 человек в каждой)
-const getSeedData = () => {
-    const newPeople = [];
-    for (let group = 1; group <= 20; group++) {
-      // Генерируем случайное число людей для группы от 2 до 7
-      const groupSize = Math.floor(Math.random() * 6) + 2;
-      for (let i = 1; i <= groupSize; i++) {
-        newPeople.push({
-          name: `Человек ${group}-${i}`,
-          group: group.toString(), // группа в виде строки
-        });
-      }
-    }
-    return newPeople;
-  };
-
     const UnseatedPeopleList = ({ people, tables }) => {
         // Фильтруем людей, которые не сидят за столами
         const unseatedPeople = people.filter((person) => {
             return !tables.some((table) => table.people.some((tablePerson) => tablePerson && tablePerson.name === person.name));
         });
-
+    
         return (
             <div className="unseated-people-list">
                 <h3>Люди без столов</h3>
@@ -110,11 +92,11 @@ const getSeedData = () => {
     const handleDeleteTable = (tableId) => {
         setTables((prevTables) => {
             const tableToRemove = prevTables.find((t) => t.id === tableId);
-
+    
             if (tableToRemove) {
                 setPeople((prevPeople) => {
                     const peopleToReturn = tableToRemove.people.filter((p) => p && p.name);
-
+    
                     const newPeople = [...prevPeople];
                     peopleToReturn.forEach((person) => {
                         if (person && !newPeople.some((p) => p.name === person.name)) {
@@ -124,11 +106,11 @@ const getSeedData = () => {
                     return newPeople;
                 });
             }
-
+    
             return prevTables.filter((t) => t.id !== tableId);
         });
     };
-
+    
     const saveTables = () => {
         localStorage.setItem('tables', JSON.stringify(tables));
     };
@@ -150,23 +132,23 @@ const getSeedData = () => {
             acc[person.group].push(person);
             return acc;
         }, {});
-
+        
         // Get people who are not already seated
         const unseatedPeople = people.filter((person) => {
-            return !tables.some((table) =>
-                table.people.some((tablePerson) =>
+            return !tables.some((table) => 
+                table.people.some((tablePerson) => 
                     tablePerson && tablePerson.name === person.name
                 )
             );
         });
-
+        
         // Group the unseated people
         const unseatedGrouped = unseatedPeople.reduce((acc, person) => {
             if (!acc[person.group]) acc[person.group] = [];
             acc[person.group].push(person);
             return acc;
         }, {});
-
+        
         // Create a table for each group of unseated people
         const newTables = Object.values(unseatedGrouped)
             .filter(group => group.length > 0)
@@ -175,20 +157,20 @@ const getSeedData = () => {
                 people: group,
                 chairCount: group.length // Set chair count to match group size
             }));
-
+        
         if (newTables.length === 0) {
             alert('Все группы уже рассажены за столами или нет доступных людей.');
             return;
         }
-
+        
         // Add the new tables to the state
         setTables(prevTables => [...newTables, ...prevTables]);
-
+        
         // Remove the seated people from the people list
-        setPeople(prevPeople =>
-            prevPeople.filter(person =>
-                !newTables.some(table =>
-                    table.people.some(seatedPerson =>
+        setPeople(prevPeople => 
+            prevPeople.filter(person => 
+                !newTables.some(table => 
+                    table.people.some(seatedPerson => 
                         seatedPerson.name === person.name
                     )
                 )
@@ -216,10 +198,10 @@ const getSeedData = () => {
     const handleChairClick = (tableId, chairIndex) => {
         const table = tables.find(t => t.id === tableId);
         const person = table?.people[chairIndex];
-
+        
         if (person) {
             // If there's a person in the chair, show removal popup
-            setSelectedTableId(tableId);
+            // setSelectedTableId(tableId);
             setSelectedChairIndex(chairIndex);
             setPersonToRemove(person);
             setIsRemoveMode(true);
@@ -238,20 +220,20 @@ const getSeedData = () => {
             setTables(prevTables => {
                 const tableIndex = prevTables.findIndex(t => t.id === selectedTableId);
                 if (tableIndex === -1) return prevTables;
-
-                const updatedTable = { ...prevTables[tableIndex] };
+                
+                const updatedTable = {...prevTables[tableIndex]};
                 const updatedPeople = [...updatedTable.people];
-
+                
                 // Remove the person from the chair
                 updatedPeople[selectedChairIndex] = null;
                 updatedTable.people = updatedPeople;
-
+                
                 // Update tables
                 const newTables = [...prevTables];
                 newTables[tableIndex] = updatedTable;
                 return newTables;
             });
-
+            
             // Only add the person back to the people list if they don't already exist there
             setPeople(prev => {
                 if (!prev.some(p => p.name === personToRemove.name)) {
@@ -259,7 +241,7 @@ const getSeedData = () => {
                 }
                 return prev;
             });
-
+            
             setIsPopupVisible(false);
             setSelectedTableId(null);
             setSelectedChairIndex(null);
@@ -274,32 +256,27 @@ const getSeedData = () => {
                 // Find the current table
                 const currentTableIndex = prevTables.findIndex(t => t.id === selectedTableId);
                 if (currentTableIndex === -1) return prevTables;
-
+                
                 // Create a copy of the table's people array
                 const updatedPeople = [...prevTables[currentTableIndex].people];
                 updatedPeople[selectedChairIndex] = person;
-
+                
                 // Create a new table with updated people
                 const updatedTable = {
                     ...prevTables[currentTableIndex],
                     people: updatedPeople
                 };
-
-                // Create a new array with the updated table at the front
-                // const newTables = [...prevTables];
-                // newTables.splice(currentTableIndex, 1); // Remove the current table
                 
-                // return [updatedTable, ...newTables]; // Add the updated table at the front
-
+                // Create a new array with the updated table at the front
                 const newTables = [...prevTables];
-                newTables.splice(currentTableIndex, 1, updatedTable);
-                return newTables;
+                newTables.splice(currentTableIndex, 1); // Remove the current table
+                return [updatedTable, ...newTables]; // Add the updated table at the front
             });
-
+    
             setPeople((prevPeople) =>
                 prevPeople.filter((p) => p.name !== person.name)
             );
-
+    
             setIsPopupVisible(false);
             setSelectedTableId(null);
             setSelectedChairIndex(null);
@@ -317,8 +294,8 @@ const getSeedData = () => {
     // Get available people that aren't already seated at tables
     const getAvailablePeople = () => {
         return people.filter((person) => {
-            return !tables.some((table) =>
-                table.people.some((tablePerson) =>
+            return !tables.some((table) => 
+                table.people.some((tablePerson) => 
                     tablePerson && tablePerson.name === person.name
                 )
             );
@@ -331,7 +308,7 @@ const getSeedData = () => {
                 <header className="app-header">
                     <div className="header-content">
                         <div className="logo">Планировщик рассадки</div>
-
+                        
                         <div className="header-controls">
                             <div className="control-group">
                                 <div className="input-group">
@@ -349,7 +326,7 @@ const getSeedData = () => {
                                     />
                                     <button className="primary-btn" onClick={handleAddPerson}>Добавить человека</button>
                                 </div>
-
+                                
                                 <div className="table-controls">
                                     <input
                                         type="number"
@@ -361,15 +338,13 @@ const getSeedData = () => {
                                     <button className="primary-btn" onClick={handleAddTable}>Добавить стол</button>
                                     <button className="primary-btn" onClick={createTablesForAllGroups}>Создать столы для всех групп</button>
                                 </div>
-
+                                
                                 <div className="save-controls">
                                     <button className="secondary-btn" onClick={loadSavedTables}>Загрузить столы</button>
                                     <button className="secondary-btn" onClick={saveTables}>Сохранить столы</button>
                                     <button className="secondary-btn" onClick={savePeople}>Сохранить людей</button>
-                                    <button className="secondary-btn" onClick={() => setPeople(getSeedData())}>SEED DATA</button>
-                                    <button className="secondary-btn" onClick={() => setPeople([])}>CLEAR DATA</button>
                                 </div>
-
+                                
                                 <div className="zoom-controls">
                                     <button onClick={() => setZoom((z) => Math.min(z + 0.1, 2))}>+</button>
                                     <span>{Math.round(zoom * 100)}%</span>
@@ -378,7 +353,7 @@ const getSeedData = () => {
                             </div>
                         </div>
                     </div>
-
+                    
                     <div className="groups-container">
                         <div className="groups-header">
                             <h3>Группы для перетаскивания</h3>
@@ -388,11 +363,11 @@ const getSeedData = () => {
                         </div>
                     </div>
                 </header>
-
+                
                 <div className="main-content">
                     <div className="sidebar">
                         <UnseatedPeopleList people={people} tables={tables} />
-
+                        
                         <div className="people-list">
                             <h3>Все люди</h3>
                             <div className="people-grid">
@@ -411,7 +386,7 @@ const getSeedData = () => {
                             </div>
                         </div>
                     </div>
-
+                    
                     <div className="tables-area" style={{ transform: `scale(${zoom})`, transformOrigin: "center" }}>
                         {/* Add the new table drop zone at the top */}
                         {draggingGroup && (
@@ -422,7 +397,7 @@ const getSeedData = () => {
                                 setPeople={setPeople}
                             />
                         )}
-
+                        
                         {/* Render existing tables */}
                         {tables.map((table) => (
                             <Table
@@ -439,10 +414,10 @@ const getSeedData = () => {
                         ))}
                     </div>
                 </div>
-
+                
                 {/* Fullscreen popup that appears regardless of scroll position */}
                 {isPopupVisible && (
-                    <div
+                    <div 
                         className="fullscreen-popup"
                         style={{
                             position: 'fixed',
@@ -458,7 +433,7 @@ const getSeedData = () => {
                         }}
                         onClick={closePopup}  // Close popup when clicking on the overlay
                     >
-                        <div
+                        <div 
                             className="fullscreen-popup-content"
                             style={{
                                 backgroundColor: 'white',
@@ -475,7 +450,7 @@ const getSeedData = () => {
                                 // Remove Person Modal
                                 <div className="remove-person-popup">
                                     <h3 style={{ textAlign: 'center', marginBottom: '20px' }}>Удалить человека со стула</h3>
-
+                                    
                                     <div style={{
                                         backgroundColor: '#f9f9f9',
                                         padding: '15px',
@@ -483,38 +458,38 @@ const getSeedData = () => {
                                         marginBottom: '20px',
                                         boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
                                     }}>
-                                        <p style={{
-                                            textAlign: 'center',
-                                            fontSize: '18px',
+                                        <p style={{ 
+                                            textAlign: 'center', 
+                                            fontSize: '18px', 
                                             margin: '0 0 10px 0',
                                             fontWeight: 'bold'
                                         }}>
                                             {personToRemove?.name}
                                         </p>
-                                        <p style={{
-                                            textAlign: 'center',
+                                        <p style={{ 
+                                            textAlign: 'center', 
                                             margin: '0',
-                                            color: '#666'
+                                            color: '#666' 
                                         }}>
                                             Группа {personToRemove?.group}
                                         </p>
                                     </div>
-
-                                    <p style={{
-                                        textAlign: 'center',
+                                    
+                                    <p style={{ 
+                                        textAlign: 'center', 
                                         marginBottom: '20px',
-                                        color: '#555'
+                                        color: '#555' 
                                     }}>
                                         Вы уверены, что хотите удалить этого человека со стула?
                                     </p>
-
+                                    
                                     <div style={{
                                         display: 'flex',
                                         justifyContent: 'center',
                                         gap: '15px'
                                     }}>
-                                        <button
-                                            onClick={handleRemovePerson}
+                                        <button 
+                                            onClick={handleRemovePerson} 
                                             style={{
                                                 padding: '10px 20px',
                                                 backgroundColor: '#e74c3c',
@@ -527,9 +502,9 @@ const getSeedData = () => {
                                         >
                                             Удалить
                                         </button>
-
-                                        <button
-                                            onClick={closePopup}
+                                        
+                                        <button 
+                                            onClick={closePopup} 
                                             style={{
                                                 padding: '10px 20px',
                                                 backgroundColor: '#7f8c8d',
@@ -547,7 +522,7 @@ const getSeedData = () => {
                                 // Add Person Modal
                                 <>
                                     <h3>Выберите человека для стула</h3>
-                                    <div
+                                    <div 
                                         className="person-selection-grid"
                                         style={{
                                             display: 'grid',
@@ -559,8 +534,8 @@ const getSeedData = () => {
                                     >
                                         {getAvailablePeople().length > 0 ? (
                                             getAvailablePeople().map((person) => (
-                                                <div
-                                                    key={person.name}
+                                                <div 
+                                                    key={person.name} 
                                                     className="person-selection-item"
                                                     style={{
                                                         padding: '12px',
@@ -572,7 +547,7 @@ const getSeedData = () => {
                                                     }}
                                                     onClick={() => handleSelectPerson(person)}
                                                 >
-                                                    <span
+                                                    <span 
                                                         className="person-name"
                                                         style={{
                                                             display: 'block',
@@ -580,7 +555,7 @@ const getSeedData = () => {
                                                             marginBottom: '4px'
                                                         }}
                                                     >{person.name}</span>
-                                                    <span
+                                                    <span 
                                                         className="person-group"
                                                         style={{
                                                             display: 'block',
@@ -591,7 +566,7 @@ const getSeedData = () => {
                                                 </div>
                                             ))
                                         ) : (
-                                            <div
+                                            <div 
                                                 className="no-people-message"
                                                 style={{
                                                     gridColumn: '1 / -1',
@@ -602,8 +577,8 @@ const getSeedData = () => {
                                             >Нет доступных людей</div>
                                         )}
                                     </div>
-                                    <button
-                                        onClick={closePopup}
+                                    <button 
+                                        onClick={closePopup} 
                                         className="close-popup-btn"
                                         style={{
                                             padding: '10px 20px',
@@ -631,30 +606,39 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
         accept: 'GROUP',
         drop: (item) => {
             if (table.people.length + item.group.length <= table.chairCount) {
-                setTables((prevTables) =>
-                    prevTables.map(t =>
-                        t.id === table.id
-                            ? { ...t, people: [...t.people, ...item.group] }
-                            : t
-                    )
-                );
-        
+                setTables((prevTables) => {
+                    // Find the current table
+                    const currentTableIndex = prevTables.findIndex(t => t.id === table.id);
+                    if (currentTableIndex === -1) return prevTables;
+                    
+                    // Create a new table with updated people
+                    const updatedTable = {
+                        ...prevTables[currentTableIndex],
+                        people: [...prevTables[currentTableIndex].people, ...item.group]
+                    };
+                    
+                    // Create a new array with the updated table at the front
+                    const newTables = [...prevTables];
+                    newTables.splice(currentTableIndex, 1); // Remove the current table
+                    return [updatedTable, ...newTables]; // Add the updated table at the front
+                });
+                
                 setDraggingGroup(null);
                 setPeople((prevPeople) =>
-                    prevPeople.filter((person) =>
+                    prevPeople.filter((person) => 
                         !item.group.some((groupPerson) => groupPerson.name === person.name)
                     )
                 );
             } else {
                 alert(`На столе не может быть больше ${table.chairCount} человек!`);
             }
-        }
+        },
     });
 
     const chairs = [];
     const angleStep = 360 / table.chairCount;
     const radius = 140;
-
+    
     const peopleOnTable = table.people || [];
 
     for (let i = 0; i < table.chairCount; i++) {
@@ -683,7 +667,7 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
             top: `calc(50% + ${yPosition}px)`,
             cursor: 'pointer'
         };
-
+        
         // For displaying the name directly on the chair
         const nameOverlayStyle = {
             position: 'absolute',
@@ -703,7 +687,7 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
             textOverflow: 'ellipsis',
             zIndex: 5
         };
-
+        
         if (angle >= 0 && angle < 90) {
             chairStyle.transform = `rotate(${angle + 90}deg)`;
         } else if (angle >= 90 && angle < 180) {
@@ -723,8 +707,8 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
                 title={peopleOnTable[i] ? `Нажмите чтобы удалить ${peopleOnTable[i].name}` : "Нажмите чтобы добавить человека"}
             >
                 {peopleOnTable[i] && (
-                    <div
-                        className="person-name-overlay"
+                    <div 
+                        className="person-name-overlay" 
                         style={nameOverlayStyle}
                     >
                         {peopleOnTable[i].name}
@@ -799,7 +783,7 @@ const NewTable = ({ draggingGroup, setTables, setDraggingGroup, setPeople }) => 
         <div
             ref={drop}
             className={`new-table-dropzone ${isOver ? 'hovered' : ''}`}
-            style={{
+            style={{ 
                 marginBottom: '20px',
                 padding: '15px',
                 border: '2px dashed #3498db',

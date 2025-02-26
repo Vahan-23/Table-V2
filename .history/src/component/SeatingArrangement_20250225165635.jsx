@@ -191,58 +191,64 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
                             : t
                     )
                 );
-                setDraggingGroup(null); // Reset the dragging group
+                setDraggingGroup(null);
             } else {
                 alert('На столе не может быть больше 12 человек!');
             }
         },
     });
 
-    const [selectedPerson, setSelectedPerson] = useState(null);
-    const [selectedChair, setSelectedChair] = useState(null);
+    const [isPopupVisible, setIsPopupVisible] = useState(false);
+    const [selectedChairIndex, setSelectedChairIndex] = useState(null);
+    
+    // Сохраняем позицию прокрутки перед обновлением
+    const saveScrollPosition = () => {
+        return {
+            x: window.pageXOffset,
+            y: window.pageYOffset
+        };
+    };
+    
+    // Восстанавливаем позицию прокрутки после обновления
+    const restoreScrollPosition = (position) => {
+        window.scrollTo(position.x, position.y);
+    };
 
     // Handle chair click
     const handleChairClick = (index) => {
-        setSelectedChair(index); // Store the chair index
-        setIsPopupVisible(true);  // Открываем pop-up
-    };
-    const [selectedChairIndex, setSelectedChairIndex] = useState(null);
-    const [isPopupVisible, setIsPopupVisible] = useState(false);
-    const Popup = ({ people, onSelectPerson, onClose }) => {
-        return (
-            <div className="popup-overlay" onClick={onClose}>
-                <div className="popup-content" onClick={(e) => e.stopPropagation()}>
-                    <h3>Выберите человека</h3>
-                    <ul>
-                        {people.map((person, index) => (
-                            <li key={index}>
-                                <button onClick={() => onSelectPerson(person)}>
-                                    {person.name}
-                                </button>
-                            </li>
-                        ))}
-                    </ul>
-                    <button onClick={onClose}>Закрыть</button>
-                </div>
-            </div>
-        );
+        setSelectedChairIndex(index);
+        setIsPopupVisible(true);
     };
 
     // Handle person selection
     const handleSelectPerson = (person) => {
         if (selectedChairIndex !== null) {
-            const updatedPeople = [...table.people];
-            updatedPeople[selectedChairIndex] = person; // Добавляем человека на стул
-            setTables((prevTables) =>
-                prevTables.map((t) =>
+            // Сохраняем позицию прокрутки
+            const scrollPosition = saveScrollPosition();
+            
+            const updatedPeople = Array.isArray(table.people) ? [...table.people] : [];
+            
+            // Заполняем массив до нужного индекса, если необходимо
+            while (updatedPeople.length <= selectedChairIndex) {
+                updatedPeople.push(null);
+            }
+            
+            updatedPeople[selectedChairIndex] = person;
+            
+            // Обновляем состояние с минимальными изменениями
+            setTables((prevTables) => {
+                const newTables = prevTables.map((t) =>
                     t.id === table.id ? { ...t, people: updatedPeople } : t
-                )
-            );
-            setIsPopupVisible(false); // Закрываем pop-up
-            setSelectedChairIndex(null); // Сбрасываем выбранный стул
+                );
+                // Используем setTimeout, чтобы восстановить прокрутку после обновления DOM
+                setTimeout(() => restoreScrollPosition(scrollPosition), 0);
+                return newTables;
+            });
+            
+            setIsPopupVisible(false);
+            setSelectedChairIndex(null);
         }
     };
-
     const chairs = [];
     const maxChairs = 12;
     const angleStep = 360 / maxChairs;
