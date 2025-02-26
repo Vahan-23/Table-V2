@@ -90,29 +90,32 @@ const SeatingArrangement = () => {
     };
 
     const handleDeleteTable = (tableId) => {
+        // Сначала находим стол
+        const tableToRemove = tables.find((t) => t.id === tableId);
+      
+        // Если стол найден, обновляем список людей
+        if (tableToRemove) {
+          // Возвращаем людей, привязанных к удаляемому столу
+          const peopleToReturn = tableToRemove.people.filter((p) => p !== null);
+      
+          // Обновляем список людей, добавляя новых
+          setPeople((prevPeople) => {
+            const newPeople = [...prevPeople];
+            peopleToReturn.forEach((person) => {
+              if (!newPeople.some((p) => p.name === person.name)) {
+                newPeople.push(person);
+              }
+            });
+            return newPeople;
+          });
+        }
+      
+        // Удаляем стол из списка
         setTables((prevTables) => {
-            const tableToRemove = prevTables.find((t) => t.id === tableId);
-    
-            if (tableToRemove) {
-                setPeople((prevPeople) => {
-                    const peopleToReturn = tableToRemove.people.filter((p) => p && p.name); // Проверка на пустые или невалидные объекты
-    
-                    const newPeople = [...prevPeople];
-                    peopleToReturn.forEach((person) => {
-                        // Проверка на наличие такого человека в новом списке людей
-                        if (person && !newPeople.some((p) => p.name === person.name)) {
-                            newPeople.push(person);
-                        }
-                    });
-                    return newPeople;
-                });
-            }
-    
-            // Удаляем стол
-            return prevTables.filter((t) => t.id !== tableId);
+          return prevTables.filter((t) => t.id !== tableId);
         });
-    };
-    
+      };
+
     const saveTables = () => {
         localStorage.setItem('tables', JSON.stringify(tables));
     };

@@ -90,29 +90,32 @@ const SeatingArrangement = () => {
     };
 
     const handleDeleteTable = (tableId) => {
+        // Сначала находим стол
+        const tableToRemove = tables.find((t) => t.id === tableId);
+      
+        // Если стол найден, обновляем список людей
+        if (tableToRemove) {
+          // Возвращаем людей, привязанных к удаляемому столу
+          const peopleToReturn = tableToRemove.people.filter((p) => p !== null);
+      
+          // Обновляем список людей, добавляя новых
+          setPeople((prevPeople) => {
+            const newPeople = [...prevPeople];
+            peopleToReturn.forEach((person) => {
+              if (!newPeople.some((p) => p.name === person.name)) {
+                newPeople.push(person);
+              }
+            });
+            return newPeople;
+          });
+        }
+      
+        // Удаляем стол из списка
         setTables((prevTables) => {
-            const tableToRemove = prevTables.find((t) => t.id === tableId);
-    
-            if (tableToRemove) {
-                setPeople((prevPeople) => {
-                    const peopleToReturn = tableToRemove.people.filter((p) => p && p.name); // Проверка на пустые или невалидные объекты
-    
-                    const newPeople = [...prevPeople];
-                    peopleToReturn.forEach((person) => {
-                        // Проверка на наличие такого человека в новом списке людей
-                        if (person && !newPeople.some((p) => p.name === person.name)) {
-                            newPeople.push(person);
-                        }
-                    });
-                    return newPeople;
-                });
-            }
-    
-            // Удаляем стол
-            return prevTables.filter((t) => t.id !== tableId);
+          return prevTables.filter((t) => t.id !== tableId);
         });
-    };
-    
+      };
+
     const saveTables = () => {
         localStorage.setItem('tables', JSON.stringify(tables));
     };
@@ -300,28 +303,27 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
 
     const handleSelectPerson = (person) => {
         if (selectedChairIndex !== null) {
-            // Копируем текущие данные стола и людей
             const updatedPeople = [...table.people];
             updatedPeople[selectedChairIndex] = person;
-    
-            // Обновляем столы с изменением людей
             setTables((prevTables) =>
                 prevTables.map((t) =>
                     t.id === table.id ? { ...t, people: updatedPeople } : t
                 )
             );
-    
-            // Обновляем список людей, удаляя выбранного человека
-            setPeople((prevPeople) =>
-                prevPeople.filter((p) => p.name !== person.name)
-            );
-    
-            // Закрываем попап и сбрасываем выбранный стул
-            setIsPopupVisible(false);
-            setSelectedChairIndex(null);
+            setPeople((prevPeople) => {
+                const newPeople = [...prevPeople];
+                peopleToReturn.forEach((person) => {
+                  if (!newPeople.some((p) => p.name === person.name)) {
+                    newPeople.push(person);
+                  }
+                });
+                return newPeople;
+              });
+            }
+            setIsPopupVisible(false); // Закрываем попап
+            setSelectedChairIndex(null); // Сбрасываем выбранный стул
         }
     };
-    
 
     const filteredPeople = people.filter((person) => {
         return !table.people.some((tablePerson) => tablePerson && tablePerson.name === person.name);

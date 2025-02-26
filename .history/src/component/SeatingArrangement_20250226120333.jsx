@@ -4,6 +4,25 @@ import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import './App.css';
 
+const UnseatedPeopleList = ({ people, tables }) => {
+    // Фильтруем людей, которые не сидят за столами
+    const unseatedPeople = people.filter((person) => {
+        return !tables.some((table) => table.people.some((tablePerson) => tablePerson && tablePerson.name === person.name));
+    });
+
+    return (
+        <div className="unseated-people-list">
+            <h3>Люди без столов</h3>
+            <ul>
+                {unseatedPeople.map((person, index) => (
+                    <li key={index}>
+                        {person.name} (Группа {person.group})
+                    </li>
+                ))}
+            </ul>
+        </div>
+    );
+};
 
 const SeatingArrangement = () => {
     const [tables, setTables] = useState([]);
@@ -14,27 +33,6 @@ const SeatingArrangement = () => {
     const [draggingGroup, setDraggingGroup] = useState(null);
     const [zoom, setZoom] = useState(1);
     const [chairCount, setChairCount] = useState(12);
-
-
-    const UnseatedPeopleList = ({ people, tables }) => {
-        // Фильтруем людей, которые не сидят за столами
-        const unseatedPeople = people.filter((person) => {
-            return !tables.some((table) => table.people.some((tablePerson) => tablePerson && tablePerson.name === person.name));
-        });
-    
-        return (
-            <div className="unseated-people-list">
-                <h3>Люди без столов</h3>
-                <ul>
-                    {unseatedPeople.map((person, index) => (
-                        <li key={index}>
-                            {person.name} (Группа {person.group})
-                        </li>
-                    ))}
-                </ul>
-            </div>
-        );
-    };
 
     useEffect(() => {
         window.addEventListener("wheel", handleWheel, { passive: false });
@@ -58,19 +56,12 @@ const SeatingArrangement = () => {
         if (savedPeople) setPeople(savedPeople);
     }, []);
 
-    const handleAddPerson = (tableId, person) => {
+    const handleAddPerson = () => {
         if (peopleInput && groupInput) {
             const newPerson = { name: peopleInput, group: groupInput };
             setPeople([...people, newPerson]);
             setPeopleInput('');
             setGroupInput('');
-            setTables((prevTables) =>
-                prevTables.map((table) =>
-                  table.id === tableId
-                    ? { ...table, people: [...table.people, person] } // Добавление нового человека
-                    : table
-                )
-              );
         } else {
             alert('Пожалуйста, заполните все поля.');
         }
@@ -91,16 +82,16 @@ const SeatingArrangement = () => {
 
     const handleDeleteTable = (tableId) => {
         setTables((prevTables) => {
+            // Находим удаляемый стол
             const tableToRemove = prevTables.find((t) => t.id === tableId);
     
             if (tableToRemove) {
                 setPeople((prevPeople) => {
-                    const peopleToReturn = tableToRemove.people.filter((p) => p && p.name); // Проверка на пустые или невалидные объекты
-    
+                    // Добавляем людей обратно в общий список, избегая дублирования
+                    const peopleToReturn = tableToRemove.people.filter((p) => p !== null);
                     const newPeople = [...prevPeople];
                     peopleToReturn.forEach((person) => {
-                        // Проверка на наличие такого человека в новом списке людей
-                        if (person && !newPeople.some((p) => p.name === person.name)) {
+                        if (!newPeople.some((p) => p.name === person.name)) {
                             newPeople.push(person);
                         }
                     });
@@ -112,7 +103,7 @@ const SeatingArrangement = () => {
             return prevTables.filter((t) => t.id !== tableId);
         });
     };
-    
+
     const saveTables = () => {
         localStorage.setItem('tables', JSON.stringify(tables));
     };
@@ -300,28 +291,20 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
 
     const handleSelectPerson = (person) => {
         if (selectedChairIndex !== null) {
-            // Копируем текущие данные стола и людей
             const updatedPeople = [...table.people];
             updatedPeople[selectedChairIndex] = person;
-    
-            // Обновляем столы с изменением людей
             setTables((prevTables) =>
                 prevTables.map((t) =>
                     t.id === table.id ? { ...t, people: updatedPeople } : t
                 )
             );
-    
-            // Обновляем список людей, удаляя выбранного человека
             setPeople((prevPeople) =>
                 prevPeople.filter((p) => p.name !== person.name)
             );
-    
-            // Закрываем попап и сбрасываем выбранный стул
-            setIsPopupVisible(false);
-            setSelectedChairIndex(null);
+            setIsPopupVisible(false); // Закрываем попап
+            setSelectedChairIndex(null); // Сбрасываем выбранный стул
         }
     };
-    
 
     const filteredPeople = people.filter((person) => {
         return !table.people.some((tablePerson) => tablePerson && tablePerson.name === person.name);
