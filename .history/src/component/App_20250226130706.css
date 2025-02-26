@@ -1,0 +1,141 @@
+/* Кнопки */
+button {
+  background-color: #4CAF50; /* Зеленый */
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  margin: 5px;
+}
+button:hover {
+  background-color: #45a049;
+}
+
+/* Поля ввода */
+input {
+  padding: 10px;
+  margin: 5px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  width: calc(100% - 22px); /* Учитываем padding и border */
+}
+
+/* Список людей без столов */
+.unseated-people-list {
+  background-color: white;
+  padding: 15px;
+  border-radius: 10px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  margin-top: 20px;
+}
+.unseated-people-list ul {
+  list-style-type: none;
+  padding: 0;
+}
+.unseated-people-list li {
+  padding: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+/* Список групп */
+.group {
+  background-color: white;
+  padding: 15px;
+  border-radius: 10px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  margin: 10px 0;
+  cursor: grab;
+}
+.group h4 {
+  margin: 0;
+}
+
+/* Контейнер */
+.container {
+  display: flex;
+  height: 100vh;
+}
+
+/* Левая панель */
+.left-panel {
+  width: 300px;
+  background-color: #f5f5f5;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+/* Правая панель */
+.right-panel {
+  flex: 1;
+  background-color: white;
+  padding: 20px;
+  overflow-y: auto;
+}
+.right-panel {
+  transform-origin: center;
+  transition: transform 0.2s ease;
+}
+
+/* Стол */
+.tableContainer {
+  background-color: white;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  margin: 20px;
+  position: relative;
+}
+.table {
+  width: 300px;
+  height: 300px;
+  background-color: #f0f0f0;
+  border-radius: 50%;
+  position: relative;
+  margin: 0 auto;
+}
+.chair {
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  background-color: #4CAF50;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: white;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+/* Новый стол */
+.new-table {
+  border: 2px dashed #ccc;
+  padding: 20px;
+  text-align: center;
+  background-color: #f5f5f5;
+  margin: 20px;
+  border-radius: 10px;
+}
+.new-table.hovered {
+  background-color: #e0e0e0;
+}
+
+/* Попап */
+.popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.popup {
+  background-color: white;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}

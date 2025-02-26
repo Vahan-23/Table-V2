@@ -17,7 +17,6 @@ const SeatingArrangement = () => {
     const [selectedChairIndex, setSelectedChairIndex] = useState(null);
     const [isPopupVisible, setIsPopupVisible] = useState(false);
     const [isRemoveMode, setIsRemoveMode] = useState(false);
-    const [personToRemove, setPersonToRemove] = useState(null);
 
     const UnseatedPeopleList = ({ people, tables }) => {
         // Фильтруем людей, которые не сидят за столами
@@ -70,11 +69,6 @@ const SeatingArrangement = () => {
         } else {
             alert('Пожалуйста, заполните все поля.');
         }
-    };
-
-    // Check if person already exists in the people array
-    const personExists = (personName) => {
-        return people.some(person => person.name === personName);
     };
 
     const handleDeletePerson = (personName) => {
@@ -200,53 +194,37 @@ const SeatingArrangement = () => {
         const person = table?.people[chairIndex];
         
         if (person) {
-            // If there's a person in the chair, show removal popup
-            setSelectedTableId(tableId);
-            setSelectedChairIndex(chairIndex);
-            setPersonToRemove(person);
-            setIsRemoveMode(true);
-            setIsPopupVisible(true);
+            // If there's a person in the chair, ask if user wants to remove them
+            if (window.confirm(`Удалить ${person.name} со стула?`)) {
+                // Remove person from chair and add back to people list
+                setTables(prevTables => {
+                    const tableIndex = prevTables.findIndex(t => t.id === tableId);
+                    if (tableIndex === -1) return prevTables;
+                    
+                    const updatedTable = {...prevTables[tableIndex]};
+                    const updatedPeople = [...updatedTable.people];
+                    
+                    // Store the person to be removed
+                    const removedPerson = updatedPeople[chairIndex];
+                    
+                    // Remove the person from the chair
+                    updatedPeople[chairIndex] = null;
+                    updatedTable.people = updatedPeople;
+                    
+                    // Add the person back to the people list
+                    setPeople(prev => [...prev, removedPerson]);
+                    
+                    // Update tables
+                    const newTables = [...prevTables];
+                    newTables[tableIndex] = updatedTable;
+                    return newTables;
+                });
+            }
         } else {
             // If chair is empty, show popup to add a person
             setSelectedTableId(tableId);
             setSelectedChairIndex(chairIndex);
-            setIsRemoveMode(false);
             setIsPopupVisible(true);
-        }
-    };
-
-    const handleRemovePerson = () => {
-        if (selectedTableId !== null && selectedChairIndex !== null && personToRemove) {
-            setTables(prevTables => {
-                const tableIndex = prevTables.findIndex(t => t.id === selectedTableId);
-                if (tableIndex === -1) return prevTables;
-                
-                const updatedTable = {...prevTables[tableIndex]};
-                const updatedPeople = [...updatedTable.people];
-                
-                // Remove the person from the chair
-                updatedPeople[selectedChairIndex] = null;
-                updatedTable.people = updatedPeople;
-                
-                // Update tables
-                const newTables = [...prevTables];
-                newTables[tableIndex] = updatedTable;
-                return newTables;
-            });
-            
-            // Only add the person back to the people list if they don't already exist there
-            setPeople(prev => {
-                if (!prev.some(p => p.name === personToRemove.name)) {
-                    return [...prev, personToRemove];
-                }
-                return prev;
-            });
-            
-            setIsPopupVisible(false);
-            setSelectedTableId(null);
-            setSelectedChairIndex(null);
-            setPersonToRemove(null);
-            setIsRemoveMode(false);
         }
     };
 
@@ -287,8 +265,6 @@ const SeatingArrangement = () => {
         setIsPopupVisible(false);
         setSelectedTableId(null);
         setSelectedChairIndex(null);
-        setPersonToRemove(null);
-        setIsRemoveMode(false);
     };
 
     // Get available people that aren't already seated at tables
@@ -446,153 +422,76 @@ const SeatingArrangement = () => {
                             }}
                             onClick={(e) => e.stopPropagation()}  // Prevent closing when clicking inside the content area
                         >
-                            {isRemoveMode ? (
-                                // Remove Person Modal
-                                <div className="remove-person-popup">
-                                    <h3 style={{ textAlign: 'center', marginBottom: '20px' }}>Удалить человека со стула</h3>
-                                    
-                                    <div style={{
-                                        backgroundColor: '#f9f9f9',
-                                        padding: '15px',
-                                        borderRadius: '8px',
-                                        marginBottom: '20px',
-                                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                                    }}>
-                                        <p style={{ 
-                                            textAlign: 'center', 
-                                            fontSize: '18px', 
-                                            margin: '0 0 10px 0',
-                                            fontWeight: 'bold'
-                                        }}>
-                                            {personToRemove?.name}
-                                        </p>
-                                        <p style={{ 
-                                            textAlign: 'center', 
-                                            margin: '0',
-                                            color: '#666' 
-                                        }}>
-                                            Группа {personToRemove?.group}
-                                        </p>
-                                    </div>
-                                    
-                                    <p style={{ 
-                                        textAlign: 'center', 
-                                        marginBottom: '20px',
-                                        color: '#555' 
-                                    }}>
-                                        Вы уверены, что хотите удалить этого человека со стула?
-                                    </p>
-                                    
-                                    <div style={{
-                                        display: 'flex',
-                                        justifyContent: 'center',
-                                        gap: '15px'
-                                    }}>
-                                        <button 
-                                            onClick={handleRemovePerson} 
+                            <h3>Выберите человека для стула</h3>
+                            <div 
+                                className="person-selection-grid"
+                                style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+                                    gap: '10px',
+                                    marginTop: '20px',
+                                    marginBottom: '20px'
+                                }}
+                            >
+                                {getAvailablePeople().length > 0 ? (
+                                    getAvailablePeople().map((person) => (
+                                        <div 
+                                            key={person.name} 
+                                            className="person-selection-item"
                                             style={{
-                                                padding: '10px 20px',
-                                                backgroundColor: '#e74c3c',
-                                                color: 'white',
-                                                border: 'none',
-                                                borderRadius: '4px',
+                                                padding: '12px',
+                                                border: '1px solid #ddd',
+                                                borderRadius: '6px',
                                                 cursor: 'pointer',
-                                                fontWeight: 'bold'
+                                                transition: 'background-color 0.2s',
+                                                backgroundColor: '#f9f9f9'
                                             }}
+                                            onClick={() => handleSelectPerson(person)}
                                         >
-                                            Удалить
-                                        </button>
-                                        
-                                        <button 
-                                            onClick={closePopup} 
-                                            style={{
-                                                padding: '10px 20px',
-                                                backgroundColor: '#7f8c8d',
-                                                color: 'white',
-                                                border: 'none',
-                                                borderRadius: '4px',
-                                                cursor: 'pointer'
-                                            }}
-                                        >
-                                            Отмена
-                                        </button>
-                                    </div>
-                                </div>
-                            ) : (
-                                // Add Person Modal
-                                <>
-                                    <h3>Выберите человека для стула</h3>
-                                    <div 
-                                        className="person-selection-grid"
-                                        style={{
-                                            display: 'grid',
-                                            gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
-                                            gap: '10px',
-                                            marginTop: '20px',
-                                            marginBottom: '20px'
-                                        }}
-                                    >
-                                        {getAvailablePeople().length > 0 ? (
-                                            getAvailablePeople().map((person) => (
-                                                <div 
-                                                    key={person.name} 
-                                                    className="person-selection-item"
-                                                    style={{
-                                                        padding: '12px',
-                                                        border: '1px solid #ddd',
-                                                        borderRadius: '6px',
-                                                        cursor: 'pointer',
-                                                        transition: 'background-color 0.2s',
-                                                        backgroundColor: '#f9f9f9'
-                                                    }}
-                                                    onClick={() => handleSelectPerson(person)}
-                                                >
-                                                    <span 
-                                                        className="person-name"
-                                                        style={{
-                                                            display: 'block',
-                                                            fontWeight: 'bold',
-                                                            marginBottom: '4px'
-                                                        }}
-                                                    >{person.name}</span>
-                                                    <span 
-                                                        className="person-group"
-                                                        style={{
-                                                            display: 'block',
-                                                            fontSize: '0.9em',
-                                                            color: '#666'
-                                                        }}
-                                                    >Группа {person.group}</span>
-                                                </div>
-                                            ))
-                                        ) : (
-                                            <div 
-                                                className="no-people-message"
+                                            <span 
+                                                className="person-name"
                                                 style={{
-                                                    gridColumn: '1 / -1',
-                                                    padding: '20px',
-                                                    textAlign: 'center',
+                                                    display: 'block',
+                                                    fontWeight: 'bold',
+                                                    marginBottom: '4px'
+                                                }}
+                                            >{person.name}</span>
+                                            <span 
+                                                className="person-group"
+                                                style={{
+                                                    display: 'block',
+                                                    fontSize: '0.9em',
                                                     color: '#666'
                                                 }}
-                                            >Нет доступных людей</div>
-                                        )}
-                                    </div>
-                                    <button 
-                                        onClick={closePopup} 
-                                        className="close-popup-btn"
+                                            >Группа {person.group}</span>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div 
+                                        className="no-people-message"
                                         style={{
-                                            padding: '10px 20px',
-                                            backgroundColor: '#3498db',
-                                            color: 'white',
-                                            border: 'none',
-                                            borderRadius: '4px',
-                                            cursor: 'pointer',
-                                            display: 'block',
-                                            margin: '0 auto'
+                                            gridColumn: '1 / -1',
+                                            padding: '20px',
+                                            textAlign: 'center',
+                                            color: '#666'
                                         }}
-                                    >Закрыть</button>
-                                </>
-                            )}
+                                    >Нет доступных людей</div>
+                                )}
+                            </div>
+                            <button 
+                                onClick={closePopup} 
+                                className="close-popup-btn"
+                                style={{
+                                    padding: '10px 20px',
+                                    backgroundColor: '#3498db',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer',
+                                    display: 'block',
+                                    margin: '0 auto'
+                                }}
+                            >Закрыть</button>
                         </div>
                     </div>
                 )}
