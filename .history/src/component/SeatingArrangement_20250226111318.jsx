@@ -89,7 +89,7 @@ const SeatingArrangement = () => {
             <Group
                 key={index}
                 group={group}
-                groupName={`Группа ${index + 1}`}
+                groupName={`Группа ${person.group}`}
                 setDraggingGroup={setDraggingGroup}
             />
         ));
@@ -192,7 +192,6 @@ const SeatingArrangement = () => {
             </div>
         </DndProvider>
     );
-    
 };
 
 const Popup = ({ people, onSelectPerson, onClose }) => {
@@ -255,9 +254,6 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
                     t.id === table.id ? { ...t, people: updatedPeople } : t
                 )
             );
-            setPeople((prevPeople) =>
-                prevPeople.filter((p) => p.name !== person.name)
-            );
             setIsPopupVisible(false); // Закрываем попап
             setSelectedChairIndex(null); // Сбрасываем выбранный стул
         }
@@ -298,9 +294,7 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
             textAlign: 'center',
             left: `calc(50% + ${xPosition}px)`,
             top: `calc(50% + ${yPosition}px)`,
-            
         };
-        
         
         if (angle >= 0 && angle < 90) {
             chairStyle.transform = `rotate(${angle + 90}deg)`;
@@ -353,6 +347,10 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
         </div>
     );
 };
+
+
+
+
 
 
 const Group = ({ group, groupName, setDraggingGroup }) => {

@@ -175,7 +175,6 @@ const SeatingArrangement = () => {
                     draggingGroup={draggingGroup}
                     setDraggingGroup={setDraggingGroup}
                     people={people} // Pass the `people` prop here
-                    setPeople={setPeople}
                     
                 />
             ))}
@@ -185,14 +184,12 @@ const SeatingArrangement = () => {
                     draggingGroup={draggingGroup}
                     setTables={setTables}
                     setDraggingGroup={setDraggingGroup}
-                    setPeople={setPeople}
                 />
             )}
         </div>
             </div>
         </DndProvider>
     );
-    
 };
 
 const Popup = ({ people, onSelectPerson, onClose }) => {
@@ -255,9 +252,6 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
                     t.id === table.id ? { ...t, people: updatedPeople } : t
                 )
             );
-            setPeople((prevPeople) =>
-                prevPeople.filter((p) => p.name !== person.name)
-            );
             setIsPopupVisible(false); // Закрываем попап
             setSelectedChairIndex(null); // Сбрасываем выбранный стул
         }
@@ -298,9 +292,7 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
             textAlign: 'center',
             left: `calc(50% + ${xPosition}px)`,
             top: `calc(50% + ${yPosition}px)`,
-            
         };
-        
         
         if (angle >= 0 && angle < 90) {
             chairStyle.transform = `rotate(${angle + 90}deg)`;
@@ -355,6 +347,10 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
 };
 
 
+
+
+
+
 const Group = ({ group, groupName, setDraggingGroup }) => {
     const [{ isDragging }, drag] = useDrag({
         type: 'GROUP',
@@ -380,7 +376,7 @@ const Group = ({ group, groupName, setDraggingGroup }) => {
 
 
 
-const NewTable = ({ draggingGroup, setTables, setDraggingGroup , setPeople }) => {
+const NewTable = ({ draggingGroup, setTables, setDraggingGroup }) => {
     const [{ isOver }, drop] = useDrop({
         accept: 'GROUP',
         drop: (item) => {
@@ -394,10 +390,6 @@ const NewTable = ({ draggingGroup, setTables, setDraggingGroup , setPeople }) =>
 
                 // Add the new table to the state
                 setTables((prevTables) => [...prevTables, newTable]);
-                setPeople((prevPeople) =>
-                    prevPeople.filter((person) => !item.group.some((groupPerson) => groupPerson.name === person.name))
-                );
-            
             } else {
                 alert('Новый стол не может содержать больше 12 человек!');
             }

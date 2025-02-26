@@ -255,9 +255,6 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
                     t.id === table.id ? { ...t, people: updatedPeople } : t
                 )
             );
-            setPeople((prevPeople) =>
-                prevPeople.filter((p) => p.name !== person.name)
-            );
             setIsPopupVisible(false); // Закрываем попап
             setSelectedChairIndex(null); // Сбрасываем выбранный стул
         }
