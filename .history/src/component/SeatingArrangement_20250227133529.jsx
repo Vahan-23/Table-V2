@@ -630,7 +630,7 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
                     )
                 );
             } else {
-                alert(`Սեղանին չի կարող լինել ավելի քան ${table.chairCount} մարդ:`);
+                alert(`На столе не может быть больше ${table.chairCount} человек!`);
             }
         }
     });

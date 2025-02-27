@@ -365,7 +365,7 @@ const getSeedData = () => {
 
                     <div className="groups-container">
                         <div className="groups-header">
-                            <h3>Խմբեր</h3>
+                            <h3>Группы для перетаскивания</h3>
                             <div className="groups-wrapper">
                                 {renderGroups()}
                             </div>
@@ -458,7 +458,7 @@ const getSeedData = () => {
                             {isRemoveMode ? (
                                 // Remove Person Modal
                                 <div className="remove-person-popup">
-                                    <h3 style={{ textAlign: 'center', marginBottom: '20px' }}>Հեռացնե՞լ աթոռից:</h3>
+                                    <h3 style={{ textAlign: 'center', marginBottom: '20px' }}>Удалить человека со стула</h3>
 
                                     <div style={{
                                         backgroundColor: '#f9f9f9',
@@ -489,7 +489,7 @@ const getSeedData = () => {
                                         marginBottom: '20px',
                                         color: '#555'
                                     }}>
-                                       Վստա՞հ եք։, որ ցանկանում եք հեռացնել այս անձին աթոռից:
+                                        Вы уверены, что хотите удалить этого человека со стула?
                                     </p>
 
                                     <div style={{
@@ -509,7 +509,7 @@ const getSeedData = () => {
                                                 fontWeight: 'bold'
                                             }}
                                         >
-                                            Հեռացնել
+                                            Удалить
                                         </button>
 
                                         <button
@@ -523,14 +523,14 @@ const getSeedData = () => {
                                                 cursor: 'pointer'
                                             }}
                                         >
-                                            Չեղարկել
+                                            Отмена
                                         </button>
                                     </div>
                                 </div>
                             ) : (
                                 // Add Person Modal
                                 <>
-                                    <h3>Ընտրեք մարդ աթոռի համար</h3>
+                                    <h3>Выберите человека для стула</h3>
                                     <div
                                         className="person-selection-grid"
                                         style={{
@@ -583,7 +583,7 @@ const getSeedData = () => {
                                                     textAlign: 'center',
                                                     color: '#666'
                                                 }}
-                                            >Հասանելի մարդիկ չկան</div>
+                                            >Нет доступных людей</div>
                                         )}
                                     </div>
                                     <button
@@ -599,7 +599,7 @@ const getSeedData = () => {
                                             display: 'block',
                                             margin: '0 auto'
                                         }}
-                                    >Փակել</button>
+                                    >Закрыть</button>
                                 </>
                             )}
                         </div>
@@ -630,7 +630,7 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
                     )
                 );
             } else {
-                alert(`Սեղանին չի կարող լինել ավելի քան ${table.chairCount} մարդ:`);
+                alert(`На столе не может быть больше ${table.chairCount} человек!`);
             }
         }
     });
@@ -721,8 +721,8 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
     return (
         <div ref={drop} className="table-container">
             <div className="table-header">
-                <h3>Սեղան {table.id} (Աթոռներ: {table.chairCount})</h3>
-                <button onClick={() => handleDeleteTable(table.id)} className="delete-table-btn">X</button>
+                <h3>Стол {table.id} (Стульев: {table.chairCount})</h3>
+                <button onClick={() => handleDeleteTable(table.id)} className="delete-table-btn">Հեռացնել սեղանը</button>
             </div>
             <div className="table">
                 <div className="table-top">
@@ -788,7 +788,7 @@ const NewTable = ({ draggingGroup, setTables, setDraggingGroup, setPeople }) => 
                 padding: '15px',
                 border: '2px dashed #3498db',
                 borderRadius: '8px',
-                backgroundColor: isOver ? 'rgba(52, 152, 219, 0.47)' : 'rgba(52, 152, 219, 0.05)',
+                backgroundColor: isOver ? 'rgba(52, 152, 219, 0.1)' : 'rgba(52, 152, 219, 0.05)',
                 transition: 'all 0.3s ease'
             }}
         >
@@ -809,7 +809,7 @@ const NewTable = ({ draggingGroup, setTables, setDraggingGroup, setPeople }) => 
                     fontSize: '16px',
                     fontWeight: 'bold',
                     color: '#333'
-                }}>Քաշեք խումբը այստեղ՝ նոր սեղան ստեղծելու համար</div>
+                }}>Перетащите группу сюда для создания нового стола</div>
             </div>
         </div>
     );

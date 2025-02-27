@@ -365,7 +365,7 @@ const getSeedData = () => {
 
                     <div className="groups-container">
                         <div className="groups-header">
-                            <h3>Խմբեր</h3>
+                            <h3>Группы для перетаскивания</h3>
                             <div className="groups-wrapper">
                                 {renderGroups()}
                             </div>
@@ -630,7 +630,7 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
                     )
                 );
             } else {
-                alert(`Սեղանին չի կարող լինել ավելի քան ${table.chairCount} մարդ:`);
+                alert(`На столе не может быть больше ${table.chairCount} человек!`);
             }
         }
     });
