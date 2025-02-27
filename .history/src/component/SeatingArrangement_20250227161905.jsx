@@ -616,8 +616,6 @@ return (
     );
 };
 
-{/* part 4*/}
-
 const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDraggingGroup, people, setPeople, onChairClick }) => {
     const [, drop] = useDrop({
         accept: 'GROUP',
@@ -741,6 +739,7 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
     );
 };
 
+// Group component
 const Group = ({ group, groupName, setDraggingGroup }) => {
     const [{ isDragging }, drag] = useDrag({
         type: 'GROUP',
@@ -800,7 +799,5 @@ const NewTable = ({ draggingGroup, setTables, setDraggingGroup, setPeople }) => 
         </div>
     );
 };
-
-{/*part 5*/}
 
 export default SeatingArrangement;

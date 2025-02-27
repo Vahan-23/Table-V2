@@ -430,43 +430,132 @@ return (
                             Ավելացնել սեղան
                         </button>
 
- {/* part 2 */}
-
- <button 
-                        className="primary-btn create-all-tables-btn" 
+                    {/* part 2 */}
+                    <button 
+                        className="primary-btn" 
                         onClick={createTablesForAllGroups}
+                        style={{
+                            flex: '2',
+                            padding: '13px 15px',
+                            backgroundColor: '#9b59b6',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '8px',
+                            fontWeight: 'bold',
+                            cursor: 'pointer',
+                            boxShadow: '0 2px 5px rgba(0, 0, 0, 0.1)',
+                            transition: 'transform 0.2s, background-color 0.2s'
+                        }}
+                        onMouseEnter={(e) => {
+                            e.target.style.backgroundColor = '#8e44ad';
+                            e.target.style.transform = 'translateY(-2px)';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.target.style.backgroundColor = '#9b59b6';
+                            e.target.style.transform = 'translateY(0)';
+                        }}
                     >
                         Ստեղծել սեղաններ բոլոր խմբերի համար
                     </button>
                 </div>
 
-                <div className="bottom-controls">
-                    <div className="save-controls">
+                <div className="bottom-controls" style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                }}>
+                    <div className="save-controls" style={{
+                        display: 'flex',
+                        gap: '10px'
+                    }}>
                         <button 
-                            className="secondary-btn seed-data-btn" 
+                            className="secondary-btn" 
                             onClick={() => setPeople(getSeedData())}
+                            style={{
+                                padding: '8px 15px',
+                                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                                color: 'white',
+                                border: '1px solid rgba(255, 255, 255, 0.4)',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                                transition: 'background-color 0.2s'
+                            }}
+                            onMouseEnter={(e) => {
+                                e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+                            }}
                         >
                             SEED DATA
                         </button>
                         <button 
-                            className="secondary-btn clear-data-btn" 
+                            className="secondary-btn" 
                             onClick={() => setPeople([])}
+                            style={{
+                                padding: '8px 15px',
+                                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                                color: 'white',
+                                border: '1px solid rgba(255, 255, 255, 0.4)',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                                transition: 'background-color 0.2s'
+                            }}
+                            onMouseEnter={(e) => {
+                                e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+                            }}
                         >
                             CLEAR DATA
                         </button>
                     </div>
 
-                    <div className="zoom-controls">
+                    <div className="zoom-controls" style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                        padding: '5px 10px',
+                        borderRadius: '6px'
+                    }}>
                         <button 
-                            className="zoom-btn zoom-in-btn"
                             onClick={() => setZoom((z) => Math.min(z + 0.1, 2))}
+                            style={{
+                                width: '30px',
+                                height: '30px',
+                                borderRadius: '50%',
+                                border: 'none',
+                                backgroundColor: 'rgba(255, 255, 255, 0.3)',
+                                color: 'white',
+                                fontSize: '18px',
+                                fontWeight: 'bold',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                justifyContent: 'center',
+                                alignItems: 'center'
+                            }}
                         >+</button>
-                        <span className="zoom-percentage">
+                        <span style={{ color: 'white', fontWeight: 'bold' }}>
                             {Math.round(zoom * 100)}%
                         </span>
                         <button 
-                            className="zoom-btn zoom-out-btn"
                             onClick={() => setZoom((z) => Math.max(z - 0.1, 0.5))}
+                            style={{
+                                width: '30px',
+                                height: '30px',
+                                borderRadius: '50%',
+                                border: 'none',
+                                backgroundColor: 'rgba(255, 255, 255, 0.3)',
+                                color: 'white',
+                                fontSize: '18px',
+                                fontWeight: 'bold',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                justifyContent: 'center',
+                                alignItems: 'center'
+                            }}
                         >-</button>
                     </div>
                 </div>
@@ -474,19 +563,47 @@ return (
         </div>
     </div>
 
-    <div className="groups-container">
-        <div className="groups-header">
-            <h3 className="groups-title">Խմբեր</h3>
-            <div className="groups-wrapper">
+    <div className="groups-container" style={{
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        // backdropFilter: 'blur(5px)',
+        borderRadius: '12px',
+        padding: '15px',
+        marginTop: '15px',
+        boxShadow: '0 2px 10px rgba(0, 0, 0, 0.1)',
+        border: '1px solid rgba(255, 255, 255, 0.2)'
+    }}>
+        <div className="groups-header" style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '10px'
+        }}>
+            <h3 style={{
+                margin: '0 0 10px 0',
+                fontSize: '20px',
+                color: 'white',
+                fontWeight: '600',
+                borderBottom: '2px solid rgba(255, 255, 255, 0.5)',
+                paddingBottom: '5px',
+                display: 'inline-block'
+            }}>Խմբեր</h3>
+            <div className="groups-wrapper" style={{
+                display: 'flex',
+                flexWrap: 'nowrap',
+                gap: '12px',
+                overflowX: 'auto',
+                padding: '5px 0',
+                maxHeight: '100px',
+                maxWidth: '100%',
+                scrollbarWidth: 'thin',
+                scrollbarColor: 'rgba(255, 255, 255, 0.5) transparent'
+            }}>
                 {renderGroups()}
             </div>
         </div>
     </div>
 </header>
 
-{/* part 3 */}
-
-<div className="main-content">
+                <div className="main-content">
                     <div className="sidebar">
                         <UnseatedPeopleList people={people} tables={tables} />
 
@@ -538,45 +655,105 @@ return (
                 </div>
                
              
-                {/* Fullscreen popup */}
+
+                {/* Fullscreen popup that appears regardless of scroll position */}
                 {isPopupVisible && (
                     <div
                         className="fullscreen-popup"
-                        onClick={closePopup}
+                        style={{
+                            position: 'fixed',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                            zIndex: 1000,
+                            display: 'flex',
+                            justifyContent: 'center',
+                            alignItems: 'center'
+                        }}
+                        onClick={closePopup}  // Close popup when clicking on the overlay
                     >
                         <div
                             className="fullscreen-popup-content"
-                            onClick={(e) => e.stopPropagation()}
+                            style={{
+                                backgroundColor: 'white',
+                                borderRadius: '8px',
+                                padding: '20px',
+                                maxWidth: '600px',
+                                width: '90%',
+                                maxHeight: '80vh',
+                                overflowY: 'auto'
+                            }}
+                            onClick={(e) => e.stopPropagation()}  // Prevent closing when clicking inside the content area
                         >
                             {isRemoveMode ? (
                                 // Remove Person Modal
                                 <div className="remove-person-popup">
-                                    <h3 className="popup-title">Հեռացնե՞լ աթոռից:</h3>
+                                    <h3 style={{ textAlign: 'center', marginBottom: '20px' }}>Հեռացնե՞լ աթոռից:</h3>
 
-                                    <div className="person-info-card">
-                                        <p className="person-info-name">
+                                    <div style={{
+                                        backgroundColor: '#f9f9f9',
+                                        padding: '15px',
+                                        borderRadius: '8px',
+                                        marginBottom: '20px',
+                                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                                    }}>
+                                        <p style={{
+                                            textAlign: 'center',
+                                            fontSize: '18px',
+                                            margin: '0 0 10px 0',
+                                            fontWeight: 'bold'
+                                        }}>
                                             {personToRemove?.name}
                                         </p>
-                                        <p className="person-info-group">
+                                        <p style={{
+                                            textAlign: 'center',
+                                            margin: '0',
+                                            color: '#666'
+                                        }}>
                                             Խումբ {personToRemove?.group}
                                         </p>
                                     </div>
 
-                                    <p className="confirmation-text">
+                                    <p style={{
+                                        textAlign: 'center',
+                                        marginBottom: '20px',
+                                        color: '#555'
+                                    }}>
                                         Վստա՞հ եք։, որ ցանկանում եք հեռացնել այս անձին աթոռից:
                                     </p>
 
-                                    <div className="popup-buttons">
+                                    <div style={{
+                                        display: 'flex',
+                                        justifyContent: 'center',
+                                        gap: '15px'
+                                    }}>
                                         <button
                                             onClick={handleRemovePerson}
-                                            className="remove-btn"
+                                            style={{
+                                                padding: '10px 20px',
+                                                backgroundColor: '#e74c3c',
+                                                color: 'white',
+                                                border: 'none',
+                                                borderRadius: '4px',
+                                                cursor: 'pointer',
+                                                fontWeight: 'bold'
+                                            }}
                                         >
                                             Հեռացնել
                                         </button>
 
                                         <button
                                             onClick={closePopup}
-                                            className="cancel-btn"
+                                            style={{
+                                                padding: '10px 20px',
+                                                backgroundColor: '#7f8c8d',
+                                                color: 'white',
+                                                border: 'none',
+                                                borderRadius: '4px',
+                                                cursor: 'pointer'
+                                            }}
                                         >
                                             Չեղարկել
                                         </button>
@@ -585,26 +762,75 @@ return (
                             ) : (
                                 // Add Person Modal
                                 <>
-                                    <h3 className="popup-title">Ընտրեք մարդ աթոռի համար</h3>
-                                    <div className="person-selection-grid">
+                                    <h3>Ընտրեք մարդ աթոռի համար</h3>
+                                    <div
+                                        className="person-selection-grid"
+                                        style={{
+                                            display: 'grid',
+                                            gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+                                            gap: '10px',
+                                            marginTop: '20px',
+                                            marginBottom: '20px'
+                                        }}
+                                    >
                                         {getAvailablePeople().length > 0 ? (
                                             getAvailablePeople().map((person) => (
                                                 <div
                                                     key={person.name}
                                                     className="person-selection-item"
+                                                    style={{
+                                                        padding: '12px',
+                                                        border: '1px solid #ddd',
+                                                        borderRadius: '6px',
+                                                        cursor: 'pointer',
+                                                        transition: 'background-color 0.2s',
+                                                        backgroundColor: '#f9f9f9'
+                                                    }}
                                                     onClick={() => handleSelectPerson(person)}
                                                 >
-                                                    <span className="person-selection-name">{person.name}</span>
-                                                    <span className="person-selection-group">Խումբ {person.group}</span>
+                                                    <span
+                                                        className="person-name"
+                                                        style={{
+                                                            display: 'block',
+                                                            fontWeight: 'bold',
+                                                            marginBottom: '4px'
+                                                        }}
+                                                    >{person.name}</span>
+                                                    <span
+                                                        className="person-group"
+                                                        style={{
+                                                            display: 'block',
+                                                            fontSize: '0.9em',
+                                                            color: '#666'
+                                                        }}
+                                                    >Խումբ {person.group}</span>
                                                 </div>
                                             ))
                                         ) : (
-                                            <div className="no-people-message">Հասանելի մարդիկ չկան</div>
+                                            <div
+                                                className="no-people-message"
+                                                style={{
+                                                    gridColumn: '1 / -1',
+                                                    padding: '20px',
+                                                    textAlign: 'center',
+                                                    color: '#666'
+                                                }}
+                                            >Հասանելի մարդիկ չկան</div>
                                         )}
                                     </div>
                                     <button
                                         onClick={closePopup}
                                         className="close-popup-btn"
+                                        style={{
+                                            padding: '10px 20px',
+                                            backgroundColor: '#3498db',
+                                            color: 'white',
+                                            border: 'none',
+                                            borderRadius: '4px',
+                                            cursor: 'pointer',
+                                            display: 'block',
+                                            margin: '0 auto'
+                                        }}
                                     >Փակել</button>
                                 </>
                             )}
@@ -615,8 +841,6 @@ return (
         </DndProvider>
     );
 };
-
-{/* part 4*/}
 
 const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDraggingGroup, people, setPeople, onChairClick }) => {
     const [, drop] = useDrop({
@@ -757,14 +981,13 @@ const Group = ({ group, groupName, setDraggingGroup }) => {
     }, [isDragging, group, setDraggingGroup]);
 
     return (
-        <div ref={drag} className={`group-card ${isDragging ? 'dragging' : ''}`}>
+        <div ref={drag} className="group-card" style={{ opacity: isDragging ? 0.5 : 1 }}>
             <div className="group-name">Խումբ {groupName}</div>
             <div className="group-count">{group.length} чел.</div>
         </div>
     );
 };
 
-// NewTable component
 const NewTable = ({ draggingGroup, setTables, setDraggingGroup, setPeople }) => {
     const [{ isOver }, drop] = useDrop({
         accept: 'GROUP',
@@ -792,15 +1015,36 @@ const NewTable = ({ draggingGroup, setTables, setDraggingGroup, setPeople }) => 
         <div
             ref={drop}
             className={`new-table-dropzone ${isOver ? 'hovered' : ''}`}
+            style={{
+                marginBottom: '20px',
+                padding: '15px',
+                border: '2px dashed #3498db',
+                borderRadius: '8px',
+                backgroundColor: isOver ? 'rgba(52, 152, 219, 0.47)' : 'rgba(52, 152, 219, 0.05)',
+                transition: 'all 0.3s ease'
+            }}
         >
-            <div className="dropzone-content">
-                <div className="dropzone-icon">+</div>
-                <div className="dropzone-text">Քաշեք խումբը այստեղ՝ նոր սեղան ստեղծելու համար</div>
+            <div className="dropzone-content" style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                textAlign: 'center',
+                padding: '20px'
+            }}>
+                <div className="dropzone-icon" style={{
+                    fontSize: '32px',
+                    color: '#3498db',
+                    marginBottom: '10px'
+                }}>+</div>
+                <div className="dropzone-text" style={{
+                    fontSize: '16px',
+                    fontWeight: 'bold',
+                    color: '#333'
+                }}>Քաշեք խումբը այստեղ՝ նոր սեղան ստեղծելու համար</div>
             </div>
         </div>
     );
 };
-
-{/*part 5*/}
 
 export default SeatingArrangement;

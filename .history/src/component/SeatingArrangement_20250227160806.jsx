@@ -757,14 +757,13 @@ const Group = ({ group, groupName, setDraggingGroup }) => {
     }, [isDragging, group, setDraggingGroup]);
 
     return (
-        <div ref={drag} className={`group-card ${isDragging ? 'dragging' : ''}`}>
+        <div ref={drag} className="group-card" style={{ opacity: isDragging ? 0.5 : 1 }}>
             <div className="group-name">Խումբ {groupName}</div>
             <div className="group-count">{group.length} чел.</div>
         </div>
     );
 };
 
-// NewTable component
 const NewTable = ({ draggingGroup, setTables, setDraggingGroup, setPeople }) => {
     const [{ isOver }, drop] = useDrop({
         accept: 'GROUP',
@@ -792,15 +791,36 @@ const NewTable = ({ draggingGroup, setTables, setDraggingGroup, setPeople }) => 
         <div
             ref={drop}
             className={`new-table-dropzone ${isOver ? 'hovered' : ''}`}
+            style={{
+                marginBottom: '20px',
+                padding: '15px',
+                border: '2px dashed #3498db',
+                borderRadius: '8px',
+                backgroundColor: isOver ? 'rgba(52, 152, 219, 0.47)' : 'rgba(52, 152, 219, 0.05)',
+                transition: 'all 0.3s ease'
+            }}
         >
-            <div className="dropzone-content">
-                <div className="dropzone-icon">+</div>
-                <div className="dropzone-text">Քաշեք խումբը այստեղ՝ նոր սեղան ստեղծելու համար</div>
+            <div className="dropzone-content" style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                textAlign: 'center',
+                padding: '20px'
+            }}>
+                <div className="dropzone-icon" style={{
+                    fontSize: '32px',
+                    color: '#3498db',
+                    marginBottom: '10px'
+                }}>+</div>
+                <div className="dropzone-text" style={{
+                    fontSize: '16px',
+                    fontWeight: 'bold',
+                    color: '#333'
+                }}>Քաշեք խումբը այստեղ՝ նոր սեղան ստեղծելու համար</div>
             </div>
         </div>
     );
 };
-
-{/*part 5*/}
 
 export default SeatingArrangement;

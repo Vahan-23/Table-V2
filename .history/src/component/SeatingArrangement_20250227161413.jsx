@@ -618,6 +618,7 @@ return (
 
 {/* part 4*/}
 
+// Table component
 const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDraggingGroup, people, setPeople, onChairClick }) => {
     const [, drop] = useDrop({
         accept: 'GROUP',
@@ -654,71 +655,33 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
         const xPosition = radius * Math.cos((angle * Math.PI) / 180);
         const yPosition = radius * Math.sin((angle * Math.PI) / 180);
 
-        const chairStyle = {
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transformOrigin: 'center',
-            width: '60px',
-            height: '60px',
-            backgroundImage: peopleOnTable[i] ? "url('/red1.png')" : "url('/green2.png')",
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            borderRadius: '50%',
-            fontSize: '12px',
-            textAlign: 'center',
-            left: `calc(50% + ${xPosition}px)`,
-            top: `calc(50% + ${yPosition}px)`,
-            cursor: 'pointer'
-        };
-
-        // For displaying the name directly on the chair
-        const nameOverlayStyle = {
-            position: 'absolute',
-            left: '50%',
-            top: '50%',
-            transform: 'translate(-50%, -50%)',
-            backgroundColor: 'rgba(255, 255, 255, 0.8)',
-            padding: '2px 6px',
-            color: "#211812",
-            borderRadius: '4px',
-            fontSize: '10px',
-            fontWeight: 'bold',
-            maxWidth: '55px',
-            textAlign: 'center',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            zIndex: 5
-        };
-
+        const chairClass = peopleOnTable[i] ? "chair occupied" : "chair empty";
+        
+        // Determine rotation class based on angle
+        let rotationClass = "";
         if (angle >= 0 && angle < 90) {
-            chairStyle.transform = `rotate(${angle + 90}deg)`;
+            rotationClass = "rotate-" + Math.round(angle + 90);
         } else if (angle >= 90 && angle < 180) {
-            chairStyle.transform = `rotate(${angle + 90}deg)`;
+            rotationClass = "rotate-" + Math.round(angle + 90);
         } else if (angle >= 180 && angle < 270) {
-            chairStyle.transform = `rotate(${angle + 90}deg)`;
+            rotationClass = "rotate-" + Math.round(angle + 90);
         } else {
-            chairStyle.transform = `rotate(${angle + 90}deg)`;
+            rotationClass = "rotate-" + Math.round(angle + 90);
         }
 
         chairs.push(
             <div
                 key={i}
-                className="chair"
-                style={chairStyle}
+                className={`chair ${chairClass} ${rotationClass}`}
+                style={{
+                    left: `calc(50% + ${xPosition}px)`,
+                    top: `calc(50% + ${yPosition}px)`
+                }}
                 onClick={() => onChairClick(i)}
                 title={peopleOnTable[i] ? `Нажмите чтобы удалить ${peopleOnTable[i].name}` : "Нажмите чтобы добавить человека"}
             >
                 {peopleOnTable[i] && (
-                    <div
-                        className="person-name-overlay"
-                        style={nameOverlayStyle}
-                    >
+                    <div className="person-name-overlay">
                         {peopleOnTable[i].name}
                     </div>
                 )}
@@ -741,6 +704,7 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
     );
 };
 
+// Group component
 const Group = ({ group, groupName, setDraggingGroup }) => {
     const [{ isDragging }, drag] = useDrag({
         type: 'GROUP',
@@ -800,7 +764,5 @@ const NewTable = ({ draggingGroup, setTables, setDraggingGroup, setPeople }) => 
         </div>
     );
 };
-
-{/*part 5*/}
 
 export default SeatingArrangement;
