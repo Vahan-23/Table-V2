@@ -1,4 +1,4 @@
-import React, { useState, useEffect , useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useDrag, useDrop } from 'react-dnd';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
@@ -36,7 +36,7 @@ const SeatingArrangement = () => {
         if (showGroupDropdown) {
             document.addEventListener("mousedown", handleClickOutside);
         }
-        
+
         // Clean up the event listener
         return () => {
             document.removeEventListener("mousedown", handleClickOutside);
@@ -344,7 +344,7 @@ const SeatingArrangement = () => {
             );
         });
     };
-
+    {/* part 1 */ }
     return (
         <DndProvider backend={HTML5Backend}>
             <div className="app-container">
@@ -405,8 +405,9 @@ const SeatingArrangement = () => {
                                         )}
                                     </div>
 
-                                    <button 
-                                        className="primary-btn add-person-btn" 
+
+                                    <button
+                                        className="primary-btn add-person-btn"
                                         onClick={handleAddPerson}
                                     >
                                         Ավելացնել մարդ
@@ -422,15 +423,17 @@ const SeatingArrangement = () => {
                                         placeholder="Кол-во стульев"
                                         className="chair-count-input"
                                     />
-                                    <button 
-                                        className="primary-btn add-table-btn" 
+                                    <button
+                                        className="primary-btn add-table-btn"
                                         onClick={handleAddTable}
                                     >
                                         Ավելացնել սեղան
                                     </button>
 
-                                    <button 
-                                        className="primary-btn create-all-tables-btn" 
+                                    {/* part 2 */}
+
+                                    <button
+                                        className="primary-btn create-all-tables-btn"
                                         onClick={createTablesForAllGroups}
                                     >
                                         Ստեղծել սեղաններ բոլոր խմբերի համար
@@ -439,14 +442,14 @@ const SeatingArrangement = () => {
 
                                 <div className="bottom-controls">
                                     <div className="save-controls">
-                                        <button 
-                                            className="secondary-btn seed-data-btn" 
+                                        <button
+                                            className="secondary-btn seed-data-btn"
                                             onClick={() => setPeople(getSeedData())}
                                         >
                                             SEED DATA
                                         </button>
-                                        <button 
-                                            className="secondary-btn clear-data-btn" 
+                                        <button
+                                            className="secondary-btn clear-data-btn"
                                             onClick={() => setPeople([])}
                                         >
                                             CLEAR DATA
@@ -454,14 +457,14 @@ const SeatingArrangement = () => {
                                     </div>
 
                                     <div className="zoom-controls">
-                                        <button 
+                                        <button
                                             className="zoom-btn zoom-in-btn"
                                             onClick={() => setZoom((z) => Math.min(z + 0.1, 2))}
                                         >+</button>
                                         <span className="zoom-percentage">
                                             {Math.round(zoom * 100)}%
                                         </span>
-                                        <button 
+                                        <button
                                             className="zoom-btn zoom-out-btn"
                                             onClick={() => setZoom((z) => Math.max(z - 0.1, 0.5))}
                                         >-</button>
@@ -480,6 +483,8 @@ const SeatingArrangement = () => {
                         </div>
                     </div>
                 </header>
+
+                {/* part 3 */}
 
                 <div className="main-content">
                     <div className="sidebar">
@@ -505,7 +510,7 @@ const SeatingArrangement = () => {
                     </div>
 
                     <div className="tables-area" style={{ transform: `scale(${zoom})`, transformOrigin: "center" }}>
-                        {/* Show NewTable component only when a group is being dragged */}
+                        {/* New table drop zone only appears when dragging a group */}
                         {draggingGroup && (
                             <NewTable
                                 draggingGroup={draggingGroup}
@@ -531,7 +536,8 @@ const SeatingArrangement = () => {
                         ))}
                     </div>
                 </div>
-               
+
+
                 {/* Fullscreen popup */}
                 {isPopupVisible && (
                     <div
@@ -610,6 +616,8 @@ const SeatingArrangement = () => {
     );
 };
 
+{/* part 4*/ }
+
 const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDraggingGroup, people, setPeople, onChairClick }) => {
     const [, drop] = useDrop({
         accept: 'GROUP',
@@ -631,7 +639,6 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
                 );
             } else {
                 alert(`Սեղանին չի կարող լինել ավելի քան ${table.chairCount} մարդ:`);
-                
             }
         }
     });
@@ -734,23 +741,24 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
     );
 };
 
-// Group component with proper end callback to clear dragging state
 const Group = ({ group, groupName, setDraggingGroup }) => {
     const [{ isDragging }, drag] = useDrag({
         type: 'GROUP',
-        item: () => {
-            // Set dragging state when drag begins
-            setDraggingGroup(group);
-            return { group };
-        },
-        end: () => {
-            // Clear dragging state when drag operation ends
-            setDraggingGroup(null);
-        },
+        item: { group },
         collect: (monitor) => ({
             isDragging: monitor.isDragging(),
         }),
+        end: () => {
+            // Clear dragging group when drag operation ends
+            setDraggingGroup(null);
+        }
     });
+
+    useEffect(() => {
+        if (isDragging) {
+            setDraggingGroup(group);
+        }
+    }, [isDragging, group, setDraggingGroup]);
 
     return (
         <div ref={drag} className="group-card" style={{ opacity: isDragging ? 0.5 : 1 }}>
@@ -759,26 +767,22 @@ const Group = ({ group, groupName, setDraggingGroup }) => {
         </div>
     );
 };
-
-// NewTable component that will only show when a group is being dragged
 const NewTable = ({ draggingGroup, setTables, setDraggingGroup, setPeople }) => {
     const [{ isOver }, drop] = useDrop({
         accept: 'GROUP',
         drop: (item) => {
+            // Here's the key change: use exactly the group size for chair count
             const newTable = {
                 id: Date.now(),
                 people: item.group,
-                chairCount: item.group.length,
+                chairCount: item.group.length, // Set chair count to match group size exactly
             };
 
-            setTables((prevTables) => [newTable, ...prevTables]);
+            setTables((prevTables) => [newTable, ...prevTables]); // Add new table to the beginning
             setPeople((prevPeople) =>
-                prevPeople.filter((person) => 
-                    !item.group.some((groupPerson) => groupPerson.name === person.name)
-                )
+                prevPeople.filter((person) => !item.group.some((groupPerson) => groupPerson.name === person.name))
             );
 
-            // Clear dragging state after successful drop
             setDraggingGroup(null);
         },
         collect: (monitor) => ({
@@ -822,6 +826,6 @@ const NewTable = ({ draggingGroup, setTables, setDraggingGroup, setPeople }) => 
     );
 };
 
-{/*part 5*/}
+{/*part 5*/ }
 
 export default SeatingArrangement;

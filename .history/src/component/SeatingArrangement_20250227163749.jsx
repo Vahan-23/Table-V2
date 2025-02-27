@@ -344,144 +344,149 @@ const SeatingArrangement = () => {
             );
         });
     };
+{/* part 1 */}
+return (
+    <DndProvider backend={HTML5Backend}>
+    <div className="app-container">
+    <header className="app-header">
+        <div className="header-content">
+            <div className="logo">Նստատեղերի դասավորություն</div>
 
-    return (
-        <DndProvider backend={HTML5Backend}>
-            <div className="app-container">
-                <header className="app-header">
-                    <div className="header-content">
-                        <div className="logo">Նստատեղերի դասավորություն</div>
-
-                        <div className="header-controls">
-                            <div className="control-group">
-                                <div className="input-group">
-                                    <input
-                                        type="text"
-                                        value={peopleInput}
-                                        onChange={(e) => setPeopleInput(e.target.value)}
-                                        placeholder="Անուն"
-                                        className="input-field"
-                                    />
-                                    <div className="group-input-container" ref={groupDropdownRef}>
-                                        <input
-                                            type="text"
-                                            value={groupInput}
-                                            onChange={handleGroupInputChange}
-                                            placeholder="Խումբ"
-                                            onFocus={() => setShowGroupDropdown(true)}
-                                            className="input-field"
-                                        />
-                                        {showGroupDropdown && (
-                                            <div className="group-dropdown">
-                                                {getExistingGroups().length > 0 ? (
-                                                    <>
-                                                        {getExistingGroups().map((group) => (
-                                                            <div
-                                                                key={group}
-                                                                onClick={() => handleSelectGroup(group)}
-                                                                className="dropdown-item"
-                                                                onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
-                                                                onMouseLeave={(e) => e.target.style.backgroundColor = 'white'}
-                                                            >
-                                                                {group}
-                                                            </div>
-                                                        ))}
-                                                        <div
-                                                            className="dropdown-item-new"
-                                                            onClick={() => {
-                                                                setIsCustomGroup(true);
-                                                                setShowGroupDropdown(false);
-                                                            }}
-                                                        >
-                                                            Նոր խումբ...
-                                                        </div>
-                                                    </>
-                                                ) : (
-                                                    <div className="dropdown-empty">
-                                                        Առկա խմբեր չկան
-                                                    </div>
-                                                )}
+            <div className="header-controls">
+                <div className="control-group">
+                    <div className="input-group">
+                        <input
+                            type="text"
+                            value={peopleInput}
+                            onChange={(e) => setPeopleInput(e.target.value)}
+                            placeholder="Անուն"
+                            className="input-field"
+                        />
+                        <div className="group-input-container" ref={groupDropdownRef}>
+                            <input
+                                type="text"
+                                value={groupInput}
+                                onChange={handleGroupInputChange}
+                                placeholder="Խումբ"
+                                onFocus={() => setShowGroupDropdown(true)}
+                                className="input-field"
+                            />
+                            {showGroupDropdown && (
+                                <div className="group-dropdown">
+                                    {getExistingGroups().length > 0 ? (
+                                        <>
+                                            {getExistingGroups().map((group) => (
+                                                <div
+                                                    key={group}
+                                                    onClick={() => handleSelectGroup(group)}
+                                                    className="dropdown-item"
+                                                    onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
+                                                    onMouseLeave={(e) => e.target.style.backgroundColor = 'white'}
+                                                >
+                                                    {group}
+                                                </div>
+                                            ))}
+                                            <div
+                                                className="dropdown-item-new"
+                                                onClick={() => {
+                                                    setIsCustomGroup(true);
+                                                    setShowGroupDropdown(false);
+                                                }}
+                                            >
+                                                Նոր խումբ...
                                             </div>
-                                        )}
-                                    </div>
-
-                                    <button 
-                                        className="primary-btn add-person-btn" 
-                                        onClick={handleAddPerson}
-                                    >
-                                        Ավելացնել մարդ
-                                    </button>
+                                        </>
+                                    ) : (
+                                        <div className="dropdown-empty">
+                                            Առկա խմբեր չկան
+                                        </div>
+                                    )}
                                 </div>
-
-                                <div className="table-controls">
-                                    <input
-                                        type="number"
-                                        value={chairCount}
-                                        onChange={handleChairCountChange}
-                                        min="1"
-                                        placeholder="Кол-во стульев"
-                                        className="chair-count-input"
-                                    />
-                                    <button 
-                                        className="primary-btn add-table-btn" 
-                                        onClick={handleAddTable}
-                                    >
-                                        Ավելացնել սեղան
-                                    </button>
-
-                                    <button 
-                                        className="primary-btn create-all-tables-btn" 
-                                        onClick={createTablesForAllGroups}
-                                    >
-                                        Ստեղծել սեղաններ բոլոր խմբերի համար
-                                    </button>
-                                </div>
-
-                                <div className="bottom-controls">
-                                    <div className="save-controls">
-                                        <button 
-                                            className="secondary-btn seed-data-btn" 
-                                            onClick={() => setPeople(getSeedData())}
-                                        >
-                                            SEED DATA
-                                        </button>
-                                        <button 
-                                            className="secondary-btn clear-data-btn" 
-                                            onClick={() => setPeople([])}
-                                        >
-                                            CLEAR DATA
-                                        </button>
-                                    </div>
-
-                                    <div className="zoom-controls">
-                                        <button 
-                                            className="zoom-btn zoom-in-btn"
-                                            onClick={() => setZoom((z) => Math.min(z + 0.1, 2))}
-                                        >+</button>
-                                        <span className="zoom-percentage">
-                                            {Math.round(zoom * 100)}%
-                                        </span>
-                                        <button 
-                                            className="zoom-btn zoom-out-btn"
-                                            onClick={() => setZoom((z) => Math.max(z - 0.1, 0.5))}
-                                        >-</button>
-                                    </div>
-                                </div>
-                            </div>
+                            )}
                         </div>
+
+                          
+                        <button 
+                            className="primary-btn add-person-btn" 
+                            onClick={handleAddPerson}
+                        >
+                            Ավելացնել մարդ
+                        </button>
                     </div>
 
-                    <div className="groups-container">
-                        <div className="groups-header">
-                            <h3 className="groups-title">Խմբեր</h3>
-                            <div className="groups-wrapper">
-                                {renderGroups()}
-                            </div>
-                        </div>
-                    </div>
-                </header>
+                    <div className="table-controls">
+                        <input
+                            type="number"
+                            value={chairCount}
+                            onChange={handleChairCountChange}
+                            min="1"
+                            placeholder="Кол-во стульев"
+                            className="chair-count-input"
+                        />
+                        <button 
+                            className="primary-btn add-table-btn" 
+                            onClick={handleAddTable}
+                        >
+                            Ավելացնել սեղան
+                        </button>
 
-                <div className="main-content">
+ {/* part 2 */}
+
+ <button 
+                        className="primary-btn create-all-tables-btn" 
+                        onClick={createTablesForAllGroups}
+                    >
+                        Ստեղծել սեղաններ բոլոր խմբերի համար
+                    </button>
+                </div>
+
+                <div className="bottom-controls">
+                    <div className="save-controls">
+                        <button 
+                            className="secondary-btn seed-data-btn" 
+                            onClick={() => setPeople(getSeedData())}
+                        >
+                            SEED DATA
+                        </button>
+                        <button 
+                            className="secondary-btn clear-data-btn" 
+                            onClick={() => setPeople([])}
+                        >
+                            CLEAR DATA
+                        </button>
+                    </div>
+
+                    <div className="zoom-controls">
+                        <button 
+                            className="zoom-btn zoom-in-btn"
+                            onClick={() => setZoom((z) => Math.min(z + 0.1, 2))}
+                        >+</button>
+                        <span className="zoom-percentage">
+                            {Math.round(zoom * 100)}%
+                        </span>
+                        <button 
+                            className="zoom-btn zoom-out-btn"
+                            onClick={() => setZoom((z) => Math.max(z - 0.1, 0.5))}
+                        >-</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div className="groups-container">
+        <div className="groups-header">
+            <h3 className="groups-title">Խմբեր</h3>
+            <div className="groups-wrapper">
+                {renderGroups()}
+            </div>
+        </div>
+    </div>
+</header>
+
+{/* part 3 */}
+
+<div className="main-content">
                     <div className="sidebar">
                         <UnseatedPeopleList people={people} tables={tables} />
 
@@ -505,7 +510,7 @@ const SeatingArrangement = () => {
                     </div>
 
                     <div className="tables-area" style={{ transform: `scale(${zoom})`, transformOrigin: "center" }}>
-                        {/* Show NewTable component only when a group is being dragged */}
+                        {/* Add the new table drop zone at the top */}
                         {draggingGroup && (
                             <NewTable
                                 draggingGroup={draggingGroup}
@@ -532,6 +537,7 @@ const SeatingArrangement = () => {
                     </div>
                 </div>
                
+             
                 {/* Fullscreen popup */}
                 {isPopupVisible && (
                     <div
@@ -610,6 +616,8 @@ const SeatingArrangement = () => {
     );
 };
 
+{/* part 4*/}
+
 const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDraggingGroup, people, setPeople, onChairClick }) => {
     const [, drop] = useDrop({
         accept: 'GROUP',
@@ -631,7 +639,6 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
                 );
             } else {
                 alert(`Սեղանին չի կարող լինել ավելի քան ${table.chairCount} մարդ:`);
-                
             }
         }
     });
@@ -734,23 +741,20 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
     );
 };
 
-// Group component with proper end callback to clear dragging state
 const Group = ({ group, groupName, setDraggingGroup }) => {
     const [{ isDragging }, drag] = useDrag({
         type: 'GROUP',
-        item: () => {
-            // Set dragging state when drag begins
-            setDraggingGroup(group);
-            return { group };
-        },
-        end: () => {
-            // Clear dragging state when drag operation ends
-            setDraggingGroup(null);
-        },
+        item: { group },
         collect: (monitor) => ({
             isDragging: monitor.isDragging(),
         }),
     });
+
+    useEffect(() => {
+        if (isDragging) {
+            setDraggingGroup(group);
+        }
+    }, [isDragging, group, setDraggingGroup]);
 
     return (
         <div ref={drag} className="group-card" style={{ opacity: isDragging ? 0.5 : 1 }}>
@@ -760,25 +764,22 @@ const Group = ({ group, groupName, setDraggingGroup }) => {
     );
 };
 
-// NewTable component that will only show when a group is being dragged
 const NewTable = ({ draggingGroup, setTables, setDraggingGroup, setPeople }) => {
     const [{ isOver }, drop] = useDrop({
         accept: 'GROUP',
         drop: (item) => {
+            // Here's the key change: use exactly the group size for chair count
             const newTable = {
                 id: Date.now(),
                 people: item.group,
-                chairCount: item.group.length,
+                chairCount: item.group.length, // Set chair count to match group size exactly
             };
 
-            setTables((prevTables) => [newTable, ...prevTables]);
+            setTables((prevTables) => [newTable, ...prevTables]); // Add new table to the beginning
             setPeople((prevPeople) =>
-                prevPeople.filter((person) => 
-                    !item.group.some((groupPerson) => groupPerson.name === person.name)
-                )
+                prevPeople.filter((person) => !item.group.some((groupPerson) => groupPerson.name === person.name))
             );
 
-            // Clear dragging state after successful drop
             setDraggingGroup(null);
         },
         collect: (monitor) => ({

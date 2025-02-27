@@ -738,18 +738,23 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
 const Group = ({ group, groupName, setDraggingGroup }) => {
     const [{ isDragging }, drag] = useDrag({
         type: 'GROUP',
-        item: () => {
-            // Set dragging state when drag begins
-            setDraggingGroup(group);
-            return { group };
-        },
-        end: () => {
-            // Clear dragging state when drag operation ends
-            setDraggingGroup(null);
-        },
+        item: { group },
         collect: (monitor) => ({
             isDragging: monitor.isDragging(),
         }),
+        // Begin and end are not needed here, but we can handle setting the dragging state
+        // using the useDrag's item prop (this is done in the useDrag hook itself)
+        item: { 
+            group,
+            begin: () => {
+                // Set dragging state when drag begins
+                setDraggingGroup(group);
+            },
+            end: () => {
+                // Clear dragging state when drag operation ends
+                setDraggingGroup(null);
+            }
+        }
     });
 
     return (
