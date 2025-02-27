@@ -124,7 +124,7 @@ const SeatingArrangement = () => {
             setPeopleInput('');
             // Don't reset group input if we're adding multiple people to the same group
         } else {
-            alert('Խնդրում ենք լրացնել բոլոր դաշտերը։');
+            alert('Пожалуйста, заполните все поля.');
         }
     };
 
@@ -202,7 +202,7 @@ const SeatingArrangement = () => {
             }));
 
         if (newTables.length === 0) {
-            alert('Բոլոր խմբերն արդեն նստած են սեղանների մոտ կամ հասանելի մարդիկ չկան:');
+            alert('Все группы уже рассажены за столами или нет доступных людей.');
             return;
         }
 

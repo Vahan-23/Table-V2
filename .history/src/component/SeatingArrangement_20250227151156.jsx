@@ -124,7 +124,7 @@ const SeatingArrangement = () => {
             setPeopleInput('');
             // Don't reset group input if we're adding multiple people to the same group
         } else {
-            alert('Խնդրում ենք լրացնել բոլոր դաշտերը։');
+            alert('Пожалуйста, заполните все поля.');
         }
     };
 
@@ -202,7 +202,7 @@ const SeatingArrangement = () => {
             }));
 
         if (newTables.length === 0) {
-            alert('Բոլոր խմբերն արդեն նստած են սեղանների մոտ կամ հասանելի մարդիկ չկան:');
+            alert('Все группы уже рассажены за столами или нет доступных людей.');
             return;
         }
 
@@ -347,373 +347,371 @@ const SeatingArrangement = () => {
     return (
         <DndProvider backend={HTML5Backend}>
         <div className="app-container">
-        <header className="app-header" style={{
-    background: 'linear-gradient(135deg, rgb(22 22 13) 0%, rgb(37, 117, 252) 100%)',
-    padding: '20px',
-    borderRadius: '0 0 15px 15px',
-    boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1)',
-    marginBottom: '20px'
-}}>
-    <div className="header-content">
-        <div className="logo" style={{
-            color: 'white',
-            fontSize: '28px',
-            fontWeight: 'bold',
-            textShadow: '2px 2px 4px rgba(0, 0, 0, 0.3)',
-            marginBottom: '15px'
-        }}>Նստատեղերի դասավորություն</div>
+            <header className="app-header" style={{
+                background: 'linear-gradient(135deg, #6a11cb 0%, #2575fc 100%)',
+                padding: '20px',
+                borderRadius: '0 0 15px 15px',
+                boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1)',
+                marginBottom: '20px'
+            }}>
+                <div className="header-content">
+                    <div className="logo" style={{
+                        color: 'white',
+                        fontSize: '28px',
+                        fontWeight: 'bold',
+                        textShadow: '2px 2px 4px rgba(0, 0, 0, 0.3)',
+                        marginBottom: '15px'
+                    }}>Նստատեղերի դասավորություն</div>
 
-        <div className="header-controls" style={{
-            background: 'rgba(255, 255, 255, 0.15)',
-            backdropFilter: 'blur(10px)',
-            padding: '15px',
-            borderRadius: '12px',
-            boxShadow: 'inset 0 1px 1px rgba(255, 255, 255, 0.1), 0 1px 2px rgba(0, 0, 0, 0.1)'
-        }}>
-            <div className="control-group">
-                <div className="input-group" style={{
-                    display: 'flex',
-                    gap: '10px',
-                    marginBottom: '15px'
-                }}>
-                    <input
-                        type="text"
-                        value={peopleInput}
-                        onChange={(e) => setPeopleInput(e.target.value)}
-                        placeholder="Անուն"
-                        style={{
-                            flex: '1',
-                            padding: '10px 15px',
-                            borderRadius: '8px',
-                            border: 'none',
-                            fontSize: '16px',
-                            boxShadow: '0 2px 5px rgba(0, 0, 0, 0.1)'
-                        }}
-                    />
-                    <div className="group-input-container" style={{ 
-                        position: 'relative',
-                        flex: '1'
-                    }} ref={groupDropdownRef}>
-                        <input
-                            type="text"
-                            value={groupInput}
-                            onChange={handleGroupInputChange}
-                            placeholder="Խումբ"
-                            onFocus={() => setShowGroupDropdown(true)}
-                            style={{
-                                width: '100%',
-                                padding: '10px 15px',
-                                borderRadius: '8px',
-                                border: 'none',
-                                fontSize: '16px',
-                                boxShadow: '0 2px 5px rgba(0, 0, 0, 0.1)'
-                            }}
-                        />
-                        {showGroupDropdown && (
-                            <div className="group-dropdown" style={{
-                                position: 'absolute',
-                                top: '100%',
-                                left: 0,
-                                width: '100%',
-                                maxHeight: '200px',
-                                overflowY: 'auto',
-                                zIndex: 10,
-                                backgroundColor: 'white',
-                                border: 'none',
-                                borderRadius: '8px',
-                                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-                                marginTop: '5px',
+                    <div className="header-controls" style={{
+                        background: 'rgba(255, 255, 255, 0.15)',
+                        backdropFilter: 'blur(10px)',
+                        padding: '15px',
+                        borderRadius: '12px',
+                        boxShadow: 'inset 0 1px 1px rgba(255, 255, 255, 0.1), 0 1px 2px rgba(0, 0, 0, 0.1)'
+                    }}>
+                        <div className="control-group">
+                            <div className="input-group" style={{
+                                display: 'flex',
+                                gap: '10px',
+                                marginBottom: '15px'
                             }}>
-                                {getExistingGroups().length > 0 ? (
-                                    <>
-                                        {getExistingGroups().map((group) => (
-                                            <div
-                                                key={group}
-                                                onClick={() => handleSelectGroup(group)}
-                                                style={{
-                                                    padding: '10px 15px',
-                                                    cursor: 'pointer',
-                                                    borderBottom: '1px solid #eee',
-                                                    transition: 'background-color 0.2s',
-                                                    hover: {
-                                                        backgroundColor: '#f5f5f5'
-                                                    }
-                                                }}
-                                                onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
-                                                onMouseLeave={(e) => e.target.style.backgroundColor = 'white'}
-                                            >
-                                                {group}
-                                            </div>
-                                        ))}
-                                        <div
-                                            style={{
-                                                padding: '10px 15px',
-                                                cursor: 'pointer',
-                                                backgroundColor: '#f0f0f0',
-                                                fontStyle: 'italic',
-                                                borderRadius: '0 0 8px 8px',
-                                                zIndex:"2"
-                                            }}
-                                            onClick={() => {
-                                                setIsCustomGroup(true);
-                                                setShowGroupDropdown(false);
-                                            }}
-                                        >
-                                            Նոր խումբ...
+                                <input
+                                    type="text"
+                                    value={peopleInput}
+                                    onChange={(e) => setPeopleInput(e.target.value)}
+                                    placeholder="Անուն"
+                                    style={{
+                                        flex: '1',
+                                        padding: '10px 15px',
+                                        borderRadius: '8px',
+                                        border: 'none',
+                                        fontSize: '16px',
+                                        boxShadow: '0 2px 5px rgba(0, 0, 0, 0.1)'
+                                    }}
+                                />
+                                <div className="group-input-container" style={{ 
+                                    position: 'relative',
+                                    flex: '1'
+                                }} ref={groupDropdownRef}>
+                                    <input
+                                        type="text"
+                                        value={groupInput}
+                                        onChange={handleGroupInputChange}
+                                        placeholder="Խումբ"
+                                        onFocus={() => setShowGroupDropdown(true)}
+                                        style={{
+                                            width: '100%',
+                                            padding: '10px 15px',
+                                            borderRadius: '8px',
+                                            border: 'none',
+                                            fontSize: '16px',
+                                            boxShadow: '0 2px 5px rgba(0, 0, 0, 0.1)'
+                                        }}
+                                    />
+                                    {showGroupDropdown && (
+                                        <div className="group-dropdown" style={{
+                                            position: 'absolute',
+                                            top: '100%',
+                                            left: 0,
+                                            width: '100%',
+                                            maxHeight: '200px',
+                                            overflowY: 'auto',
+                                            zIndex: 10,
+                                            backgroundColor: 'white',
+                                            border: 'none',
+                                            borderRadius: '8px',
+                                            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                                            marginTop: '5px'
+                                        }}>
+                                            {getExistingGroups().length > 0 ? (
+                                                <>
+                                                    {getExistingGroups().map((group) => (
+                                                        <div
+                                                            key={group}
+                                                            onClick={() => handleSelectGroup(group)}
+                                                            style={{
+                                                                padding: '10px 15px',
+                                                                cursor: 'pointer',
+                                                                borderBottom: '1px solid #eee',
+                                                                transition: 'background-color 0.2s',
+                                                                hover: {
+                                                                    backgroundColor: '#f5f5f5'
+                                                                }
+                                                            }}
+                                                            onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
+                                                            onMouseLeave={(e) => e.target.style.backgroundColor = 'white'}
+                                                        >
+                                                            {group}
+                                                        </div>
+                                                    ))}
+                                                    <div
+                                                        style={{
+                                                            padding: '10px 15px',
+                                                            cursor: 'pointer',
+                                                            backgroundColor: '#f0f0f0',
+                                                            fontStyle: 'italic',
+                                                            borderRadius: '0 0 8px 8px'
+                                                        }}
+                                                        onClick={() => {
+                                                            setIsCustomGroup(true);
+                                                            setShowGroupDropdown(false);
+                                                        }}
+                                                    >
+                                                        Новая группа...
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                <div style={{ padding: '10px 15px', color: '#666' }}>
+                                                    Нет существующих групп
+                                                </div>
+                                            )}
                                         </div>
-                                    </>
-                                ) : (
-                                    <div style={{ padding: '10px 15px', color: '#666' }}>
-                                        Առկա խմբեր չկան
-                                    </div>
-                                )}
+                                    )}
+                                </div>
+                                <button 
+                                    className="primary-btn" 
+                                    onClick={handleAddPerson}
+                                    style={{
+                                        padding: '10px 20px',
+                                        backgroundColor: '#2ecc71',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '8px',
+                                        fontWeight: 'bold',
+                                        cursor: 'pointer',
+                                        boxShadow: '0 2px 5px rgba(0, 0, 0, 0.1)',
+                                        transition: 'transform 0.2s, background-color 0.2s'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.target.style.backgroundColor = '#27ae60';
+                                        e.target.style.transform = 'translateY(-2px)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.target.style.backgroundColor = '#2ecc71';
+                                        e.target.style.transform = 'translateY(0)';
+                                    }}
+                                >
+                                    Ավելացնել մարդ
+                                </button>
                             </div>
-                        )}
+
+                            <div className="table-controls" style={{
+                                display: 'flex',
+                                gap: '10px',
+                                marginBottom: '15px'
+                            }}>
+                                <input
+                                    type="number"
+                                    value={chairCount}
+                                    onChange={handleChairCountChange}
+                                    min="1"
+                                    placeholder="Кол-во стульев"
+                                    style={{
+                                        width: '120px',
+                                        padding: '10px 15px',
+                                        borderRadius: '8px',
+                                        border: 'none',
+                                        fontSize: '16px',
+                                        boxShadow: '0 2px 5px rgba(0, 0, 0, 0.1)'
+                                    }}
+                                />
+                                <button 
+                                    className="primary-btn" 
+                                    onClick={handleAddTable}
+                                    style={{
+                                        flex: '1',
+                                        padding: '10px 15px',
+                                        backgroundColor: '#3498db',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '8px',
+                                        fontWeight: 'bold',
+                                        cursor: 'pointer',
+                                        boxShadow: '0 2px 5px rgba(0, 0, 0, 0.1)',
+                                        transition: 'transform 0.2s, background-color 0.2s'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.target.style.backgroundColor = '#2980b9';
+                                        e.target.style.transform = 'translateY(-2px)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.target.style.backgroundColor = '#3498db';
+                                        e.target.style.transform = 'translateY(0)';
+                                    }}
+                                >
+                                    Ավելացնել սեղան
+                                </button>
+                                <button 
+                                    className="primary-btn" 
+                                    onClick={createTablesForAllGroups}
+                                    style={{
+                                        flex: '2',
+                                        padding: '10px 15px',
+                                        backgroundColor: '#9b59b6',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '8px',
+                                        fontWeight: 'bold',
+                                        cursor: 'pointer',
+                                        boxShadow: '0 2px 5px rgba(0, 0, 0, 0.1)',
+                                        transition: 'transform 0.2s, background-color 0.2s'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.target.style.backgroundColor = '#8e44ad';
+                                        e.target.style.transform = 'translateY(-2px)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.target.style.backgroundColor = '#9b59b6';
+                                        e.target.style.transform = 'translateY(0)';
+                                    }}
+                                >
+                                    Ստեղծել սեղաններ բոլոր խմբերի համար
+                                </button>
+                            </div>
+
+                            <div className="bottom-controls" style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center'
+                            }}>
+                                <div className="save-controls" style={{
+                                    display: 'flex',
+                                    gap: '10px'
+                                }}>
+                                    <button 
+                                        className="secondary-btn" 
+                                        onClick={() => setPeople(getSeedData())}
+                                        style={{
+                                            padding: '8px 15px',
+                                            backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                                            color: 'white',
+                                            border: '1px solid rgba(255, 255, 255, 0.4)',
+                                            borderRadius: '6px',
+                                            cursor: 'pointer',
+                                            transition: 'background-color 0.2s'
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+                                        }}
+                                    >
+                                        SEED DATA
+                                    </button>
+                                    <button 
+                                        className="secondary-btn" 
+                                        onClick={() => setPeople([])}
+                                        style={{
+                                            padding: '8px 15px',
+                                            backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                                            color: 'white',
+                                            border: '1px solid rgba(255, 255, 255, 0.4)',
+                                            borderRadius: '6px',
+                                            cursor: 'pointer',
+                                            transition: 'background-color 0.2s'
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+                                        }}
+                                    >
+                                        CLEAR DATA
+                                    </button>
+                                </div>
+
+                                <div className="zoom-controls" style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                                    padding: '5px 10px',
+                                    borderRadius: '6px'
+                                }}>
+                                    <button 
+                                        onClick={() => setZoom((z) => Math.min(z + 0.1, 2))}
+                                        style={{
+                                            width: '30px',
+                                            height: '30px',
+                                            borderRadius: '50%',
+                                            border: 'none',
+                                            backgroundColor: 'rgba(255, 255, 255, 0.3)',
+                                            color: 'white',
+                                            fontSize: '18px',
+                                            fontWeight: 'bold',
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            justifyContent: 'center',
+                                            alignItems: 'center'
+                                        }}
+                                    >+</button>
+                                    <span style={{ color: 'white', fontWeight: 'bold' }}>
+                                        {Math.round(zoom * 100)}%
+                                    </span>
+                                    <button 
+                                        onClick={() => setZoom((z) => Math.max(z - 0.1, 0.5))}
+                                        style={{
+                                            width: '30px',
+                                            height: '30px',
+                                            borderRadius: '50%',
+                                            border: 'none',
+                                            backgroundColor: 'rgba(255, 255, 255, 0.3)',
+                                            color: 'white',
+                                            fontSize: '18px',
+                                            fontWeight: 'bold',
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            justifyContent: 'center',
+                                            alignItems: 'center'
+                                        }}
+                                    >-</button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <button 
-                        className="primary-btn" 
-                        onClick={handleAddPerson}
-                        style={{
-                            marginLeft: "30px",
-                            padding: '21px 20px',
-                            backgroundColor: '#2ecc71',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '8px',
-                            fontWeight: 'bold',
-                            cursor: 'pointer',
-                            boxShadow: '0 2px 5px rgba(0, 0, 0, 0.1)',
-                            transition: 'transform 0.2s, background-color 0.2s'
-                        }}
-                        onMouseEnter={(e) => {
-                            e.target.style.backgroundColor = '#27ae60';
-                            e.target.style.transform = 'translateY(-2px)';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.target.style.backgroundColor = '#2ecc71';
-                            e.target.style.transform = 'translateY(0)';
-                        }}
-                    >
-                        Ավելացնել մարդ
-                    </button>
                 </div>
 
-                <div className="table-controls" style={{
-                    display: 'flex',
-                    gap: '10px',
-                    marginBottom: '15px'
+                <div className="groups-container" style={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                    backdropFilter: 'blur(5px)',
+                    borderRadius: '12px',
+                    padding: '15px',
+                    marginTop: '15px',
+                    boxShadow: '0 2px 10px rgba(0, 0, 0, 0.1)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)'
                 }}>
-                    <input
-                        type="number"
-                        value={chairCount}
-                        onChange={handleChairCountChange}
-                        min="1"
-                        placeholder="Кол-во стульев"
-                        style={{
-                            width: '120px',
-                            padding: '10px 15px',
-                            borderRadius: '8px',
-                            border: 'none',
-                            fontSize: '16px',
-                            boxShadow: '0 2px 5px rgba(0, 0, 0, 0.1)'
-                        }}
-                    />
-                    <button 
-                        className="primary-btn" 
-                        onClick={handleAddTable}
-                        style={{
-                            flex: '1',
-                            padding: '21px 15px',
-                            backgroundColor: '#3498db',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '8px',
-                            fontWeight: 'bold',
-                            cursor: 'pointer',
-                            boxShadow: '0 2px 5px rgba(0, 0, 0, 0.1)',
-                            transition: 'transform 0.2s, background-color 0.2s'
-                        }}
-                        onMouseEnter={(e) => {
-                            e.target.style.backgroundColor = '#2980b9';
-                            e.target.style.transform = 'translateY(-2px)';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.target.style.backgroundColor = '#3498db';
-                            e.target.style.transform = 'translateY(0)';
-                        }}
-                    >
-                        Ավելացնել սեղան
-                    </button>
-                    <button 
-                        className="primary-btn" 
-                        onClick={createTablesForAllGroups}
-                        style={{
-                            flex: '2',
-                            padding: '13px 15px',
-                            backgroundColor: '#9b59b6',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '8px',
-                            fontWeight: 'bold',
-                            cursor: 'pointer',
-                            boxShadow: '0 2px 5px rgba(0, 0, 0, 0.1)',
-                            transition: 'transform 0.2s, background-color 0.2s'
-                        }}
-                        onMouseEnter={(e) => {
-                            e.target.style.backgroundColor = '#8e44ad';
-                            e.target.style.transform = 'translateY(-2px)';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.target.style.backgroundColor = '#9b59b6';
-                            e.target.style.transform = 'translateY(0)';
-                        }}
-                    >
-                        Ստեղծել սեղաններ բոլոր խմբերի համար
-                    </button>
-                </div>
-
-                <div className="bottom-controls" style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
-                }}>
-                    <div className="save-controls" style={{
+                    <div className="groups-header" style={{
                         display: 'flex',
+                        flexDirection: 'column',
                         gap: '10px'
                     }}>
-                        <button 
-                            className="secondary-btn" 
-                            onClick={() => setPeople(getSeedData())}
-                            style={{
-                                padding: '8px 15px',
-                                backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                                color: 'white',
-                                border: '1px solid rgba(255, 255, 255, 0.4)',
-                                borderRadius: '6px',
-                                cursor: 'pointer',
-                                transition: 'background-color 0.2s'
-                            }}
-                            onMouseEnter={(e) => {
-                                e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
-                            }}
-                        >
-                            SEED DATA
-                        </button>
-                        <button 
-                            className="secondary-btn" 
-                            onClick={() => setPeople([])}
-                            style={{
-                                padding: '8px 15px',
-                                backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                                color: 'white',
-                                border: '1px solid rgba(255, 255, 255, 0.4)',
-                                borderRadius: '6px',
-                                cursor: 'pointer',
-                                transition: 'background-color 0.2s'
-                            }}
-                            onMouseEnter={(e) => {
-                                e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
-                            }}
-                        >
-                            CLEAR DATA
-                        </button>
-                    </div>
-
-                    <div className="zoom-controls" style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                        padding: '5px 10px',
-                        borderRadius: '6px'
-                    }}>
-                        <button 
-                            onClick={() => setZoom((z) => Math.min(z + 0.1, 2))}
-                            style={{
-                                width: '30px',
-                                height: '30px',
-                                borderRadius: '50%',
-                                border: 'none',
-                                backgroundColor: 'rgba(255, 255, 255, 0.3)',
-                                color: 'white',
-                                fontSize: '18px',
-                                fontWeight: 'bold',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                justifyContent: 'center',
-                                alignItems: 'center'
-                            }}
-                        >+</button>
-                        <span style={{ color: 'white', fontWeight: 'bold' }}>
-                            {Math.round(zoom * 100)}%
-                        </span>
-                        <button 
-                            onClick={() => setZoom((z) => Math.max(z - 0.1, 0.5))}
-                            style={{
-                                width: '30px',
-                                height: '30px',
-                                borderRadius: '50%',
-                                border: 'none',
-                                backgroundColor: 'rgba(255, 255, 255, 0.3)',
-                                color: 'white',
-                                fontSize: '18px',
-                                fontWeight: 'bold',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                justifyContent: 'center',
-                                alignItems: 'center'
-                            }}
-                        >-</button>
+                        <h3 style={{
+                            margin: '0 0 10px 0',
+                            fontSize: '20px',
+                            color: 'white',
+                            fontWeight: '600',
+                            borderBottom: '2px solid rgba(255, 255, 255, 0.5)',
+                            paddingBottom: '5px',
+                            display: 'inline-block'
+                        }}>Խմբեր</h3>
+                        <div className="groups-wrapper" style={{
+                            display: 'flex',
+                            flexWrap: 'nowrap',
+                            gap: '12px',
+                            overflowX: 'auto',
+                            padding: '5px 0',
+                            maxHeight: '100px',
+                            maxWidth: '100%',
+                            scrollbarWidth: 'thin',
+                            scrollbarColor: 'rgba(255, 255, 255, 0.5) transparent'
+                        }}>
+                            {renderGroups()}
+                        </div>
                     </div>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <div className="groups-container" style={{
-        backgroundColor: 'rgba(255, 255, 255, 0.1)',
-        // backdropFilter: 'blur(5px)',
-        borderRadius: '12px',
-        padding: '15px',
-        marginTop: '15px',
-        boxShadow: '0 2px 10px rgba(0, 0, 0, 0.1)',
-        border: '1px solid rgba(255, 255, 255, 0.2)'
-    }}>
-        <div className="groups-header" style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '10px'
-        }}>
-            <h3 style={{
-                margin: '0 0 10px 0',
-                fontSize: '20px',
-                color: 'white',
-                fontWeight: '600',
-                borderBottom: '2px solid rgba(255, 255, 255, 0.5)',
-                paddingBottom: '5px',
-                display: 'inline-block'
-            }}>Խմբեր</h3>
-            <div className="groups-wrapper" style={{
-                display: 'flex',
-                flexWrap: 'nowrap',
-                gap: '12px',
-                overflowX: 'auto',
-                padding: '5px 0',
-                maxHeight: '100px',
-                maxWidth: '100%',
-                scrollbarWidth: 'thin',
-                scrollbarColor: 'rgba(255, 255, 255, 0.5) transparent'
-            }}>
-                {renderGroups()}
-            </div>
-        </div>
-    </div>
 </header>
 
                 <div className="main-content">

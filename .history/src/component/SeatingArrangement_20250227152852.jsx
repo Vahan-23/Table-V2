@@ -124,7 +124,7 @@ const SeatingArrangement = () => {
             setPeopleInput('');
             // Don't reset group input if we're adding multiple people to the same group
         } else {
-            alert('Խնդրում ենք լրացնել բոլոր դաշտերը։');
+            alert('Пожалуйста, заполните все поля.');
         }
     };
 

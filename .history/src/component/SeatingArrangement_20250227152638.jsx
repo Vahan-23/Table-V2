@@ -124,7 +124,7 @@ const SeatingArrangement = () => {
             setPeopleInput('');
             // Don't reset group input if we're adding multiple people to the same group
         } else {
-            alert('Խնդրում ենք լրացնել բոլոր դաշտերը։');
+            alert('Пожалуйста, заполните все поля.');
         }
     };
 
@@ -202,7 +202,7 @@ const SeatingArrangement = () => {
             }));
 
         if (newTables.length === 0) {
-            alert('Բոլոր խմբերն արդեն նստած են սեղանների մոտ կամ հասանելի մարդիկ չկան:');
+            alert('Все группы уже рассажены за столами или нет доступных людей.');
             return;
         }
 
@@ -348,7 +348,7 @@ const SeatingArrangement = () => {
         <DndProvider backend={HTML5Backend}>
         <div className="app-container">
         <header className="app-header" style={{
-    background: 'linear-gradient(135deg, rgb(22 22 13) 0%, rgb(37, 117, 252) 100%)',
+    background: 'linear-gradient(135deg, #6a11cb 0%, #2575fc 100%)',
     padding: '20px',
     borderRadius: '0 0 15px 15px',
     boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1)',
