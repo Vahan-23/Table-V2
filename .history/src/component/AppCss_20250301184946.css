@@ -6,6 +6,10 @@
     margin-bottom: 20px;
 }
 
+.header-content {
+    /* Header content layout */
+}
+
 .logo {
     color: white;
     font-size: 28px;
@@ -326,7 +330,7 @@
     background-color: #e6eef5;
     flex: 1;
     min-height: 600px;
-    /* background-color: #f0f0f0; */
+    background-color: #f0f0f0;
     border-radius: 8px;
     padding: 20px;
     position: relative;
@@ -541,8 +545,8 @@
 }
 
 .table-container {
-    /* width: 320px;
-    height: 320px; */
+    width: 320px;
+    height: 320px;
     margin-bottom: 20px;
     flex-shrink: 0;
 }

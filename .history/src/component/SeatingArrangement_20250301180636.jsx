@@ -13,6 +13,8 @@ const SeatingArrangement = () => {
     const [showGroups, setShowGroups] = useState(true);
     const [draggingGroup, setDraggingGroup] = useState(null);
     const [zoom, setZoom] = useState(1);
+    const [containerDimensions, setContainerDimensions] = useState({ width: 0, height: 0 });
+    const tablesAreaRef = useRef(null);
     const [chairCount, setChairCount] = useState(12);
     const [selectedTableId, setSelectedTableId] = useState(null);
     const [selectedChairIndex, setSelectedChairIndex] = useState(null);
@@ -21,9 +23,30 @@ const SeatingArrangement = () => {
     const [personToRemove, setPersonToRemove] = useState(null);
     const [showGroupDropdown, setShowGroupDropdown] = useState(false);
     const [isCustomGroup, setIsCustomGroup] = useState(false);
-    const tablesAreaRef = useRef(null);
+
     // Add this new ref for the dropdown
     const groupDropdownRef = useRef(null);
+
+
+    useEffect(() => {
+        const updateDimensions = () => {
+            if (tablesAreaRef.current) {
+                setContainerDimensions({
+                    width: tablesAreaRef.current.clientWidth,
+                    height: tablesAreaRef.current.clientHeight
+                });
+            }
+        };
+
+        // Initial measurement
+        updateDimensions();
+
+        // Update on window resize
+        window.addEventListener('resize', updateDimensions);
+
+        // Clean up
+        return () => window.removeEventListener('resize', updateDimensions);
+    }, []);
 
     useEffect(() => {
         function handleClickOutside(event) {
@@ -90,22 +113,62 @@ const SeatingArrangement = () => {
         return () => window.removeEventListener("wheel", handleWheel);
     }, []);
 
-    const handleZoomIn = () => {
-        setZoom((prevZoom) => Math.min(prevZoom + 0.1, 1.5));
-    };
-
-    const handleZoomOut = () => {
-        setZoom((prevZoom) => Math.max(prevZoom - 0.1, 0.2));
-    };
-
     const handleWheel = (e) => {
         if (e.ctrlKey) {
             e.preventDefault();
             setZoom((prevZoom) => {
+                const tablesArea = tablesAreaRef.current;
+                const contentWidth = tablesArea?.scrollWidth || 0;
+                const contentHeight = tablesArea?.scrollHeight || 0;
+                const containerWidth = containerDimensions.width;
+                const containerHeight = containerDimensions.height;
+
+                // Calculate the new zoom level
                 let newZoom = prevZoom + (e.deltaY > 0 ? -0.1 : 0.1);
-                return Math.min(Math.max(newZoom, 0.2), 1.5);
+
+                // Make sure zoom doesn't go below 0.5
+                newZoom = Math.max(newZoom, 0.5);
+
+                // Calculate if the scaled content would fit in the container
+                const scaledWidth = contentWidth * newZoom;
+                const scaledHeight = contentHeight * newZoom;
+
+                // Limit zoom to prevent content from exceeding container boundaries
+                // Add a small margin to prevent content from touching the edges
+                const maxZoomWidth = (containerWidth * 0.9) / contentWidth;
+                const maxZoomHeight = (containerHeight * 0.9) / contentHeight;
+                const maxZoom = Math.min(maxZoomWidth, maxZoomHeight, 2);
+
+                return Math.min(newZoom, maxZoom);
             });
         }
+    };
+    const handleZoomIn = () => {
+        setZoom((prevZoom) => {
+            const tablesArea = tablesAreaRef.current;
+            const contentWidth = tablesArea?.scrollWidth || 0;
+            const contentHeight = tablesArea?.scrollHeight || 0;
+            const containerWidth = containerDimensions.width;
+            const containerHeight = containerDimensions.height;
+
+            // Calculate the new zoom level
+            let newZoom = prevZoom + 0.1;
+
+            // Calculate if the scaled content would fit in the container
+            const scaledWidth = contentWidth * newZoom;
+            const scaledHeight = contentHeight * newZoom;
+
+            // Limit zoom to prevent content from exceeding container boundaries
+            const maxZoomWidth = (containerWidth * 0.9) / contentWidth;
+            const maxZoomHeight = (containerHeight * 0.9) / contentHeight;
+            const maxZoom = Math.min(maxZoomWidth, maxZoomHeight, 2);
+
+            return Math.min(newZoom, maxZoom);
+        });
+    };
+
+    const handleZoomOut = () => {
+        setZoom((prevZoom) => Math.max(prevZoom - 0.1, 0.5));
     };
 
     useEffect(() => {
@@ -510,49 +573,33 @@ const SeatingArrangement = () => {
                                 ))}
                             </div>
                         </div>
-
                     </div>
 
-                    <div className="tables-area-container" style={{
-                        position: 'relative',
-                        width: '100%',
-                        height: '100%',
-                    }}>
-                        {/* This div will be scaled */}
-                        <div className="tables-area" style={{
-                            transform: `scale(${zoom})`,
-                            transformOrigin: 'top left',
-                            display: 'flex',
-                            flexWrap: 'wrap',
-                            gap: '20px',
-                            padding: '20px',
-                            width: `${100 / zoom}%`,
-                            minHeight: `${100 / zoom}%`,
-                            justifyContent: "center"
-                        }}>
-                            {draggingGroup && (
-                                <NewTable
-                                    draggingGroup={draggingGroup}
-                                    setTables={setTables}
-                                    setDraggingGroup={setDraggingGroup}
-                                    setPeople={setPeople}
-                                />
-                            )}
+                    <div className="tables-area" ref={tablesAreaRef} style={{ transform: `scale(${zoom})`, transformOrigin: "center" , transformOrigin: "center" }}>
+                        {/* Show NewTable component only when a group is being dragged */}
+                        {draggingGroup && (
+                            <NewTable
+                                draggingGroup={draggingGroup}
+                                setTables={setTables}
+                                setDraggingGroup={setDraggingGroup}
+                                setPeople={setPeople}
+                            />
+                        )}
 
-                            {tables.map((table) => (
-                                <Table
-                                    key={table.id}
-                                    table={table}
-                                    setTables={setTables}
-                                    handleDeleteTable={handleDeleteTable}
-                                    draggingGroup={draggingGroup}
-                                    setDraggingGroup={setDraggingGroup}
-                                    people={people}
-                                    setPeople={setPeople}
-                                    onChairClick={(chairIndex) => handleChairClick(table.id, chairIndex)}
-                                />
-                            ))}
-                        </div>
+                        {/* Render existing tables */}
+                        {tables.map((table) => (
+                            <Table
+                                key={table.id}
+                                table={table}
+                                setTables={setTables}
+                                handleDeleteTable={handleDeleteTable}
+                                draggingGroup={draggingGroup}
+                                setDraggingGroup={setDraggingGroup}
+                                people={people}
+                                setPeople={setPeople}
+                                onChairClick={(chairIndex) => handleChairClick(table.id, chairIndex)}
+                            />
+                        ))}
                     </div>
                 </div>
 

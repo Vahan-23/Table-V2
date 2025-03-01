@@ -13,6 +13,8 @@ const SeatingArrangement = () => {
     const [showGroups, setShowGroups] = useState(true);
     const [draggingGroup, setDraggingGroup] = useState(null);
     const [zoom, setZoom] = useState(1);
+    const [containerDimensions, setContainerDimensions] = useState({ width: 0, height: 0 });
+    const tablesAreaRef = useRef(null);
     const [chairCount, setChairCount] = useState(12);
     const [selectedTableId, setSelectedTableId] = useState(null);
     const [selectedChairIndex, setSelectedChairIndex] = useState(null);
@@ -21,10 +23,31 @@ const SeatingArrangement = () => {
     const [personToRemove, setPersonToRemove] = useState(null);
     const [showGroupDropdown, setShowGroupDropdown] = useState(false);
     const [isCustomGroup, setIsCustomGroup] = useState(false);
-    const tablesAreaRef = useRef(null);
+
     // Add this new ref for the dropdown
     const groupDropdownRef = useRef(null);
 
+
+    useEffect(() => {
+        const updateDimensions = () => {
+          if (tablesAreaRef.current) {
+            setContainerDimensions({
+              width: tablesAreaRef.current.clientWidth,
+              height: tablesAreaRef.current.clientHeight
+            });
+          }
+        };
+        
+        // Initial measurement
+        updateDimensions();
+        
+        // Update on window resize
+        window.addEventListener('resize', updateDimensions);
+        
+        // Clean up
+        return () => window.removeEventListener('resize', updateDimensions);
+      }, []);
+      
     useEffect(() => {
         function handleClickOutside(event) {
             if (groupDropdownRef.current && !groupDropdownRef.current.contains(event.target)) {
@@ -90,20 +113,12 @@ const SeatingArrangement = () => {
         return () => window.removeEventListener("wheel", handleWheel);
     }, []);
 
-    const handleZoomIn = () => {
-        setZoom((prevZoom) => Math.min(prevZoom + 0.1, 1.5));
-    };
-
-    const handleZoomOut = () => {
-        setZoom((prevZoom) => Math.max(prevZoom - 0.1, 0.2));
-    };
-
     const handleWheel = (e) => {
         if (e.ctrlKey) {
             e.preventDefault();
             setZoom((prevZoom) => {
                 let newZoom = prevZoom + (e.deltaY > 0 ? -0.1 : 0.1);
-                return Math.min(Math.max(newZoom, 0.2), 1.5);
+                return Math.min(Math.max(newZoom, 0.5), 2); // Ограничиваем от 0.5x до 2x
             });
         }
     };
@@ -464,14 +479,14 @@ const SeatingArrangement = () => {
                                     <div className="zoom-controls">
                                         <button
                                             className="zoom-btn zoom-in-btn"
-                                            onClick={handleZoomIn}
+                                            onClick={() => setZoom((z) => Math.min(z + 0.1, 2))}
                                         >+</button>
                                         <span className="zoom-percentage">
                                             {Math.round(zoom * 100)}%
                                         </span>
                                         <button
                                             className="zoom-btn zoom-out-btn"
-                                            onClick={handleZoomOut}
+                                            onClick={() => setZoom((z) => Math.max(z - 0.1, 0.5))}
                                         >-</button>
                                     </div>
                                 </div>
@@ -510,49 +525,33 @@ const SeatingArrangement = () => {
                                 ))}
                             </div>
                         </div>
-
                     </div>
 
-                    <div className="tables-area-container" style={{
-                        position: 'relative',
-                        width: '100%',
-                        height: '100%',
-                    }}>
-                        {/* This div will be scaled */}
-                        <div className="tables-area" style={{
-                            transform: `scale(${zoom})`,
-                            transformOrigin: 'top left',
-                            display: 'flex',
-                            flexWrap: 'wrap',
-                            gap: '20px',
-                            padding: '20px',
-                            width: `${100 / zoom}%`,
-                            minHeight: `${100 / zoom}%`,
-                            justifyContent: "center"
-                        }}>
-                            {draggingGroup && (
-                                <NewTable
-                                    draggingGroup={draggingGroup}
-                                    setTables={setTables}
-                                    setDraggingGroup={setDraggingGroup}
-                                    setPeople={setPeople}
-                                />
-                            )}
+                    <div className="tables-area" style={{ transform: `scale(${zoom})`, transformOrigin: "center" }}>
+                        {/* Show NewTable component only when a group is being dragged */}
+                        {draggingGroup && (
+                            <NewTable
+                                draggingGroup={draggingGroup}
+                                setTables={setTables}
+                                setDraggingGroup={setDraggingGroup}
+                                setPeople={setPeople}
+                            />
+                        )}
 
-                            {tables.map((table) => (
-                                <Table
-                                    key={table.id}
-                                    table={table}
-                                    setTables={setTables}
-                                    handleDeleteTable={handleDeleteTable}
-                                    draggingGroup={draggingGroup}
-                                    setDraggingGroup={setDraggingGroup}
-                                    people={people}
-                                    setPeople={setPeople}
-                                    onChairClick={(chairIndex) => handleChairClick(table.id, chairIndex)}
-                                />
-                            ))}
-                        </div>
+                        {/* Render existing tables */}
+                        {tables.map((table) => (
+                            <Table
+                                key={table.id}
+                                table={table}
+                                setTables={setTables}
+                                handleDeleteTable={handleDeleteTable}
+                                draggingGroup={draggingGroup}
+                                setDraggingGroup={setDraggingGroup}
+                                people={people}
+                                setPeople={setPeople}
+                                onChairClick={(chairIndex) => handleChairClick(table.id, chairIndex)}
+                            />
+                        ))}
                     </div>
                 </div>
 

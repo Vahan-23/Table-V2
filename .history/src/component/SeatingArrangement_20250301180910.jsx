@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect , useRef } from 'react';
 import { useDrag, useDrop } from 'react-dnd';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
@@ -21,7 +21,7 @@ const SeatingArrangement = () => {
     const [personToRemove, setPersonToRemove] = useState(null);
     const [showGroupDropdown, setShowGroupDropdown] = useState(false);
     const [isCustomGroup, setIsCustomGroup] = useState(false);
-    const tablesAreaRef = useRef(null);
+
     // Add this new ref for the dropdown
     const groupDropdownRef = useRef(null);
 
@@ -36,7 +36,7 @@ const SeatingArrangement = () => {
         if (showGroupDropdown) {
             document.addEventListener("mousedown", handleClickOutside);
         }
-
+        
         // Clean up the event listener
         return () => {
             document.removeEventListener("mousedown", handleClickOutside);
@@ -90,20 +90,12 @@ const SeatingArrangement = () => {
         return () => window.removeEventListener("wheel", handleWheel);
     }, []);
 
-    const handleZoomIn = () => {
-        setZoom((prevZoom) => Math.min(prevZoom + 0.1, 1.5));
-    };
-
-    const handleZoomOut = () => {
-        setZoom((prevZoom) => Math.max(prevZoom - 0.1, 0.2));
-    };
-
     const handleWheel = (e) => {
         if (e.ctrlKey) {
             e.preventDefault();
             setZoom((prevZoom) => {
                 let newZoom = prevZoom + (e.deltaY > 0 ? -0.1 : 0.1);
-                return Math.min(Math.max(newZoom, 0.2), 1.5);
+                return Math.min(Math.max(newZoom, 0.5), 2); // Ограничиваем от 0.5x до 2x
             });
         }
     };
@@ -413,8 +405,8 @@ const SeatingArrangement = () => {
                                         )}
                                     </div>
 
-                                    <button
-                                        className="primary-btn add-person-btn"
+                                    <button 
+                                        className="primary-btn add-person-btn" 
                                         onClick={handleAddPerson}
                                     >
                                         Ավելացնել մարդ
@@ -430,15 +422,15 @@ const SeatingArrangement = () => {
                                         placeholder="Кол-во стульев"
                                         className="chair-count-input"
                                     />
-                                    <button
-                                        className="primary-btn add-table-btn"
+                                    <button 
+                                        className="primary-btn add-table-btn" 
                                         onClick={handleAddTable}
                                     >
                                         Ավելացնել սեղան
                                     </button>
 
-                                    <button
-                                        className="primary-btn create-all-tables-btn"
+                                    <button 
+                                        className="primary-btn create-all-tables-btn" 
                                         onClick={createTablesForAllGroups}
                                     >
                                         Ստեղծել սեղաններ բոլոր խմբերի համար
@@ -447,14 +439,14 @@ const SeatingArrangement = () => {
 
                                 <div className="bottom-controls">
                                     <div className="save-controls">
-                                        <button
-                                            className="secondary-btn seed-data-btn"
+                                        <button 
+                                            className="secondary-btn seed-data-btn" 
                                             onClick={() => setPeople(getSeedData())}
                                         >
                                             SEED DATA
                                         </button>
-                                        <button
-                                            className="secondary-btn clear-data-btn"
+                                        <button 
+                                            className="secondary-btn clear-data-btn" 
                                             onClick={() => setPeople([])}
                                         >
                                             CLEAR DATA
@@ -462,16 +454,16 @@ const SeatingArrangement = () => {
                                     </div>
 
                                     <div className="zoom-controls">
-                                        <button
+                                        <button 
                                             className="zoom-btn zoom-in-btn"
-                                            onClick={handleZoomIn}
+                                            onClick={() => setZoom((z) => Math.min(z + 0.1, 2))}
                                         >+</button>
                                         <span className="zoom-percentage">
                                             {Math.round(zoom * 100)}%
                                         </span>
-                                        <button
+                                        <button 
                                             className="zoom-btn zoom-out-btn"
-                                            onClick={handleZoomOut}
+                                            onClick={() => setZoom((z) => Math.max(z - 0.1, 0.5))}
                                         >-</button>
                                     </div>
                                 </div>
@@ -510,52 +502,36 @@ const SeatingArrangement = () => {
                                 ))}
                             </div>
                         </div>
-
                     </div>
 
-                    <div className="tables-area-container" style={{
-                        position: 'relative',
-                        width: '100%',
-                        height: '100%',
-                    }}>
-                        {/* This div will be scaled */}
-                        <div className="tables-area" style={{
-                            transform: `scale(${zoom})`,
-                            transformOrigin: 'top left',
-                            display: 'flex',
-                            flexWrap: 'wrap',
-                            gap: '20px',
-                            padding: '20px',
-                            width: `${100 / zoom}%`,
-                            minHeight: `${100 / zoom}%`,
-                            justifyContent: "center"
-                        }}>
-                            {draggingGroup && (
-                                <NewTable
-                                    draggingGroup={draggingGroup}
-                                    setTables={setTables}
-                                    setDraggingGroup={setDraggingGroup}
-                                    setPeople={setPeople}
-                                />
-                            )}
+                    <div className="tables-area" style={{ transform: `scale(${zoom})`, transformOrigin: "center" }}>
+                        {/* Show NewTable component only when a group is being dragged */}
+                        {draggingGroup && (
+                            <NewTable
+                                draggingGroup={draggingGroup}
+                                setTables={setTables}
+                                setDraggingGroup={setDraggingGroup}
+                                setPeople={setPeople}
+                            />
+                        )}
 
-                            {tables.map((table) => (
-                                <Table
-                                    key={table.id}
-                                    table={table}
-                                    setTables={setTables}
-                                    handleDeleteTable={handleDeleteTable}
-                                    draggingGroup={draggingGroup}
-                                    setDraggingGroup={setDraggingGroup}
-                                    people={people}
-                                    setPeople={setPeople}
-                                    onChairClick={(chairIndex) => handleChairClick(table.id, chairIndex)}
-                                />
-                            ))}
-                        </div>
+                        {/* Render existing tables */}
+                        {tables.map((table) => (
+                            <Table
+                                key={table.id}
+                                table={table}
+                                setTables={setTables}
+                                handleDeleteTable={handleDeleteTable}
+                                draggingGroup={draggingGroup}
+                                setDraggingGroup={setDraggingGroup}
+                                people={people}
+                                setPeople={setPeople}
+                                onChairClick={(chairIndex) => handleChairClick(table.id, chairIndex)}
+                            />
+                        ))}
                     </div>
                 </div>
-
+               
                 {/* Fullscreen popup */}
                 {isPopupVisible && (
                     <div
@@ -655,7 +631,7 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
                 );
             } else {
                 alert(`Սեղանին չի կարող լինել ավելի քան ${table.chairCount} մարդ:`);
-
+                
             }
         }
     });
@@ -797,7 +773,7 @@ const NewTable = ({ draggingGroup, setTables, setDraggingGroup, setPeople }) => 
 
             setTables((prevTables) => [newTable, ...prevTables]);
             setPeople((prevPeople) =>
-                prevPeople.filter((person) =>
+                prevPeople.filter((person) => 
                     !item.group.some((groupPerson) => groupPerson.name === person.name)
                 )
             );
@@ -846,6 +822,6 @@ const NewTable = ({ draggingGroup, setTables, setDraggingGroup, setPeople }) => 
     );
 };
 
-{/*part 5*/ }
+{/*part 5*/}
 
 export default SeatingArrangement;

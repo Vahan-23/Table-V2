@@ -1,9 +1,14 @@
+
 .app-header {
     background: linear-gradient(135deg, rgb(22 22 13) 0%, rgb(37, 117, 252) 100%);
     padding: 20px;
     border-radius: 0 0 15px 15px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
     margin-bottom: 20px;
+}
+
+.header-content {
+    /* Header content layout */
 }
 
 .logo {
@@ -133,7 +138,6 @@
     background-color: #2980b9;
     transform: translateY(-2px);
 }
-
 .create-all-tables-btn {
     flex: 2;
     padding: 13px 15px;
@@ -320,13 +324,9 @@
 
 /* Tables area */
 .tables-area {
-    background-image: linear-gradient(rgba(255, 255, 255, 0.8) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255, 255, 255, 0.8) 1px, transparent 1px);
-    background-size: 20px 20px;
-    background-color: #e6eef5;
     flex: 1;
     min-height: 600px;
-    /* background-color: #f0f0f0; */
+    background-color: #f0f0f0;
     border-radius: 8px;
     padding: 20px;
     position: relative;
@@ -371,7 +371,7 @@
     padding: 15px;
     border-radius: 8px;
     margin-bottom: 20px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .person-info-name {
@@ -484,65 +484,65 @@
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
     cursor: grab;
     transition: all 0.2s ease;
-}
-
-.group-card:hover {
+  }
+  
+  .group-card:hover {
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
     transform: translateY(-2px);
-}
-
-.group-card.dragging {
+  }
+  
+  .group-card.dragging {
     opacity: 0.5;
-}
-
-.group-name {
+  }
+  
+  .group-name {
     font-weight: bold;
     margin-bottom: 5px;
-}
-
-.group-count {
+  }
+  
+  .group-count {
     color: #666;
     font-size: 14px;
-}
-
-/* Стили для компонента NewTable */
-.new-table-dropzone {
+  }
+  
+  /* Стили для компонента NewTable */
+  .new-table-dropzone {
     margin-bottom: 20px;
     padding: 15px;
     border: 2px dashed #3498db;
     border-radius: 8px;
     background-color: rgba(52, 152, 219, 0.05);
     transition: all 0.3s ease;
-}
-
-.new-table-dropzone.hovered {
+  }
+  
+  .new-table-dropzone.hovered {
     background-color: rgba(52, 152, 219, 0.47);
-}
-
-.dropzone-content {
+  }
+  
+  .dropzone-content {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     text-align: center;
     padding: 20px;
-}
-
-.dropzone-icon {
+  }
+  
+  .dropzone-icon {
     font-size: 32px;
     color: #3498db;
     margin-bottom: 10px;
-}
-
-.dropzone-text {
+  }
+  
+  .dropzone-text {
     font-size: 16px;
     font-weight: bold;
     color: #333;
-}
+  }
 
-.table-container {
-    /* width: 320px;
-    height: 320px; */
+  .table-container {
+    width: 320px;
+    height: 320px;
     margin-bottom: 20px;
     flex-shrink: 0;
-}
+  }

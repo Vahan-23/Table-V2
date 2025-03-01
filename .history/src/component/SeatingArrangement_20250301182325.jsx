@@ -517,6 +517,7 @@ const SeatingArrangement = () => {
                         position: 'relative',
                         width: '100%',
                         height: '100%',
+                        overflow: 'auto'
                     }}>
                         {/* This div will be scaled */}
                         <div className="tables-area" style={{
@@ -527,8 +528,7 @@ const SeatingArrangement = () => {
                             gap: '20px',
                             padding: '20px',
                             width: `${100 / zoom}%`,
-                            minHeight: `${100 / zoom}%`,
-                            justifyContent: "center"
+                            minHeight: `${100 / zoom}%`
                         }}>
                             {draggingGroup && (
                                 <NewTable

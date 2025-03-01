@@ -513,46 +513,47 @@ const SeatingArrangement = () => {
 
                     </div>
 
-                    <div className="tables-area-container" style={{
+                    <div ref={tablesAreaRef} className="tables-area" style={{
                         position: 'relative',
                         width: '100%',
                         height: '100%',
+                        overflow: 'auto'  // Add scrollbars when needed
                     }}>
-                        {/* This div will be scaled */}
-                        <div className="tables-area" style={{
+                        <div className="tables-wrapper" style={{
                             transform: `scale(${zoom})`,
                             transformOrigin: 'top left',
                             display: 'flex',
                             flexWrap: 'wrap',
                             gap: '20px',
                             padding: '20px',
-                            width: `${100 / zoom}%`,
-                            minHeight: `${100 / zoom}%`,
-                            justifyContent: "center"
-                        }}>
-                            {draggingGroup && (
-                                <NewTable
-                                    draggingGroup={draggingGroup}
-                                    setTables={setTables}
-                                    setDraggingGroup={setDraggingGroup}
-                                    setPeople={setPeople}
-                                />
-                            )}
+                            width: `${100 / zoom}%`,  // Make the wrapper wider as we zoom out
+                            height: `${100 / zoom}%`, // Make the wrapper taller as we zoom out
+                            transition: 'transform 0.2s ease'
+                        }}></div>
+                        {/* Show NewTable component only when a group is being dragged */}
+                        {draggingGroup && (
+                            <NewTable
+                                draggingGroup={draggingGroup}
+                                setTables={setTables}
+                                setDraggingGroup={setDraggingGroup}
+                                setPeople={setPeople}
+                            />
+                        )}
 
-                            {tables.map((table) => (
-                                <Table
-                                    key={table.id}
-                                    table={table}
-                                    setTables={setTables}
-                                    handleDeleteTable={handleDeleteTable}
-                                    draggingGroup={draggingGroup}
-                                    setDraggingGroup={setDraggingGroup}
-                                    people={people}
-                                    setPeople={setPeople}
-                                    onChairClick={(chairIndex) => handleChairClick(table.id, chairIndex)}
-                                />
-                            ))}
-                        </div>
+                        {/* Render existing tables */}
+                        {tables.map((table) => (
+                            <Table
+                                key={table.id}
+                                table={table}
+                                setTables={setTables}
+                                handleDeleteTable={handleDeleteTable}
+                                draggingGroup={draggingGroup}
+                                setDraggingGroup={setDraggingGroup}
+                                people={people}
+                                setPeople={setPeople}
+                                onChairClick={(chairIndex) => handleChairClick(table.id, chairIndex)}
+                            />
+                        ))}
                     </div>
                 </div>
 

@@ -21,7 +21,7 @@ const SeatingArrangement = () => {
     const [personToRemove, setPersonToRemove] = useState(null);
     const [showGroupDropdown, setShowGroupDropdown] = useState(false);
     const [isCustomGroup, setIsCustomGroup] = useState(false);
-    const tablesAreaRef = useRef(null);
+
     // Add this new ref for the dropdown
     const groupDropdownRef = useRef(null);
 
@@ -464,14 +464,14 @@ const SeatingArrangement = () => {
                                     <div className="zoom-controls">
                                         <button
                                             className="zoom-btn zoom-in-btn"
-                                            onClick={handleZoomIn}
+                                            onClick={() => setZoom((z) => Math.min(z + 0.1, 2))}
                                         >+</button>
                                         <span className="zoom-percentage">
                                             {Math.round(zoom * 100)}%
                                         </span>
                                         <button
                                             className="zoom-btn zoom-out-btn"
-                                            onClick={handleZoomOut}
+                                            onClick={() => setZoom((z) => Math.max(z - 0.1, 0.5))}
                                         >-</button>
                                     </div>
                                 </div>
@@ -492,44 +492,37 @@ const SeatingArrangement = () => {
                 <div className="main-content">
                     <div className="sidebar">
                         <UnseatedPeopleList people={people} tables={tables} />
-
-                        <div className="people-list">
-                            <h3>Բոլոր մարդիկ</h3>
-                            <div className="people-grid">
-                                {people.map((person, index) => (
-                                    <div key={index} className="person-card">
-                                        <span className="person-name">{person.name}</span>
-                                        <span className="person-group">Խումբ {person.group}</span>
-                                        <button
-                                            onClick={() => handleDeletePerson(person.name)}
-                                            className="delete-btn"
-                                        >
-                                            ✕
-                                        </button>
-                                    </div>
-                                ))}
+                        <div
+                            ref={tablesAreaRef}
+                            className="tables-area"
+                            style={{
+                                position: 'relative',
+                                width: '100%',
+                                height: '100%',
+                                overflow: 'auto'  // Add scrollbars when needed
+                            }}
+                        >
+                            <div className="people-list">
+                                <h3>Բոլոր մարդիկ</h3>
+                                <div className="people-grid">
+                                    {people.map((person, index) => (
+                                        <div key={index} className="person-card">
+                                            <span className="person-name">{person.name}</span>
+                                            <span className="person-group">Խումբ {person.group}</span>
+                                            <button
+                                                onClick={() => handleDeletePerson(person.name)}
+                                                className="delete-btn"
+                                            >
+                                                ✕
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         </div>
 
-                    </div>
-
-                    <div className="tables-area-container" style={{
-                        position: 'relative',
-                        width: '100%',
-                        height: '100%',
-                    }}>
-                        {/* This div will be scaled */}
-                        <div className="tables-area" style={{
-                            transform: `scale(${zoom})`,
-                            transformOrigin: 'top left',
-                            display: 'flex',
-                            flexWrap: 'wrap',
-                            gap: '20px',
-                            padding: '20px',
-                            width: `${100 / zoom}%`,
-                            minHeight: `${100 / zoom}%`,
-                            justifyContent: "center"
-                        }}>
+                        <div className="tables-area" style={{ transform: `scale(${zoom})`, transformOrigin: "center" }}>
+                            {/* Show NewTable component only when a group is being dragged */}
                             {draggingGroup && (
                                 <NewTable
                                     draggingGroup={draggingGroup}
@@ -539,6 +532,7 @@ const SeatingArrangement = () => {
                                 />
                             )}
 
+                            {/* Render existing tables */}
                             {tables.map((table) => (
                                 <Table
                                     key={table.id}
@@ -554,82 +548,81 @@ const SeatingArrangement = () => {
                             ))}
                         </div>
                     </div>
-                </div>
 
-                {/* Fullscreen popup */}
-                {isPopupVisible && (
-                    <div
-                        className="fullscreen-popup"
-                        onClick={closePopup}
-                    >
+                    {/* Fullscreen popup */}
+                    {isPopupVisible && (
                         <div
-                            className="fullscreen-popup-content"
-                            onClick={(e) => e.stopPropagation()}
+                            className="fullscreen-popup"
+                            onClick={closePopup}
                         >
-                            {isRemoveMode ? (
-                                // Remove Person Modal
-                                <div className="remove-person-popup">
-                                    <h3 className="popup-title">Հեռացնե՞լ աթոռից:</h3>
+                            <div
+                                className="fullscreen-popup-content"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                {isRemoveMode ? (
+                                    // Remove Person Modal
+                                    <div className="remove-person-popup">
+                                        <h3 className="popup-title">Հեռացնե՞լ աթոռից:</h3>
 
-                                    <div className="person-info-card">
-                                        <p className="person-info-name">
-                                            {personToRemove?.name}
+                                        <div className="person-info-card">
+                                            <p className="person-info-name">
+                                                {personToRemove?.name}
+                                            </p>
+                                            <p className="person-info-group">
+                                                Խումբ {personToRemove?.group}
+                                            </p>
+                                        </div>
+
+                                        <p className="confirmation-text">
+                                            Վստա՞հ եք։, որ ցանկանում եք հեռացնել այս անձին աթոռից:
                                         </p>
-                                        <p className="person-info-group">
-                                            Խումբ {personToRemove?.group}
-                                        </p>
+
+                                        <div className="popup-buttons">
+                                            <button
+                                                onClick={handleRemovePerson}
+                                                className="remove-btn"
+                                            >
+                                                Հեռացնել
+                                            </button>
+
+                                            <button
+                                                onClick={closePopup}
+                                                className="cancel-btn"
+                                            >
+                                                Չեղարկել
+                                            </button>
+                                        </div>
                                     </div>
-
-                                    <p className="confirmation-text">
-                                        Վստա՞հ եք։, որ ցանկանում եք հեռացնել այս անձին աթոռից:
-                                    </p>
-
-                                    <div className="popup-buttons">
-                                        <button
-                                            onClick={handleRemovePerson}
-                                            className="remove-btn"
-                                        >
-                                            Հեռացնել
-                                        </button>
-
+                                ) : (
+                                    // Add Person Modal
+                                    <>
+                                        <h3 className="popup-title">Ընտրեք մարդ աթոռի համար</h3>
+                                        <div className="person-selection-grid">
+                                            {getAvailablePeople().length > 0 ? (
+                                                getAvailablePeople().map((person) => (
+                                                    <div
+                                                        key={person.name}
+                                                        className="person-selection-item"
+                                                        onClick={() => handleSelectPerson(person)}
+                                                    >
+                                                        <span className="person-selection-name">{person.name}</span>
+                                                        <span className="person-selection-group">Խումբ {person.group}</span>
+                                                    </div>
+                                                ))
+                                            ) : (
+                                                <div className="no-people-message">Հասանելի մարդիկ չկան</div>
+                                            )}
+                                        </div>
                                         <button
                                             onClick={closePopup}
-                                            className="cancel-btn"
-                                        >
-                                            Չեղարկել
-                                        </button>
-                                    </div>
-                                </div>
-                            ) : (
-                                // Add Person Modal
-                                <>
-                                    <h3 className="popup-title">Ընտրեք մարդ աթոռի համար</h3>
-                                    <div className="person-selection-grid">
-                                        {getAvailablePeople().length > 0 ? (
-                                            getAvailablePeople().map((person) => (
-                                                <div
-                                                    key={person.name}
-                                                    className="person-selection-item"
-                                                    onClick={() => handleSelectPerson(person)}
-                                                >
-                                                    <span className="person-selection-name">{person.name}</span>
-                                                    <span className="person-selection-group">Խումբ {person.group}</span>
-                                                </div>
-                                            ))
-                                        ) : (
-                                            <div className="no-people-message">Հասանելի մարդիկ չկան</div>
-                                        )}
-                                    </div>
-                                    <button
-                                        onClick={closePopup}
-                                        className="close-popup-btn"
-                                    >Փակել</button>
-                                </>
-                            )}
+                                            className="close-popup-btn"
+                                        >Փակել</button>
+                                    </>
+                                )}
+                            </div>
                         </div>
-                    </div>
-                )}
-            </div>
+                    )}
+                </div>
         </DndProvider>
     );
 };
