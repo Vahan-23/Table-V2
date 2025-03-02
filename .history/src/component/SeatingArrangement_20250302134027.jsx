@@ -3,7 +3,7 @@ import { useDrag, useDrop } from 'react-dnd';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import './App.css';
-// import './AppCss.css'
+import './AppCss.css'
 
 const SeatingArrangement = () => {
     const [tables, setTables] = useState([]);
