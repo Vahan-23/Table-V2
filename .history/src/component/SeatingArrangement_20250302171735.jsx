@@ -612,7 +612,22 @@ const SeatingArrangement = () => {
                                     </div>
                                 </div>
 
-                              
+                                <div className="data-management">
+                                    <div className="data-buttons">
+                                        <button
+                                            className="secondary-btn seed-data-btn"
+                                            onClick={() => setPeople(getSeedData())}
+                                        >
+                                            Ավելացնել փորձնական տվյալներ
+                                        </button>
+                                        <button
+                                            className="secondary-btn clear-data-btn"
+                                            onClick={() => setPeople([])}
+                                        >
+                                            Մաքրել բոլոր տվյալները
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
 
                             {/* SECTION 2: Table Management */}
@@ -652,26 +667,10 @@ const SeatingArrangement = () => {
                             </div>
                         </div>
                     </div>
-                   
+
                     {/* Groups Container - Below both sections */}
                     <div className="groups-container">
                         <div className="groups-header">
-                        <div className="data-management">
-                                    <div className="data-buttons">
-                                        <button
-                                            className="secondary-btn seed-data-btn"
-                                            onClick={() => setPeople(getSeedData())}
-                                        >
-                                            Ավելացնել փորձնական տվյալներ
-                                        </button>
-                                        <button
-                                            className="secondary-btn clear-data-btn"
-                                            onClick={() => setPeople([])}
-                                        >
-                                            Մաքրել բոլոր տվյալները
-                                        </button>
-                                    </div>
-                                </div>
                             <h3 className="groups-title">Հասանելի խմբեր (քաշեք համապատասխան սեղանի վրա)</h3>
                             <div className="groups-wrapper">
                                 {renderGroups()}

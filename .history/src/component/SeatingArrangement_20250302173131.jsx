@@ -652,11 +652,7 @@ const SeatingArrangement = () => {
                             </div>
                         </div>
                     </div>
-                   
-                    {/* Groups Container - Below both sections */}
-                    <div className="groups-container">
-                        <div className="groups-header">
-                        <div className="data-management">
+                    <div className="data-management">
                                     <div className="data-buttons">
                                         <button
                                             className="secondary-btn seed-data-btn"
@@ -672,6 +668,9 @@ const SeatingArrangement = () => {
                                         </button>
                                     </div>
                                 </div>
+                    {/* Groups Container - Below both sections */}
+                    <div className="groups-container">
+                        <div className="groups-header">
                             <h3 className="groups-title">Հասանելի խմբեր (քաշեք համապատասխան սեղանի վրա)</h3>
                             <div className="groups-wrapper">
                                 {renderGroups()}

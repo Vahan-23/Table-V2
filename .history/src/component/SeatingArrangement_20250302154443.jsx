@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useDrag, useDrop } from 'react-dnd';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
-
 import './App.css';
+// import './AppCss.css'
 
 const SeatingArrangement = () => {
     const [tables, setTables] = useState([]);
@@ -64,213 +64,36 @@ const SeatingArrangement = () => {
         const groups = people.map(person => person.group);
         return [...new Set(groups)].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
     };
-    const totalPeople = people.length;
-    // const seatedCount = seatedPeople.length;
-    const unseatedCount = totalPeople;
 
-    const PeopleSection = ({ people, tables, handleDeletePerson, setPeople, setTables }) => {
-        // States for controlling collapse/expand for both sections
-        const [isSeatedExpanded, setIsSeatedExpanded] = useState(true);
-        const [isUnseatedExpanded, setIsUnseatedExpanded] = useState(true);
-
-        // State for the removal confirmation popup
-        const [showRemovalPopup, setShowRemovalPopup] = useState(false);
-        const [personToHandle, setPersonToHandle] = useState(null);
-
-        // Toggle functions
-        const toggleSeatedExpand = () => {
-            setIsSeatedExpanded(!isSeatedExpanded);
-        };
-
-        const toggleUnseatedExpand = () => {
-            setIsUnseatedExpanded(!isUnseatedExpanded);
-        };
-
-        // Filter seated and unseated people
-        const seatedPeople = [];
-        tables.forEach(table => {
-            table.people.forEach(person => {
-                if (person) seatedPeople.push(person);
-            });
+    const UnseatedPeopleList = ({ people, tables, onDeletePerson }) => {
+        // Фильтруем людей, которые не сидят за столами
+        const unseatedPeople = people.filter((person) => {
+            return !tables.some((table) => table.people.some((tablePerson) => tablePerson && tablePerson.name === person.name));
         });
 
-        const unseatedPeople = people.filter(person =>
-            !seatedPeople.some(seated => seated.name === person.name)
-        );
-
-        // Calculate counts
-        const totalPeople = unseatedPeople.length + seatedPeople.length;
-        const seatedCount = seatedPeople.length;
-        const unseatedCount = unseatedPeople.length;
-
-        // Handle deletion with confirmation for seated people
-        const handleSeatedPersonDelete = (event, person) => {
-            event.stopPropagation();
-            setPersonToHandle(person);
-            setShowRemovalPopup(true);
-        };
-
-        // Handle direct deletion for unseated people
-        const handleUnseatedPersonDelete = (event, personName) => {
-            event.stopPropagation();
-            handleDeletePerson(personName);
-        };
-
-        // Function to completely delete a person
-        const handleCompleteDelete = () => {
-            if (personToHandle) {
-                // Remove person from tables
-                setTables(prevTables => {
-                    return prevTables.map(table => {
-                        const updatedPeople = table.people.map(p =>
-                            p && p.name === personToHandle.name ? null : p
-                        );
-                        return { ...table, people: updatedPeople };
-                    });
-                });
-
-                // Remove person from people list
-                handleDeletePerson(personToHandle.name);
-                setShowRemovalPopup(false);
-                setPersonToHandle(null);
-            }
-        };
-
-        // Function to just unseat a person
-        const handleUnseat = () => {
-            if (personToHandle) {
-                // Remove person from tables but add to unseated list
-                setTables(prevTables => {
-                    return prevTables.map(table => {
-                        const updatedPeople = table.people.map(p =>
-                            p && p.name === personToHandle.name ? null : p
-                        );
-                        return { ...table, people: updatedPeople };
-                    });
-                });
-
-                // Make sure the person is in the people list
-                setPeople(prevPeople => {
-                    // Only add if not already in the list
-                    if (!prevPeople.some(p => p.name === personToHandle.name)) {
-                        return [...prevPeople, personToHandle];
-                    }
-                    return prevPeople;
-                });
-
-                setShowRemovalPopup(false);
-                setPersonToHandle(null);
-            }
-        };
-
-        // Close the popup
-        const closePopup = () => {
-            setShowRemovalPopup(false);
-            setPersonToHandle(null);
-        };
-
         return (
-            <div className="people-section">
-                <div className="total-people-counter">
-                    <h3>Ընդհանուր մարդիկ: {totalPeople}</h3>
-                </div>
-
-                {/* Seated People Box */}
-                <div className="people-box">
-                    <div className="people-header" onClick={toggleSeatedExpand}>
-                        <h3>Նստած մարդիկ ({seatedCount})</h3>
-                        <div className={`expand-arrow ${isSeatedExpanded ? 'expanded' : ''}`}>
-                            ▼
+            <div className="unseated-people-list">
+                <h3>Մարդիկ առանց սեղանների</h3>
+                <div className="unseated-people-grid">
+                    {unseatedPeople.map((person, index) => (
+                        <div key={index} className="unseated-person-card">
+                            {person.name} <span className="group-tag">Խումբ {person.group}</span>
+                            <button
+                                onClick={() => onDeletePerson(person.name)}
+                                className="delete-btn"
+                            >
+                                ✕
+                            </button>
                         </div>
-                    </div>
-
-                    {isSeatedExpanded && (
-                        <div className="people-grid-container">
-                            <div className="people-grid">
-                                {seatedPeople.length > 0 ? (
-                                    seatedPeople.map((person, index) => (
-                                        <div key={index} className="person-card seated">
-                                            <span className="person-name">{person.name}</span>
-                                            <span className="person-group">Խումբ {person.group}</span>
-                                            <button
-                                                onClick={(e) => handleSeatedPersonDelete(e, person)}
-                                                className="delete-btn"
-                                            >
-                                                ✕
-                                            </button>
-                                        </div>
-                                    ))
-                                ) : (
-                                    <div className="empty-message">Չկան նստած մարդիկ</div>
-                                )}
-                            </div>
-                        </div>
+                    ))}
+                    {unseatedPeople.length === 0 && (
+                        <div className="no-unseated-people">Բոլոր մարդիկ նստած են</div>
                     )}
                 </div>
-
-                {/* Unseated People Box */}
-                <div className="people-box">
-                    <div className="people-header" onClick={toggleUnseatedExpand}>
-                        <h3>Մարդիկ առանց սեղանների ({unseatedCount})</h3>
-                        <div className={`expand-arrow ${isUnseatedExpanded ? 'expanded' : ''}`}>
-                            ▼
-                        </div>
-                    </div>
-
-                    {isUnseatedExpanded && (
-                        <div className="people-grid-container">
-                            <div className="people-grid">
-                                {unseatedPeople.length > 0 ? (
-                                    unseatedPeople.map((person, index) => (
-                                        <div key={index} className="person-card unseated">
-                                            <span className="person-name">{person.name}</span>
-                                            <span className="person-group">Խումբ {person.group}</span>
-                                            <button
-                                                onClick={(e) => handleUnseatedPersonDelete(e, person.name)}
-                                                className="delete-btn"
-                                            >
-                                                ✕
-                                            </button>
-                                        </div>
-                                    ))
-                                ) : (
-                                    <div className="empty-message">Բոլոր մարդիկ նստած են</div>
-                                )}
-                            </div>
-                        </div>
-                    )}
-                </div>
-
-                {/* Removal confirmation popup */}
-                {showRemovalPopup && personToHandle && (
-                    <div className="fullscreen-popup" onClick={closePopup}>
-                        <div className="fullscreen-popup-content" onClick={(e) => e.stopPropagation()}>
-                            <h3 className="popup-title">Ի՞նչ եք ուզում անել այս անձի հետ:</h3>
-
-                            <div className="person-info-card">
-                                <p className="person-info-name">{personToHandle.name}</p>
-                                <p className="person-info-group">Խումբ {personToHandle.group}</p>
-                            </div>
-
-                            <div className="popup-buttons">
-                                <button onClick={handleCompleteDelete} className="remove-btn">
-                                    Ամբողջությամբ հեռացնել
-                                </button>
-
-                                <button onClick={handleUnseat} className="unseat-btn">
-                                    Հեռացնել աթոռից միայն
-                                </button>
-
-                                <button onClick={closePopup} className="cancel-btn">
-                                    Չեղարկել
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )}
             </div>
         );
     };
+
     useEffect(() => {
         window.addEventListener("wheel", handleWheel, { passive: false });
         return () => window.removeEventListener("wheel", handleWheel);
@@ -539,6 +362,22 @@ const SeatingArrangement = () => {
         });
     };
 
+    // Get people who are seated at tables
+    const getSeatedPeople = () => {
+        const seated = [];
+        tables.forEach(table => {
+            table.people.forEach(person => {
+                if (person) seated.push(person);
+            });
+        });
+        return seated;
+    };
+
+    // Calculate total counts for the UI
+    const totalPeople = people.length + getSeatedPeople().length;
+    const unseatedCount = people.length;
+    const seatedCount = getSeatedPeople().length;
+
     return (
         <DndProvider backend={HTML5Backend}>
             <div className="app-container">
@@ -546,133 +385,128 @@ const SeatingArrangement = () => {
                     <div className="header-content">
                         <div className="logo">Նստատեղերի դասավորություն</div>
 
-                        {/* Split into two distinct sections */}
-                        <div className="header-sections">
-                            {/* SECTION 1: People Management */}
-                            <div className="header-section people-section">
-                                <h3 className="section-main-title">Մարդկանց կառավարում</h3>
-
+                        <div className="header-controls">
+                            <div className="control-group">
                                 <div className="input-group">
-                                    <div className="input-row">
+                                    <input
+                                        type="text"
+                                        value={peopleInput}
+                                        onChange={(e) => setPeopleInput(e.target.value)}
+                                        placeholder="Անուն"
+                                        className="input-field"
+                                    />
+                                    <div className="group-input-container" ref={groupDropdownRef}>
                                         <input
                                             type="text"
-                                            value={peopleInput}
-                                            onChange={(e) => setPeopleInput(e.target.value)}
-                                            placeholder="Մուտքագրեք անուն"
+                                            value={groupInput}
+                                            onChange={handleGroupInputChange}
+                                            placeholder="Խումբ"
+                                            onFocus={() => setShowGroupDropdown(true)}
                                             className="input-field"
                                         />
-                                        <div className="group-input-container" ref={groupDropdownRef}>
-                                            <input
-                                                type="text"
-                                                value={groupInput}
-                                                onChange={handleGroupInputChange}
-                                                placeholder="Խմբի համար"
-                                                onFocus={() => setShowGroupDropdown(true)}
-                                                className="input-field"
-                                            />
-                                            {showGroupDropdown && (
-                                                <div className="group-dropdown">
-                                                    {getExistingGroups().length > 0 ? (
-                                                        <>
-                                                            {getExistingGroups().map((group) => (
-                                                                <div
-                                                                    key={group}
-                                                                    onClick={() => handleSelectGroup(group)}
-                                                                    className="dropdown-item"
-                                                                    onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
-                                                                    onMouseLeave={(e) => e.target.style.backgroundColor = 'white'}
-                                                                >
-                                                                    {group}
-                                                                </div>
-                                                            ))}
+                                        {showGroupDropdown && (
+                                            <div className="group-dropdown">
+                                                {getExistingGroups().length > 0 ? (
+                                                    <>
+                                                        {getExistingGroups().map((group) => (
                                                             <div
-                                                                className="dropdown-item-new"
-                                                                onClick={() => {
-                                                                    setIsCustomGroup(true);
-                                                                    setShowGroupDropdown(false);
-                                                                }}
+                                                                key={group}
+                                                                onClick={() => handleSelectGroup(group)}
+                                                                className="dropdown-item"
+                                                                onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
+                                                                onMouseLeave={(e) => e.target.style.backgroundColor = 'white'}
                                                             >
-                                                                Նոր խումբ...
+                                                                {group}
                                                             </div>
-                                                        </>
-                                                    ) : (
-                                                        <div className="dropdown-empty">
-                                                            Առկա խմբեր չկան
+                                                        ))}
+                                                        <div
+                                                            className="dropdown-item-new"
+                                                            onClick={() => {
+                                                                setIsCustomGroup(true);
+                                                                setShowGroupDropdown(false);
+                                                            }}
+                                                        >
+                                                            Նոր խումբ...
                                                         </div>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </div>
-                                        <button
-                                            className="primary-btn add-person-btn"
-                                            onClick={handleAddPerson}
-                                        >
-                                            Ավելացնել մարդ
-                                        </button>
-                                    </div>
-                                </div>
-
-                              
-                            </div>
-
-                            {/* SECTION 2: Table Management */}
-                            <div className="header-section tables-section">
-                                <h3 className="section-main-title">Սեղանների կառավարում</h3>
-
-                                <div className="table-controls">
-                                    <div className="table-controls-row">
-                                        <div className="chair-count-container">
-                                            <label htmlFor="chair-count">Աթոռների քանակ:</label>
-                                            <input
-                                                id="chair-count"
-                                                type="number"
-                                                value={chairCount}
-                                                onChange={handleChairCountChange}
-                                                min="1"
-                                                className="chair-count-input"
-                                            />
-                                        </div>
-                                        <button
-                                            className="primary-btn add-table-btn"
-                                            onClick={handleAddTable}
-                                        >
-                                            Ավելացնել սեղան
-                                        </button>
+                                                    </>
+                                                ) : (
+                                                    <div className="dropdown-empty">
+                                                        Առկա խմբեր չկան
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
 
                                     <button
-                                        className="secondary-btn create-all-tables-btn"
-                                        onClick={createTablesForAllGroups}
+                                        className="primary-btn add-person-btn"
+                                        onClick={handleAddPerson}
                                     >
-                                        Ավտոմատ դասավորել խմբերը
+                                        Ավելացնել մարդ
                                     </button>
                                 </div>
 
-                                
-                            </div>
-                        </div>
-                    </div>
-                   
-                    {/* Groups Container - Below both sections */}
-                    <div className="groups-container">
-                        <div className="groups-header">
-                        <div className="data-management">
-                                    <div className="data-buttons">
+                                <div className="table-controls">
+                                    <input
+                                        type="number"
+                                        value={chairCount}
+                                        onChange={handleChairCountChange}
+                                        min="1"
+                                        placeholder="Աթոռների քանակը"
+                                        className="chair-count-input"
+                                    />
+                                    <button
+                                        className="primary-btn add-table-btn"
+                                        onClick={handleAddTable}
+                                    >
+                                        Ավելացնել սեղան
+                                    </button>
+
+                                    <button
+                                        className="primary-btn create-all-tables-btn"
+                                        onClick={createTablesForAllGroups}
+                                    >
+                                        Ստեղծել սեղաններ բոլոր խմբերի համար
+                                    </button>
+                                </div>
+
+                                <div className="bottom-controls">
+                                    <div className="save-controls">
                                         <button
                                             className="secondary-btn seed-data-btn"
                                             onClick={() => setPeople(getSeedData())}
                                         >
-                                            Ավելացնել փորձնական տվյալներ
+                                            SEED DATA
                                         </button>
                                         <button
                                             className="secondary-btn clear-data-btn"
                                             onClick={() => setPeople([])}
                                         >
-                                            Մաքրել բոլոր տվյալները
+                                            CLEAR DATA
                                         </button>
                                     </div>
+
+                                    <div className="zoom-controls">
+                                        <button
+                                            className="zoom-btn zoom-in-btn"
+                                            onClick={handleZoomIn}
+                                        >+</button>
+                                        <span className="zoom-percentage">
+                                            {Math.round(zoom * 100)}%
+                                        </span>
+                                        <button
+                                            className="zoom-btn zoom-out-btn"
+                                            onClick={handleZoomOut}
+                                        >-</button>
+                                    </div>
                                 </div>
-                            <h3 className="groups-title">Հասանելի խմբեր (քաշեք համապատասխան սեղանի վրա)</h3>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="groups-container">
+                        <div className="groups-header">
+                            <h3 className="groups-title">Խմբեր</h3>
                             <div className="groups-wrapper">
                                 {renderGroups()}
                             </div>
@@ -682,14 +516,55 @@ const SeatingArrangement = () => {
 
                 <div className="main-content">
                     <div className="sidebar">
-                        <PeopleSection
-                            people={people}
-                            tables={tables}
-                            handleDeletePerson={handleDeletePerson}
-                            setPeople={setPeople}
-                            setTables={setTables}
+                        <div className="people-stats">
+                            <div className="stat-item">
+                                <div className="stat-label">Ընդհանուր</div>
+                                <div className="stat-value">{totalPeople}</div>
+                            </div>
+                            <div className="stat-item">
+                                <div className="stat-label">Նստած</div>
+                                <div className="stat-value">{seatedCount}</div>
+                            </div>
+                            <div className="stat-item">
+                                <div className="stat-label">Կանգնած</div>
+                                <div className="stat-value">{unseatedCount}</div>
+                            </div>
+                        </div>
+
+                        <UnseatedPeopleList 
+                            people={people} 
+                            tables={tables} 
+                            onDeletePerson={handleDeletePerson} 
                         />
 
+                        <div className="people-list">
+                            <h3>Բոլոր մարդիկ</h3>
+                            <div className="people-grid">
+                                {[...people, ...getSeatedPeople()].map((person, index) => {
+                                    const isSeated = getSeatedPeople().some(p => p.name === person.name);
+                                    return (
+                                        <div key={index} className={`person-card ${isSeated ? 'seated' : ''}`}>
+                                            <span className="person-name">{person.name}</span>
+                                            <span className="person-group">Խումբ {person.group}</span>
+                                            {!isSeated && (
+                                                <button
+                                                    onClick={() => handleDeletePerson(person.name)}
+                                                    className="delete-btn"
+                                                >
+                                                    ✕
+                                                </button>
+                                            )}
+                                            {isSeated && (
+                                                <span className="seated-indicator">նստած</span>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                                {[...people, ...getSeatedPeople()].length === 0 && (
+                                    <div className="no-people">Մարդիկ չկան</div>
+                                )}
+                            </div>
+                        </div>
                     </div>
 
                     <div className="tables-area-container" style={{
@@ -697,22 +572,6 @@ const SeatingArrangement = () => {
                         width: '100%',
                         height: '100%',
                     }}>
-                        <div className="zoom-controls">
-                                    <label>Մասշտաբ:</label>
-                                    <div className="zoom-buttons">
-                                        <button
-                                            className="zoom-btn zoom-out-btn"
-                                            onClick={handleZoomOut}
-                                        >−</button>
-                                        <span className="zoom-percentage">
-                                            {Math.round(zoom * 100)}%
-                                        </span>
-                                        <button
-                                            className="zoom-btn zoom-in-btn"
-                                            onClick={handleZoomIn}
-                                        >+</button>
-                                    </div>
-                                </div>
                         {/* This div will be scaled */}
                         <div className="tables-area" style={{
                             transform: `scale(${zoom})`,
@@ -868,8 +727,8 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
 
         const chairStyle = {
             position: 'absolute',
-            // top: '50%',
-            // left: '50%',
+            top: '50%',
+            left: '50%',
             transformOrigin: 'center',
             width: '60px',
             height: '60px',
@@ -924,7 +783,7 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
                 className="chair"
                 style={chairStyle}
                 onClick={() => onChairClick(i)}
-                title={peopleOnTable[i] ? `Нажмите чтобы удалить ${peopleOnTable[i].name}` : "Нажмите чтобы добавить человека"}
+                title={peopleOnTable[i] ? `Սեղմեք, որպեսզի հեռացնեք ${peopleOnTable[i].name}` : "Սեղմեք, որպեսզի ավելացնեք մարդ"}
             >
                 {peopleOnTable[i] && (
                     <div
@@ -979,6 +838,7 @@ const Group = ({ group, groupName, setDraggingGroup }) => {
     );
 };
 
+// NewTable component that will only show when a group is being dragged
 const NewTable = ({ draggingGroup, setTables, setDraggingGroup, setPeople }) => {
     const [{ isOver }, drop] = useDrop({
         accept: 'GROUP',
@@ -1039,5 +899,7 @@ const NewTable = ({ draggingGroup, setTables, setDraggingGroup, setPeople }) => 
         </div>
     );
 };
+
+{/*part 5*/ }
 
 export default SeatingArrangement;

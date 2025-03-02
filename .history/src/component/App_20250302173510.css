@@ -66,7 +66,6 @@ body {
   gap: 10px;
   margin-bottom: 15px;
   align-items: center;
-  justify-content: center;
 }
 
 .input-field {
@@ -163,7 +162,7 @@ button {
 }
 
 .add-person-btn {
-  /* margin-left: 30px; */
+  margin-left: 30px;
   padding: 21px 20px;
   background-color: #2ecc71;
   color: white;

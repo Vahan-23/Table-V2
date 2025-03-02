@@ -612,7 +612,22 @@ const SeatingArrangement = () => {
                                     </div>
                                 </div>
 
-                              
+                                <div className="data-management">
+                                    <div className="data-buttons">
+                                        <button
+                                            className="secondary-btn seed-data-btn"
+                                            onClick={() => setPeople(getSeedData())}
+                                        >
+                                            Ավելացնել փորձնական տվյալներ
+                                        </button>
+                                        <button
+                                            className="secondary-btn clear-data-btn"
+                                            onClick={() => setPeople([])}
+                                        >
+                                            Մաքրել բոլոր տվյալները
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
 
                             {/* SECTION 2: Table Management */}
@@ -648,30 +663,29 @@ const SeatingArrangement = () => {
                                     </button>
                                 </div>
 
-                                
+                                <div className="zoom-controls">
+                                    <label>Մասշտաբ:</label>
+                                    <div className="zoom-buttons">
+                                        <button
+                                            className="zoom-btn zoom-out-btn"
+                                            onClick={handleZoomOut}
+                                        >−</button>
+                                        <span className="zoom-percentage">
+                                            {Math.round(zoom * 100)}%
+                                        </span>
+                                        <button
+                                            className="zoom-btn zoom-in-btn"
+                                            onClick={handleZoomIn}
+                                        >+</button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
-                   
+
                     {/* Groups Container - Below both sections */}
                     <div className="groups-container">
                         <div className="groups-header">
-                        <div className="data-management">
-                                    <div className="data-buttons">
-                                        <button
-                                            className="secondary-btn seed-data-btn"
-                                            onClick={() => setPeople(getSeedData())}
-                                        >
-                                            Ավելացնել փորձնական տվյալներ
-                                        </button>
-                                        <button
-                                            className="secondary-btn clear-data-btn"
-                                            onClick={() => setPeople([])}
-                                        >
-                                            Մաքրել բոլոր տվյալները
-                                        </button>
-                                    </div>
-                                </div>
                             <h3 className="groups-title">Հասանելի խմբեր (քաշեք համապատասխան սեղանի վրա)</h3>
                             <div className="groups-wrapper">
                                 {renderGroups()}
@@ -697,22 +711,6 @@ const SeatingArrangement = () => {
                         width: '100%',
                         height: '100%',
                     }}>
-                        <div className="zoom-controls">
-                                    <label>Մասշտաբ:</label>
-                                    <div className="zoom-buttons">
-                                        <button
-                                            className="zoom-btn zoom-out-btn"
-                                            onClick={handleZoomOut}
-                                        >−</button>
-                                        <span className="zoom-percentage">
-                                            {Math.round(zoom * 100)}%
-                                        </span>
-                                        <button
-                                            className="zoom-btn zoom-in-btn"
-                                            onClick={handleZoomIn}
-                                        >+</button>
-                                    </div>
-                                </div>
                         {/* This div will be scaled */}
                         <div className="tables-area" style={{
                             transform: `scale(${zoom})`,
