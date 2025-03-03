@@ -30,58 +30,42 @@ const SeatingArrangement = () => {
     const [newHallName, setNewHallName] = useState('');
     const [newHallTableCount, setNewHallTableCount] = useState(10);
     const [newHallChairCount, setNewHallChairCount] = useState(12);
-    const [activeNavSection, setActiveNavSection] = useState(null);
-    const [hoveredSection, setHoveredSection] = useState(null);
-    const navRefs = useRef({});
-
-    // Close dropdown when clicking outside
-    useEffect(() => {
-        const handleClickOutside = (event) => {
-            if (activeNavSection && navRefs.current[activeNavSection] && !navRefs.current[activeNavSection].contains(event.target)) {
-                setActiveNavSection(null);
-            }
-        };
-
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
-    }, [activeNavSection]);
+    
     useEffect(() => {
         const savedHalls = JSON.parse(localStorage.getItem('halls')) || [];
         if (savedHalls.length) setHalls(savedHalls);
     }, []);
-
+    
     // Save hall configuration
     const saveHall = () => {
         if (!currentHall) {
             alert('Խնդրում ենք նախ ընտրել դահլիճը');
             return;
         }
-
+    
         const updatedHalls = halls.map(hall =>
             hall.id === currentHall.id
                 ? { ...hall, tables: tables }
                 : hall
         );
-
+    
         setHalls(updatedHalls);
         localStorage.setItem('halls', JSON.stringify(updatedHalls));
         alert(`Դահլիճը "${currentHall.name}" հաջողությամբ պահպանվել է`);
     };
-
+    
     // Create a new hall
     const createNewHall = (hallName, tableCount, chairCount) => {
         if (!hallName || !hallName.trim()) {
             alert('Խնդրում ենք մուտքագրել դահլիճի անունը');
             return;
         }
-
+        
         // Generate tables based on settings
         const newTables = [];
         const numTables = Math.max(1, parseInt(tableCount) || 10);
         const numChairs = Math.max(1, parseInt(chairCount) || 12);
-
+        
         for (let i = 0; i < numTables; i++) {
             newTables.push({
                 id: Date.now() + i,
@@ -89,39 +73,39 @@ const SeatingArrangement = () => {
                 chairCount: numChairs
             });
         }
-
+        
         const newHall = {
             id: Date.now(),
             name: hallName.trim(),
             tables: newTables
         };
-
+        
         // Update halls state and localStorage
         const updatedHalls = [...halls, newHall];
         setHalls(updatedHalls);
         localStorage.setItem('halls', JSON.stringify(updatedHalls));
-
+        
         // Set as current hall
         setCurrentHall(newHall);
         setTables(newTables);
-
+        
         // Close the modal
         setShowHallModal(false);
     };
-
+    
     // Load a hall configuration
     const loadHall = (hall) => {
         setCurrentHall(hall);
         setTables(hall.tables);
     };
-
+    
     // Delete a hall
     const deleteHall = (hallId) => {
         if (window.confirm('Վստա՞հ եք, որ ցանկանում եք ջնջել այս դահլիճը:')) {
             const updatedHalls = halls.filter(hall => hall.id !== hallId);
             setHalls(updatedHalls);
             localStorage.setItem('halls', JSON.stringify(updatedHalls));
-
+    
             // If current hall is deleted, reset current hall
             if (currentHall && currentHall.id === hallId) {
                 setCurrentHall(null);
@@ -129,35 +113,35 @@ const SeatingArrangement = () => {
             }
         }
     };
-
+    
     const HallModal = () => {
         const nameInputRef = useRef(null);
-
+        
         useEffect(() => {
             if (nameInputRef.current) {
                 nameInputRef.current.focus();
             }
         }, []);
-
+        
         const [hallName, setHallName] = useState('');
         const [tableCount, setTableCount] = useState(10);
         const [chairCount, setChairCount] = useState(12);
-
+    
         const handleTableCountChange = (e) => {
             const value = e.target.value;
             setTableCount(value === '' ? '' : Math.max(1, parseInt(value) || 1));
         };
-
+    
         const handleChairCountChange = (e) => {
             const value = e.target.value;
             setChairCount(value === '' ? '' : Math.max(1, parseInt(value) || 1));
         };
-
+    
         return (
             <div className="fullscreen-popup">
                 <div className="fullscreen-popup-content">
                     <h3 className="popup-title">Ստեղծել նոր դահլիճ</h3>
-
+    
                     <div className="hall-form">
                         <div className="form-group">
                             <label htmlFor="hallName">Դահլիճի անունը:</label>
@@ -171,7 +155,7 @@ const SeatingArrangement = () => {
                                 className="input-field"
                             />
                         </div>
-
+    
                         <div className="form-group">
                             <label htmlFor="tableCount">Սեղանների քանակը:</label>
                             <input
@@ -183,7 +167,7 @@ const SeatingArrangement = () => {
                                 className="input-field"
                             />
                         </div>
-
+    
                         <div className="form-group">
                             <label htmlFor="chairCount">Աթոռների քանակը մեկ սեղանի համար:</label>
                             <input
@@ -195,7 +179,7 @@ const SeatingArrangement = () => {
                                 className="input-field"
                             />
                         </div>
-
+    
                         <div className="popup-buttons">
                             <button
                                 type="button"
@@ -204,7 +188,7 @@ const SeatingArrangement = () => {
                             >
                                 Ստեղծել դահլիճ
                             </button>
-
+    
                             <button
                                 type="button"
                                 onClick={() => setShowHallModal(false)}
@@ -218,14 +202,14 @@ const SeatingArrangement = () => {
             </div>
         );
     };
-
-
+    
+    
     // Hall Management UI component
     const HallManagement = () => {
         return (
             <div className="hall-management">
                 <h3 className="section-main-title">Դահլիճների կառավարում</h3>
-
+    
                 <div className="hall-controls">
                     <div className="hall-dropdown-container">
                         <select
@@ -244,7 +228,7 @@ const SeatingArrangement = () => {
                             ))}
                         </select>
                     </div>
-
+    
                     <div className="hall-buttons">
                         <button
                             className="primary-btn create-hall-btn"
@@ -252,7 +236,7 @@ const SeatingArrangement = () => {
                         >
                             Ստեղծել նոր դահլիճ
                         </button>
-
+    
                         <button
                             className="primary-btn save-hall-btn"
                             onClick={saveHall}
@@ -260,7 +244,7 @@ const SeatingArrangement = () => {
                         >
                             Պահպանել դահլիճը
                         </button>
-
+    
                         {currentHall && (
                             <button
                                 className="secondary-btn delete-hall-btn"
@@ -271,7 +255,7 @@ const SeatingArrangement = () => {
                         )}
                     </div>
                 </div>
-
+    
                 {currentHall && (
                     <div className="current-hall-info">
                         <h4>Ընթացիկ դահլիճ: {currentHall.name}</h4>
@@ -281,8 +265,8 @@ const SeatingArrangement = () => {
             </div>
         );
     };
-
-    { showHallModal && <HallModal /> }
+    
+    {showHallModal && <HallModal />}
     const handleTableCountChange = (e) => {
         setTableCount(parseInt(e.target.value, 10) || 1);
     };
@@ -647,7 +631,7 @@ const SeatingArrangement = () => {
             acc[person.group].push(person);
             return acc;
         }, {});
-
+    
         // Get people who are not already seated
         const unseatedPeople = people.filter((person) => {
             return !tables.some((table) =>
@@ -656,31 +640,31 @@ const SeatingArrangement = () => {
                 )
             );
         });
-
+    
         // Group the unseated people
         const unseatedGrouped = unseatedPeople.reduce((acc, person) => {
             if (!acc[person.group]) acc[person.group] = [];
             acc[person.group].push(person);
             return acc;
         }, {});
-
+    
         let anyGroupsSeated = false;
-
+    
         // Create a new tables state
         const updatedTables = [...tables];
-
+        
         // Try to seat each group at existing tables
         Object.entries(unseatedGrouped).forEach(([groupName, groupMembers]) => {
             if (groupMembers.length === 0) return;
-
+            
             // Find tables with enough free seats
             for (const table of updatedTables) {
                 const emptySeats = table.chairCount - table.people.filter(Boolean).length;
-
+                
                 if (emptySeats >= groupMembers.length) {
                     // This table has enough space for the group
                     const newPeople = [...table.people];
-
+                    
                     // Find empty spots and fill them
                     let groupIndex = 0;
                     for (let i = 0; i < newPeople.length && groupIndex < groupMembers.length; i++) {
@@ -689,46 +673,46 @@ const SeatingArrangement = () => {
                             groupIndex++;
                         }
                     }
-
+                    
                     // If we haven't filled all spots (which shouldn't happen given our check),
                     // add remaining people
                     while (groupIndex < groupMembers.length) {
                         newPeople.push(groupMembers[groupIndex]);
                         groupIndex++;
                     }
-
+                    
                     table.people = newPeople;
                     anyGroupsSeated = true;
-
+                    
                     // Remove these people from unseatedGrouped
                     unseatedGrouped[groupName] = [];
                     break;
                 }
             }
         });
-
+        
         // If there are still unseated groups, create new tables for them
         const remainingGroups = Object.values(unseatedGrouped).filter(group => group.length > 0);
-
+        
         if (remainingGroups.length > 0) {
             const newTables = remainingGroups.map(group => ({
                 id: Date.now() + Math.random(), // Ensure unique ID
                 people: group,
                 chairCount: group.length // Set chair count to match group size
             }));
-
+            
             updatedTables.push(...newTables);
             anyGroupsSeated = true;
         }
-
+    
         if (!anyGroupsSeated) {
             alert('Բոլոր խմբերն արդեն նստած են սեղանների մոտ կամ հասանելի մարդիկ չկան:');
             return;
         }
-
+    
         // Update the tables state
         setTables(updatedTables);
-
+    
         // Remove the seated people from the people list
         setPeople(prevPeople =>
             prevPeople.filter(person =>
@@ -868,193 +852,137 @@ const SeatingArrangement = () => {
         <DndProvider backend={HTML5Backend}>
             <div className="app-container">
                 <header className="app-header">
-                    <div className="header-top">
+                    <div className="header-content">
                         <div className="logo">Նստատեղերի դասավորություն</div>
-                        <nav className="main-nav">
-                            <ul className="nav-list">
-                                <li
-                                    className={`nav-item ${activeNavSection === 'hall' ? 'active' : ''}`}
-                                    onMouseEnter={() => setHoveredSection('hall')}
-                                    onMouseLeave={() => setHoveredSection(null)}
-                                    ref={el => navRefs.current['hall'] = el}
-                                >
-                                    <a
-                                        href="#hall"
-                                        className="nav-link"
-                                        onClick={(e) => {
-                                            e.preventDefault();
-                                            setActiveNavSection(activeNavSection === 'hall' ? null : 'hall');
-                                        }}
-                                    >
-                                        Դահլիճի կառավարում
-                                    </a>
-                                    {(hoveredSection === 'hall' || activeNavSection === 'hall') && (
-                                        <div className="dropdown-menu">
-                                            <div className="dropdown-content hall-section">
-                                                <HallManagement />
-                                            </div>
-                                        </div>
-                                    )}
-                                </li>
-                                <li
-                                    className={`nav-item ${activeNavSection === 'people' ? 'active' : ''}`}
-                                    onMouseEnter={() => setHoveredSection('people')}
-                                    onMouseLeave={() => setHoveredSection(null)}
-                                    ref={el => navRefs.current['people'] = el}
-                                >
-                                    <a
-                                        href="#people"
-                                        className="nav-link"
-                                        onClick={(e) => {
-                                            e.preventDefault();
-                                            setActiveNavSection(activeNavSection === 'people' ? null : 'people');
-                                        }}
-                                    >
-                                        Մարդկանց կառավարում
-                                    </a>
-                                    {(hoveredSection === 'people' || activeNavSection === 'people') && (
-                                        <div className="dropdown-menu">
-                                            <div className="dropdown-content people-section">
-                                                <h3 className="section-title">Մարդկանց կառավարում</h3>
-                                                <div className="input-group">
-                                                    <div className="input-row">
-                                                        <input
-                                                            type="text"
-                                                            value={peopleInput}
-                                                            onChange={(e) => setPeopleInput(e.target.value)}
-                                                            placeholder="Մուտքագրեք անուն"
-                                                            className="input-field"
-                                                        />
-                                                        <div className="group-input-container" ref={groupDropdownRef}>
-                                                            <input
-                                                                type="text"
-                                                                value={groupInput}
-                                                                onChange={handleGroupInputChange}
-                                                                placeholder="Խմբի համար"
-                                                                onFocus={() => setShowGroupDropdown(true)}
-                                                                className="input-field"
-                                                            />
-                                                            {showGroupDropdown && (
-                                                                <div className="group-dropdown">
-                                                                    {getExistingGroups().length > 0 ? (
-                                                                        <>
-                                                                            {getExistingGroups().map((group) => (
-                                                                                <div
-                                                                                    key={group}
-                                                                                    onClick={() => handleSelectGroup(group)}
-                                                                                    className="dropdown-item"
-                                                                                    onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
-                                                                                    onMouseLeave={(e) => e.target.style.backgroundColor = 'white'}
-                                                                                >
-                                                                                    {group}
-                                                                                </div>
-                                                                            ))}
-                                                                            <div
-                                                                                className="dropdown-item-new"
-                                                                                onClick={() => {
-                                                                                    setIsCustomGroup(true);
-                                                                                    setShowGroupDropdown(false);
-                                                                                }}
-                                                                            >
-                                                                                Նոր խումբ...
-                                                                            </div>
-                                                                        </>
-                                                                    ) : (
-                                                                        <div className="dropdown-empty">
-                                                                            Առկա խմբեր չկան
-                                                                        </div>
-                                                                    )}
+                        <div className="hall-management-container">
+                        </div>
+                        {showHallModal && <HallModal />}
+                        {/* Split into two distinct sections */}
+                        <div className="header-sections">
+                            {/* SECTION 1: People Management */}
+                            <HallManagement />
+                            <div className="header-section people-section">
+                                <h3 className="section-main-title">Մարդկանց կառավարում</h3>
+
+                                <div className="input-group">
+                                    <div className="input-row">
+                                        <input
+                                            type="text"
+                                            value={peopleInput}
+                                            onChange={(e) => setPeopleInput(e.target.value)}
+                                            placeholder="Մուտքագրեք անուն"
+                                            className="input-field"
+                                        />
+                                        <div className="group-input-container" ref={groupDropdownRef}>
+                                            <input
+                                                type="text"
+                                                value={groupInput}
+                                                onChange={handleGroupInputChange}
+                                                placeholder="Խմբի համար"
+                                                onFocus={() => setShowGroupDropdown(true)}
+                                                className="input-field"
+                                            />
+                                            {showGroupDropdown && (
+                                                <div className="group-dropdown">
+                                                    {getExistingGroups().length > 0 ? (
+                                                        <>
+                                                            {getExistingGroups().map((group) => (
+                                                                <div
+                                                                    key={group}
+                                                                    onClick={() => handleSelectGroup(group)}
+                                                                    className="dropdown-item"
+                                                                    onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
+                                                                    onMouseLeave={(e) => e.target.style.backgroundColor = 'white'}
+                                                                >
+                                                                    {group}
                                                                 </div>
-                                                            )}
+                                                            ))}
+                                                            <div
+                                                                className="dropdown-item-new"
+                                                                onClick={() => {
+                                                                    setIsCustomGroup(true);
+                                                                    setShowGroupDropdown(false);
+                                                                }}
+                                                            >
+                                                                Նոր խումբ...
+                                                            </div>
+                                                        </>
+                                                    ) : (
+                                                        <div className="dropdown-empty">
+                                                            Առկա խմբեր չկան
                                                         </div>
-                                                        <button
-                                                            className="primary-btn add-person-btn"
-                                                            onClick={handleAddPerson}
-                                                        >
-                                                            Ավելացնել մարդ
-                                                        </button>
-                                                    </div>
+                                                    )}
                                                 </div>
-                                            </div>
+                                            )}
                                         </div>
-                                    )}
-                                </li>
-                                <li
-                                    className={`nav-item ${activeNavSection === 'tables' ? 'active' : ''}`}
-                                    onMouseEnter={() => setHoveredSection('tables')}
-                                    onMouseLeave={() => setHoveredSection(null)}
-                                    ref={el => navRefs.current['tables'] = el}
-                                >
-                                    <a
-                                        href="#tables"
-                                        className="nav-link"
-                                        onClick={(e) => {
-                                            e.preventDefault();
-                                            setActiveNavSection(activeNavSection === 'tables' ? null : 'tables');
-                                        }}
-                                    >
-                                        Սեղանների կառավարում
-                                    </a>
-                                    {(hoveredSection === 'tables' || activeNavSection === 'tables') && (
-                                        <div className="dropdown-menu">
-                                            <div className="dropdown-content tables-section">
-                                                <h3 className="section-title">Սեղանների կառավարում</h3>
-                                                <div className="table-controls">
-                                                    <div className="table-controls-row">
-                                                        <div className="chair-count-container">
-                                                            <label htmlFor="chair-count">Աթոռների քանակ:</label>
-                                                            <input
-                                                                id="chair-count"
-                                                                type="number"
-                                                                value={chairCount}
-                                                                onChange={handleChairCountChange}
-                                                                min="1"
-                                                                className="chair-count-input"
-                                                            />
-                                                        </div>
-                                                        <div className="table-count-container">
-                                                            <label htmlFor="table-count">Սեղանների քանակ:</label>
-                                                            <input
-                                                                id="table-count"
-                                                                type="number"
-                                                                value={tableCount}
-                                                                onChange={handleTableCountChange}
-                                                                min="1"
-                                                                className="table-count-input"
-                                                            />
-                                                        </div>
-                                                        <button
-                                                            className="primary-btn add-multiple-tables-btn chair-count-container"
-                                                            onClick={handleAddMultipleTables}
-                                                        >
-                                                            Ավելացնել {tableCount} սեղան
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </div>
+                                        <button
+                                            className="primary-btn add-person-btn"
+                                            onClick={handleAddPerson}
+                                        >
+                                          Ավելացնել մարդ
+                                        </button>
+                                    </div>
+                                </div>
+
+
+                            </div>
+
+                            {/* SECTION 2: Table Management */}
+                            <div className="header-section tables-section">
+                                <h3 className="section-main-title">Սեղանների կառավարում</h3>
+
+                                <div className="table-controls">
+                                    <div className="table-controls-row">
+                                        <div className="chair-count-container">
+                                            <label htmlFor="chair-count">Աթոռների քանակ:</label>
+                                            <input
+                                                id="chair-count"
+                                                type="number"
+                                                value={chairCount}
+                                                onChange={handleChairCountChange}
+                                                min="1"
+                                                className="chair-count-input"
+                                            />
                                         </div>
-                                    )}
-                                </li>
-                                <li
-                                    className={`nav-item ${activeNavSection === 'groups' ? 'active' : ''}`}
-                                    onMouseEnter={() => setHoveredSection('groups')}
-                                    onMouseLeave={() => setHoveredSection(null)}
-                                    ref={el => navRefs.current['groups'] = el}
-                                >
-                                    <a
-                                        href="#groups"
-                                        className="nav-link"
-                                        onClick={(e) => {
-                                            e.preventDefault();
-                                            setActiveNavSection(activeNavSection === 'groups' ? null : 'groups');
-                                        }}
-                                    >
-                                        Խմբերի կառավարում
-                                    </a>
-                                    {(hoveredSection === 'groups' || activeNavSection === 'groups') && (
-                                        <div className="dropdown-menu">
-                                            <div className="dropdown-content groups-section">
-                                            <button
+                                        <div className="table-count-container">
+                                            <label htmlFor="table-count">Սեղանների քանակ:</label>
+                                            <input
+                                                id="table-count"
+                                                type="number"
+                                                value={tableCount}
+                                                onChange={handleTableCountChange}
+                                                min="1"
+                                                className="table-count-input"
+                                            />
+                                        </div>
+                                        <button
+                                            className="primary-btn add-multiple-tables-btn chair-count-container"
+                                            onClick={handleAddMultipleTables}
+                                        >
+                                            Ավելացնել {tableCount} սեղան
+                                        </button>
+                                        {/* <button
+                                            className="primary-btn add-table-btn"
+                                            onClick={handleAddTable}
+                                        >
+                                            Ավելացնել սեղան
+                                        </button> */}
+                                    </div>
+
+
+                                </div>
+
+
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Groups Container - Below both sections */}
+                    <div className="groups-container">
+                        <div className="groups-header">
+                            <div className="data-management">
+                                <div className="data-buttons">
+                                    <button
                                         className="secondary-btn seed-data-btn"
                                         onClick={() => setPeople(getSeedData())}
                                     >
@@ -1066,21 +994,6 @@ const SeatingArrangement = () => {
                                     >
                                         Մաքրել բոլոր տվյալները
                                     </button>
-                                            </div>
-                                        </div>
-                                    )}
-                                </li>
-                            </ul>
-                        </nav>
-                    </div>
-
-                    {showHallModal && <HallModal />}
-                </header>
-                <div className="groups-container">
-                        <div className="groups-header">
-                            <div className="data-management">
-                                <div className="data-buttons">
-                                    
                                     <button
                                         className="secondary-btn create-all-tables-btn"
                                         onClick={createTablesForAllGroups}
@@ -1095,6 +1008,8 @@ const SeatingArrangement = () => {
                             </div>
                         </div>
                     </div>
+                </header>
+
                 <div className="main-content">
                     <div className="sidebar">
                         <PeopleSection
@@ -1104,8 +1019,9 @@ const SeatingArrangement = () => {
                             setPeople={setPeople}
                             setTables={setTables}
                         />
+
                     </div>
-                   
+
                     <div className="tables-area-container" style={{
                         position: 'relative',
                         width: '100%',
@@ -1240,9 +1156,8 @@ const SeatingArrangement = () => {
                 )}
             </div>
         </DndProvider>
-    )
+    );
 };
-
 
 const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDraggingGroup, people, setPeople, onChairClick }) => {
     const [, drop] = useDrop({

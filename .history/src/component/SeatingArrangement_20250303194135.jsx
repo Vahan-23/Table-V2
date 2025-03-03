@@ -1054,18 +1054,7 @@ const SeatingArrangement = () => {
                                     {(hoveredSection === 'groups' || activeNavSection === 'groups') && (
                                         <div className="dropdown-menu">
                                             <div className="dropdown-content groups-section">
-                                            <button
-                                        className="secondary-btn seed-data-btn"
-                                        onClick={() => setPeople(getSeedData())}
-                                    >
-                                        Ավելացնել փորձնական տվյալներ
-                                    </button>
-                                    <button
-                                        className="secondary-btn clear-data-btn"
-                                        onClick={() => setPeople([])}
-                                    >
-                                        Մաքրել բոլոր տվյալները
-                                    </button>
+
                                             </div>
                                         </div>
                                     )}
@@ -1080,7 +1069,18 @@ const SeatingArrangement = () => {
                         <div className="groups-header">
                             <div className="data-management">
                                 <div className="data-buttons">
-                                    
+                                    <button
+                                        className="secondary-btn seed-data-btn"
+                                        onClick={() => setPeople(getSeedData())}
+                                    >
+                                        Ավելացնել փորձնական տվյալներ
+                                    </button>
+                                    <button
+                                        className="secondary-btn clear-data-btn"
+                                        onClick={() => setPeople([])}
+                                    >
+                                        Մաքրել բոլոր տվյալները
+                                    </button>
                                     <button
                                         className="secondary-btn create-all-tables-btn"
                                         onClick={createTablesForAllGroups}

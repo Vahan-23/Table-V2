@@ -1054,7 +1054,33 @@ const SeatingArrangement = () => {
                                     {(hoveredSection === 'groups' || activeNavSection === 'groups') && (
                                         <div className="dropdown-menu">
                                             <div className="dropdown-content groups-section">
-                                            <button
+
+                                            </div>
+                                        </div>
+                                    )}
+                                </li>
+                            </ul>
+                        </nav>
+                    </div>
+
+                    {showHallModal && <HallModal />}
+                </header>
+
+                <div className="main-content">
+                    <div className="sidebar">
+                        <PeopleSection
+                            people={people}
+                            tables={tables}
+                            handleDeletePerson={handleDeletePerson}
+                            setPeople={setPeople}
+                            setTables={setTables}
+                        />
+                    </div>
+                    <div className="groups-container">
+                        <div className="groups-header">
+                            <div className="data-management">
+                                <div className="data-buttons">
+                                    <button
                                         className="secondary-btn seed-data-btn"
                                         onClick={() => setPeople(getSeedData())}
                                     >
@@ -1066,21 +1092,6 @@ const SeatingArrangement = () => {
                                     >
                                         Մաքրել բոլոր տվյալները
                                     </button>
-                                            </div>
-                                        </div>
-                                    )}
-                                </li>
-                            </ul>
-                        </nav>
-                    </div>
-
-                    {showHallModal && <HallModal />}
-                </header>
-                <div className="groups-container">
-                        <div className="groups-header">
-                            <div className="data-management">
-                                <div className="data-buttons">
-                                    
                                     <button
                                         className="secondary-btn create-all-tables-btn"
                                         onClick={createTablesForAllGroups}
@@ -1095,17 +1106,6 @@ const SeatingArrangement = () => {
                             </div>
                         </div>
                     </div>
-                <div className="main-content">
-                    <div className="sidebar">
-                        <PeopleSection
-                            people={people}
-                            tables={tables}
-                            handleDeletePerson={handleDeletePerson}
-                            setPeople={setPeople}
-                            setTables={setTables}
-                        />
-                    </div>
-                   
                     <div className="tables-area-container" style={{
                         position: 'relative',
                         width: '100%',

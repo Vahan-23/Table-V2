@@ -1054,18 +1054,7 @@ const SeatingArrangement = () => {
                                     {(hoveredSection === 'groups' || activeNavSection === 'groups') && (
                                         <div className="dropdown-menu">
                                             <div className="dropdown-content groups-section">
-                                            <button
-                                        className="secondary-btn seed-data-btn"
-                                        onClick={() => setPeople(getSeedData())}
-                                    >
-                                        Ավելացնել փորձնական տվյալներ
-                                    </button>
-                                    <button
-                                        className="secondary-btn clear-data-btn"
-                                        onClick={() => setPeople([])}
-                                    >
-                                        Մաքրել բոլոր տվյալները
-                                    </button>
+
                                             </div>
                                         </div>
                                     )}
@@ -1076,25 +1065,7 @@ const SeatingArrangement = () => {
 
                     {showHallModal && <HallModal />}
                 </header>
-                <div className="groups-container">
-                        <div className="groups-header">
-                            <div className="data-management">
-                                <div className="data-buttons">
-                                    
-                                    <button
-                                        className="secondary-btn create-all-tables-btn"
-                                        onClick={createTablesForAllGroups}
-                                    >
-                                        Ավտոմատ դասավորել խմբերը
-                                    </button>
-                                </div>
-                            </div>
-                            <h3 className="groups-title">Հասանելի խմբեր (քաշեք համապատասխան սեղանի վրա)</h3>
-                            <div className="groups-wrapper">
-                                {renderGroups()}
-                            </div>
-                        </div>
-                    </div>
+
                 <div className="main-content">
                     <div className="sidebar">
                         <PeopleSection
@@ -1105,7 +1076,34 @@ const SeatingArrangement = () => {
                             setTables={setTables}
                         />
                     </div>
-                   
+                    <div className="groups-header">
+                        <div className="data-management">
+                            <div className="data-buttons">
+                                <button
+                                    className="secondary-btn seed-data-btn"
+                                    onClick={() => setPeople(getSeedData())}
+                                >
+                                    Ավելացնել փորձնական տվյալներ
+                                </button>
+                                <button
+                                    className="secondary-btn clear-data-btn"
+                                    onClick={() => setPeople([])}
+                                >
+                                    Մաքրել բոլոր տվյալները
+                                </button>
+                                <button
+                                    className="secondary-btn create-all-tables-btn"
+                                    onClick={createTablesForAllGroups}
+                                >
+                                    Ավտոմատ դասավորել խմբերը
+                                </button>
+                            </div>
+                        </div>
+                        <h3 className="groups-title">Հասանելի խմբեր (քաշեք համապատասխան սեղանի վրա)</h3>
+                        <div className="groups-wrapper">
+                            {renderGroups()}
+                        </div>
+                    </div>
                     <div className="tables-area-container" style={{
                         position: 'relative',
                         width: '100%',
