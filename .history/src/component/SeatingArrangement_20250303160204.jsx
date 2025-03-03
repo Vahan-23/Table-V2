@@ -223,7 +223,7 @@ const SeatingArrangement = () => {
                             <option value="">Ընտրեք դահլիճը</option>
                             {halls.map(hall => (
                                 <option key={hall.id} value={hall.id}>
-                                    {hall.name} ({hall.tables.length} սեղան)
+                                    {hall.name} ({hall.tables.length} սեղաններ)
                                 </option>
                             ))}
                         </select>
@@ -307,7 +307,7 @@ const SeatingArrangement = () => {
     // Функция для генерации препопуляции 20 групп (от 2 до 7 человек в каждой)
     const getSeedData = () => {
         const newPeople = [];
-        for (let group = 1; group <= 20; group++) {
+        for (let group = 1; group <= 45; group++) {
             // Генерируем случайное число людей для группы от 2 до 7
             const groupSize = Math.floor(Math.random() * 6) + 2;
             for (let i = 1; i <= groupSize; i++) {
@@ -593,8 +593,19 @@ const SeatingArrangement = () => {
         setPeople(people.filter((person) => person.name !== personName));
     };
 
-    const handleAddTable = () => {
-        setTables([{ id: Date.now(), people: [], chairCount }, ...tables]);
+    const handleAddTable = (chairCount) => {
+        // Получаем текущее количество столов для определения следующего номера
+        const nextTableIndex = tables.length + 1;
+        
+        // Создаем новый стол с последовательным индексом
+        const newTable = {
+            id: Date.now(), // Уникальный ID для внутренней логики
+            tableIndex: nextTableIndex, // Последовательный номер для отображения
+            chairCount: chairCount,
+            people: []
+        };
+        
+        setTables([...tables, newTable]);
     };
 
     const handleChairCountChange = (e) => {
@@ -919,7 +930,7 @@ const SeatingArrangement = () => {
                                             className="primary-btn add-person-btn"
                                             onClick={handleAddPerson}
                                         >
-                                          Ավելացնել մարդ
+                                            Ավելացնել մարդ
                                         </button>
                                     </div>
                                 </div>
@@ -1180,7 +1191,6 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
                 );
             } else {
                 alert(`Սեղանին չի կարող լինել ավելի քան ${table.chairCount} մարդ:`);
-
             }
         }
     });
@@ -1189,6 +1199,9 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
     const angleStep = 360 / table.chairCount;
     const radius = 140;
 
+    // Используем только табличный индекс для отображения, игнорируя оригинальный ID
+    const displayNumber = table.tableIndex || table.id;
+    
     const peopleOnTable = table.people || [];
 
     for (let i = 0; i < table.chairCount; i++) {
@@ -1198,8 +1211,6 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
 
         const chairStyle = {
             position: 'absolute',
-            // top: '50%',
-            // left: '50%',
             transformOrigin: 'center',
             width: '60px',
             height: '60px',
@@ -1271,7 +1282,7 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
     return (
         <div ref={drop} className="table-container">
             <div className="table-header">
-                <h3>Սեղան {table.id} (Աթոռներ: {table.chairCount})</h3>
+                <h3>Սեղան {displayNumber} (Աթոռներ: {table.chairCount})</h3>
                 <button onClick={() => handleDeleteTable(table.id)} className="delete-table-btn">X</button>
             </div>
             <div className="table">
@@ -1282,7 +1293,6 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
         </div>
     );
 };
-
 // Group component with proper end callback to clear dragging state
 const Group = ({ group, groupName, setDraggingGroup }) => {
     const [{ isDragging }, drag] = useDrag({

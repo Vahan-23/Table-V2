@@ -1038,7 +1038,7 @@ button {
   height: 400px;
   gap: 20px;
   margin-top: 20px;
-  justify-content: space-between;
+  justify-content: flex-start;
 }
 
 .header-section {
@@ -1217,14 +1217,12 @@ button {
   background-color: #f44336;
   color: white;
 }
-
 .delete-hall-btn:hover {
   width: 100%;
   height: 53px;
   background-color: #f44336ab;
   color: white;
 }
-
 .hall-management-container {
   width: 100%;
   margin-bottom: 20px;

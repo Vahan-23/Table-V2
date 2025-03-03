@@ -101,12 +101,12 @@ const SeatingArrangement = () => {
     
     // Delete a hall
     const deleteHall = (hallId) => {
-        if (window.confirm('Վստա՞հ եք, որ ցանկանում եք ջնջել այս դահլիճը:')) {
+        if (window.confirm('Վստա՞հ եք, որ ցանկանում եք ջնջել այս դահլիճը?')) {
             const updatedHalls = halls.filter(hall => hall.id !== hallId);
             setHalls(updatedHalls);
             localStorage.setItem('halls', JSON.stringify(updatedHalls));
-    
-            // If current hall is deleted, reset current hall
+
+            // Если удалён текущий зал, сбросить состояние
             if (currentHall && currentHall.id === hallId) {
                 setCurrentHall(null);
                 setTables([]);
@@ -116,32 +116,32 @@ const SeatingArrangement = () => {
     
     const HallModal = () => {
         const nameInputRef = useRef(null);
-        
+
         useEffect(() => {
             if (nameInputRef.current) {
                 nameInputRef.current.focus();
             }
         }, []);
-        
+
         const [hallName, setHallName] = useState('');
         const [tableCount, setTableCount] = useState(10);
         const [chairCount, setChairCount] = useState(12);
-    
+
         const handleTableCountChange = (e) => {
             const value = e.target.value;
             setTableCount(value === '' ? '' : Math.max(1, parseInt(value) || 1));
         };
-    
+
         const handleChairCountChange = (e) => {
             const value = e.target.value;
             setChairCount(value === '' ? '' : Math.max(1, parseInt(value) || 1));
         };
-    
+     
         return (
             <div className="fullscreen-popup">
                 <div className="fullscreen-popup-content">
                     <h3 className="popup-title">Ստեղծել նոր դահլիճ</h3>
-    
+
                     <div className="hall-form">
                         <div className="form-group">
                             <label htmlFor="hallName">Դահլիճի անունը:</label>
@@ -155,7 +155,7 @@ const SeatingArrangement = () => {
                                 className="input-field"
                             />
                         </div>
-    
+
                         <div className="form-group">
                             <label htmlFor="tableCount">Սեղանների քանակը:</label>
                             <input
@@ -167,7 +167,7 @@ const SeatingArrangement = () => {
                                 className="input-field"
                             />
                         </div>
-    
+
                         <div className="form-group">
                             <label htmlFor="chairCount">Աթոռների քանակը մեկ սեղանի համար:</label>
                             <input
@@ -179,7 +179,7 @@ const SeatingArrangement = () => {
                                 className="input-field"
                             />
                         </div>
-    
+
                         <div className="popup-buttons">
                             <button
                                 type="button"
@@ -188,7 +188,7 @@ const SeatingArrangement = () => {
                             >
                                 Ստեղծել դահլիճ
                             </button>
-    
+
                             <button
                                 type="button"
                                 onClick={() => setShowHallModal(false)}
@@ -202,7 +202,6 @@ const SeatingArrangement = () => {
             </div>
         );
     };
-    
     
     // Hall Management UI component
     const HallManagement = () => {
@@ -919,7 +918,7 @@ const SeatingArrangement = () => {
                                             className="primary-btn add-person-btn"
                                             onClick={handleAddPerson}
                                         >
-                                          Ավելացնել մարդ
+                                            Ավելացնել մարդ
                                         </button>
                                     </div>
                                 </div>

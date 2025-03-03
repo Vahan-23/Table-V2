@@ -919,7 +919,7 @@ const SeatingArrangement = () => {
                                             className="primary-btn add-person-btn"
                                             onClick={handleAddPerson}
                                         >
-                                          Ավելացնել մարդ
+                                           + <br /> Ավելացնել մարդ
                                         </button>
                                     </div>
                                 </div>

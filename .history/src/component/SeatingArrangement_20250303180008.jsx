@@ -137,11 +137,12 @@ const SeatingArrangement = () => {
             setChairCount(value === '' ? '' : Math.max(1, parseInt(value) || 1));
         };
     
+     
         return (
             <div className="fullscreen-popup">
                 <div className="fullscreen-popup-content">
                     <h3 className="popup-title">Ստեղծել նոր դահլիճ</h3>
-    
+
                     <div className="hall-form">
                         <div className="form-group">
                             <label htmlFor="hallName">Դահլիճի անունը:</label>
@@ -155,7 +156,7 @@ const SeatingArrangement = () => {
                                 className="input-field"
                             />
                         </div>
-    
+
                         <div className="form-group">
                             <label htmlFor="tableCount">Սեղանների քանակը:</label>
                             <input
@@ -167,7 +168,7 @@ const SeatingArrangement = () => {
                                 className="input-field"
                             />
                         </div>
-    
+
                         <div className="form-group">
                             <label htmlFor="chairCount">Աթոռների քանակը մեկ սեղանի համար:</label>
                             <input
@@ -179,7 +180,7 @@ const SeatingArrangement = () => {
                                 className="input-field"
                             />
                         </div>
-    
+
                         <div className="popup-buttons">
                             <button
                                 type="button"
@@ -188,7 +189,7 @@ const SeatingArrangement = () => {
                             >
                                 Ստեղծել դահլիճ
                             </button>
-    
+
                             <button
                                 type="button"
                                 onClick={() => setShowHallModal(false)}
@@ -202,7 +203,6 @@ const SeatingArrangement = () => {
             </div>
         );
     };
-    
     
     // Hall Management UI component
     const HallManagement = () => {
@@ -919,7 +919,7 @@ const SeatingArrangement = () => {
                                             className="primary-btn add-person-btn"
                                             onClick={handleAddPerson}
                                         >
-                                          Ավելացնել մարդ
+                                            Ավելացնել մարդ
                                         </button>
                                     </div>
                                 </div>

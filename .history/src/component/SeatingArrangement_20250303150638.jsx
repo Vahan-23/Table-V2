@@ -223,7 +223,7 @@ const SeatingArrangement = () => {
                             <option value="">Ընտրեք դահլիճը</option>
                             {halls.map(hall => (
                                 <option key={hall.id} value={hall.id}>
-                                    {hall.name} ({hall.tables.length} սեղան)
+                                    {hall.name} ({hall.tables.length} սեղաններ)
                                 </option>
                             ))}
                         </select>
@@ -631,7 +631,7 @@ const SeatingArrangement = () => {
             acc[person.group].push(person);
             return acc;
         }, {});
-    
+
         // Get people who are not already seated
         const unseatedPeople = people.filter((person) => {
             return !tables.some((table) =>
@@ -640,85 +640,37 @@ const SeatingArrangement = () => {
                 )
             );
         });
-    
+
         // Group the unseated people
         const unseatedGrouped = unseatedPeople.reduce((acc, person) => {
             if (!acc[person.group]) acc[person.group] = [];
             acc[person.group].push(person);
             return acc;
         }, {});
-    
-        let anyGroupsSeated = false;
-    
-        // Create a new tables state
-        const updatedTables = [...tables];
-        
-        // Try to seat each group at existing tables
-        Object.entries(unseatedGrouped).forEach(([groupName, groupMembers]) => {
-            if (groupMembers.length === 0) return;
-            
-            // Find tables with enough free seats
-            for (const table of updatedTables) {
-                const emptySeats = table.chairCount - table.people.filter(Boolean).length;
-                
-                if (emptySeats >= groupMembers.length) {
-                    // This table has enough space for the group
-                    const newPeople = [...table.people];
-                    
-                    // Find empty spots and fill them
-                    let groupIndex = 0;
-                    for (let i = 0; i < newPeople.length && groupIndex < groupMembers.length; i++) {
-                        if (!newPeople[i]) {
-                            newPeople[i] = groupMembers[groupIndex];
-                            groupIndex++;
-                        }
-                    }
-                    
-                    // If we haven't filled all spots (which shouldn't happen given our check),
-                    // add remaining people
-                    while (groupIndex < groupMembers.length) {
-                        newPeople.push(groupMembers[groupIndex]);
-                        groupIndex++;
-                    }
-                    
-                    table.people = newPeople;
-                    anyGroupsSeated = true;
-                    
-                    // Remove these people from unseatedGrouped
-                    unseatedGrouped[groupName] = [];
-                    break;
-                }
-            }
-        });
-        
-        // If there are still unseated groups, create new tables for them
-        const remainingGroups = Object.values(unseatedGrouped).filter(group => group.length > 0);
-        
-        if (remainingGroups.length > 0) {
-            const newTables = remainingGroups.map(group => ({
+
+        // Create a table for each group of unseated people
+        const newTables = Object.values(unseatedGrouped)
+            .filter(group => group.length > 0)
+            .map(group => ({
                 id: Date.now() + Math.random(), // Ensure unique ID
                 people: group,
                 chairCount: group.length // Set chair count to match group size
             }));
-            
-            updatedTables.push(...newTables);
-            anyGroupsSeated = true;
-        }
-    
-        if (!anyGroupsSeated) {
+
+        if (newTables.length === 0) {
             alert('Բոլոր խմբերն արդեն նստած են սեղանների մոտ կամ հասանելի մարդիկ չկան:');
             return;
         }
-    
-        // Update the tables state
-        setTables(updatedTables);
-    
+
+        // Add the new tables to the state
+        setTables(prevTables => [...newTables, ...prevTables]);
+
         // Remove the seated people from the people list
         setPeople(prevPeople =>
             prevPeople.filter(person =>
-                !updatedTables.some(table =>
+                !newTables.some(table =>
                     table.people.some(seatedPerson =>
-                        seatedPerson && seatedPerson.name === person.name
+                        seatedPerson.name === person.name
                     )
                 )
             )
@@ -919,7 +871,7 @@ const SeatingArrangement = () => {
                                             className="primary-btn add-person-btn"
                                             onClick={handleAddPerson}
                                         >
-                                          Ավելացնել մարդ
+                                            Ավելացնել մարդ
                                         </button>
                                     </div>
                                 </div>

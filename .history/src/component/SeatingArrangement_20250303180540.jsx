@@ -871,7 +871,7 @@ const SeatingArrangement = () => {
                                             value={peopleInput}
                                             onChange={(e) => setPeopleInput(e.target.value)}
                                             placeholder="Մուտքագրեք անուն"
-                                            className="input-field"
+                                            className="input-field2"
                                         />
                                         <div className="group-input-container" ref={groupDropdownRef}>
                                             <input
@@ -919,7 +919,7 @@ const SeatingArrangement = () => {
                                             className="primary-btn add-person-btn"
                                             onClick={handleAddPerson}
                                         >
-                                          Ավելացնել մարդ
+                                            Ավելացնել մարդ
                                         </button>
                                     </div>
                                 </div>

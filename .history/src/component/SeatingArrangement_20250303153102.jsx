@@ -223,7 +223,7 @@ const SeatingArrangement = () => {
                             <option value="">Ընտրեք դահլիճը</option>
                             {halls.map(hall => (
                                 <option key={hall.id} value={hall.id}>
-                                    {hall.name} ({hall.tables.length} սեղան)
+                                    {hall.name} ({hall.tables.length} սեղաններ)
                                 </option>
                             ))}
                         </select>
@@ -919,7 +919,7 @@ const SeatingArrangement = () => {
                                             className="primary-btn add-person-btn"
                                             onClick={handleAddPerson}
                                         >
-                                          Ավելացնել մարդ
+                                            Ավելացնել մարդ
                                         </button>
                                     </div>
                                 </div>
@@ -1023,62 +1023,100 @@ const SeatingArrangement = () => {
                     </div>
 
                     <div className="tables-area-container" style={{
-                        position: 'relative',
-                        width: '100%',
-                        height: '100%',
-                    }}>
-                        <div className="zoom-controls">
-                            <label>Մասշտաբ:</label>
-                            <div className="zoom-buttons">
-                                <button
-                                    className="zoom-btn zoom-out-btn"
-                                    onClick={handleZoomOut}
-                                >−</button>
-                                <span className="zoom-percentage">
-                                    {Math.round(zoom * 100)}%
-                                </span>
-                                <button
-                                    className="zoom-btn zoom-in-btn"
-                                    onClick={handleZoomIn}
-                                >+</button>
-                            </div>
-                        </div>
-                        {/* This div will be scaled */}
-                        <div className="tables-area" style={{
-                            transform: `scale(${zoom})`,
-                            transformOrigin: 'top left',
-                            display: 'flex',
-                            flexWrap: 'wrap',
-                            gap: '20px',
-                            padding: '20px',
-                            width: `${100 / zoom}%`,
-                            minHeight: `${100 / zoom}%`,
-                            justifyContent: "center"
-                        }}>
-                            {draggingGroup && (
-                                <NewTable
-                                    draggingGroup={draggingGroup}
-                                    setTables={setTables}
-                                    setDraggingGroup={setDraggingGroup}
-                                    setPeople={setPeople}
-                                />
-                            )}
+    position: 'relative',
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#f5f5f5', // Фон зала
+    borderRadius: '8px',
+    boxShadow: 'inset 0 0 10px rgba(0,0,0,0.1)', // Тень внутри для объема
+    border: '8px solid #8b7355', // Коричневые стены
+    boxSizing: 'border-box',
+    padding: '10px',
+    overflow: 'hidden'
+}}>
+    <div className="zoom-controls" style={{
+        position: 'absolute',
+        top: '10px',
+        right: '10px',
+        zIndex: 10,
+        background: 'white',
+        padding: '5px 10px',
+        borderRadius: '4px',
+        boxShadow: '0 2px 5px rgba(0,0,0,0.2)'
+    }}>
+        <label>Մասշտաբ:</label>
+        <div className="zoom-buttons">
+            <button
+                className="zoom-btn zoom-out-btn"
+                onClick={handleZoomOut}
+            >−</button>
+            <span className="zoom-percentage">
+                {Math.round(zoom * 100)}%
+            </span>
+            <button
+                className="zoom-btn zoom-in-btn"
+                onClick={handleZoomIn}
+            >+</button>
+        </div>
+    </div>
+    
+    {/* Вход в зал */}
+    <div style={{
+        position: 'absolute',
+        bottom: '0',
+        left: '48%',
+        width: '4%',
+        height: '8px',
+        background: '#f5f5f5',
+        zIndex: 5
+    }}></div>
+    <div style={{
+        position: 'absolute',
+        bottom: '10px',
+        left: '48%',
+        color: '#555',
+        fontSize: '10px',
+        transform: 'translateX(-50%)',
+        zIndex: 5
+    }}>Մուտք</div>
+    
+    {/* This div will be scaled */}
+    <div className="tables-area" style={{
+        transform: `scale(${zoom})`,
+        transformOrigin: 'top left',
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: '20px',
+        padding: '40px', // Увеличенный отступ для свободного расположения
+        width: `${100 / zoom}%`,
+        minHeight: `${100 / zoom}%`,
+        justifyContent: "space-around", // Более равномерное распределение столов
+        alignContent: "flex-start" // Начинать сверху
+    }}>
+        {draggingGroup && (
+            <NewTable
+                draggingGroup={draggingGroup}
+                setTables={setTables}
+                setDraggingGroup={setDraggingGroup}
+                setPeople={setPeople}
+            />
+        )}
 
-                            {tables.map((table) => (
-                                <Table
-                                    key={table.id}
-                                    table={table}
-                                    setTables={setTables}
-                                    handleDeleteTable={handleDeleteTable}
-                                    draggingGroup={draggingGroup}
-                                    setDraggingGroup={setDraggingGroup}
-                                    people={people}
-                                    setPeople={setPeople}
-                                    onChairClick={(chairIndex) => handleChairClick(table.id, chairIndex)}
-                                />
-                            ))}
-                        </div>
-                    </div>
+        {tables.map((table) => (
+            <Table
+                key={table.id}
+                table={table}
+                setTables={setTables}
+                handleDeleteTable={handleDeleteTable}
+                draggingGroup={draggingGroup}
+                setDraggingGroup={setDraggingGroup}
+                people={people}
+                setPeople={setPeople}
+                onChairClick={(chairIndex) => handleChairClick(table.id, chairIndex)}
+            />
+        ))}
+    </div>
+</div>
                 </div>
 
                 {/* Fullscreen popup */}

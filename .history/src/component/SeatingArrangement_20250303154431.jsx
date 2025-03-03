@@ -30,42 +30,42 @@ const SeatingArrangement = () => {
     const [newHallName, setNewHallName] = useState('');
     const [newHallTableCount, setNewHallTableCount] = useState(10);
     const [newHallChairCount, setNewHallChairCount] = useState(12);
-    
+
     useEffect(() => {
         const savedHalls = JSON.parse(localStorage.getItem('halls')) || [];
         if (savedHalls.length) setHalls(savedHalls);
     }, []);
-    
+
     // Save hall configuration
     const saveHall = () => {
         if (!currentHall) {
             alert('Խնդրում ենք նախ ընտրել դահլիճը');
             return;
         }
-    
+
         const updatedHalls = halls.map(hall =>
             hall.id === currentHall.id
                 ? { ...hall, tables: tables }
                 : hall
         );
-    
+
         setHalls(updatedHalls);
         localStorage.setItem('halls', JSON.stringify(updatedHalls));
         alert(`Դահլիճը "${currentHall.name}" հաջողությամբ պահպանվել է`);
     };
-    
+
     // Create a new hall
     const createNewHall = (hallName, tableCount, chairCount) => {
         if (!hallName || !hallName.trim()) {
             alert('Խնդրում ենք մուտքագրել դահլիճի անունը');
             return;
         }
-        
+
         // Generate tables based on settings
         const newTables = [];
         const numTables = Math.max(1, parseInt(tableCount) || 10);
         const numChairs = Math.max(1, parseInt(chairCount) || 12);
-        
+
         for (let i = 0; i < numTables; i++) {
             newTables.push({
                 id: Date.now() + i,
@@ -73,39 +73,39 @@ const SeatingArrangement = () => {
                 chairCount: numChairs
             });
         }
-        
+
         const newHall = {
             id: Date.now(),
             name: hallName.trim(),
             tables: newTables
         };
-        
+
         // Update halls state and localStorage
         const updatedHalls = [...halls, newHall];
         setHalls(updatedHalls);
         localStorage.setItem('halls', JSON.stringify(updatedHalls));
-        
+
         // Set as current hall
         setCurrentHall(newHall);
         setTables(newTables);
-        
+
         // Close the modal
         setShowHallModal(false);
     };
-    
+
     // Load a hall configuration
     const loadHall = (hall) => {
         setCurrentHall(hall);
         setTables(hall.tables);
     };
-    
+
     // Delete a hall
     const deleteHall = (hallId) => {
         if (window.confirm('Վստա՞հ եք, որ ցանկանում եք ջնջել այս դահլիճը:')) {
             const updatedHalls = halls.filter(hall => hall.id !== hallId);
             setHalls(updatedHalls);
             localStorage.setItem('halls', JSON.stringify(updatedHalls));
-    
+
             // If current hall is deleted, reset current hall
             if (currentHall && currentHall.id === hallId) {
                 setCurrentHall(null);
@@ -113,35 +113,35 @@ const SeatingArrangement = () => {
             }
         }
     };
-    
+
     const HallModal = () => {
         const nameInputRef = useRef(null);
-        
+
         useEffect(() => {
             if (nameInputRef.current) {
                 nameInputRef.current.focus();
             }
         }, []);
-        
+
         const [hallName, setHallName] = useState('');
         const [tableCount, setTableCount] = useState(10);
         const [chairCount, setChairCount] = useState(12);
-    
+
         const handleTableCountChange = (e) => {
             const value = e.target.value;
             setTableCount(value === '' ? '' : Math.max(1, parseInt(value) || 1));
         };
-    
+
         const handleChairCountChange = (e) => {
             const value = e.target.value;
             setChairCount(value === '' ? '' : Math.max(1, parseInt(value) || 1));
         };
-    
+
         return (
             <div className="fullscreen-popup">
                 <div className="fullscreen-popup-content">
                     <h3 className="popup-title">Ստեղծել նոր դահլիճ</h3>
-    
+
                     <div className="hall-form">
                         <div className="form-group">
                             <label htmlFor="hallName">Դահլիճի անունը:</label>
@@ -155,7 +155,7 @@ const SeatingArrangement = () => {
                                 className="input-field"
                             />
                         </div>
-    
+
                         <div className="form-group">
                             <label htmlFor="tableCount">Սեղանների քանակը:</label>
                             <input
@@ -167,7 +167,7 @@ const SeatingArrangement = () => {
                                 className="input-field"
                             />
                         </div>
-    
+
                         <div className="form-group">
                             <label htmlFor="chairCount">Աթոռների քանակը մեկ սեղանի համար:</label>
                             <input
@@ -179,7 +179,7 @@ const SeatingArrangement = () => {
                                 className="input-field"
                             />
                         </div>
-    
+
                         <div className="popup-buttons">
                             <button
                                 type="button"
@@ -188,7 +188,7 @@ const SeatingArrangement = () => {
                             >
                                 Ստեղծել դահլիճ
                             </button>
-    
+
                             <button
                                 type="button"
                                 onClick={() => setShowHallModal(false)}
@@ -202,14 +202,14 @@ const SeatingArrangement = () => {
             </div>
         );
     };
-    
-    
+
+
     // Hall Management UI component
     const HallManagement = () => {
         return (
             <div className="hall-management">
                 <h3 className="section-main-title">Դահլիճների կառավարում</h3>
-    
+
                 <div className="hall-controls">
                     <div className="hall-dropdown-container">
                         <select
@@ -223,12 +223,12 @@ const SeatingArrangement = () => {
                             <option value="">Ընտրեք դահլիճը</option>
                             {halls.map(hall => (
                                 <option key={hall.id} value={hall.id}>
-                                    {hall.name} ({hall.tables.length} սեղան)
+                                    {hall.name} ({hall.tables.length} սեղաններ)
                                 </option>
                             ))}
                         </select>
                     </div>
-    
+
                     <div className="hall-buttons">
                         <button
                             className="primary-btn create-hall-btn"
@@ -236,7 +236,7 @@ const SeatingArrangement = () => {
                         >
                             Ստեղծել նոր դահլիճ
                         </button>
-    
+
                         <button
                             className="primary-btn save-hall-btn"
                             onClick={saveHall}
@@ -244,7 +244,7 @@ const SeatingArrangement = () => {
                         >
                             Պահպանել դահլիճը
                         </button>
-    
+
                         {currentHall && (
                             <button
                                 className="secondary-btn delete-hall-btn"
@@ -255,7 +255,7 @@ const SeatingArrangement = () => {
                         )}
                     </div>
                 </div>
-    
+
                 {currentHall && (
                     <div className="current-hall-info">
                         <h4>Ընթացիկ դահլիճ: {currentHall.name}</h4>
@@ -265,8 +265,8 @@ const SeatingArrangement = () => {
             </div>
         );
     };
-    
-    {showHallModal && <HallModal />}
+
+    { showHallModal && <HallModal /> }
     const handleTableCountChange = (e) => {
         setTableCount(parseInt(e.target.value, 10) || 1);
     };
@@ -631,7 +631,7 @@ const SeatingArrangement = () => {
             acc[person.group].push(person);
             return acc;
         }, {});
-    
+
         // Get people who are not already seated
         const unseatedPeople = people.filter((person) => {
             return !tables.some((table) =>
@@ -640,31 +640,31 @@ const SeatingArrangement = () => {
                 )
             );
         });
-    
+
         // Group the unseated people
         const unseatedGrouped = unseatedPeople.reduce((acc, person) => {
             if (!acc[person.group]) acc[person.group] = [];
             acc[person.group].push(person);
             return acc;
         }, {});
-    
+
         let anyGroupsSeated = false;
-    
+
         // Create a new tables state
         const updatedTables = [...tables];
-        
+
         // Try to seat each group at existing tables
         Object.entries(unseatedGrouped).forEach(([groupName, groupMembers]) => {
             if (groupMembers.length === 0) return;
-            
+
             // Find tables with enough free seats
             for (const table of updatedTables) {
                 const emptySeats = table.chairCount - table.people.filter(Boolean).length;
-                
+
                 if (emptySeats >= groupMembers.length) {
                     // This table has enough space for the group
                     const newPeople = [...table.people];
-                    
+
                     // Find empty spots and fill them
                     let groupIndex = 0;
                     for (let i = 0; i < newPeople.length && groupIndex < groupMembers.length; i++) {
@@ -673,46 +673,46 @@ const SeatingArrangement = () => {
                             groupIndex++;
                         }
                     }
-                    
+
                     // If we haven't filled all spots (which shouldn't happen given our check),
                     // add remaining people
                     while (groupIndex < groupMembers.length) {
                         newPeople.push(groupMembers[groupIndex]);
                         groupIndex++;
                     }
-                    
+
                     table.people = newPeople;
                     anyGroupsSeated = true;
-                    
+
                     // Remove these people from unseatedGrouped
                     unseatedGrouped[groupName] = [];
                     break;
                 }
             }
         });
-        
+
         // If there are still unseated groups, create new tables for them
         const remainingGroups = Object.values(unseatedGrouped).filter(group => group.length > 0);
-        
+
         if (remainingGroups.length > 0) {
             const newTables = remainingGroups.map(group => ({
                 id: Date.now() + Math.random(), // Ensure unique ID
                 people: group,
                 chairCount: group.length // Set chair count to match group size
             }));
-            
+
             updatedTables.push(...newTables);
             anyGroupsSeated = true;
         }
-    
+
         if (!anyGroupsSeated) {
             alert('Բոլոր խմբերն արդեն նստած են սեղանների մոտ կամ հասանելի մարդիկ չկան:');
             return;
         }
-    
+
         // Update the tables state
         setTables(updatedTables);
-    
+
         // Remove the seated people from the people list
         setPeople(prevPeople =>
             prevPeople.filter(person =>
@@ -919,7 +919,7 @@ const SeatingArrangement = () => {
                                             className="primary-btn add-person-btn"
                                             onClick={handleAddPerson}
                                         >
-                                          Ավելացնել մարդ
+                                            Ավելացնել մարդ
                                         </button>
                                     </div>
                                 </div>
@@ -1023,62 +1023,273 @@ const SeatingArrangement = () => {
                     </div>
 
                     <div className="tables-area-container" style={{
-                        position: 'relative',
-                        width: '100%',
-                        height: '100%',
-                    }}>
-                        <div className="zoom-controls">
-                            <label>Մասշտաբ:</label>
-                            <div className="zoom-buttons">
-                                <button
-                                    className="zoom-btn zoom-out-btn"
-                                    onClick={handleZoomOut}
-                                >−</button>
-                                <span className="zoom-percentage">
-                                    {Math.round(zoom * 100)}%
-                                </span>
-                                <button
-                                    className="zoom-btn zoom-in-btn"
-                                    onClick={handleZoomIn}
-                                >+</button>
-                            </div>
-                        </div>
-                        {/* This div will be scaled */}
-                        <div className="tables-area" style={{
-                            transform: `scale(${zoom})`,
-                            transformOrigin: 'top left',
-                            display: 'flex',
-                            flexWrap: 'wrap',
-                            gap: '20px',
-                            padding: '20px',
-                            width: `${100 / zoom}%`,
-                            minHeight: `${100 / zoom}%`,
-                            justifyContent: "center"
-                        }}>
-                            {draggingGroup && (
-                                <NewTable
-                                    draggingGroup={draggingGroup}
-                                    setTables={setTables}
-                                    setDraggingGroup={setDraggingGroup}
-                                    setPeople={setPeople}
-                                />
-                            )}
+    position: 'relative',
+    width: '100%',
+    height: '100%',
+    background: 'url("https://cdnjs.cloudflare.com/ajax/libs/patterns.js/1.0.6/patterns/marble-light.png")', // Мраморный пол
+    backgroundSize: '200px',
+    backgroundRepeat: 'repeat',
+    borderRadius: '8px',
+    boxShadow: 'inset 0 0 30px rgba(0,0,0,0.2)', 
+    border: '15px solid #5e4d3c', // Темные деревянные стены
+    boxSizing: 'border-box',
+    padding: '10px',
+    overflow: 'hidden'
+}}>
+    {/* Декоративная отделка стены */}
+    <div style={{
+        position: 'absolute',
+        top: 0, left: 0, right: 0,
+        height: '30px',
+        background: 'linear-gradient(180deg, #8a7054 0%, #5e4d3c 100%)',
+        borderBottom: '2px solid #b39c7a',
+        boxShadow: '0 2px 10px rgba(0,0,0,0.15)'
+    }}></div>
+    
+    {/* Золотые узоры на стенах */}
+    <div style={{
+        position: 'absolute',
+        top: '6px',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        width: '80%',
+        height: '18px',
+        background: 'url("https://cdnjs.cloudflare.com/ajax/libs/patterns.js/1.0.6/patterns/ornamental.png")',
+        backgroundSize: 'contain',
+        backgroundRepeat: 'repeat-x',
+        opacity: 0.7
+    }}></div>
+    
+    {/* Элегантная большая люстра в центре */}
+    <div style={{
+        position: 'absolute',
+        top: '80px',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        width: '80px',
+        height: '80px',
+        borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(255,253,219,0.9) 0%, rgba(255,253,219,0.5) 40%, rgba(255,253,219,0) 70%)',
+        boxShadow: '0 0 40px 30px rgba(255,253,219,0.4), 0 0 15px 5px rgba(255,223,119,0.6)',
+        zIndex: 4,
+        pointerEvents: 'none'
+    }}></div>
+    
+    {/* Канделябры по бокам */}
+    <div style={{
+        position: 'absolute',
+        top: '30px',
+        left: '15%',
+        width: '20px',
+        height: '60px',
+        backgroundImage: 'linear-gradient(to bottom, #d4b06c, #b39c7a)',
+        boxShadow: '0 0 15px 8px rgba(255,253,219,0.3)',
+        zIndex: 4
+    }}></div>
+    <div style={{
+        position: 'absolute',
+        top: '30px',
+        right: '15%',
+        width: '20px',
+        height: '60px',
+        backgroundImage: 'linear-gradient(to bottom, #d4b06c, #b39c7a)',
+        boxShadow: '0 0 15px 8px rgba(255,253,219,0.3)',
+        zIndex: 4
+    }}></div>
+    
+    {/* Красные шторы по бокам */}
+    <div style={{
+        position: 'absolute',
+        top: '0',
+        left: '5%',
+        width: '30px',
+        height: '80%',
+        background: 'linear-gradient(90deg, #8a2929, #c53c3c, #8a2929)',
+        borderRadius: '0 0 8px 8px',
+        boxShadow: '2px 2px 5px rgba(0,0,0,0.3)'
+    }}></div>
+    <div style={{
+        position: 'absolute',
+        top: '0',
+        right: '5%',
+        width: '30px',
+        height: '80%',
+        background: 'linear-gradient(90deg, #8a2929, #c53c3c, #8a2929)',
+        borderRadius: '0 0 8px 8px',
+        boxShadow: '-2px 2px 5px rgba(0,0,0,0.3)'
+    }}></div>
 
-                            {tables.map((table) => (
-                                <Table
-                                    key={table.id}
-                                    table={table}
-                                    setTables={setTables}
-                                    handleDeleteTable={handleDeleteTable}
-                                    draggingGroup={draggingGroup}
-                                    setDraggingGroup={setDraggingGroup}
-                                    people={people}
-                                    setPeople={setPeople}
-                                    onChairClick={(chairIndex) => handleChairClick(table.id, chairIndex)}
-                                />
-                            ))}
-                        </div>
-                    </div>
+    <div className="zoom-controls" style={{
+        position: 'absolute',
+        top: '10px',
+        right: '10px',
+        zIndex: 10,
+        background: 'rgba(255, 255, 255, 0.8)',
+        backdropFilter: 'blur(3px)',
+        padding: '8px 12px',
+        borderRadius: '6px',
+        boxShadow: '0 3px 8px rgba(0,0,0,0.2)',
+        border: '1px solid #d4b06c'
+    }}>
+        <label style={{ fontWeight: 'bold', marginRight: '8px', color: '#5e4d3c' }}>Մասշտաբ:</label>
+        <div className="zoom-buttons" style={{ display: 'flex', alignItems: 'center' }}>
+            <button
+                className="zoom-btn zoom-out-btn"
+                onClick={handleZoomOut}
+                style={{
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '4px',
+                    background: 'linear-gradient(to bottom, #f8f1e2, #e8d9b5)',
+                    border: '1px solid #d4b06c',
+                    cursor: 'pointer',
+                    fontWeight: 'bold',
+                    color: '#5e4d3c'
+                }}
+            >−</button>
+            <span className="zoom-percentage" style={{ margin: '0 10px', fontWeight: 'bold', color: '#5e4d3c' }}>
+                {Math.round(zoom * 100)}%
+            </span>
+            <button
+                className="zoom-btn zoom-in-btn"
+                onClick={handleZoomIn}
+                style={{
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '4px',
+                    background: 'linear-gradient(to bottom, #f8f1e2, #e8d9b5)',
+                    border: '1px solid #d4b06c',
+                    cursor: 'pointer',
+                    fontWeight: 'bold',
+                    color: '#5e4d3c'
+                }}
+            >+</button>
+        </div>
+    </div>
+
+    {/* Роскошный вход */}
+    <div style={{
+        position: 'absolute',
+        bottom: '0',
+        left: '45%',
+        width: '10%',
+        height: '20px',
+        background: 'linear-gradient(to top, #8a2929, #c53c3c)',
+        borderTopLeftRadius: '12px',
+        borderTopRightRadius: '12px',
+        boxShadow: 'inset 0 2px 5px rgba(0,0,0,0.3), 0 -2px 4px rgba(0,0,0,0.1)',
+        zIndex: 5
+    }}></div>
+    <div style={{
+        position: 'absolute',
+        bottom: '21px',
+        left: '50%',
+        color: '#f8f1e2',
+        fontSize: '12px',
+        fontWeight: 'bold',
+        transform: 'translateX(-50%)',
+        textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
+        zIndex: 5
+    }}>Մուտք</div>
+    
+    {/* Декоративные элементы по углам */}
+    <div style={{
+        position: 'absolute',
+        top: '40px',
+        left: '40px',
+        width: '30px',
+        height: '30px',
+        borderRadius: '50%',
+        background: 'radial-gradient(circle, #b39c7a 0%, #d4b06c 40%, transparent 70%)',
+        opacity: 0.6,
+        zIndex: 2
+    }}></div>
+    <div style={{
+        position: 'absolute',
+        top: '40px',
+        right: '40px',
+        width: '30px',
+        height: '30px',
+        borderRadius: '50%',
+        background: 'radial-gradient(circle, #b39c7a 0%, #d4b06c 40%, transparent 70%)',
+        opacity: 0.6,
+        zIndex: 2
+    }}></div>
+
+    {/* This div will be scaled */}
+    <div className="tables-area" style={{
+        transform: `scale(${zoom})`,
+        transformOrigin: 'top left',
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: '20px',
+        padding: '70px 60px',
+        width: `${100 / zoom}%`,
+        minHeight: `${100 / zoom}%`,
+        justifyContent: "space-around",
+        alignContent: "flex-start",
+        position: 'relative'
+    }}>
+        {/* Эффект мраморного пола с золотыми вставками */}
+        <div style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: '70%',
+            height: '70%',
+            border: '2px solid rgba(212, 176, 108, 0.3)',
+            borderRadius: '50%',
+            pointerEvents: 'none',
+            zIndex: 1
+        }}></div>
+        
+        {/* Тонкие линии на полу */}
+        <div style={{
+            position: 'absolute',
+            top: '50%',
+            left: '0',
+            width: '100%',
+            height: '1px',
+            background: 'rgba(212, 176, 108, 0.2)',
+            pointerEvents: 'none',
+            zIndex: 1
+        }}></div>
+        <div style={{
+            position: 'absolute',
+            top: '0',
+            left: '50%',
+            width: '1px',
+            height: '100%',
+            background: 'rgba(212, 176, 108, 0.2)',
+            pointerEvents: 'none',
+            zIndex: 1
+        }}></div>
+
+        {draggingGroup && (
+            <NewTable
+                draggingGroup={draggingGroup}
+                setTables={setTables}
+                setDraggingGroup={setDraggingGroup}
+                setPeople={setPeople}
+            />
+        )}
+
+        {tables.map((table) => (
+            <Table
+                key={table.id}
+                table={table}
+                setTables={setTables}
+                handleDeleteTable={handleDeleteTable}
+                draggingGroup={draggingGroup}
+                setDraggingGroup={setDraggingGroup}
+                people={people}
+                setPeople={setPeople}
+                onChairClick={(chairIndex) => handleChairClick(table.id, chairIndex)}
+            />
+        ))}
+    </div>
+</div>
                 </div>
 
                 {/* Fullscreen popup */}

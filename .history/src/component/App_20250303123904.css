@@ -1,9 +1,23 @@
 /* Modern styles for the Seating Arrangement app */
+:root {
+  --primary-color: #4f46e5;
+  --primary-hover: #4338ca;
+  --success-color: #10b981;
+  --success-hover: #059669;
+  --bg-gradient: linear-gradient(135deg, #6366f1, #3b82f6);
+  --card-bg: rgba(255, 255, 255, 0.95);
+  --shadow-sm: 0 4px 6px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 10px 15px rgba(0, 0, 0, 0.07), 0 4px 6px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 20px 25px rgba(0, 0, 0, 0.1), 0 10px 10px rgba(0, 0, 0, 0.04);
+  --transition-normal: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --border-radius: 14px;
+}
 
 * {
   margin: 0;
   padding: 0;
-  font-family: 'Roboto', 'Segoe UI', Arial, sans-serif;
+  /* box-sizing: border-box; */
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 body {
@@ -44,6 +58,103 @@ body {
   margin-bottom: 15px;
 }
 
+.header-sections {
+  display: flex;
+  width: 100%;
+  gap: 20px;
+  margin-top: 20px;
+  justify-content: center;
+}
+
+.header-section {
+  /* flex: 1 1; */
+  display: flex;
+  height: auto;
+  background-color: #f7f8fc;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  flex-direction: column;
+  justify-content: space-around;
+}
+
+.section-main-title {
+  color: #3a3a3a;
+  margin-top: 0;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e5e5e5;
+  font-size: 18px;
+}
+
+/* People section specific */
+.people-section .input-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+  flex-direction: column;
+}
+
+.people-section .data-management {
+  margin-top: 20px;
+}
+
+/* Table section specific */
+.tables-section .table-controls-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 15px;
+  flex-direction: column;
+
+}
+
+.tables-section .chair-count-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tables-section .chair-count-input {
+  width: 60px;
+}
+
+.tables-section .zoom-controls {
+  display: flex;
+  align-items: center;
+  margin-top: 20px;
+  gap: 10px;
+}
+
+.zoom-buttons {
+  display: flex;
+  align-items: center;
+}
+
+.zoom-btn {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  background-color: #f0f0f0;
+  border: 1px solid #ddd;
+  cursor: pointer;
+}
+
+.zoom-percentage {
+  margin: 0 8px;
+  min-width: 50px;
+  text-align: center;
+}
+
+.data-buttons {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
 .header-controls {
   background: rgba(255, 255, 255, 0.15);
   backdrop-filter: blur(10px);
@@ -70,16 +181,7 @@ body {
 }
 
 .input-field {
-  /* flex: 1; */
-  padding: 10px 15px;
-  border-radius: 8px;
-  border: none;
-  font-size: 16px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-}
-
-.input-field2 {
-  /* flex: 1; */
+  flex: 1;
   padding: 10px 15px;
   border-radius: 8px;
   border: none;
@@ -157,8 +259,6 @@ button {
 }
 
 .primary-btn {
-  width: 100%;
-  height: 53px;
   background-color: #2563eb;
   color: white;
   border: none;
@@ -208,12 +308,12 @@ button {
 }
 
 .chair-count-input {
-  height: 38px;
-  padding: 0.5rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  outline: none;
-  transition: border-color 0.2s;
+  width: 120px;
+  padding: 10px 15px;
+  border-radius: 8px;
+  border: none;
+  font-size: 16px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
 .add-table-btn {
@@ -1032,200 +1132,3 @@ button {
 }
 
 /* Split header sections styling */
-.header-sections {
-  display: flex;
-  width: 100%;
-  height: 400px;
-  gap: 20px;
-  margin-top: 20px;
-  justify-content: space-between;
-}
-
-.header-section {
-  /* flex: 1 1; */
-  display: flex;
-  height: auto;
-  background-color: #f7f8fc;
-  border-radius: 8px;
-  padding: 16px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-  flex-direction: column;
-  justify-content: flex-start;
-
-
-}
-
-.section-main-title {
-  color: #3a3a3a;
-  margin-top: 0;
-  margin-bottom: 16px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid #e5e5e5;
-  font-size: 18px;
-}
-
-/* People section specific */
-.people-section .input-row {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 15px;
-  flex-direction: column;
-}
-
-.people-section .data-management {
-  margin-top: 20px;
-}
-
-/* Table section specific */
-.tables-section .table-controls-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 15px;
-  flex-direction: column;
-  align-items: flex-end;
-}
-
-.tables-section .chair-count-container {
-  display: flex;
-  align-items: center;
-  gap: 23px;
-  justify-content: center;
-}
-
-.table-count-container {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.table-count-input {
-  width: 60px;
-}
-
-.tables-section .chair-count-input {
-  width: 60px;
-}
-
-.tables-section .zoom-controls {
-  display: flex;
-  align-items: center;
-  margin-top: 20px;
-  gap: 10px;
-}
-
-.zoom-buttons {
-  display: flex;
-  align-items: center;
-}
-
-.zoom-btn {
-  width: 30px;
-  height: 30px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 4px;
-  background-color: #f0f0f0;
-  border: 1px solid #ddd;
-  cursor: pointer;
-}
-
-.zoom-percentage {
-  margin: 0 8px;
-  min-width: 50px;
-  text-align: center;
-}
-
-.data-buttons {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-}
-
-.hall-management {
-  background-color: #f9f9f9;
-  border-radius: 8px;
-  padding: 15px;
-  /* margin-bottom: 20px; */
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-}
-
-.hall-controls {
-  display: flex;
-  /* flex-wrap: wrap; */
-  gap: 15px;
-  margin-top: 10px;
-  flex-direction: column;
-
-}
-
-.hall-dropdown-container {
-  flex: 1;
-  min-width: 250px;
-}
-
-.hall-select {
-  width: 100%;
-  padding: 10px;
-  border-radius: 4px;
-  border: 1px solid #ddd;
-  font-size: 16px;
-}
-
-.hall-buttons {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.current-hall-info {
-  margin-top: 15px;
-  padding: 10px;
-  background-color: #e8f4fd;
-  border-radius: 4px;
-}
-
-.hall-form {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-  margin: 20px 0;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.form-group label {
-  font-weight: bold;
-}
-
-.create-hall-btn {
-  background-color: #4CAF50;
-}
-
-.save-hall-btn {
-  background-color: #2196F3;
-}
-
-.delete-hall-btn {
-  width: 100%;
-  height: 53px;
-  background-color: #f44336;
-  color: white;
-}
-
-.delete-hall-btn:hover {
-  width: 100%;
-  height: 53px;
-  background-color: #f44336ab;
-  color: white;
-}
-
-.hall-management-container {
-  width: 100%;
-  margin-bottom: 20px;
-}

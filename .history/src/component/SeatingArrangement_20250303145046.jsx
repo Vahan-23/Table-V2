@@ -30,6 +30,7 @@ const SeatingArrangement = () => {
     const [newHallName, setNewHallName] = useState('');
     const [newHallTableCount, setNewHallTableCount] = useState(10);
     const [newHallChairCount, setNewHallChairCount] = useState(12);
+    const [tables, setTables] = useState([]);
     
     useEffect(() => {
         const savedHalls = JSON.parse(localStorage.getItem('halls')) || [];
@@ -115,6 +116,7 @@ const SeatingArrangement = () => {
     };
     
     const HallModal = () => {
+        // Focus the name input when modal opens
         const nameInputRef = useRef(null);
         
         useEffect(() => {
@@ -127,19 +129,21 @@ const SeatingArrangement = () => {
         const [tableCount, setTableCount] = useState(10);
         const [chairCount, setChairCount] = useState(12);
     
+        // Handler for table count changes
         const handleTableCountChange = (e) => {
             const value = e.target.value;
             setTableCount(value === '' ? '' : Math.max(1, parseInt(value) || 1));
         };
     
+        // Handler for chair count changes
         const handleChairCountChange = (e) => {
             const value = e.target.value;
             setChairCount(value === '' ? '' : Math.max(1, parseInt(value) || 1));
         };
-    
+        
         return (
-            <div className="fullscreen-popup">
-                <div className="fullscreen-popup-content">
+            <div className="fullscreen-popup" onClick={() => setShowHallModal(false)}>
+                <div className="fullscreen-popup-content" onClick={(e) => e.stopPropagation()}>
                     <h3 className="popup-title">Ստեղծել նոր դահլիճ</h3>
     
                     <div className="hall-form">
@@ -203,7 +207,6 @@ const SeatingArrangement = () => {
         );
     };
     
-    
     // Hall Management UI component
     const HallManagement = () => {
         return (
@@ -223,7 +226,7 @@ const SeatingArrangement = () => {
                             <option value="">Ընտրեք դահլիճը</option>
                             {halls.map(hall => (
                                 <option key={hall.id} value={hall.id}>
-                                    {hall.name} ({hall.tables.length} սեղան)
+                                    {hall.name} ({hall.tables.length} սեղաններ)
                                 </option>
                             ))}
                         </select>
@@ -631,7 +634,7 @@ const SeatingArrangement = () => {
             acc[person.group].push(person);
             return acc;
         }, {});
-    
+
         // Get people who are not already seated
         const unseatedPeople = people.filter((person) => {
             return !tables.some((table) =>
@@ -640,85 +643,37 @@ const SeatingArrangement = () => {
                 )
             );
         });
-    
+
         // Group the unseated people
         const unseatedGrouped = unseatedPeople.reduce((acc, person) => {
             if (!acc[person.group]) acc[person.group] = [];
             acc[person.group].push(person);
             return acc;
         }, {});
-    
-        let anyGroupsSeated = false;
-    
-        // Create a new tables state
-        const updatedTables = [...tables];
-        
-        // Try to seat each group at existing tables
-        Object.entries(unseatedGrouped).forEach(([groupName, groupMembers]) => {
-            if (groupMembers.length === 0) return;
-            
-            // Find tables with enough free seats
-            for (const table of updatedTables) {
-                const emptySeats = table.chairCount - table.people.filter(Boolean).length;
-                
-                if (emptySeats >= groupMembers.length) {
-                    // This table has enough space for the group
-                    const newPeople = [...table.people];
-                    
-                    // Find empty spots and fill them
-                    let groupIndex = 0;
-                    for (let i = 0; i < newPeople.length && groupIndex < groupMembers.length; i++) {
-                        if (!newPeople[i]) {
-                            newPeople[i] = groupMembers[groupIndex];
-                            groupIndex++;
-                        }
-                    }
-                    
-                    // If we haven't filled all spots (which shouldn't happen given our check),
-                    // add remaining people
-                    while (groupIndex < groupMembers.length) {
-                        newPeople.push(groupMembers[groupIndex]);
-                        groupIndex++;
-                    }
-                    
-                    table.people = newPeople;
-                    anyGroupsSeated = true;
-                    
-                    // Remove these people from unseatedGrouped
-                    unseatedGrouped[groupName] = [];
-                    break;
-                }
-            }
-        });
-        
-        // If there are still unseated groups, create new tables for them
-        const remainingGroups = Object.values(unseatedGrouped).filter(group => group.length > 0);
-        
-        if (remainingGroups.length > 0) {
-            const newTables = remainingGroups.map(group => ({
+
+        // Create a table for each group of unseated people
+        const newTables = Object.values(unseatedGrouped)
+            .filter(group => group.length > 0)
+            .map(group => ({
                 id: Date.now() + Math.random(), // Ensure unique ID
                 people: group,
                 chairCount: group.length // Set chair count to match group size
             }));
-            
-            updatedTables.push(...newTables);
-            anyGroupsSeated = true;
-        }
-    
-        if (!anyGroupsSeated) {
+
+        if (newTables.length === 0) {
             alert('Բոլոր խմբերն արդեն նստած են սեղանների մոտ կամ հասանելի մարդիկ չկան:');
             return;
         }
-    
-        // Update the tables state
-        setTables(updatedTables);
-    
+
+        // Add the new tables to the state
+        setTables(prevTables => [...newTables, ...prevTables]);
+
         // Remove the seated people from the people list
         setPeople(prevPeople =>
             prevPeople.filter(person =>
-                !updatedTables.some(table =>
+                !newTables.some(table =>
                     table.people.some(seatedPerson =>
-                        seatedPerson && seatedPerson.name === person.name
+                        seatedPerson.name === person.name
                     )
                 )
             )
@@ -855,12 +810,12 @@ const SeatingArrangement = () => {
                     <div className="header-content">
                         <div className="logo">Նստատեղերի դասավորություն</div>
                         <div className="hall-management-container">
+                            <HallManagement />
                         </div>
                         {showHallModal && <HallModal />}
                         {/* Split into two distinct sections */}
                         <div className="header-sections">
                             {/* SECTION 1: People Management */}
-                            <HallManagement />
                             <div className="header-section people-section">
                                 <h3 className="section-main-title">Մարդկանց կառավարում</h3>
 
@@ -919,7 +874,7 @@ const SeatingArrangement = () => {
                                             className="primary-btn add-person-btn"
                                             onClick={handleAddPerson}
                                         >
-                                          Ավելացնել մարդ
+                                            Ավելացնել մարդ
                                         </button>
                                     </div>
                                 </div>

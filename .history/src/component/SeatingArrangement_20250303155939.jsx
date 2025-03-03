@@ -223,7 +223,7 @@ const SeatingArrangement = () => {
                             <option value="">Ընտրեք դահլիճը</option>
                             {halls.map(hall => (
                                 <option key={hall.id} value={hall.id}>
-                                    {hall.name} ({hall.tables.length} սեղան)
+                                    {hall.name} ({hall.tables.length} սեղաններ)
                                 </option>
                             ))}
                         </select>
@@ -307,7 +307,7 @@ const SeatingArrangement = () => {
     // Функция для генерации препопуляции 20 групп (от 2 до 7 человек в каждой)
     const getSeedData = () => {
         const newPeople = [];
-        for (let group = 1; group <= 20; group++) {
+        for (let group = 1; group <= 45; group++) {
             // Генерируем случайное число людей для группы от 2 до 7
             const groupSize = Math.floor(Math.random() * 6) + 2;
             for (let i = 1; i <= groupSize; i++) {
@@ -919,7 +919,7 @@ const SeatingArrangement = () => {
                                             className="primary-btn add-person-btn"
                                             onClick={handleAddPerson}
                                         >
-                                          Ավելացնել մարդ
+                                            Ավելացնել մարդ
                                         </button>
                                     </div>
                                 </div>
@@ -1180,7 +1180,6 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
                 );
             } else {
                 alert(`Սեղանին չի կարող լինել ավելի քան ${table.chairCount} մարդ:`);
-
             }
         }
     });
@@ -1189,6 +1188,22 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
     const angleStep = 360 / table.chairCount;
     const radius = 140;
 
+    // Получаем порядковый номер стола для отображения
+    const getDisplayNumber = () => {
+        // Преобразовываем ID стола в порядковый номер
+        // Если table.id уже является числом, используем его напрямую
+        // В противном случае пытаемся извлечь порядковый номер из строки ID
+        
+        if (typeof table.id === 'number') {
+            return table.id;
+        }
+        
+        // Используем regex для извлечения числовой части из ID
+        const match = table.id.toString().match(/\d+$/);
+        return match ? parseInt(match[0]) : table.id;
+    };
+
+    const displayNumber = getDisplayNumber();
     const peopleOnTable = table.people || [];
 
     for (let i = 0; i < table.chairCount; i++) {
@@ -1198,8 +1213,6 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
 
         const chairStyle = {
             position: 'absolute',
-            // top: '50%',
-            // left: '50%',
             transformOrigin: 'center',
             width: '60px',
             height: '60px',
@@ -1271,7 +1284,7 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
     return (
         <div ref={drop} className="table-container">
             <div className="table-header">
-                <h3>Սեղան {table.id} (Աթոռներ: {table.chairCount})</h3>
+                <h3>Սեղան {displayNumber} (Աթոռներ: {table.chairCount})</h3>
                 <button onClick={() => handleDeleteTable(table.id)} className="delete-table-btn">X</button>
             </div>
             <div className="table">
@@ -1282,7 +1295,6 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
         </div>
     );
 };
-
 // Group component with proper end callback to clear dragging state
 const Group = ({ group, groupName, setDraggingGroup }) => {
     const [{ isDragging }, drag] = useDrag({

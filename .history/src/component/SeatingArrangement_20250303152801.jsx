@@ -223,7 +223,7 @@ const SeatingArrangement = () => {
                             <option value="">Ընտրեք դահլիճը</option>
                             {halls.map(hall => (
                                 <option key={hall.id} value={hall.id}>
-                                    {hall.name} ({hall.tables.length} սեղան)
+                                    {hall.name} ({hall.tables.length} սեղաններ)
                                 </option>
                             ))}
                         </select>
@@ -919,7 +919,7 @@ const SeatingArrangement = () => {
                                             className="primary-btn add-person-btn"
                                             onClick={handleAddPerson}
                                         >
-                                          Ավելացնել մարդ
+                                            Ավելացնել մարդ
                                         </button>
                                     </div>
                                 </div>
@@ -1022,63 +1022,148 @@ const SeatingArrangement = () => {
 
                     </div>
 
-                    <div className="tables-area-container" style={{
-                        position: 'relative',
-                        width: '100%',
-                        height: '100%',
-                    }}>
-                        <div className="zoom-controls">
-                            <label>Մասշտաբ:</label>
-                            <div className="zoom-buttons">
-                                <button
-                                    className="zoom-btn zoom-out-btn"
-                                    onClick={handleZoomOut}
-                                >−</button>
-                                <span className="zoom-percentage">
-                                    {Math.round(zoom * 100)}%
-                                </span>
-                                <button
-                                    className="zoom-btn zoom-in-btn"
-                                    onClick={handleZoomIn}
-                                >+</button>
-                            </div>
-                        </div>
-                        {/* This div will be scaled */}
-                        <div className="tables-area" style={{
-                            transform: `scale(${zoom})`,
-                            transformOrigin: 'top left',
-                            display: 'flex',
-                            flexWrap: 'wrap',
-                            gap: '20px',
-                            padding: '20px',
-                            width: `${100 / zoom}%`,
-                            minHeight: `${100 / zoom}%`,
-                            justifyContent: "center"
-                        }}>
-                            {draggingGroup && (
-                                <NewTable
-                                    draggingGroup={draggingGroup}
-                                    setTables={setTables}
-                                    setDraggingGroup={setDraggingGroup}
-                                    setPeople={setPeople}
-                                />
-                            )}
+                    <div className="hall-layout-container" style={{
+    position: 'relative',
+    width: '100%',
+    height: '100%',
+    overflow: 'hidden',
+    backgroundColor: '#f5f5f5', // Светлый фон для зала
+    borderRadius: '8px',
+    boxShadow: 'inset 0 0 10px rgba(0,0,0,0.1)' // Тень внутри для эффекта объема
+}}>
+    <div className="zoom-controls" style={{
+        position: 'absolute',
+        top: '10px',
+        right: '10px',
+        zIndex: 10,
+        background: 'white',
+        padding: '5px 10px',
+        borderRadius: '4px',
+        boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px'
+    }}>
+        <label>Մասշտաբ:</label>
+        <div className="zoom-buttons" style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '5px'
+        }}>
+            <button
+                className="zoom-btn zoom-out-btn"
+                onClick={handleZoomOut}
+                style={{
+                    width: '30px',
+                    height: '30px',
+                    borderRadius: '50%',
+                    border: '1px solid #ccc',
+                    background: 'white',
+                    cursor: 'pointer'
+                }}
+            >−</button>
+            <span className="zoom-percentage" style={{
+                minWidth: '50px',
+                textAlign: 'center'
+            }}>
+                {Math.round(zoom * 100)}%
+            </span>
+            <button
+                className="zoom-btn zoom-in-btn"
+                onClick={handleZoomIn}
+                style={{
+                    width: '30px',
+                    height: '30px',
+                    borderRadius: '50%',
+                    border: '1px solid #ccc',
+                    background: 'white',
+                    cursor: 'pointer'
+                }}
+            >+</button>
+        </div>
+    </div>
+    
+    {/* Декоративные элементы для создания вида ресторана */}
+    <div className="hall-decorations" style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        pointerEvents: 'none',
+        zIndex: 1
+    }}>
+        {/* Стены зала */}
+        <div className="hall-walls" style={{
+            position: 'absolute',
+            top: '0',
+            left: '0',
+            right: '0',
+            bottom: '0',
+            border: '8px solid #8b7355', // Коричневый цвет стен
+            borderRadius: '10px',
+            boxSizing: 'border-box'
+        }}></div>
+        
+        {/* Вход в зал */}
+        <div className="hall-entrance" style={{
+            position: 'absolute',
+            bottom: '0',
+            left: '48%',
+            width: '4%',
+            height: '8px',
+            background: '#f5f5f5' // Прерывание в стене для входа
+        }}></div>
+        
+        <div className="entrance-label" style={{
+            position: 'absolute',
+            bottom: '10px',
+            left: '48%',
+            color: '#555',
+            fontSize: '10px',
+            transform: 'translateX(-50%)'
+        }}>Մուտք</div>
+    </div>
+    
+    {/* Область размещения столов - масштабируемая */}
+    <div className="tables-area" style={{
+        transform: `scale(${zoom})`,
+        transformOrigin: 'top left',
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: '20px',
+        padding: '50px', // Увеличенный отступ, чтобы столы не прижимались к стенам
+        width: `${100 / zoom}%`,
+        height: `${100 / zoom}%`,
+        justifyContent: "space-around", // Равномерное распределение столов
+        alignContent: "flex-start", // Начинать размещение сверху
+        position: 'relative',
+        zIndex: 5
+    }}>
+        {draggingGroup && (
+            <NewTable
+                draggingGroup={draggingGroup}
+                setTables={setTables}
+                setDraggingGroup={setDraggingGroup}
+                setPeople={setPeople}
+            />
+        )}
 
-                            {tables.map((table) => (
-                                <Table
-                                    key={table.id}
-                                    table={table}
-                                    setTables={setTables}
-                                    handleDeleteTable={handleDeleteTable}
-                                    draggingGroup={draggingGroup}
-                                    setDraggingGroup={setDraggingGroup}
-                                    people={people}
-                                    setPeople={setPeople}
-                                    onChairClick={(chairIndex) => handleChairClick(table.id, chairIndex)}
-                                />
-                            ))}
-                        </div>
-                    </div>
+        {tables.map((table) => (
+            <Table
+                key={table.id}
+                table={table}
+                setTables={setTables}
+                handleDeleteTable={handleDeleteTable}
+                draggingGroup={draggingGroup}
+                setDraggingGroup={setDraggingGroup}
+                people={people}
+                setPeople={setPeople}
+                onChairClick={(chairIndex) => handleChairClick(table.id, chairIndex)}
+            />
+        ))}
+    </div>
+</div>
                 </div>
 
                 {/* Fullscreen popup */}

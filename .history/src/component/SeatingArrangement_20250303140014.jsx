@@ -30,53 +30,53 @@ const SeatingArrangement = () => {
     const [newHallName, setNewHallName] = useState('');
     const [newHallTableCount, setNewHallTableCount] = useState(10);
     const [newHallChairCount, setNewHallChairCount] = useState(12);
-    
+
     useEffect(() => {
-        const savedHalls = JSON.parse(localStorage.getItem('halls')) || [];
-        if (savedHalls.length) setHalls(savedHalls);
+        const savedHalls = JSON.parse(localStorage.getItem('halls'));
+        if (savedHalls) setHalls(savedHalls);
     }, []);
-    
+
     // Save hall configuration
     const saveHall = () => {
         if (!currentHall) {
             alert('Խնդրում ենք նախ ընտրել դահլիճը');
             return;
         }
-    
+
         const updatedHalls = halls.map(hall =>
             hall.id === currentHall.id
                 ? { ...hall, tables: tables }
                 : hall
         );
-    
+
         setHalls(updatedHalls);
         localStorage.setItem('halls', JSON.stringify(updatedHalls));
         alert(`Դահլիճը "${currentHall.name}" հաջողությամբ պահպանվել է`);
     };
-    
+
     // Create a new hall
-    const createNewHall = (hallName, tableCount, chairCount) => {
-        if (!hallName || !hallName.trim()) {
+    const createNewHall = () => {
+        if (!newHallName.trim()) {
             alert('Խնդրում ենք մուտքագրել դահլիճի անունը');
             return;
         }
         
         // Generate tables based on settings
         const newTables = [];
-        const numTables = Math.max(1, parseInt(tableCount) || 10);
-        const numChairs = Math.max(1, parseInt(chairCount) || 12);
+        const tableCount = Math.max(1, newHallTableCount); // Ensure at least 1 table
+        const chairCount = Math.max(1, newHallChairCount); // Ensure at least 1 chair
         
-        for (let i = 0; i < numTables; i++) {
+        for (let i = 0; i < tableCount; i++) {
             newTables.push({
                 id: Date.now() + i,
                 people: [],
-                chairCount: numChairs
+                chairCount: chairCount
             });
         }
         
         const newHall = {
             id: Date.now(),
-            name: hallName.trim(),
+            name: newHallName.trim(),
             tables: newTables
         };
         
@@ -89,23 +89,24 @@ const SeatingArrangement = () => {
         setCurrentHall(newHall);
         setTables(newTables);
         
-        // Close the modal
+        // Close the modal and reset form
         setShowHallModal(false);
+        setNewHallName('');
     };
-    
+
     // Load a hall configuration
     const loadHall = (hall) => {
         setCurrentHall(hall);
         setTables(hall.tables);
     };
-    
+
     // Delete a hall
     const deleteHall = (hallId) => {
         if (window.confirm('Վստա՞հ եք, որ ցանկանում եք ջնջել այս դահլիճը:')) {
             const updatedHalls = halls.filter(hall => hall.id !== hallId);
             setHalls(updatedHalls);
             localStorage.setItem('halls', JSON.stringify(updatedHalls));
-    
+
             // If current hall is deleted, reset current hall
             if (currentHall && currentHall.id === hallId) {
                 setCurrentHall(null);
@@ -113,103 +114,136 @@ const SeatingArrangement = () => {
             }
         }
     };
-    
     const HallModal = () => {
+        // Create refs for the input fields
         const nameInputRef = useRef(null);
+        const formRef = useRef(null);
         
+        // Handle modal click without closing
+        const handleModalClick = (e) => {
+            e.stopPropagation();
+        };
+        
+        // Handle form submission
+        const handleSubmit = (e) => {
+            e.preventDefault(); // Prevent default form submission
+            e.stopPropagation();
+            createNewHall();
+        };
+    
+        // Focus the name input when modal opens
         useEffect(() => {
             if (nameInputRef.current) {
                 nameInputRef.current.focus();
             }
         }, []);
         
-        const [hallName, setHallName] = useState('');
-        const [tableCount, setTableCount] = useState(10);
-        const [chairCount, setChairCount] = useState(12);
-    
+        // Direct input handlers to prevent event bubbling issues
+        const handleNameChange = (e) => {
+            e.stopPropagation();
+            setNewHallName(e.target.value);
+        };
+        
         const handleTableCountChange = (e) => {
+            e.stopPropagation();
             const value = e.target.value;
-            setTableCount(value === '' ? '' : Math.max(1, parseInt(value) || 1));
+            // Only update if value is valid
+            if (value === '' || /^\d+$/.test(value)) {
+                setNewHallTableCount(value === '' ? '' : parseInt(value));
+            }
         };
-    
+        
         const handleChairCountChange = (e) => {
+            e.stopPropagation();
             const value = e.target.value;
-            setChairCount(value === '' ? '' : Math.max(1, parseInt(value) || 1));
+            // Only update if value is valid
+            if (value === '' || /^\d+$/.test(value)) {
+                setNewHallChairCount(value === '' ? '' : parseInt(value));
+            }
         };
-    
+        
         return (
-            <div className="fullscreen-popup">
-                <div className="fullscreen-popup-content">
+            <div className="fullscreen-popup" 
+                 onClick={(e) => {
+                     e.preventDefault();
+                     setShowHallModal(false);
+                 }}>
+                <div className="fullscreen-popup-content" onClick={handleModalClick}>
                     <h3 className="popup-title">Ստեղծել նոր դահլիճ</h3>
-    
-                    <div className="hall-form">
+                    
+                    <form ref={formRef} onSubmit={handleSubmit} className="hall-form">
                         <div className="form-group">
                             <label htmlFor="hallName">Դահլիճի անունը:</label>
                             <input
                                 id="hallName"
                                 type="text"
                                 ref={nameInputRef}
-                                value={hallName}
-                                onChange={(e) => setHallName(e.target.value)}
+                                value={newHallName}
+                                onChange={handleNameChange}
                                 placeholder="Օր․՝ Dvin Hall"
                                 className="input-field"
+                                onClick={(e) => e.stopPropagation()}
                             />
                         </div>
-    
+                        
                         <div className="form-group">
                             <label htmlFor="tableCount">Սեղանների քանակը:</label>
                             <input
                                 id="tableCount"
                                 type="number"
-                                min="1"
-                                value={tableCount}
+                                value={newHallTableCount}
                                 onChange={handleTableCountChange}
+                                min="1"
                                 className="input-field"
+                                onClick={(e) => e.stopPropagation()}
                             />
                         </div>
-    
+                        
                         <div className="form-group">
                             <label htmlFor="chairCount">Աթոռների քանակը մեկ սեղանի համար:</label>
                             <input
                                 id="chairCount"
                                 type="number"
-                                min="1"
-                                value={chairCount}
+                                value={newHallChairCount}
                                 onChange={handleChairCountChange}
+                                min="1"
                                 className="input-field"
+                                onClick={(e) => e.stopPropagation()}
                             />
                         </div>
-    
+                        
                         <div className="popup-buttons">
-                            <button
-                                type="button"
+                            <button 
+                                type="submit" 
                                 className="primary-btn"
-                                onClick={() => createNewHall(hallName, tableCount, chairCount)}
+                                onClick={(e) => e.stopPropagation()}
                             >
                                 Ստեղծել դահլիճ
                             </button>
-    
-                            <button
-                                type="button"
-                                onClick={() => setShowHallModal(false)}
+                            
+                            <button 
+                                type="button" 
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setShowHallModal(false);
+                                }} 
                                 className="cancel-btn"
                             >
                                 Չեղարկել
                             </button>
                         </div>
-                    </div>
+                    </form>
                 </div>
             </div>
         );
     };
-    
-    
-    // Hall Management UI component
+    // Now add the Hall Management UI component - place this inside your SeatingArrangement component
+    // You can render it in the return statement
     const HallManagement = () => {
         return (
             <div className="hall-management">
                 <h3 className="section-main-title">Դահլիճների կառավարում</h3>
-    
+
                 <div className="hall-controls">
                     <div className="hall-dropdown-container">
                         <select
@@ -223,12 +257,12 @@ const SeatingArrangement = () => {
                             <option value="">Ընտրեք դահլիճը</option>
                             {halls.map(hall => (
                                 <option key={hall.id} value={hall.id}>
-                                    {hall.name} ({hall.tables.length} սեղան)
+                                    {hall.name} ({hall.tables.length} սեղաններ)
                                 </option>
                             ))}
                         </select>
                     </div>
-    
+
                     <div className="hall-buttons">
                         <button
                             className="primary-btn create-hall-btn"
@@ -236,7 +270,7 @@ const SeatingArrangement = () => {
                         >
                             Ստեղծել նոր դահլիճ
                         </button>
-    
+
                         <button
                             className="primary-btn save-hall-btn"
                             onClick={saveHall}
@@ -244,7 +278,7 @@ const SeatingArrangement = () => {
                         >
                             Պահպանել դահլիճը
                         </button>
-    
+
                         {currentHall && (
                             <button
                                 className="secondary-btn delete-hall-btn"
@@ -255,7 +289,7 @@ const SeatingArrangement = () => {
                         )}
                     </div>
                 </div>
-    
+
                 {currentHall && (
                     <div className="current-hall-info">
                         <h4>Ընթացիկ դահլիճ: {currentHall.name}</h4>
@@ -265,8 +299,7 @@ const SeatingArrangement = () => {
             </div>
         );
     };
-    
-    {showHallModal && <HallModal />}
+
     const handleTableCountChange = (e) => {
         setTableCount(parseInt(e.target.value, 10) || 1);
     };
@@ -631,7 +664,7 @@ const SeatingArrangement = () => {
             acc[person.group].push(person);
             return acc;
         }, {});
-    
+
         // Get people who are not already seated
         const unseatedPeople = people.filter((person) => {
             return !tables.some((table) =>
@@ -640,85 +673,37 @@ const SeatingArrangement = () => {
                 )
             );
         });
-    
+
         // Group the unseated people
         const unseatedGrouped = unseatedPeople.reduce((acc, person) => {
             if (!acc[person.group]) acc[person.group] = [];
             acc[person.group].push(person);
             return acc;
         }, {});
-    
-        let anyGroupsSeated = false;
-    
-        // Create a new tables state
-        const updatedTables = [...tables];
-        
-        // Try to seat each group at existing tables
-        Object.entries(unseatedGrouped).forEach(([groupName, groupMembers]) => {
-            if (groupMembers.length === 0) return;
-            
-            // Find tables with enough free seats
-            for (const table of updatedTables) {
-                const emptySeats = table.chairCount - table.people.filter(Boolean).length;
-                
-                if (emptySeats >= groupMembers.length) {
-                    // This table has enough space for the group
-                    const newPeople = [...table.people];
-                    
-                    // Find empty spots and fill them
-                    let groupIndex = 0;
-                    for (let i = 0; i < newPeople.length && groupIndex < groupMembers.length; i++) {
-                        if (!newPeople[i]) {
-                            newPeople[i] = groupMembers[groupIndex];
-                            groupIndex++;
-                        }
-                    }
-                    
-                    // If we haven't filled all spots (which shouldn't happen given our check),
-                    // add remaining people
-                    while (groupIndex < groupMembers.length) {
-                        newPeople.push(groupMembers[groupIndex]);
-                        groupIndex++;
-                    }
-                    
-                    table.people = newPeople;
-                    anyGroupsSeated = true;
-                    
-                    // Remove these people from unseatedGrouped
-                    unseatedGrouped[groupName] = [];
-                    break;
-                }
-            }
-        });
-        
-        // If there are still unseated groups, create new tables for them
-        const remainingGroups = Object.values(unseatedGrouped).filter(group => group.length > 0);
-        
-        if (remainingGroups.length > 0) {
-            const newTables = remainingGroups.map(group => ({
+
+        // Create a table for each group of unseated people
+        const newTables = Object.values(unseatedGrouped)
+            .filter(group => group.length > 0)
+            .map(group => ({
                 id: Date.now() + Math.random(), // Ensure unique ID
                 people: group,
                 chairCount: group.length // Set chair count to match group size
             }));
-            
-            updatedTables.push(...newTables);
-            anyGroupsSeated = true;
-        }
-    
-        if (!anyGroupsSeated) {
+
+        if (newTables.length === 0) {
             alert('Բոլոր խմբերն արդեն նստած են սեղանների մոտ կամ հասանելի մարդիկ չկան:');
             return;
         }
-    
-        // Update the tables state
-        setTables(updatedTables);
-    
+
+        // Add the new tables to the state
+        setTables(prevTables => [...newTables, ...prevTables]);
+
         // Remove the seated people from the people list
         setPeople(prevPeople =>
             prevPeople.filter(person =>
-                !updatedTables.some(table =>
+                !newTables.some(table =>
                     table.people.some(seatedPerson =>
-                        seatedPerson && seatedPerson.name === person.name
+                        seatedPerson.name === person.name
                     )
                 )
             )
@@ -855,12 +840,12 @@ const SeatingArrangement = () => {
                     <div className="header-content">
                         <div className="logo">Նստատեղերի դասավորություն</div>
                         <div className="hall-management-container">
+                            <HallManagement />
                         </div>
                         {showHallModal && <HallModal />}
                         {/* Split into two distinct sections */}
                         <div className="header-sections">
                             {/* SECTION 1: People Management */}
-                            <HallManagement />
                             <div className="header-section people-section">
                                 <h3 className="section-main-title">Մարդկանց կառավարում</h3>
 
@@ -919,7 +904,7 @@ const SeatingArrangement = () => {
                                             className="primary-btn add-person-btn"
                                             onClick={handleAddPerson}
                                         >
-                                          Ավելացնել մարդ
+                                            Ավելացնել մարդ
                                         </button>
                                     </div>
                                 </div>

@@ -223,7 +223,7 @@ const SeatingArrangement = () => {
                             <option value="">Ընտրեք դահլիճը</option>
                             {halls.map(hall => (
                                 <option key={hall.id} value={hall.id}>
-                                    {hall.name} ({hall.tables.length} սեղան)
+                                    {hall.name} ({hall.tables.length} սեղաններ)
                                 </option>
                             ))}
                         </select>
@@ -307,7 +307,7 @@ const SeatingArrangement = () => {
     // Функция для генерации препопуляции 20 групп (от 2 до 7 человек в каждой)
     const getSeedData = () => {
         const newPeople = [];
-        for (let group = 1; group <= 20; group++) {
+        for (let group = 1; group <= 45; group++) {
             // Генерируем случайное число людей для группы от 2 до 7
             const groupSize = Math.floor(Math.random() * 6) + 2;
             for (let i = 1; i <= groupSize; i++) {
@@ -919,7 +919,7 @@ const SeatingArrangement = () => {
                                             className="primary-btn add-person-btn"
                                             onClick={handleAddPerson}
                                         >
-                                          Ավելացնել մարդ
+                                            Ավելացնել մարդ
                                         </button>
                                     </div>
                                 </div>
