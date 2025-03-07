@@ -305,14 +305,15 @@ button {
 
 /* Groups Container */
 .groups-container {
-    /* background-color: rgba(255, 255, 255, 0.1); */
-    background: linear-gradient(360deg, #181213 0%, rgb(71 20 31) 100%);
-    /* border-radius: 12px; */
-    padding: 15px;
-    /* margin-top: 15px; */
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    /* border: 1px solid rgba(255, 255, 255, 0.2);
-*/}
+  /* background-color: rgba(255, 255, 255, 0.1); */
+  background: linear-gradient(360deg, #181213 0%, rgb(71 20 31) 100%);
+  /* border-radius: 12px; */
+  padding: 15px;
+  /* margin-top: 15px; */
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  /* border: 1px solid rgba(255, 255, 255, 0.2);
+*/
+}
 
 .groups-header {
   display: flex;
@@ -373,9 +374,9 @@ button {
   flex: 1;
   padding: 1rem;
   gap: 20px;
-  max-width: 1600px;
+  /* max-width: 1600px; */
   margin: 0 auto;
-  width: 100%;
+  width: 95%;
 }
 
 /* Sidebar */
@@ -496,11 +497,12 @@ button {
   min-height: 70vh;
 }
 
+
 /* Table Styles */
 .table-container {
-  background-color: white;
+  /* background-color: white; */
   border-radius: 10px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  /* box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); */
   padding: 1rem;
   width: fit-content;
   margin-bottom: 20px;
@@ -1325,26 +1327,32 @@ button {
     flex-direction: column;
     align-items: flex-start;
   }
-  
+
   .main-nav {
     width: 100%;
     margin-top: 15px;
   }
-  
+
   .nav-list {
     flex-direction: column;
     width: 100%;
   }
-  
+
   .nav-item {
     margin-left: 0;
     margin-bottom: 10px;
   }
-  
+
   .dropdown-menu {
     position: static;
     width: 100%;
     box-shadow: none;
     border: 1px solid #eee;
   }
+}
+
+.figmaContainer {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
 }

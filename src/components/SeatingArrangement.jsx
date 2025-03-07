@@ -4,6 +4,7 @@ import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 
 import './App.css';
+import TablesAreaComponent from './newhall';
 
 const SeatingArrangement = () => {
     const [tables, setTables] = useState([]);
@@ -21,7 +22,6 @@ const SeatingArrangement = () => {
     const [personToRemove, setPersonToRemove] = useState(null);
     const [showGroupDropdown, setShowGroupDropdown] = useState(false);
     const [isCustomGroup, setIsCustomGroup] = useState(false);
-    const tablesAreaRef = useRef(null);
     const [tableCount, setTableCount] = useState(1);
     const groupDropdownRef = useRef(null);
     const [halls, setHalls] = useState([]);
@@ -33,7 +33,49 @@ const SeatingArrangement = () => {
     const [activeNavSection, setActiveNavSection] = useState(null);
     const [hoveredSection, setHoveredSection] = useState(null);
     const navRefs = useRef({});
+    const [isDraggingCanvas, setIsDraggingCanvas] = useState(false);
+    const [dragStartPos, setDragStartPos] = useState({ x: 0, y: 0 });
+    const containerRef = useRef(null);
+    const tablesAreaRef = useRef(null);
 
+    const handleZoomIn = () => {
+        setZoom(prev => Math.min(prev + 0.1, 2));
+    };
+
+    const handleZoomOut = () => {
+        setZoom(prev => Math.max(prev - 0.1, 0.5));
+    };
+
+    const handleCanvasMouseDown = (e) => {
+        // Только если клик был на самом холсте, а не на столах
+        if (e.target === tablesAreaRef.current) {
+            setIsDraggingCanvas(true);
+            setDragStartPos({
+                x: e.clientX + tablesAreaRef.current.scrollLeft,
+                y: e.clientY + tablesAreaRef.current.scrollTop
+            });
+            e.preventDefault();
+        }
+    };
+    const handleMouseMove = (e) => {
+        if (isDraggingCanvas) {
+            tablesAreaRef.current.scrollLeft = dragStartPos.x - e.clientX;
+            tablesAreaRef.current.scrollTop = dragStartPos.y - e.clientY;
+        }
+    };
+
+    const handleMouseUp = () => {
+        setIsDraggingCanvas(false);
+    }
+
+    useEffect(() => {
+        window.addEventListener('mousemove', handleMouseMove);
+        window.addEventListener('mouseup', handleMouseUp);
+        return () => {
+            window.removeEventListener('mousemove', handleMouseMove);
+            window.removeEventListener('mouseup', handleMouseUp);
+        };
+    }, [isDraggingCanvas]);
     // Close dropdown when clicking outside
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -553,13 +595,7 @@ const SeatingArrangement = () => {
         return () => window.removeEventListener("wheel", handleWheel);
     }, []);
 
-    const handleZoomIn = () => {
-        setZoom((prevZoom) => Math.min(prevZoom + 0.1, 1.5));
-    };
 
-    const handleZoomOut = () => {
-        setZoom((prevZoom) => Math.max(prevZoom - 0.1, 0.2));
-    };
 
     const handleWheel = (e) => {
         if (e.ctrlKey) {
@@ -1054,18 +1090,18 @@ const SeatingArrangement = () => {
                                     {(hoveredSection === 'groups' || activeNavSection === 'groups') && (
                                         <div className="dropdown-menu">
                                             <div className="dropdown-content groups-section">
-                                            <button
-                                        className="secondary-btn seed-data-btn"
-                                        onClick={() => setPeople(getSeedData())}
-                                    >
-                                        Ավելացնել փորձնական տվյալներ
-                                    </button>
-                                    <button
-                                        className="secondary-btn clear-data-btn"
-                                        onClick={() => setPeople([])}
-                                    >
-                                        Մաքրել բոլոր տվյալները
-                                    </button>
+                                                <button
+                                                    className="secondary-btn seed-data-btn"
+                                                    onClick={() => setPeople(getSeedData())}
+                                                >
+                                                    Ավելացնել փորձնական տվյալներ
+                                                </button>
+                                                <button
+                                                    className="secondary-btn clear-data-btn"
+                                                    onClick={() => setPeople([])}
+                                                >
+                                                    Մաքրել բոլոր տվյալները
+                                                </button>
                                             </div>
                                         </div>
                                     )}
@@ -1077,24 +1113,24 @@ const SeatingArrangement = () => {
                     {showHallModal && <HallModal />}
                 </header>
                 <div className="groups-container">
-                        <div className="groups-header">
-                            <div className="data-management">
-                                <div className="data-buttons">
-                                    
-                                    <button
-                                        className="secondary-btn create-all-tables-btn"
-                                        onClick={createTablesForAllGroups}
-                                    >
-                                        Ավտոմատ դասավորել խմբերը
-                                    </button>
-                                </div>
-                            </div>
-                            <h3 className="groups-title">Հասանելի խմբեր (քաշեք համապատասխան սեղանի վրա)</h3>
-                            <div className="groups-wrapper">
-                                {renderGroups()}
+                    <div className="groups-header">
+                        <div className="data-management">
+                            <div className="data-buttons">
+
+                                <button
+                                    className="secondary-btn create-all-tables-btn"
+                                    onClick={createTablesForAllGroups}
+                                >
+                                    Ավտոմատ դասավորել խմբերը
+                                </button>
                             </div>
                         </div>
+                        <h3 className="groups-title">Հասանելի խմբեր (քաշեք համապատասխան սեղանի վրա)</h3>
+                        <div className="groups-wrapper">
+                            {renderGroups()}
+                        </div>
                     </div>
+                </div>
                 <div className="main-content">
                     <div className="sidebar">
                         <PeopleSection
@@ -1105,12 +1141,7 @@ const SeatingArrangement = () => {
                             setTables={setTables}
                         />
                     </div>
-                   
-                    <div className="tables-area-container" style={{
-                        position: 'relative',
-                        width: '100%',
-                        height: '100%',
-                    }}>
+                    <div className="figmaContainer">
                         <div className="zoom-controls">
                             <label>Մասշտաբ:</label>
                             <div className="zoom-buttons">
@@ -1127,42 +1158,68 @@ const SeatingArrangement = () => {
                                 >+</button>
                             </div>
                         </div>
-                        {/* This div will be scaled */}
-                        <div className="tables-area" style={{
-                            transform: `scale(${zoom})`,
-                            transformOrigin: 'top left',
-                            display: 'flex',
-                            flexWrap: 'wrap',
-                            gap: '20px',
-                            padding: '20px',
-                            width: `${100 / zoom}%`,
-                            minHeight: `${100 / zoom}%`,
-                            justifyContent: "center"
-                        }}>
-                            {draggingGroup && (
-                                <NewTable
-                                    draggingGroup={draggingGroup}
-                                    setTables={setTables}
-                                    setDraggingGroup={setDraggingGroup}
-                                    setPeople={setPeople}
-                                />
-                            )}
 
-                            {tables.map((table) => (
-                                <Table
-                                    key={table.id}
-                                    table={table}
-                                    setTables={setTables}
-                                    handleDeleteTable={handleDeleteTable}
-                                    draggingGroup={draggingGroup}
-                                    setDraggingGroup={setDraggingGroup}
-                                    people={people}
-                                    setPeople={setPeople}
-                                    onChairClick={(chairIndex) => handleChairClick(table.id, chairIndex)}
-                                />
-                            ))}
-                        </div>
+
+                        {/* <div
+                            className="tables-area-container"
+                            ref={containerRef}
+                            onMouseDown={handleCanvasMouseDown}
+                            style={{
+                                position: 'relative',
+                                width: '100%',
+                                height: '100%',
+                                overflow: 'auto' // Добавлено для скроллинга
+                            }}
+                        > */}
+
+
+                            <div
+                                className="tables-area"
+                                ref={tablesAreaRef}
+                                onMouseDown={handleCanvasMouseDown}
+                                style={{
+                                    transform: `scale(${zoom})`,
+                                    transformOrigin: 'top left',
+                                    display: 'flex',
+                                    overflow: 'auto',
+                                    flexWrap: 'wrap',
+                                    gap: '20px',
+                                    padding: '20px',
+                                    width: `${100 / zoom}%`,
+                                    minHeight: `${100 / zoom}%`,
+                                    justifyContent: "center",
+                                    position: 'relative', // Добавлено для позиционирования столов
+                                    cursor: isDraggingCanvas ? 'grabbing' : 'default'
+                                }}
+                            >
+                                {draggingGroup && (
+                                    <NewTable
+                                        draggingGroup={draggingGroup}
+                                        setTables={setTables}
+                                        setDraggingGroup={setDraggingGroup}
+                                        setPeople={setPeople}
+                                    />
+                                )}
+
+                                {tables.map((table) => (
+                                    <Table
+                                        key={table.id}
+                                        table={table}
+                                        setTables={setTables}
+                                        handleDeleteTable={handleDeleteTable}
+                                        draggingGroup={draggingGroup}
+                                        setDraggingGroup={setDraggingGroup}
+                                        people={people}
+                                        setPeople={setPeople}
+                                        onChairClick={(chairIndex) => handleChairClick(table.id, chairIndex)}
+                                        isDraggable={true} // Добавляем свойство для перетаскивания
+                                    />
+                                ))}
+                            </div>
+                        {/* </div> */}
                     </div>
+
+
                 </div>
 
                 {/* Fullscreen popup */}
@@ -1244,7 +1301,72 @@ const SeatingArrangement = () => {
 };
 
 
-const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDraggingGroup, people, setPeople, onChairClick }) => {
+const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDraggingGroup, people, setPeople, onChairClick, isDraggable }) => {
+
+    const [isDragging, setIsDragging] = useState(false);
+    const [isResizing, setIsResizing] = useState(false);
+    const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+    const tableRef = useRef(null);
+
+    const handleDragStart = (e) => {
+        if (!isDraggable) return;
+
+        setIsDragging(true);
+        const rect = tableRef.current.getBoundingClientRect();
+        setDragOffset({
+            x: e.clientX - rect.left,
+            y: e.clientY - rect.top
+        });
+        e.stopPropagation();
+    };
+
+    const handleResizeStart = (e) => {
+        setIsResizing(true);
+        e.stopPropagation();
+    };
+    const handleMouseMove = (e) => {
+        if (isDragging) {
+            // Получаем позицию относительно родительского контейнера
+            const container = tableRef.current.parentElement.getBoundingClientRect();
+            const zoom = parseFloat(tableRef.current.parentElement.style.transform.match(/scale\(([^)]+)\)/)[1] || 1);
+
+            const newX = (e.clientX - container.left - dragOffset.x) / zoom;
+            const newY = (e.clientY - container.top - dragOffset.y) / zoom;
+
+            setTables(prev => prev.map(t =>
+                t.id === table.id ? { ...t, x: newX, y: newY } : t
+            ));
+        } else if (isResizing) {
+            const container = tableRef.current.parentElement.getBoundingClientRect();
+            const zoom = parseFloat(tableRef.current.parentElement.style.transform.match(/scale\(([^)]+)\)/)[1] || 1);
+
+            const newWidth = Math.max(100, (e.clientX - container.left - table.x * zoom) / zoom);
+            const newHeight = Math.max(100, (e.clientY - container.top - table.y * zoom) / zoom);
+
+            setTables(prev => prev.map(t =>
+                t.id === table.id ? { ...t, width: newWidth, height: newHeight } : t
+            ));
+        }
+    };
+    const handleMouseUp = (e) => {
+        setIsDragging(false);
+        setIsResizing(false);
+
+        const rect = tableRef.current.getBoundingClientRect();
+        tableRef.current.x = e.clientX - rect.left;
+        tableRef.current.y = e.clientY - rect.top;
+    };
+    React.useEffect(() => {
+        if (isDragging || isResizing) {
+            window.addEventListener('mousemove', handleMouseMove);
+            window.addEventListener('mouseup', handleMouseUp);
+            return () => {
+                window.removeEventListener('mousemove', handleMouseMove);
+                window.removeEventListener('mouseup', handleMouseUp);
+            };
+        }
+    }, [isDragging, isResizing]);
+
     const [, drop] = useDrop({
         accept: 'GROUP',
         drop: (item) => {
@@ -1354,16 +1476,52 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
     }
 
     return (
-        <div ref={drop} className="table-container">
+        <div
+            ref={tableRef}
+            className="table-container"
+            style={{
+                position: 'absolute',
+                left: `${table.x || 0}px`,
+                top: `${table.y || 0}px`,
+                // width: `${table.width || 200}px`,
+                // height: `${table.height || 150}px`,
+                cursor: isDragging ? 'grabbing' : 'grab'
+            }}
+            onMouseDown={handleDragStart}
+        >
             <div className="table-header">
                 <h3>Սեղան {table.id} (Աթոռներ: {table.chairCount})</h3>
-                <button onClick={() => handleDeleteTable(table.id)} className="delete-table-btn">X</button>
+                <button
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteTable(table.id);
+                    }}
+                    className="delete-table-btn"
+                >
+                    X
+                </button>
             </div>
             <div className="table">
                 <div className="table-top">
                     {chairs}
                 </div>
             </div>
+
+            {/* Маркер для изменения размера */}
+            {/* <div
+                className="resize-handle"
+                style={{
+                    position: 'absolute',
+                    right: '2px',
+                    bottom: '2px',
+                    width: '10px',
+                    height: '10px',
+                    backgroundColor: '#333',
+                    cursor: 'nwse-resize',
+                    borderRadius: '50%'
+                }}
+                onMouseDown={handleResizeStart}
+            /> */}
         </div>
     );
 };
@@ -1399,7 +1557,11 @@ const NewTable = ({ draggingGroup, setTables, setDraggingGroup, setPeople }) => 
         accept: 'GROUP',
         drop: (item) => {
             const newTable = {
-                id: Date.now(),
+                id: `table-${Date.now()}`,
+                x: 200,
+                y: 200,
+                width: 200,
+                height: 150,
                 people: item.group,
                 chairCount: item.group.length,
             };
