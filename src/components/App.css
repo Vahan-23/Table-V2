@@ -14,7 +14,7 @@ body {
 .app-container {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  min-height: 90vh;
 }
 
 /* Header Styles */
@@ -485,6 +485,8 @@ button {
   background-size: 20px 20px;
   background-color: #e6eef5;
   flex: 1;
+  width: calc(100% / var(--zoom-level, 1));
+  height: calc(100% / var(--zoom-level, 1));
   min-height: 600px;
   border-radius: 8px;
   padding: 20px;
@@ -494,9 +496,17 @@ button {
   flex-wrap: wrap;
   gap: 2rem;
   align-content: flex-start;
-  min-height: 70vh;
+  position: relative;
+  cursor: default;
+  border: 3px dashed #3a3a3a;
+  background-color: #f7f7f7;
+  box-sizing: border-box;
+  margin: 0 auto;
+  border-radius: 10px;
 }
-
+.tables-area.dragging {
+  cursor: grabbing;
+}
 
 /* Table Styles */
 .table-container {

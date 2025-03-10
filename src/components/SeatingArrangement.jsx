@@ -33,12 +33,15 @@ const SeatingArrangement = () => {
     const [activeNavSection, setActiveNavSection] = useState(null);
     const [hoveredSection, setHoveredSection] = useState(null);
     const navRefs = useRef({});
+    const containerRef = useRef(null);
     const [isDraggingCanvas, setIsDraggingCanvas] = useState(false);
     const [dragStartPos, setDragStartPos] = useState({ x: 0, y: 0 });
-    const containerRef = useRef(null);
     const tablesAreaRef = useRef(null);
-
     window.currentDraggedGroup = null;
+    const [isZooming, setIsZooming] = useState(false);
+    const zoomTimeout = useRef(null);
+    const mousePosition = useRef({ x: 0, y: 0 });
+    const zoomAnimFrame = useRef(null);
 
     const [detailsTableId, setDetailsTableId] = useState(null);
     const [isDetailsOpen, setIsDetailsOpen] = useState(false);
@@ -197,44 +200,189 @@ const SeatingArrangement = () => {
         }, 100);
     };
 
-    const handleZoomIn = () => {
-        setZoom(prev => Math.min(prev + 0.1, 2));
+    // Track mouse position for zoom operations
+    const handleMouseMoveOnCanvas = (e) => {
+        if (tablesAreaRef.current) {
+            const rect = tablesAreaRef.current.getBoundingClientRect();
+            mousePosition.current = {
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top
+            };
+        }
     };
 
-    const handleZoomOut = () => {
-        setZoom(prev => Math.max(prev - 0.1, 0.5));
+    useEffect(() => {
+        // Set up mouse position tracking
+        const tablesArea = tablesAreaRef.current;
+        if (tablesArea) {
+            tablesArea.addEventListener('mousemove', handleMouseMoveOnCanvas);
+        }
+
+        return () => {
+            if (tablesArea) {
+                tablesArea.removeEventListener('mousemove', handleMouseMoveOnCanvas);
+            }
+        };
+    }, []);
+
+    // Improved smooth zoom function
+    const smoothZoom = (targetZoom, mouseX, mouseY) => {
+        // Cancel any ongoing animation
+        if (zoomAnimFrame.current) {
+            cancelAnimationFrame(zoomAnimFrame.current);
+        }
+
+        setIsZooming(true);
+        if (zoomTimeout.current) {
+            clearTimeout(zoomTimeout.current);
+        }
+
+        const container = tablesAreaRef.current;
+        if (!container) return;
+
+        // Set a reasonable duration for the animation (in ms)
+        const duration = 200;
+        const startTime = performance.now();
+        const startZoom = zoom;
+
+        // Use provided mouse coordinates or default to center
+        const rect = container.getBoundingClientRect();
+        const focusX = mouseX !== undefined ? mouseX : rect.width / 2;
+        const focusY = mouseY !== undefined ? mouseY : rect.height / 2;
+
+        // Calculate content coordinates under cursor before zoom change
+        const contentX = (container.scrollLeft + focusX) / startZoom;
+        const contentY = (container.scrollTop + focusY) / startZoom;
+
+        const animateZoomStep = (timestamp) => {
+            const elapsed = timestamp - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+
+            // Easing function (ease-out cubic)
+            const easeProgress = 1 - Math.pow(1 - progress, 3);
+
+            // Calculate current zoom level
+            const currentZoom = startZoom + (targetZoom - startZoom) * easeProgress;
+
+            // Update zoom state
+            setZoom(currentZoom);
+
+            // Calculate new scroll position to keep point under cursor
+            const newScrollX = contentX * currentZoom - focusX;
+            const newScrollY = contentY * currentZoom - focusY;
+
+            // Apply scroll position
+            container.scrollLeft = newScrollX;
+            container.scrollTop = newScrollY;
+
+            if (progress < 1) {
+                zoomAnimFrame.current = requestAnimationFrame(animateZoomStep);
+            } else {
+                // Animation complete
+                zoomTimeout.current = setTimeout(() => {
+                    setIsZooming(false);
+                }, 100);
+            }
+        };
+
+        // Start animation
+        zoomAnimFrame.current = requestAnimationFrame(animateZoomStep);
     };
+
+    // Handle zoom in button click
+    const handleZoomIn = () => {
+        const targetZoom = Math.min(zoom * 1.25, 3.0);
+        smoothZoom(targetZoom, mousePosition.current.x, mousePosition.current.y);
+    };
+
+    // Handle zoom out button click
+    const handleZoomOut = () => {
+        const targetZoom = Math.max(zoom / 1.25, 0.2);
+        smoothZoom(targetZoom, mousePosition.current.x, mousePosition.current.y);
+    };
+
+    // Handle mouse wheel zoom
+
+
+    useEffect(() => {
+        // Add wheel event listener with passive false to allow preventDefault
+        document.addEventListener("wheel", handleWheel, { passive: false });
+
+        // Cleanup on component unmount
+        return () => {
+            document.removeEventListener("wheel", handleWheel);
+            if (zoomAnimFrame.current) {
+                cancelAnimationFrame(zoomAnimFrame.current);
+            }
+            if (zoomTimeout.current) {
+                clearTimeout(zoomTimeout.current);
+            }
+        };
+    }, [zoom]); // Dependency on zoom ensures the handler updates when zoom changes
 
     const handleCanvasMouseDown = (e) => {
-        // Только если клик был на самом холсте, а не на столах
+        // Only trigger if click was on the canvas itself, not on tables
         if (e.target === tablesAreaRef.current) {
             setIsDraggingCanvas(true);
+
+            // Store initial mouse position
             setDragStartPos({
-                x: e.clientX + tablesAreaRef.current.scrollLeft,
-                y: e.clientY + tablesAreaRef.current.scrollTop
+                x: e.clientX,
+                y: e.clientY
             });
+
+            // Store initial scroll position
+            if (tablesAreaRef.current) {
+                tablesAreaRef.current.initialScrollLeft = tablesAreaRef.current.scrollLeft;
+                tablesAreaRef.current.initialScrollTop = tablesAreaRef.current.scrollTop;
+            }
+
             e.preventDefault();
         }
     };
+
+    const handleCanvasMouseMove = (e) => {
+        if (isDraggingCanvas && tablesAreaRef.current) {
+            // Calculate how much the mouse has moved
+            const deltaX = e.clientX - dragStartPos.x;
+            const deltaY = e.clientY - dragStartPos.y;
+
+            // Move in the opposite direction of mouse movement for natural "grabbing" feel
+            tablesAreaRef.current.scrollLeft = tablesAreaRef.current.initialScrollLeft - deltaX;
+            tablesAreaRef.current.scrollTop = tablesAreaRef.current.initialScrollTop - deltaY;
+        }
+    };
+
     const handleMouseMove = (e) => {
-        if (isDraggingCanvas) {
-            tablesAreaRef.current.scrollLeft = dragStartPos.x - e.clientX;
-            tablesAreaRef.current.scrollTop = dragStartPos.y - e.clientY;
+        if (isDraggingCanvas && tablesAreaRef.current) {
+            // Calculate how much the mouse has moved
+            const deltaX = e.clientX - dragStartPos.x;
+            const deltaY = e.clientY - dragStartPos.y;
+
+            // Move in the opposite direction of mouse movement for natural "grabbing" feel
+            tablesAreaRef.current.scrollLeft = tablesAreaRef.current.initialScrollLeft - deltaX;
+            tablesAreaRef.current.scrollTop = tablesAreaRef.current.initialScrollTop - deltaY;
         }
     };
 
     const handleMouseUp = () => {
         setIsDraggingCanvas(false);
-    }
+    };
 
     useEffect(() => {
-        window.addEventListener('mousemove', handleMouseMove);
-        window.addEventListener('mouseup', handleMouseUp);
+        if (isDraggingCanvas) {
+            window.addEventListener('mousemove', handleCanvasMouseMove);
+            window.addEventListener('mouseup', handleMouseUp);
+        } else {
+            window.removeEventListener('mousemove', handleCanvasMouseMove);
+        }
+
         return () => {
-            window.removeEventListener('mousemove', handleMouseMove);
+            window.removeEventListener('mousemove', handleCanvasMouseMove);
             window.removeEventListener('mouseup', handleMouseUp);
         };
-    }, [isDraggingCanvas]);
+    }, [isDraggingCanvas, dragStartPos]);
+
     // Close dropdown when clicking outside
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -248,6 +396,7 @@ const SeatingArrangement = () => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
     }, [activeNavSection]);
+
     useEffect(() => {
         const savedHalls = JSON.parse(localStorage.getItem('halls')) || [];
         if (savedHalls.length) setHalls(savedHalls);
@@ -420,7 +569,6 @@ const SeatingArrangement = () => {
         );
     };
 
-
     // Hall Management UI component
     const HallManagement = () => {
         return (
@@ -492,11 +640,40 @@ const SeatingArrangement = () => {
         const newTables = [];
         const currentTime = Date.now();
 
+        // Get container dimensions
+        const containerRect = tablesAreaRef.current.getBoundingClientRect();
+        const containerWidth = containerRect.width / zoom;
+        const containerHeight = containerRect.height / zoom;
+
+        // Estimate table size (approximate values)
+        const tableWidth = 300;
+        const tableHeight = 300;
+
+        // Calculate how many tables can fit per row with some spacing
+        const spacing = 20;
+        const tablesPerRow = Math.floor((containerWidth - spacing) / (tableWidth + spacing));
+
         for (let i = 0; i < tableCount; i++) {
+            // Calculate position within grid layout
+            const row = Math.floor(i / tablesPerRow);
+            const col = i % tablesPerRow;
+
+            // Position the table
+            const x = col * (tableWidth + spacing) + spacing;
+            const y = row * (tableHeight + spacing) + spacing;
+
+            // Ensure the table is within boundaries
+            const safeX = Math.min(x, containerWidth - tableWidth - spacing);
+            const safeY = Math.min(y, containerHeight - tableHeight - spacing);
+
             newTables.push({
                 id: currentTime + i, // Ensure unique IDs
                 people: [],
-                chairCount
+                chairCount,
+                x: safeX,
+                y: safeY,
+                width: tableWidth,
+                height: tableHeight
             });
         }
 
@@ -649,76 +826,6 @@ const SeatingArrangement = () => {
 
         return (
             <div className="people-section">
-                <div className="total-people-counter">
-                    <h3>Ընդհանուր մարդիկ: {totalPeople}</h3>
-                </div>
-
-                {/* Seated People Box */}
-                <div className="people-box">
-                    <div className="people-header" onClick={toggleSeatedExpand}>
-                        <h3>Նստած մարդիկ ({seatedCount})</h3>
-                        <div className={`expand-arrow ${isSeatedExpanded ? 'expanded' : ''}`}>
-                            ▼
-                        </div>
-                    </div>
-
-                    {isSeatedExpanded && (
-                        <div className="people-grid-container">
-                            <div className="people-grid">
-                                {seatedPeople.length > 0 ? (
-                                    seatedPeople.map((person, index) => (
-                                        <div key={index} className="person-card seated">
-                                            <span className="person-name">{person.name}</span>
-                                            <span className="person-group">Խումբ {person.group}</span>
-                                            <button
-                                                onClick={(e) => handleSeatedPersonDelete(e, person)}
-                                                className="delete-btn"
-                                            >
-                                                ✕
-                                            </button>
-                                        </div>
-                                    ))
-                                ) : (
-                                    <div className="empty-message">Չկան նստած մարդիկ</div>
-                                )}
-                            </div>
-                        </div>
-                    )}
-                </div>
-
-                {/* Unseated People Box */}
-                <div className="people-box">
-                    <div className="people-header" onClick={toggleUnseatedExpand}>
-                        <h3>Մարդիկ առանց սեղանների ({unseatedCount})</h3>
-                        <div className={`expand-arrow ${isUnseatedExpanded ? 'expanded' : ''}`}>
-                            ▼
-                        </div>
-                    </div>
-
-                    {isUnseatedExpanded && (
-                        <div className="people-grid-container">
-                            <div className="people-grid">
-                                {unseatedPeople.length > 0 ? (
-                                    unseatedPeople.map((person, index) => (
-                                        <div key={index} className="person-card unseated">
-                                            <span className="person-name">{person.name}</span>
-                                            <span className="person-group">Խումբ {person.group}</span>
-                                            <button
-                                                onClick={(e) => handleUnseatedPersonDelete(e, person.name)}
-                                                className="delete-btn"
-                                            >
-                                                ✕
-                                            </button>
-                                        </div>
-                                    ))
-                                ) : (
-                                    <div className="empty-message">Բոլոր մարդիկ նստած են</div>
-                                )}
-                            </div>
-                        </div>
-                    )}
-                </div>
-
                 {/* Removal confirmation popup */}
                 {showRemovalPopup && personToHandle && (
                     <div className="fullscreen-popup" onClick={closePopup}>
@@ -749,20 +856,48 @@ const SeatingArrangement = () => {
             </div>
         );
     };
-    useEffect(() => {
-        window.addEventListener("wheel", handleWheel, { passive: false });
-        return () => window.removeEventListener("wheel", handleWheel);
-    }, []);
 
 
 
     const handleWheel = (e) => {
         if (e.ctrlKey) {
             e.preventDefault();
-            setZoom((prevZoom) => {
-                let newZoom = prevZoom + (e.deltaY > 0 ? -0.1 : 0.1);
-                return Math.min(Math.max(newZoom, 0.2), 1.5);
-            });
+    
+            // Get container information
+            const container = tablesAreaRef.current;
+            if (!container) return;
+    
+            // Get container dimensions and position
+            const rect = container.getBoundingClientRect();
+    
+            // Calculate cursor position relative to the container
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+    
+            // Calculate the current real coordinates under the mouse (content coordinates)
+            const contentX = (container.scrollLeft + mouseX) / zoom;
+            const contentY = (container.scrollTop + mouseY) / zoom;
+    
+            // Calculate new zoom level
+            let newZoom;
+            if (e.deltaY < 0) {
+                // Zoom in - use smaller step for more precise control
+                newZoom = Math.min(zoom * 1.1, 3.0);
+            } else {
+                // Zoom out - use smaller step for more precise control
+                newZoom = Math.max(zoom / 1.1, 0.2);
+            }
+    
+            // Update zoom state (synchronously to prevent flickering)
+            setZoom(newZoom);
+    
+            // Calculate new scroll position to keep the point under the cursor
+            const newScrollX = contentX * newZoom - mouseX;
+            const newScrollY = contentY * newZoom - mouseY;
+    
+            // Apply scroll immediately
+            container.scrollLeft = newScrollX;
+            container.scrollTop = newScrollY;
         }
     };
 
@@ -805,7 +940,65 @@ const SeatingArrangement = () => {
     };
 
     const handleAddTable = () => {
-        setTables([{ id: Date.now(), people: [], chairCount }, ...tables]);
+        // Get container dimensions
+        const containerRect = tablesAreaRef.current.getBoundingClientRect();
+        const containerWidth = containerRect.width / zoom;
+        const containerHeight = containerRect.height / zoom;
+
+        // Default table size
+        const tableWidth = 300;
+        const tableHeight = 300;
+
+        // Find an empty spot by checking existing table positions
+        let x = 20, y = 20; // Start at the top left with some padding
+
+        // Simple algorithm to find a position that doesn't overlap too much
+        const existingTables = [...tables];
+        const occupied = new Map();
+
+        // Mark existing positions as occupied
+        existingTables.forEach(table => {
+            const tableX = Math.floor((table.x || 0) / 100);
+            const tableY = Math.floor((table.y || 0) / 100);
+
+            // Mark a grid area as occupied
+            for (let i = 0; i < 3; i++) {
+                for (let j = 0; j < 3; j++) {
+                    occupied.set(`${tableX + i},${tableY + j}`, true);
+                }
+            }
+        });
+
+        // Find the first non-occupied position
+        let found = false;
+        for (let gridY = 0; gridY < Math.floor(containerHeight / 100); gridY++) {
+            for (let gridX = 0; gridX < Math.floor(containerWidth / 100); gridX++) {
+                if (!occupied.has(`${gridX},${gridY}`)) {
+                    x = gridX * 100;
+                    y = gridY * 100;
+                    found = true;
+                    break;
+                }
+            }
+            if (found) break;
+        }
+
+        // Ensure the table is within boundaries
+        x = Math.min(x, containerWidth - tableWidth - 20);
+        y = Math.min(y, containerHeight - tableHeight - 20);
+
+        setTables([
+            {
+                id: Date.now(),
+                people: [],
+                chairCount,
+                x: x,
+                y: y,
+                width: tableWidth,
+                height: tableHeight
+            },
+            ...tables
+        ]);
     };
 
     const handleChairCountChange = (e) => {
@@ -1292,13 +1485,13 @@ const SeatingArrangement = () => {
                 </div>
                 <div className="main-content">
                     <div className="sidebar">
-                        <PeopleSection
+                        {/* <PeopleSection
                             people={people}
                             tables={tables}
                             handleDeletePerson={handleDeletePerson}
                             setPeople={setPeople}
                             setTables={setTables}
-                        />
+                        /> */}
                     </div>
                     <TableDetailsPopup
                         table={getDetailsTable()}
@@ -1327,22 +1520,24 @@ const SeatingArrangement = () => {
                         </div>
 
                         <div
-                            className="tables-area"
+                            className={`tables-area ${isDraggingCanvas ? 'dragging' : ''}`}
                             ref={tablesAreaRef}
                             onMouseDown={handleCanvasMouseDown}
+                            onMouseMove={handleMouseMoveOnCanvas} // Добавить этот обработчик
                             style={{
                                 transform: `scale(${zoom})`,
                                 transformOrigin: 'top left',
                                 display: 'flex',
                                 overflow: 'auto',
-                                flexWrap: 'wrap',
-                                gap: '20px',
-                                padding: '20px',
                                 width: `${100 / zoom}%`,
+                                height: `${100 / zoom}%`,
                                 minHeight: `${100 / zoom}%`,
-                                justifyContent: "center",
+                                padding: '20px',
                                 position: 'relative',
-                                cursor: isDraggingCanvas ? 'grabbing' : 'default'
+                                cursor: isDraggingCanvas ? 'grabbing' : 'default',
+                                '--zoom-level': zoom,
+                                transition: isZooming ? 'transform 0.1s ease-out' : 'none', // Изменить на это
+                                willChange: 'transform',
                             }}
                         >
                             {draggingGroup && (
@@ -1461,7 +1656,7 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
     const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
     const [dragStartTime, setDragStartTime] = useState(null);
     const tableRef = useRef(null);
-    
+
     // Track if we're actually dragging or just clicking
     const isDragOperation = useRef(false);
 
@@ -1471,14 +1666,104 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
         setIsDragging(true);
         setDragStartTime(Date.now());
         isDragOperation.current = false;
-        
-        const rect = tableRef.current.getBoundingClientRect();
-        setDragOffset({
-            x: e.clientX - rect.left,
-            y: e.clientY - rect.top
-        });
+
+        // Определяем начальные координаты таблицы
+        const tablePosition = { x: table.x || 0, y: table.y || 0 };
+
+        // Сохраняем начальную позицию мыши
+        const initialMousePos = { x: e.clientX, y: e.clientY };
+
+        // Сохраняем эти данные в ref для использования при движении
+        tableRef.current.tableStartPosition = tablePosition;
+        tableRef.current.mouseStartPosition = initialMousePos;
+
         e.stopPropagation();
     };
+
+    const handleTableMouseMove = (e) => {
+        if (isDragging && tableRef.current) {
+            // Отмечаем, что это операция перетаскивания, а не клик
+            isDragOperation.current = true;
+
+            // Получаем масштаб
+            const container = tableRef.current.parentElement;
+            const zoom = parseFloat(getComputedStyle(container).getPropertyValue('--zoom-level') || 1);
+
+            // Вычисляем смещение мыши от начальной позиции
+            const deltaX = (e.clientX - tableRef.current.mouseStartPosition.x) / zoom;
+            const deltaY = (e.clientY - tableRef.current.mouseStartPosition.y) / zoom;
+
+            // Вычисляем новые координаты таблицы
+            const newX = tableRef.current.tableStartPosition.x + deltaX;
+            const newY = tableRef.current.tableStartPosition.y + deltaY;
+
+            // Получаем размеры контейнера и таблицы
+            const containerRect = container.getBoundingClientRect();
+            const tableRect = tableRef.current.getBoundingClientRect();
+
+            // Вычисляем размеры с учетом масштаба
+            const containerWidth = containerRect.width / zoom;
+            const containerHeight = containerRect.height / zoom;
+            const tableWidth = tableRect.width / zoom;
+            const tableHeight = tableRect.height / zoom;
+
+            // Проверяем границы
+            const boundedX = Math.max(0, Math.min(containerWidth - tableWidth, newX));
+            const boundedY = Math.max(0, Math.min(containerHeight - tableHeight, newY));
+
+            // Обновляем позицию таблицы
+            setTables(prev => prev.map(t =>
+                t.id === table.id ? { ...t, x: boundedX, y: boundedY } : t
+            ));
+        } else if (isResizing && tableRef.current) {
+            // Существующий код изменения размера таблицы
+            const container = tableRef.current.parentElement;
+            const zoom = parseFloat(getComputedStyle(container).getPropertyValue('--zoom-level') || 1);
+
+            const containerRect = container.getBoundingClientRect();
+            const tableRect = tableRef.current.getBoundingClientRect();
+
+            const newWidth = Math.max(100, (e.clientX - containerRect.left - table.x * zoom) / zoom);
+            const newHeight = Math.max(100, (e.clientY - containerRect.top - table.y * zoom) / zoom);
+
+            setTables(prev => prev.map(t =>
+                t.id === table.id ? { ...t, width: newWidth, height: newHeight } : t
+            ));
+        }
+    };
+
+
+    const handleTableMouseUp = () => {
+        // Определяем, был ли это клик или перетаскивание
+        if (isDragging && !isDragOperation.current) {
+            // Если это клик (а не перетаскивание) и прошло менее 200 мс, показываем детали
+            const elapsedTime = Date.now() - dragStartTime;
+            if (elapsedTime < 200) {
+                onShowDetails(table.id);
+            }
+        }
+
+        // Очищаем временные данные
+        if (tableRef.current) {
+            tableRef.current.tableStartPosition = null;
+            tableRef.current.mouseStartPosition = null;
+        }
+
+        setIsDragging(false);
+        setIsResizing(false);
+        isDragOperation.current = false;
+    };
+
+    useEffect(() => {
+        if (isDragging || isResizing) {
+            window.addEventListener('mousemove', handleTableMouseMove);
+            window.addEventListener('mouseup', handleTableMouseUp);
+            return () => {
+                window.removeEventListener('mousemove', handleTableMouseMove);
+                window.removeEventListener('mouseup', handleTableMouseUp);
+            };
+        }
+    }, [isDragging, isResizing, dragOffset]);
 
     const handleResizeStart = (e) => {
         setIsResizing(true);
@@ -1487,28 +1772,36 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
 
     const handleMouseMove = (e) => {
         if (isDragging) {
-            // If we've moved, mark this as a drag operation, not a click
+            // Mark this as a drag operation, not a click
             isDragOperation.current = true;
-            
-            const container = tableRef.current.parentElement.getBoundingClientRect();
-            const zoom = parseFloat(tableRef.current.parentElement.style.transform.match(/scale\(([^)]+)\)/)[1] || 1);
 
-            const newX = (e.clientX - container.left - dragOffset.x) / zoom;
-            const newY = (e.clientY - container.top - dragOffset.y) / zoom;
+            const container = tableRef.current.parentElement;
+            const zoom = parseFloat(container.style.getPropertyValue('--zoom-level') || 1);
 
+            // Calculate new position with exact 1:1 movement, accounting for zoom
+            const newX = (e.clientX - dragOffset.x) / zoom;
+            const newY = (e.clientY - dragOffset.y) / zoom;
+
+            // Calculate container boundaries
+            const containerRect = container.getBoundingClientRect();
+            const containerWidth = containerRect.width / zoom;
+            const containerHeight = containerRect.height / zoom;
+
+            // Calculate table dimensions
+            const tableRect = tableRef.current.getBoundingClientRect();
+            const tableWidth = tableRect.width / zoom;
+            const tableHeight = tableRect.height / zoom;
+
+            // Enforce boundaries
+            const boundedX = Math.max(0, Math.min(containerWidth - tableWidth, newX));
+            const boundedY = Math.max(0, Math.min(containerHeight - tableHeight, newY));
+
+            // Update table position with exact coordinates
             setTables(prev => prev.map(t =>
-                t.id === table.id ? { ...t, x: newX, y: newY } : t
+                t.id === table.id ? { ...t, x: boundedX, y: boundedY } : t
             ));
         } else if (isResizing) {
-            const container = tableRef.current.parentElement.getBoundingClientRect();
-            const zoom = parseFloat(tableRef.current.parentElement.style.transform.match(/scale\(([^)]+)\)/)[1] || 1);
-
-            const newWidth = Math.max(100, (e.clientX - container.left - table.x * zoom) / zoom);
-            const newHeight = Math.max(100, (e.clientY - container.top - table.y * zoom) / zoom);
-
-            setTables(prev => prev.map(t =>
-                t.id === table.id ? { ...t, width: newWidth, height: newHeight } : t
-            ));
+            // Existing resizing code...
         }
     };
 
@@ -1521,7 +1814,7 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
                 onShowDetails(table.id);
             }
         }
-        
+
         setIsDragging(false);
         setIsResizing(false);
         isDragOperation.current = false;
@@ -1533,13 +1826,13 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
         }
     };
 
-    React.useEffect(() => {
+    useEffect(() => {
         if (isDragging || isResizing) {
-            window.addEventListener('mousemove', handleMouseMove);
-            window.addEventListener('mouseup', handleMouseUp);
+            window.addEventListener('mousemove', handleTableMouseMove);
+            window.addEventListener('mouseup', handleTableMouseUp);
             return () => {
-                window.removeEventListener('mousemove', handleMouseMove);
-                window.removeEventListener('mouseup', handleMouseUp);
+                window.removeEventListener('mousemove', handleTableMouseMove);
+                window.removeEventListener('mouseup', handleTableMouseUp);
             };
         }
     }, [isDragging, isResizing]);
@@ -1696,7 +1989,7 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
                 </div>
             </div>
             <div className="table">
-                <div 
+                <div
                     className="table-top"
                 >
                     {chairs}
@@ -1766,7 +2059,7 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
             groupName: group.groupName,
             people: group.people
         };
-        
+
         // Add dragging class for visual feedback
         e.currentTarget.classList.add('dragging');
 
@@ -1778,7 +2071,7 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
                 groupName: group.groupName,
                 people: group.people
             }));
-            
+
             // Set drag effect
             e.dataTransfer.effectAllowed = 'move';
         } catch (error) {
