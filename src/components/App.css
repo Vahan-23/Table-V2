@@ -1356,3 +1356,351 @@ button {
   flex-direction: column;
   width: 100%;
 }
+
+
+/* Table details button styling */
+.table-buttons {
+  display: flex;
+  gap: 5px;
+}
+
+.details-table-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background-color: #3498db;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: bold;
+  transition: all 0.2s ease;
+}
+
+.details-table-btn:hover {
+  background-color: #2980b9;
+  transform: scale(1.1);
+}
+
+/* Active state for the details button when panel is open */
+.highlighted-table .details-table-btn {
+  background-color: #2980b9;
+  box-shadow: 0
+}
+/* Table details popup */
+.table-details-popup {
+  position: absolute;
+  top: 0;
+  left: -350px; /* Start off-screen */
+  width: 320px;
+  height: 100%;
+  background-color: white;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+  z-index: 10;
+  transition: left 0.3s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.table-details-popup.open {
+  left: 0; /* Slide in when open */
+}
+
+.table-details-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+  background-color: #3498db;
+  color: white;
+}
+
+.close-details-btn {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.table-details-content {
+  flex: 1;
+  padding: 15px;
+  overflow-y: auto;
+}
+
+.table-stats {
+  margin-bottom: 20px;
+  padding: 10px;
+  background-color: #f5f5f5;
+  border-radius: 4px;
+}
+
+.table-groups-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.table-group-item {
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+  background-color: #f9f9f9;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: grab;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.table-group-item:hover {
+  background-color: #f0f0f0;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.table-group-item::before {
+  content: '↖️ Перетащить';
+  position: absolute;
+  top: -20px;
+  right: 10px;
+  font-size: 11px;
+  color: #666;
+  background-color: rgba(255,255,255,0.8);
+  padding: 2px 5px;
+  border-radius: 3px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.table-group-item:hover::before {
+  opacity: 1;
+}
+
+.group-info {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.group-name {
+  font-weight: bold;
+}
+
+.group-count {
+  color: #666;
+}
+
+.group-people {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 5px;
+}
+
+.group-person {
+  padding: 3px 6px;
+  background-color: #e1f5fe;
+  border-radius: 3px;
+  font-size: 12px;
+}
+
+.remove-group-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #e74c3c;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.remove-group-btn:hover {
+  background-color: #c0392b;
+}
+
+.groups-section-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.groups-section-header h4 {
+  margin: 0;
+  margin-right: 10px;
+}
+
+.group-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  background-color: #3498db;
+  color: white;
+  border-radius: 11px;
+  font-size: 12px;
+  font-weight: bold;
+  padding: 0 6px;
+}
+
+.empty-groups-message {
+  padding: 30px 20px;
+  text-align: center;
+  color: #666;
+  border: 2px dashed #ddd;
+  border-radius: 8px;
+  background-color: #f9f9f9;
+  margin: 15px 0;
+}
+
+.empty-icon {
+  font-size: 40px;
+  margin-bottom: 10px;
+  color: #bbb;
+}
+
+.empty-hint {
+  margin-top: 10px;
+  font-size: 12px;
+  font-style: italic;
+  color: #999;
+}
+
+.table-details-footer {
+  padding: 15px;
+  background-color: #f5f5f5;
+  border-top: 1px solid #ddd;
+  font-size: 12px;
+  color: #666;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.footer-tip {
+  display: flex;
+  align-items: center;
+  background-color: #fff8e1;
+  padding: 10px;
+  border-radius: 4px;
+  border-left: 3px solid #ffc107;
+}
+
+.tip-icon {
+  font-size: 16px;
+  margin-right: 8px;
+}
+
+.remove-all-groups-btn {
+  padding: 8px 12px;
+  background-color: #e74c3c;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.2s ease;
+}
+
+.remove-all-groups-btn:hover {
+  background-color: #c0392b;
+}
+
+/* Стили для уведомления о перемещении */
+.transfer-notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 15px 20px;
+  background-color: #2ecc71;
+  color: white;
+  border-radius: 4px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  font-weight: bold;
+  z-index: 9999;
+  opacity: 0;
+  transform: translateY(-20px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.transfer-notification.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Улучшение визуального отклика при перетаскивании */
+.table-group-item[draggable=true] {
+  user-select: none;
+  cursor: grab;
+}
+
+.table-group-item[draggable=true]:active {
+  cursor: grabbing;
+}
+
+.table-group-item.dragging {
+  opacity: 0.6 !important;
+  transform: scale(0.95);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+  border: 2px dashed #3498db;
+}
+
+/* Подсказка при перетаскивании */
+.drag-tooltip {
+  position: absolute;
+  padding: 5px 8px;
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+  border-radius: 3px;
+  font-size: 12px;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* Drag and drop styles */
+.table-group-item.dragging {
+  opacity: 0.5;
+  border: 2px dashed #3498db;
+}
+
+/* Table drop target highlight */
+.table-container.drop-target {
+  outline: 2px dashed #3498db;
+  outline-offset: 5px;
+  background-color: rgba(52, 152, 219, 0.1);
+}
+
+/* Highlighted table when details are shown */
+.table-container.highlighted-table {
+  outline: 2px solid #3498db;
+  outline-offset: 5px;
+  box-shadow: 0 0 15px rgba(52, 152, 219, 0.5);
+  z-index: 5;
+}
+
+/* Drag-and-drop ghost image customization */
+.table-group-item.dragging::after {
+  content: "Перетащить в другой стол";
+  position: absolute;
+  bottom: -20px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 4px;
+  border-radius: 4px;
+  font-size: 10px;
+}

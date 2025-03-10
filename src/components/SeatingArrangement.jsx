@@ -38,6 +38,165 @@ const SeatingArrangement = () => {
     const containerRef = useRef(null);
     const tablesAreaRef = useRef(null);
 
+    window.currentDraggedGroup = null;
+
+    const [detailsTableId, setDetailsTableId] = useState(null);
+    const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+
+    // Handler to show table details
+    const handleShowTableDetails = (tableId) => {
+        setDetailsTableId(tableId);
+        setIsDetailsOpen(true);
+    };
+
+    // Handler to close table details
+    const handleCloseTableDetails = () => {
+        setIsDetailsOpen(false);
+
+        // Add a small delay before clearing the table ID to allow for smooth transition
+        setTimeout(() => {
+            setDetailsTableId(null);
+        }, 300);
+    };
+
+    // Function to get the current table for details
+    const getDetailsTable = () => {
+        return tables.find(table => table.id === detailsTableId);
+    };
+
+    // Function to highlight a table when showing its details
+    const isTableHighlighted = (tableId) => {
+        return detailsTableId === tableId && isDetailsOpen;
+    };
+
+    const handleTableDrop = (e, tableId) => {
+        // If there's drag data in the global variable, use it
+        if (window.currentDraggedGroup) {
+            const data = window.currentDraggedGroup;
+            processGroupTransfer(data, tableId, tables, setTables);
+            return;
+        }
+
+        // If not, try to get data from dataTransfer
+        try {
+            // First try to get the type identifier
+            const typeId = e.dataTransfer.getData('text/plain');
+
+            if (typeId === 'SEATED_GROUP') {
+                // Then try to get the JSON data
+                try {
+                    const jsonData = e.dataTransfer.getData('application/json');
+                    if (jsonData) {
+                        const data = JSON.parse(jsonData);
+                        processGroupTransfer(data, tableId, tables, setTables);
+                    } else {
+                        console.error('Failed to get JSON data about the dragged group');
+                    }
+                } catch (jsonError) {
+                    console.error('Error parsing JSON data:', jsonError);
+                }
+            } else {
+                console.log('Dragged element type is not SEATED_GROUP:', typeId);
+            }
+        } catch (error) {
+            console.error('Error getting drag data:', error);
+        }
+    };
+
+    // Process group transfer between tables
+    const processGroupTransfer = (data, targetTableId, tables, setTables) => {
+        const sourceTableId = data.tableId;
+        const groupName = data.groupName;
+
+        // Don't process if dropped on the same table
+        if (sourceTableId === targetTableId) return;
+
+        // Find source and target tables
+        const sourceTable = tables.find(t => t.id === sourceTableId);
+        const targetTable = tables.find(t => t.id === targetTableId);
+
+        if (!sourceTable || !targetTable) {
+            console.error('Source or target table not found');
+            return;
+        }
+
+        // Get people from this group in the source table
+        const groupPeople = sourceTable.people.filter(p => p && p.group === groupName);
+
+        if (groupPeople.length === 0) {
+            console.error('No people found to move');
+            return;
+        }
+
+        // Check if target table has enough free seats
+        const targetFreeSeats = targetTable.chairCount - targetTable.people.filter(Boolean).length;
+
+        if (targetFreeSeats < groupPeople.length) {
+            alert(`Not enough free seats at the table (need ${groupPeople.length}, available ${targetFreeSeats})`);
+            return;
+        }
+
+        // Update tables
+        setTables(prevTables => {
+            return prevTables.map(table => {
+                if (table.id === sourceTableId) {
+                    // Remove people from source table
+                    return {
+                        ...table,
+                        people: table.people.map(person =>
+                            (person && person.group === groupName) ? null : person
+                        )
+                    };
+                } else if (table.id === targetTableId) {
+                    // Add people to target table
+                    const newPeople = [...table.people];
+                    let peopleAdded = 0;
+
+                    // Fill empty seats first
+                    for (let i = 0; i < newPeople.length && peopleAdded < groupPeople.length; i++) {
+                        if (!newPeople[i]) {
+                            newPeople[i] = groupPeople[peopleAdded];
+                            peopleAdded++;
+                        }
+                    }
+
+                    // If there are still people to add, append them
+                    while (peopleAdded < groupPeople.length) {
+                        newPeople.push(groupPeople[peopleAdded]);
+                        peopleAdded++;
+                    }
+
+                    return {
+                        ...table,
+                        people: newPeople
+                    };
+                }
+                return table;
+            });
+        });
+
+        // Show transfer notification
+        showTransferNotification(groupName, targetTableId);
+    };
+
+    // Function to display transfer notification
+    const showTransferNotification = (groupName, tableId) => {
+        const notification = document.createElement('div');
+        notification.className = 'transfer-notification';
+        notification.textContent = `Group ${groupName} moved to table ${tableId}`;
+        document.body.appendChild(notification);
+
+        setTimeout(() => {
+            notification.classList.add('show');
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => {
+                    document.body.removeChild(notification);
+                }, 300);
+            }, 2000);
+        }, 100);
+    };
+
     const handleZoomIn = () => {
         setZoom(prev => Math.min(prev + 0.1, 2));
     };
@@ -1141,6 +1300,14 @@ const SeatingArrangement = () => {
                             setTables={setTables}
                         />
                     </div>
+                    <TableDetailsPopup
+                        table={getDetailsTable()}
+                        tables={tables}
+                        setTables={setTables}
+                        isOpen={isDetailsOpen}
+                        onClose={handleCloseTableDetails}
+                        setPeople={setPeople}
+                    />
                     <div className="figmaContainer">
                         <div className="zoom-controls">
                             <label>Մասշտաբ:</label>
@@ -1159,150 +1326,136 @@ const SeatingArrangement = () => {
                             </div>
                         </div>
 
-
-                        {/* <div
-                            className="tables-area-container"
-                            ref={containerRef}
+                        <div
+                            className="tables-area"
+                            ref={tablesAreaRef}
                             onMouseDown={handleCanvasMouseDown}
                             style={{
+                                transform: `scale(${zoom})`,
+                                transformOrigin: 'top left',
+                                display: 'flex',
+                                overflow: 'auto',
+                                flexWrap: 'wrap',
+                                gap: '20px',
+                                padding: '20px',
+                                width: `${100 / zoom}%`,
+                                minHeight: `${100 / zoom}%`,
+                                justifyContent: "center",
                                 position: 'relative',
-                                width: '100%',
-                                height: '100%',
-                                overflow: 'auto' // Добавлено для скроллинга
+                                cursor: isDraggingCanvas ? 'grabbing' : 'default'
                             }}
-                        > */}
-
-
-                            <div
-                                className="tables-area"
-                                ref={tablesAreaRef}
-                                onMouseDown={handleCanvasMouseDown}
-                                style={{
-                                    transform: `scale(${zoom})`,
-                                    transformOrigin: 'top left',
-                                    display: 'flex',
-                                    overflow: 'auto',
-                                    flexWrap: 'wrap',
-                                    gap: '20px',
-                                    padding: '20px',
-                                    width: `${100 / zoom}%`,
-                                    minHeight: `${100 / zoom}%`,
-                                    justifyContent: "center",
-                                    position: 'relative', // Добавлено для позиционирования столов
-                                    cursor: isDraggingCanvas ? 'grabbing' : 'default'
-                                }}
-                            >
-                                {draggingGroup && (
-                                    <NewTable
-                                        draggingGroup={draggingGroup}
-                                        setTables={setTables}
-                                        setDraggingGroup={setDraggingGroup}
-                                        setPeople={setPeople}
-                                    />
-                                )}
-
-                                {tables.map((table) => (
-                                    <Table
-                                        key={table.id}
-                                        table={table}
-                                        setTables={setTables}
-                                        handleDeleteTable={handleDeleteTable}
-                                        draggingGroup={draggingGroup}
-                                        setDraggingGroup={setDraggingGroup}
-                                        people={people}
-                                        setPeople={setPeople}
-                                        onChairClick={(chairIndex) => handleChairClick(table.id, chairIndex)}
-                                        isDraggable={true} // Добавляем свойство для перетаскивания
-                                    />
-                                ))}
-                            </div>
-                        {/* </div> */}
-                    </div>
-
-
-                </div>
-
-                {/* Fullscreen popup */}
-                {isPopupVisible && (
-                    <div
-                        className="fullscreen-popup"
-                        onClick={closePopup}
-                    >
-                        <div
-                            className="fullscreen-popup-content"
-                            onClick={(e) => e.stopPropagation()}
                         >
-                            {isRemoveMode ? (
-                                // Remove Person Modal
-                                <div className="remove-person-popup">
-                                    <h3 className="popup-title">Հեռացնե՞լ աթոռից:</h3>
-
-                                    <div className="person-info-card">
-                                        <p className="person-info-name">
-                                            {personToRemove?.name}
-                                        </p>
-                                        <p className="person-info-group">
-                                            Խումբ {personToRemove?.group}
-                                        </p>
-                                    </div>
-
-                                    <p className="confirmation-text">
-                                        Վստա՞հ եք։, որ ցանկանում եք հեռացնել այս անձին աթոռից:
-                                    </p>
-
-                                    <div className="popup-buttons">
-                                        <button
-                                            onClick={handleRemovePerson}
-                                            className="remove-btn"
-                                        >
-                                            Հեռացնել
-                                        </button>
-
-                                        <button
-                                            onClick={closePopup}
-                                            className="cancel-btn"
-                                        >
-                                            Չեղարկել
-                                        </button>
-                                    </div>
-                                </div>
-                            ) : (
-                                // Add Person Modal
-                                <>
-                                    <h3 className="popup-title">Ընտրեք մարդ աթոռի համար</h3>
-                                    <div className="person-selection-grid">
-                                        {getAvailablePeople().length > 0 ? (
-                                            getAvailablePeople().map((person) => (
-                                                <div
-                                                    key={person.name}
-                                                    className="person-selection-item"
-                                                    onClick={() => handleSelectPerson(person)}
-                                                >
-                                                    <span className="person-selection-name">{person.name}</span>
-                                                    <span className="person-selection-group">Խումբ {person.group}</span>
-                                                </div>
-                                            ))
-                                        ) : (
-                                            <div className="no-people-message">Հասանելի մարդիկ չկան</div>
-                                        )}
-                                    </div>
-                                    <button
-                                        onClick={closePopup}
-                                        className="close-popup-btn"
-                                    >Փակել</button>
-                                </>
+                            {draggingGroup && (
+                                <NewTable
+                                    draggingGroup={draggingGroup}
+                                    setTables={setTables}
+                                    setDraggingGroup={setDraggingGroup}
+                                    setPeople={setPeople}
+                                />
                             )}
+
+                            {tables.map((table) => (
+                                <Table
+                                    key={table.id}
+                                    table={table}
+                                    setTables={setTables}
+                                    handleDeleteTable={handleDeleteTable}
+                                    draggingGroup={draggingGroup}
+                                    setDraggingGroup={setDraggingGroup}
+                                    people={people}
+                                    setPeople={setPeople}
+                                    onChairClick={(chairIndex) => handleChairClick(table.id, chairIndex)}
+                                    isDraggable={true}
+                                    onShowDetails={handleShowTableDetails}
+                                    onDrop={(e) => handleTableDrop(e, table.id)}
+                                    isTableHighlighted={isTableHighlighted(table.id)}
+                                    tables={tables} // Pass all tables for the drop handler
+                                />
+                            ))}
                         </div>
                     </div>
-                )}
+                </div>
             </div>
-        </DndProvider>
+
+            {/* Fullscreen popup */}
+            {isPopupVisible && (
+                <div
+                    className="fullscreen-popup"
+                    onClick={closePopup}
+                >
+                    <div
+                        className="fullscreen-popup-content"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {isRemoveMode ? (
+                            // Remove Person Modal
+                            <div className="remove-person-popup">
+                                <h3 className="popup-title">Հեռացնե՞լ աթոռից:</h3>
+
+                                <div className="person-info-card">
+                                    <p className="person-info-name">
+                                        {personToRemove?.name}
+                                    </p>
+                                    <p className="person-info-group">
+                                        Խումբ {personToRemove?.group}
+                                    </p>
+                                </div>
+
+                                <p className="confirmation-text">
+                                    Վստա՞հ եք։, որ ցանկանում եք հեռացնել այս անձին աթոռից:
+                                </p>
+
+                                <div className="popup-buttons">
+                                    <button
+                                        onClick={handleRemovePerson}
+                                        className="remove-btn"
+                                    >
+                                        Հեռացնել
+                                    </button>
+
+                                    <button
+                                        onClick={closePopup}
+                                        className="cancel-btn"
+                                    >
+                                        Չեղարկել
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            // Add Person Modal
+                            <>
+                                <h3 className="popup-title">Ընտրեք մարդ աթոռի համար</h3>
+                                <div className="person-selection-grid">
+                                    {getAvailablePeople().length > 0 ? (
+                                        getAvailablePeople().map((person) => (
+                                            <div
+                                                key={person.name}
+                                                className="person-selection-item"
+                                                onClick={() => handleSelectPerson(person)}
+                                            >
+                                                <span className="person-selection-name">{person.name}</span>
+                                                <span className="person-selection-group">Խումբ {person.group}</span>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div className="no-people-message">Հասանելի մարդիկ չկան</div>
+                                    )}
+                                </div>
+                                <button
+                                    onClick={closePopup}
+                                    className="close-popup-btn"
+                                >Փակել</button>
+                            </>
+                        )}
+                    </div>
+                </div>
+            )}
+        </DndProvider >
     )
 };
 
 
-const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDraggingGroup, people, setPeople, onChairClick, isDraggable }) => {
-
+const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDraggingGroup, people, setPeople, onChairClick, isDraggable, onShowDetails, onDrop, isTableHighlighted }) => {
     const [isDragging, setIsDragging] = useState(false);
     const [isResizing, setIsResizing] = useState(false);
     const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
@@ -1324,9 +1477,9 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
         setIsResizing(true);
         e.stopPropagation();
     };
+
     const handleMouseMove = (e) => {
         if (isDragging) {
-            // Получаем позицию относительно родительского контейнера
             const container = tableRef.current.parentElement.getBoundingClientRect();
             const zoom = parseFloat(tableRef.current.parentElement.style.transform.match(/scale\(([^)]+)\)/)[1] || 1);
 
@@ -1348,6 +1501,7 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
             ));
         }
     };
+
     const handleMouseUp = (e) => {
         setIsDragging(false);
         setIsResizing(false);
@@ -1356,6 +1510,7 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
         tableRef.current.x = e.clientX - rect.left;
         tableRef.current.y = e.clientY - rect.top;
     };
+
     React.useEffect(() => {
         if (isDragging || isResizing) {
             window.addEventListener('mousemove', handleMouseMove);
@@ -1367,30 +1522,137 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
         }
     }, [isDragging, isResizing]);
 
-    const [, drop] = useDrop({
-        accept: 'GROUP',
-        drop: (item) => {
-            if (table.people.length + item.group.length <= table.chairCount) {
-                setTables((prevTables) =>
-                    prevTables.map(t =>
-                        t.id === table.id
-                            ? { ...t, people: [...t.people, ...item.group] }
-                            : t
-                    )
-                );
+    // Add a handler for the details button
+    const handleShowDetails = (e) => {
+        e.stopPropagation(); // Prevent triggering drag start
+        onShowDetails(table.id);
+    };
 
-                setDraggingGroup(null);
-                setPeople((prevPeople) =>
-                    prevPeople.filter((person) =>
-                        !item.group.some((groupPerson) => groupPerson.name === person.name)
-                    )
-                );
-            } else {
-                alert(`Սեղանին չի կարող լինել ավելի քան ${table.chairCount} մարդ:`);
+    // Enhanced drop target to handle both regular group drops and seated group transfers
+    const [{ isOver }, drop] = useDrop({
+        accept: ['GROUP', 'SEATED_GROUP'],
+        drop: (item, monitor) => {
+            const itemType = monitor.getItemType();
 
+            if (itemType === 'GROUP') {
+                // Handle regular group drop (from the people sidebar)
+                if (table.people.filter(Boolean).length + item.group.length <= table.chairCount) {
+                    setTables((prevTables) =>
+                        prevTables.map(t =>
+                            t.id === table.id
+                                ? { ...t, people: [...t.people, ...item.group] }
+                                : t
+                        )
+                    );
+
+                    setDraggingGroup(null);
+                    setPeople((prevPeople) =>
+                        prevPeople.filter((person) =>
+                            !item.group.some((groupPerson) => groupPerson.name === person.name)
+                        )
+                    );
+                } else {
+                    alert(`The table cannot have more than ${table.chairCount} people`);
+                }
+            } else if (itemType === 'SEATED_GROUP') {
+                // Pass the drop event to the parent component's handler
+                onDrop && onDrop(monitor.getDropResult());
             }
-        }
+        },
+        collect: (monitor) => ({
+            isOver: monitor.isOver()
+        })
     });
+
+    // Отдельная функция для обработки перетаскивания группы с сидячих мест
+    const handleSeatedGroupDrop = (groupData) => {
+        const sourceTableId = groupData.tableId;
+        const groupName = groupData.groupName;
+        const targetTableId = table.id;
+
+        // Не обрабатываем, если перетаскивание на тот же стол
+        if (sourceTableId === targetTableId) return;
+
+        // Получаем исходный и целевой столы
+        const sourceTable = table.find(t => t.id === sourceTableId);
+        const targetTable = table.find(t => t.id === targetTableId);
+
+        if (!sourceTable || !targetTable) {
+            console.error('Не удалось найти исходный или целевой стол');
+            return;
+        }
+
+        // Получаем людей из этой группы на исходном столе
+        const groupPeople = sourceTable.people.filter(p => p && p.group === groupName);
+
+        if (groupPeople.length === 0) {
+            console.error('Не найдены люди в группе для перемещения');
+            return;
+        }
+
+        // Проверяем, достаточно ли свободных мест на целевом столе
+        const targetFreeSeats = targetTable.chairCount - targetTable.people.filter(Boolean).length;
+
+        if (targetFreeSeats < groupPeople.length) {
+            alert(`На столе недостаточно свободных мест для этой группы (нужно ${groupPeople.length}, доступно ${targetFreeSeats})`);
+            return;
+        }
+
+        // Обновляем столы
+        setTables(prevTables => {
+            return prevTables.map(t => {
+                if (t.id === sourceTableId) {
+                    // Удаляем людей с исходного стола
+                    return {
+                        ...t,
+                        people: t.people.map(person =>
+                            (person && person.group === groupName) ? null : person
+                        )
+                    };
+                } else if (t.id === targetTableId) {
+                    // Добавляем людей на целевой стол
+                    const newPeople = [...t.people];
+                    let peopleAdded = 0;
+
+                    // Сначала заполняем пустые места
+                    for (let i = 0; i < newPeople.length && peopleAdded < groupPeople.length; i++) {
+                        if (!newPeople[i]) {
+                            newPeople[i] = groupPeople[peopleAdded];
+                            peopleAdded++;
+                        }
+                    }
+
+                    // Если еще остались люди, добавляем их
+                    while (peopleAdded < groupPeople.length) {
+                        newPeople.push(groupPeople[peopleAdded]);
+                        peopleAdded++;
+                    }
+
+                    return {
+                        ...t,
+                        people: newPeople
+                    };
+                }
+                return t;
+            });
+        });
+
+        // Показываем уведомление об успешном перемещении
+        const notification = document.createElement('div');
+        notification.className = 'transfer-notification';
+        notification.textContent = `Группа ${groupName} перемещена на стол ${targetTableId}`;
+        document.body.appendChild(notification);
+
+        setTimeout(() => {
+            notification.classList.add('show');
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => {
+                    document.body.removeChild(notification);
+                }, 300);
+            }, 2000);
+        }, 100);
+    };
 
     const chairs = [];
     const angleStep = 360 / table.chairCount;
@@ -1405,8 +1667,6 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
 
         const chairStyle = {
             position: 'absolute',
-            // top: '50%',
-            // left: '50%',
             transformOrigin: 'center',
             width: '60px',
             height: '60px',
@@ -1425,7 +1685,6 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
             cursor: 'pointer'
         };
 
-        // For displaying the name directly on the chair
         const nameOverlayStyle = {
             position: 'absolute',
             left: '50%',
@@ -1477,55 +1736,242 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
 
     return (
         <div
-            ref={tableRef}
-            className="table-container"
+            ref={node => {
+                tableRef.current = node;
+                drop(node);
+            }}
+            className={`table-container ${isOver ? 'drop-target' : ''} ${isTableHighlighted ? 'highlighted-table' : ''}`}
+            onDrop={(e) => onDrop && onDrop(e)}
+            onDragOver={(e) => e.preventDefault()}
             style={{
                 position: 'absolute',
                 left: `${table.x || 0}px`,
                 top: `${table.y || 0}px`,
-                // width: `${table.width || 200}px`,
-                // height: `${table.height || 150}px`,
                 cursor: isDragging ? 'grabbing' : 'grab'
             }}
             onMouseDown={handleDragStart}
         >
             <div className="table-header">
                 <h3>Սեղան {table.id} (Աթոռներ: {table.chairCount})</h3>
-                <button
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteTable(table.id);
-                    }}
-                    className="delete-table-btn"
-                >
-                    X
-                </button>
+                <div className="table-buttons">
+                    {/* Add details button */}
+                    <button
+                        onClick={handleShowDetails}
+                        className="details-table-btn"
+                        title="Տեսնել սեղանի մանրամասները"
+                    >
+                        ℹ
+                    </button>
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteTable(table.id);
+                        }}
+                        className="delete-table-btn"
+                    >
+                        X
+                    </button>
+                </div>
             </div>
             <div className="table">
                 <div className="table-top">
                     {chairs}
                 </div>
             </div>
-
-            {/* Маркер для изменения размера */}
-            {/* <div
-                className="resize-handle"
-                style={{
-                    position: 'absolute',
-                    right: '2px',
-                    bottom: '2px',
-                    width: '10px',
-                    height: '10px',
-                    backgroundColor: '#333',
-                    cursor: 'nwse-resize',
-                    borderRadius: '50%'
-                }}
-                onMouseDown={handleResizeStart}
-            /> */}
         </div>
     );
 };
 
+const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeople }) => {
+    // Group people by their group
+    const getTableGroups = () => {
+        if (!table) return [];
+
+        // Get all seated people at this table
+        const tablePeople = table.people.filter(Boolean);
+
+        // Group them by group
+        const groups = {};
+        tablePeople.forEach(person => {
+            if (!groups[person.group]) {
+                groups[person.group] = [];
+            }
+            groups[person.group].push(person);
+        });
+
+        // Convert to array format for rendering
+        return Object.entries(groups).map(([groupName, people]) => ({
+            groupName,
+            people
+        }));
+    };
+
+    const tableGroups = getTableGroups();
+
+    // Handler to remove a group from the table
+    const handleRemoveGroup = (groupName) => {
+        if (window.confirm(`Are you sure you want to remove group ${groupName} from this table?`)) {
+            // Find people with this group at the table
+            const groupPeople = table.people.filter(person => person && person.group === groupName);
+
+            // Update the table by removing these people
+            setTables(prevTables =>
+                prevTables.map(t => {
+                    if (t.id === table.id) {
+                        return {
+                            ...t,
+                            people: t.people.map(person =>
+                                (person && person.group === groupName) ? null : person
+                            )
+                        };
+                    }
+                    return t;
+                })
+            );
+
+            // Add these people back to the people list
+            setPeople(prevPeople => [...prevPeople, ...groupPeople]);
+        }
+    };
+
+    // Function to handle drag start for group - FIXED VERSION
+    const handleGroupDragStart = (e, group) => {
+        // Set data on global variable
+        window.currentDraggedGroup = {
+            tableId: table.id,
+            groupName: group.groupName,
+            people: group.people
+        };
+        
+        // Add dragging class for visual feedback
+        e.currentTarget.classList.add('dragging');
+
+        try {
+            // Try to set data in dataTransfer
+            e.dataTransfer.setData('text/plain', 'SEATED_GROUP');
+            e.dataTransfer.setData('application/json', JSON.stringify({
+                tableId: table.id,
+                groupName: group.groupName,
+                people: group.people
+            }));
+            
+            // Set drag effect
+            e.dataTransfer.effectAllowed = 'move';
+        } catch (error) {
+            console.error('Error setting drag data:', error);
+        }
+    };
+
+    // Handle drag end
+    const handleDragEnd = (e) => {
+        e.currentTarget.classList.remove('dragging');
+        // Clear the global variable after a small delay to allow for drop processing
+        setTimeout(() => {
+            window.currentDraggedGroup = null;
+        }, 100);
+    };
+
+    return (
+        <div className={`table-details-popup ${isOpen ? 'open' : ''}`}>
+            <div className="table-details-header">
+                <h3>Table Details {table ? `${table.id}` : ''}</h3>
+                <button className="close-details-btn" onClick={onClose}>×</button>
+            </div>
+
+            <div className="table-details-content">
+                {table ? (
+                    <>
+                        <div className="table-stats">
+                            <p>Total Chairs: {table.chairCount}</p>
+                            <p>Occupied Chairs: {table.people.filter(Boolean).length}</p>
+                            <p>Free Chairs: {table.chairCount - table.people.filter(Boolean).length}</p>
+                        </div>
+
+                        <div className="groups-section-header">
+                            <h4>Groups at this table</h4>
+                            <div className="group-count-badge">
+                                {tableGroups.length}
+                            </div>
+                        </div>
+
+                        {tableGroups.length > 0 ? (
+                            <div className="table-groups-list">
+                                {tableGroups.map((group, index) => (
+                                    <div
+                                        key={index}
+                                        className="table-group-item"
+                                        draggable="true"
+                                        onDragStart={(e) => handleGroupDragStart(e, group)}
+                                        onDragEnd={handleDragEnd}
+                                    >
+                                        <div className="group-info">
+                                            <span className="group-name">Group {group.groupName}</span>
+                                            <span className="group-count">{group.people.length} people</span>
+                                        </div>
+
+                                        <div className="group-people">
+                                            {group.people.map((person, personIndex) => (
+                                                <div key={personIndex} className="group-person">
+                                                    {person.name}
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        <button
+                                            className="remove-group-btn"
+                                            onClick={() => handleRemoveGroup(group.groupName)}
+                                            title="Remove this group from the table"
+                                        >
+                                            ✕
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="empty-groups-message">
+                                <div className="empty-icon">👥</div>
+                                <p>No groups at this table</p>
+                                <p className="empty-hint">Drag groups here to place them</p>
+                            </div>
+                        )}
+                    </>
+                ) : (
+                    <p>No table selected</p>
+                )}
+            </div>
+
+            <div className="table-details-footer">
+                <div className="footer-tip">
+                    <div className="tip-icon">💡</div>
+                    <p>Drag groups to other tables to move them</p>
+                </div>
+                {tableGroups.length > 0 && (
+                    <button
+                        className="remove-all-groups-btn"
+                        onClick={() => {
+                            if (window.confirm('Are you sure you want to remove all groups from this table?')) {
+                                // Get all people at this table
+                                const tablePeople = table.people.filter(Boolean);
+
+                                // Update table by removing all people
+                                setTables(prevTables =>
+                                    prevTables.map(t =>
+                                        t.id === table.id ? { ...t, people: t.people.map(() => null) } : t
+                                    )
+                                );
+
+                                // Add people back to the people list
+                                setPeople(prevPeople => [...prevPeople, ...tablePeople]);
+                            }
+                        }}
+                    >
+                        Remove All Groups
+                    </button>
+                )}
+            </div>
+        </div>
+    );
+};
 // Group component with proper end callback to clear dragging state
 const Group = ({ group, groupName, setDraggingGroup }) => {
     const [{ isDragging }, drag] = useDrag({
