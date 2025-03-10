@@ -1455,16 +1455,23 @@ const SeatingArrangement = () => {
 };
 
 
-const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDraggingGroup, people, setPeople, onChairClick, isDraggable, onShowDetails, onDrop, isTableHighlighted }) => {
+const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDraggingGroup, people, setPeople, onChairClick, isDraggable, onShowDetails, onDrop, isTableHighlighted, tables }) => {
     const [isDragging, setIsDragging] = useState(false);
     const [isResizing, setIsResizing] = useState(false);
     const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+    const [dragStartTime, setDragStartTime] = useState(null);
     const tableRef = useRef(null);
+    
+    // Track if we're actually dragging or just clicking
+    const isDragOperation = useRef(false);
 
     const handleDragStart = (e) => {
         if (!isDraggable) return;
 
         setIsDragging(true);
+        setDragStartTime(Date.now());
+        isDragOperation.current = false;
+        
         const rect = tableRef.current.getBoundingClientRect();
         setDragOffset({
             x: e.clientX - rect.left,
@@ -1480,6 +1487,9 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
 
     const handleMouseMove = (e) => {
         if (isDragging) {
+            // If we've moved, mark this as a drag operation, not a click
+            isDragOperation.current = true;
+            
             const container = tableRef.current.parentElement.getBoundingClientRect();
             const zoom = parseFloat(tableRef.current.parentElement.style.transform.match(/scale\(([^)]+)\)/)[1] || 1);
 
@@ -1503,12 +1513,24 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
     };
 
     const handleMouseUp = (e) => {
+        // Detect if this was a click (not a drag)
+        if (isDragging && !isDragOperation.current) {
+            // If it's a click (not a drag) and less than 200ms, show details
+            const elapsedTime = Date.now() - dragStartTime;
+            if (elapsedTime < 200) {
+                onShowDetails(table.id);
+            }
+        }
+        
         setIsDragging(false);
         setIsResizing(false);
+        isDragOperation.current = false;
 
-        const rect = tableRef.current.getBoundingClientRect();
-        tableRef.current.x = e.clientX - rect.left;
-        tableRef.current.y = e.clientY - rect.top;
+        if (tableRef.current) {
+            const rect = tableRef.current.getBoundingClientRect();
+            tableRef.current.x = e.clientX - rect.left;
+            tableRef.current.y = e.clientY - rect.top;
+        }
     };
 
     React.useEffect(() => {
@@ -1521,12 +1543,6 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
             };
         }
     }, [isDragging, isResizing]);
-
-    // Add a handler for the details button
-    const handleShowDetails = (e) => {
-        e.stopPropagation(); // Prevent triggering drag start
-        onShowDetails(table.id);
-    };
 
     // Enhanced drop target to handle both regular group drops and seated group transfers
     const [{ isOver }, drop] = useDrop({
@@ -1563,96 +1579,6 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
             isOver: monitor.isOver()
         })
     });
-
-    // Отдельная функция для обработки перетаскивания группы с сидячих мест
-    const handleSeatedGroupDrop = (groupData) => {
-        const sourceTableId = groupData.tableId;
-        const groupName = groupData.groupName;
-        const targetTableId = table.id;
-
-        // Не обрабатываем, если перетаскивание на тот же стол
-        if (sourceTableId === targetTableId) return;
-
-        // Получаем исходный и целевой столы
-        const sourceTable = table.find(t => t.id === sourceTableId);
-        const targetTable = table.find(t => t.id === targetTableId);
-
-        if (!sourceTable || !targetTable) {
-            console.error('Не удалось найти исходный или целевой стол');
-            return;
-        }
-
-        // Получаем людей из этой группы на исходном столе
-        const groupPeople = sourceTable.people.filter(p => p && p.group === groupName);
-
-        if (groupPeople.length === 0) {
-            console.error('Не найдены люди в группе для перемещения');
-            return;
-        }
-
-        // Проверяем, достаточно ли свободных мест на целевом столе
-        const targetFreeSeats = targetTable.chairCount - targetTable.people.filter(Boolean).length;
-
-        if (targetFreeSeats < groupPeople.length) {
-            alert(`На столе недостаточно свободных мест для этой группы (нужно ${groupPeople.length}, доступно ${targetFreeSeats})`);
-            return;
-        }
-
-        // Обновляем столы
-        setTables(prevTables => {
-            return prevTables.map(t => {
-                if (t.id === sourceTableId) {
-                    // Удаляем людей с исходного стола
-                    return {
-                        ...t,
-                        people: t.people.map(person =>
-                            (person && person.group === groupName) ? null : person
-                        )
-                    };
-                } else if (t.id === targetTableId) {
-                    // Добавляем людей на целевой стол
-                    const newPeople = [...t.people];
-                    let peopleAdded = 0;
-
-                    // Сначала заполняем пустые места
-                    for (let i = 0; i < newPeople.length && peopleAdded < groupPeople.length; i++) {
-                        if (!newPeople[i]) {
-                            newPeople[i] = groupPeople[peopleAdded];
-                            peopleAdded++;
-                        }
-                    }
-
-                    // Если еще остались люди, добавляем их
-                    while (peopleAdded < groupPeople.length) {
-                        newPeople.push(groupPeople[peopleAdded]);
-                        peopleAdded++;
-                    }
-
-                    return {
-                        ...t,
-                        people: newPeople
-                    };
-                }
-                return t;
-            });
-        });
-
-        // Показываем уведомление об успешном перемещении
-        const notification = document.createElement('div');
-        notification.className = 'transfer-notification';
-        notification.textContent = `Группа ${groupName} перемещена на стол ${targetTableId}`;
-        document.body.appendChild(notification);
-
-        setTimeout(() => {
-            notification.classList.add('show');
-            setTimeout(() => {
-                notification.classList.remove('show');
-                setTimeout(() => {
-                    document.body.removeChild(notification);
-                }, 300);
-            }, 2000);
-        }, 100);
-    };
 
     const chairs = [];
     const angleStep = 360 / table.chairCount;
@@ -1719,8 +1645,11 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
                 key={i}
                 className="chair"
                 style={chairStyle}
-                onClick={() => onChairClick(i)}
-                title={peopleOnTable[i] ? `Нажмите чтобы удалить ${peopleOnTable[i].name}` : "Нажмите чтобы добавить человека"}
+                onClick={(e) => {
+                    e.stopPropagation(); // Prevent triggering table click
+                    onChairClick(i);
+                }}
+                title={peopleOnTable[i] ? `Նշեք աթոռը, որպեսզի հեռացնեք ${peopleOnTable[i].name}` : "Նշեք աթոռը մարդ ավելացնելու համար"}
             >
                 {peopleOnTable[i] && (
                     <div
@@ -1754,14 +1683,7 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
             <div className="table-header">
                 <h3>Սեղան {table.id} (Աթոռներ: {table.chairCount})</h3>
                 <div className="table-buttons">
-                    {/* Add details button */}
-                    <button
-                        onClick={handleShowDetails}
-                        className="details-table-btn"
-                        title="Տեսնել սեղանի մանրամասները"
-                    >
-                        ℹ
-                    </button>
+                    {/* Remove info button since entire table is clickable now */}
                     <button
                         onClick={(e) => {
                             e.stopPropagation();
@@ -1774,7 +1696,9 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
                 </div>
             </div>
             <div className="table">
-                <div className="table-top">
+                <div 
+                    className="table-top"
+                >
                     {chairs}
                 </div>
             </div>
