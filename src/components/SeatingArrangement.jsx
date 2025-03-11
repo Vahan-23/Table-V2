@@ -291,16 +291,77 @@ const SeatingArrangement = () => {
 
     // Handle zoom in button click
     const handleZoomIn = () => {
-        const targetZoom = Math.min(zoom * 1.25, 3.0);
+        const targetZoom = Math.min(zoom * 1.25, 3.0);  // Multiply by 1.25 to increase zoom
         smoothZoom(targetZoom, mousePosition.current.x, mousePosition.current.y);
     };
 
-    // Handle zoom out button click
+    // Handle zoom out button click (for the - button)
     const handleZoomOut = () => {
-        const targetZoom = Math.max(zoom / 1.25, 0.2);
+        const targetZoom = Math.max(zoom / 1.25, 0.2);  // Divide by 1.25 to decrease zoom
         smoothZoom(targetZoom, mousePosition.current.x, mousePosition.current.y);
     };
-
+    const handleButtonZoomIn = () => {
+        // Get container information
+        const container = tablesAreaRef.current;
+        if (!container) return;
+    
+        // Get container dimensions
+        const rect = container.getBoundingClientRect();
+        
+        // Use center of viewport as focal point for button zooms
+        const mouseX = rect.width / 2;
+        const mouseY = rect.height / 2;
+    
+        // Calculate the current real coordinates under the mouse (content coordinates)
+        const contentX = (container.scrollLeft + mouseX) / zoom;
+        const contentY = (container.scrollTop + mouseY) / zoom;
+    
+        // Calculate new zoom level - using the same 1.1 factor from your wheel handler
+        const newZoom = Math.min(zoom * 1.1, 3.0);
+    
+        // Update zoom state
+        setZoom(newZoom);
+    
+        // Calculate new scroll position to keep the point under the cursor
+        const newScrollX = contentX * newZoom - mouseX;
+        const newScrollY = contentY * newZoom - mouseY;
+    
+        // Apply scroll immediately
+        container.scrollLeft = newScrollX;
+        container.scrollTop = newScrollY;
+    };
+    
+    // Handle zoom out button click
+    const handleButtonZoomOut = () => {
+        // Get container information
+        const container = tablesAreaRef.current;
+        if (!container) return;
+    
+        // Get container dimensions
+        const rect = container.getBoundingClientRect();
+        
+        // Use center of viewport as focal point for button zooms
+        const mouseX = rect.width / 2;
+        const mouseY = rect.height / 2;
+    
+        // Calculate the current real coordinates under the mouse (content coordinates)
+        const contentX = (container.scrollLeft + mouseX) / zoom;
+        const contentY = (container.scrollTop + mouseY) / zoom;
+    
+        // Calculate new zoom level - using the same 1.1 factor from your wheel handler
+        const newZoom = Math.max(zoom / 1.1, 0.2);
+    
+        // Update zoom state
+        setZoom(newZoom);
+    
+        // Calculate new scroll position to keep the point under the cursor
+        const newScrollX = contentX * newZoom - mouseX;
+        const newScrollY = contentY * newZoom - mouseY;
+    
+        // Apply scroll immediately
+        container.scrollLeft = newScrollX;
+        container.scrollTop = newScrollY;
+    };
     // Handle mouse wheel zoom
 
 
@@ -862,22 +923,22 @@ const SeatingArrangement = () => {
     const handleWheel = (e) => {
         if (e.ctrlKey) {
             e.preventDefault();
-    
+
             // Get container information
             const container = tablesAreaRef.current;
             if (!container) return;
-    
+
             // Get container dimensions and position
             const rect = container.getBoundingClientRect();
-    
+
             // Calculate cursor position relative to the container
             const mouseX = e.clientX - rect.left;
             const mouseY = e.clientY - rect.top;
-    
+
             // Calculate the current real coordinates under the mouse (content coordinates)
             const contentX = (container.scrollLeft + mouseX) / zoom;
             const contentY = (container.scrollTop + mouseY) / zoom;
-    
+
             // Calculate new zoom level
             let newZoom;
             if (e.deltaY < 0) {
@@ -887,14 +948,14 @@ const SeatingArrangement = () => {
                 // Zoom out - use smaller step for more precise control
                 newZoom = Math.max(zoom / 1.1, 0.2);
             }
-    
+
             // Update zoom state (synchronously to prevent flickering)
             setZoom(newZoom);
-    
+
             // Calculate new scroll position to keep the point under the cursor
             const newScrollX = contentX * newZoom - mouseX;
             const newScrollY = contentY * newZoom - mouseY;
-    
+
             // Apply scroll immediately
             container.scrollLeft = newScrollX;
             container.scrollTop = newScrollY;
@@ -1502,22 +1563,22 @@ const SeatingArrangement = () => {
                         setPeople={setPeople}
                     />
                     <div className="figmaContainer">
-                        <div className="zoom-controls">
-                            <label>Մասշտաբ:</label>
-                            <div className="zoom-buttons">
-                                <button
-                                    className="zoom-btn zoom-out-btn"
-                                    onClick={handleZoomOut}
-                                >−</button>
-                                <span className="zoom-percentage">
-                                    {Math.round(zoom * 100)}%
-                                </span>
-                                <button
-                                    className="zoom-btn zoom-in-btn"
-                                    onClick={handleZoomIn}
-                                >+</button>
-                            </div>
-                        </div>
+                    <div className="zoom-controls">
+    <label>Մասշտաբ:</label>
+    <div className="zoom-buttons">
+        <button
+            className="zoom-btn zoom-out-btn"
+            onClick={handleButtonZoomOut}  // CHANGE THIS to handleZoomIn (this will decrease zoom)
+        >−</button>
+        <span className="zoom-percentage">
+            {Math.round(zoom * 100)}%
+        </span>
+        <button
+            className="zoom-btn zoom-in-btn"
+            onClick={handleButtonZoomIn}  // CHANGE THIS to handleZoomOut (this will increase zoom)
+        >+</button>
+    </div>
+</div>
 
                         <div
                             className={`tables-area ${isDraggingCanvas ? 'dragging' : ''}`}
