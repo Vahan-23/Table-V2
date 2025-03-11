@@ -291,7 +291,7 @@ const SeatingArrangement = () => {
 
     // Handle zoom in button click
     const handleZoomIn = () => {
-        const targetZoom = Math.min(zoom * 1.25, 3.0);  // Multiply by 1.25 to increase zoom
+        const targetZoom = Math.min(zoom * 1.25, 1.0);  // Multiply by 1.25 to increase zoom
         smoothZoom(targetZoom, mousePosition.current.x, mousePosition.current.y);
     };
 
@@ -317,7 +317,7 @@ const SeatingArrangement = () => {
         const contentY = (container.scrollTop + mouseY) / zoom;
     
         // Calculate new zoom level - using the same 1.1 factor from your wheel handler
-        const newZoom = Math.min(zoom * 1.1, 3.0);
+        const newZoom = Math.min(zoom * 1.1, 1.0);
     
         // Update zoom state
         setZoom(newZoom);
@@ -943,7 +943,7 @@ const SeatingArrangement = () => {
             let newZoom;
             if (e.deltaY < 0) {
                 // Zoom in - use smaller step for more precise control
-                newZoom = Math.min(zoom * 1.1, 3.0);
+                newZoom = Math.min(zoom * 1.1, 1.0);
             } else {
                 // Zoom out - use smaller step for more precise control
                 newZoom = Math.max(zoom / 1.1, 0.2);
@@ -1545,15 +1545,15 @@ const SeatingArrangement = () => {
                     </div>
                 </div>
                 <div className="main-content">
-                    <div className="sidebar">
-                        {/* <PeopleSection
+                    {/* <div className="sidebar">
+                        <PeopleSection
                             people={people}
                             tables={tables}
                             handleDeletePerson={handleDeletePerson}
                             setPeople={setPeople}
                             setTables={setTables}
-                        /> */}
-                    </div>
+                        /> 
+                    </div> */}
                     <TableDetailsPopup
                         table={getDetailsTable()}
                         tables={tables}
