@@ -5,6 +5,7 @@ import { HTML5Backend } from 'react-dnd-html5-backend';
 
 import './App.css';
 import TablesAreaComponent from './newhall';
+import MiniMap from './MiniMap';
 
 const SeatingArrangement = () => {
     const [tables, setTables] = useState([]);
@@ -46,6 +47,20 @@ const SeatingArrangement = () => {
     const [detailsTableId, setDetailsTableId] = useState(null);
     const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
+    const highlightTable = (tableId) => {
+        // Find the table element
+        const tableElement = document.querySelector(`.table-container[data-id="${tableId}"]`);
+        if (tableElement) {
+            // Add a temporary highlight class
+            tableElement.classList.add('table-highlight-pulse');
+            
+            // Remove the class after animation completes
+            setTimeout(() => {
+                tableElement.classList.remove('table-highlight-pulse');
+            }, 1000);
+        }
+    };
+    
     // Handler to show table details
     const handleShowTableDetails = (tableId) => {
         setDetailsTableId(tableId);
@@ -1579,7 +1594,12 @@ const SeatingArrangement = () => {
                                 >+</button>
                             </div>
                         </div>
-
+                        <MiniMap 
+    tables={tables} 
+    tablesAreaRef={tablesAreaRef} 
+    zoom={zoom} 
+    setZoom={setZoom} 
+/>
                         <div
                             className={`tables-area ${isDraggingCanvas ? 'dragging' : ''}`}
                             ref={tablesAreaRef}
@@ -2097,6 +2117,7 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
                 drop(node);
             }}
             className={`table-container ${isOver ? 'drop-target' : ''} ${isTableHighlighted ? 'highlighted-table' : ''}`}
+            data-id={table.id} // Add this line
             onDrop={(e) => onDrop && onDrop(e)}
             onDragOver={(e) => e.preventDefault()}
             style={{
