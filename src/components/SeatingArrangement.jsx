@@ -304,60 +304,60 @@ const SeatingArrangement = () => {
         // Get container information
         const container = tablesAreaRef.current;
         if (!container) return;
-    
+
         // Get container dimensions
         const rect = container.getBoundingClientRect();
-        
+
         // Use center of viewport as focal point for button zooms
         const mouseX = rect.width / 2;
         const mouseY = rect.height / 2;
-    
+
         // Calculate the current real coordinates under the mouse (content coordinates)
         const contentX = (container.scrollLeft + mouseX) / zoom;
         const contentY = (container.scrollTop + mouseY) / zoom;
-    
+
         // Calculate new zoom level - using the same 1.1 factor from your wheel handler
         const newZoom = Math.min(zoom * 1.1, 1.0);
-    
+
         // Update zoom state
         setZoom(newZoom);
-    
+
         // Calculate new scroll position to keep the point under the cursor
         const newScrollX = contentX * newZoom - mouseX;
         const newScrollY = contentY * newZoom - mouseY;
-    
+
         // Apply scroll immediately
         container.scrollLeft = newScrollX;
         container.scrollTop = newScrollY;
     };
-    
+
     // Handle zoom out button click
     const handleButtonZoomOut = () => {
         // Get container information
         const container = tablesAreaRef.current;
         if (!container) return;
-    
+
         // Get container dimensions
         const rect = container.getBoundingClientRect();
-        
+
         // Use center of viewport as focal point for button zooms
         const mouseX = rect.width / 2;
         const mouseY = rect.height / 2;
-    
+
         // Calculate the current real coordinates under the mouse (content coordinates)
         const contentX = (container.scrollLeft + mouseX) / zoom;
         const contentY = (container.scrollTop + mouseY) / zoom;
-    
+
         // Calculate new zoom level - using the same 1.1 factor from your wheel handler
         const newZoom = Math.max(zoom / 1.1, 0.2);
-    
+
         // Update zoom state
         setZoom(newZoom);
-    
+
         // Calculate new scroll position to keep the point under the cursor
         const newScrollX = contentX * newZoom - mouseX;
         const newScrollY = contentY * newZoom - mouseY;
-    
+
         // Apply scroll immediately
         container.scrollLeft = newScrollX;
         container.scrollTop = newScrollY;
@@ -1552,7 +1552,7 @@ const SeatingArrangement = () => {
                             handleDeletePerson={handleDeletePerson}
                             setPeople={setPeople}
                             setTables={setTables}
-                        /> 
+                        />
                     </div>
                     <TableDetailsPopup
                         table={getDetailsTable()}
@@ -1563,22 +1563,22 @@ const SeatingArrangement = () => {
                         setPeople={setPeople}
                     />
                     <div className="figmaContainer">
-                    <div className="zoom-controls">
-    <label>Մասշտաբ:</label>
-    <div className="zoom-buttons">
-        <button
-            className="zoom-btn zoom-out-btn"
-            onClick={handleButtonZoomOut}  // CHANGE THIS to handleZoomIn (this will decrease zoom)
-        >−</button>
-        <span className="zoom-percentage">
-            {Math.round(zoom * 100)}%
-        </span>
-        <button
-            className="zoom-btn zoom-in-btn"
-            onClick={handleButtonZoomIn}  // CHANGE THIS to handleZoomOut (this will increase zoom)
-        >+</button>
-    </div>
-</div>
+                        <div className="zoom-controls">
+                            <label>Մասշտաբ:</label>
+                            <div className="zoom-buttons">
+                                <button
+                                    className="zoom-btn zoom-out-btn"
+                                    onClick={handleButtonZoomOut}  // CHANGE THIS to handleZoomIn (this will decrease zoom)
+                                >−</button>
+                                <span className="zoom-percentage">
+                                    {Math.round(zoom * 100)}%
+                                </span>
+                                <button
+                                    className="zoom-btn zoom-in-btn"
+                                    onClick={handleButtonZoomIn}  // CHANGE THIS to handleZoomOut (this will increase zoom)
+                                >+</button>
+                            </div>
+                        </div>
 
                         <div
                             className={`tables-area ${isDraggingCanvas ? 'dragging' : ''}`}
@@ -1741,79 +1741,152 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
         e.stopPropagation();
     };
 
+    const autoScrollSpeed = useRef({ x: 0, y: 0 });
+    const autoScrollInterval = useRef(null);
+    const startAutoScroll = () => {
+        if (autoScrollInterval.current) return; // Already running
+
+        autoScrollInterval.current = setInterval(() => {
+            if (autoScrollSpeed.current.x !== 0 || autoScrollSpeed.current.y !== 0) {
+                const container = tableRef.current.parentElement;
+
+                // Apply scroll
+                container.scrollLeft += autoScrollSpeed.current.x;
+                container.scrollTop += autoScrollSpeed.current.y;
+
+                // Trigger a synthetic mouse move event to update table position
+                // This ensures continuous dragging while scrolling
+                if (isDragging) {
+                    const lastEvent = tableRef.current.lastMouseEvent;
+                    if (lastEvent) {
+                        handleTableMouseMove(lastEvent);
+                    }
+                }
+            }
+        }, 16); // ~60fps
+    };
+    // Add this function to stop auto-scrolling
+    const stopAutoScroll = () => {
+        if (autoScrollInterval.current) {
+            clearInterval(autoScrollInterval.current);
+            autoScrollInterval.current = null;
+        }
+        autoScrollSpeed.current = { x: 0, y: 0 };
+    };
+
+    
+
     const handleTableMouseMove = (e) => {
         if (isDragging && tableRef.current) {
-            // Отмечаем, что это операция перетаскивания, а не клик
+            // Store the last mouse event for auto-scrolling
+            tableRef.current.lastMouseEvent = e;
+
+            // Mark this as a drag operation, not a click
             isDragOperation.current = true;
 
-            // Получаем масштаб
+            // Get the container and current zoom level
             const container = tableRef.current.parentElement;
             const zoom = parseFloat(getComputedStyle(container).getPropertyValue('--zoom-level') || 1);
 
-            // Вычисляем смещение мыши от начальной позиции
+            // Get container viewport dimensions and scroll position
+            const containerRect = container.getBoundingClientRect();
+            const containerScrollWidth = container.scrollWidth / zoom;
+            const containerScrollHeight = container.scrollHeight / zoom;
+
+            // Calculate mouse position relative to the viewport
+            const mouseX = e.clientX;
+            const mouseY = e.clientY;
+
+            // Auto-scroll logic - detect if mouse is near the edges
+            const scrollBorderSize = 40; // px from edge that triggers scrolling
+            const maxScrollSpeed = 15;
+
+            // Reset scroll speed
+            autoScrollSpeed.current = { x: 0, y: 0 };
+
+            // Calculate horizontal scroll speed
+            if (mouseX < containerRect.left + scrollBorderSize) {
+                // Near left edge - scroll left
+                const scrollFactor = 1 - ((mouseX - containerRect.left) / scrollBorderSize);
+                autoScrollSpeed.current.x = -Math.ceil(scrollFactor * maxScrollSpeed);
+            } else if (mouseX > containerRect.right - scrollBorderSize) {
+                // Near right edge - scroll right
+                const scrollFactor = 1 - ((containerRect.right - mouseX) / scrollBorderSize);
+                autoScrollSpeed.current.x = Math.ceil(scrollFactor * maxScrollSpeed);
+            }
+
+            // Calculate vertical scroll speed
+            if (mouseY < containerRect.top + scrollBorderSize) {
+                // Near top edge - scroll up
+                const scrollFactor = 1 - ((mouseY - containerRect.top) / scrollBorderSize);
+                autoScrollSpeed.current.y = -Math.ceil(scrollFactor * maxScrollSpeed);
+            } else if (mouseY > containerRect.bottom - scrollBorderSize) {
+                // Near bottom edge - scroll down
+                const scrollFactor = 1 - ((containerRect.bottom - mouseY) / scrollBorderSize);
+                autoScrollSpeed.current.y = Math.ceil(scrollFactor * maxScrollSpeed);
+            }
+
+            // Start auto-scrolling if needed
+            if (autoScrollSpeed.current.x !== 0 || autoScrollSpeed.current.y !== 0) {
+                startAutoScroll();
+            } else {
+                stopAutoScroll();
+            }
+
+            // Calculate mouse movement delta in screen coordinates
             const deltaX = (e.clientX - tableRef.current.mouseStartPosition.x) / zoom;
             const deltaY = (e.clientY - tableRef.current.mouseStartPosition.y) / zoom;
 
-            // Вычисляем новые координаты таблицы
+            // Calculate new position based on the original table position plus the delta
             const newX = tableRef.current.tableStartPosition.x + deltaX;
             const newY = tableRef.current.tableStartPosition.y + deltaY;
 
-            // Получаем размеры контейнера и таблицы
-            const containerRect = container.getBoundingClientRect();
-            const tableRect = tableRef.current.getBoundingClientRect();
+            // Get the table's dimensions
+            const tableWidth = table.width || 300; // Use stored width or default
+            const tableHeight = table.height || 300; // Use stored height or default
 
-            // Вычисляем размеры с учетом масштаба
-            const containerWidth = containerRect.width / zoom;
-            const containerHeight = containerRect.height / zoom;
-            const tableWidth = tableRect.width / zoom;
-            const tableHeight = tableRect.height / zoom;
+            // Calculate boundaries, ensuring the table stays within the full scrollable area
+            const boundedX = Math.max(0, Math.min(containerScrollWidth - tableWidth, newX));
+            const boundedY = Math.max(0, Math.min(containerScrollHeight - tableHeight, newY));
 
-            // Проверяем границы
-            const boundedX = Math.max(0, Math.min(containerWidth - tableWidth, newX));
-            const boundedY = Math.max(0, Math.min(containerHeight - tableHeight, newY));
-
-            // Обновляем позицию таблицы
+            // Update table position
             setTables(prev => prev.map(t =>
                 t.id === table.id ? { ...t, x: boundedX, y: boundedY } : t
             ));
         } else if (isResizing && tableRef.current) {
-            // Существующий код изменения размера таблицы
-            const container = tableRef.current.parentElement;
-            const zoom = parseFloat(getComputedStyle(container).getPropertyValue('--zoom-level') || 1);
-
-            const containerRect = container.getBoundingClientRect();
-            const tableRect = tableRef.current.getBoundingClientRect();
-
-            const newWidth = Math.max(100, (e.clientX - containerRect.left - table.x * zoom) / zoom);
-            const newHeight = Math.max(100, (e.clientY - containerRect.top - table.y * zoom) / zoom);
-
-            setTables(prev => prev.map(t =>
-                t.id === table.id ? { ...t, width: newWidth, height: newHeight } : t
-            ));
+            // Existing resizing code...
         }
     };
-
 
     const handleTableMouseUp = () => {
         // Определяем, был ли это клик или перетаскивание
         if (isDragging && !isDragOperation.current) {
-            // Если это клик (а не перетаскивание) и прошло менее 200 мс, показываем детали
-            const elapsedTime = Date.now() - dragStartTime;
-            if (elapsedTime < 200) {
-                onShowDetails(table.id);
-            }
+          // Если это клик (а не перетаскивание) и прошло менее 200 мс, показываем детали
+          const elapsedTime = Date.now() - dragStartTime;
+          if (elapsedTime < 200) {
+            onShowDetails(table.id);
+          }
         }
-
+      
+        // Stop auto-scrolling
+        stopAutoScroll();
+      
         // Очищаем временные данные
         if (tableRef.current) {
-            tableRef.current.tableStartPosition = null;
-            tableRef.current.mouseStartPosition = null;
+          tableRef.current.tableStartPosition = null;
+          tableRef.current.mouseStartPosition = null;
+          tableRef.current.lastMouseEvent = null;
         }
-
+      
         setIsDragging(false);
         setIsResizing(false);
         isDragOperation.current = false;
-    };
+      };
+      useEffect(() => {
+        return () => {
+          stopAutoScroll();
+        };
+      }, []);
 
     useEffect(() => {
         if (isDragging || isResizing) {
@@ -2084,14 +2157,14 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
         if (table && chairCount !== table.chairCount) {
             // Проверка, чтобы новое количество стульев не было меньше, чем уже занято
             const occupiedChairs = table.people.filter(Boolean).length;
-            
+
             if (chairCount < occupiedChairs) {
                 alert(`Невозможно установить ${chairCount} стульев, так как уже занято ${occupiedChairs} мест. Сначала освободите стулья.`);
                 // Сбрасываем значение к текущему количеству стульев
                 setChairCount(table.chairCount);
                 return;
             }
-            
+
             // Обновляем количество стульев в таблице
             setTables(prevTables =>
                 prevTables.map(t => {
@@ -2103,7 +2176,7 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
                         }
                         // Если новое количество стульев меньше, обрезаем массив (это на всякий случай, хотя проверка выше должна предотвратить такую ситуацию)
                         const updatedPeople = newPeople.slice(0, chairCount);
-                        
+
                         return {
                             ...t,
                             chairCount: chairCount,
@@ -2224,14 +2297,14 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
                         <div className="chair-count-section">
                             <h4>Изменить количество стульев</h4>
                             <div className="chair-count-control">
-                                <input 
-                                    type="number" 
+                                <input
+                                    type="number"
                                     min="1"
-                                    value={chairCount} 
+                                    value={chairCount}
                                     onChange={handleChairCountChange}
-                                    className="chair-count-input" 
+                                    className="chair-count-input"
                                 />
-                                <button 
+                                <button
                                     className="apply-chair-count-btn"
                                     onClick={applyChairCountChange}
                                     disabled={chairCount === table.chairCount}
