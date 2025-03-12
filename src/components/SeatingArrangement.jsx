@@ -1545,7 +1545,7 @@ const SeatingArrangement = () => {
                     </div>
                 </div>
                 <div className="main-content">
-                    {/* <div className="sidebar">
+                    <div className="sidebar">
                         <PeopleSection
                             people={people}
                             tables={tables}
@@ -1553,7 +1553,7 @@ const SeatingArrangement = () => {
                             setPeople={setPeople}
                             setTables={setTables}
                         /> 
-                    </div> */}
+                    </div>
                     <TableDetailsPopup
                         table={getDetailsTable()}
                         tables={tables}
@@ -2061,6 +2061,61 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
 };
 
 const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeople }) => {
+    // Локальное состояние для отслеживания изменений количества стульев
+    const [chairCount, setChairCount] = useState(table ? table.chairCount : 12);
+
+    // Обновляем локальное состояние при изменении стола
+    useEffect(() => {
+        if (table) {
+            setChairCount(table.chairCount);
+        }
+    }, [table]);
+
+    // Обработчик изменения количества стульев
+    const handleChairCountChange = (e) => {
+        const newCount = parseInt(e.target.value, 10);
+        if (newCount >= 1) {
+            setChairCount(newCount);
+        }
+    };
+
+    // Применение изменений количества стульев
+    const applyChairCountChange = () => {
+        if (table && chairCount !== table.chairCount) {
+            // Проверка, чтобы новое количество стульев не было меньше, чем уже занято
+            const occupiedChairs = table.people.filter(Boolean).length;
+            
+            if (chairCount < occupiedChairs) {
+                alert(`Невозможно установить ${chairCount} стульев, так как уже занято ${occupiedChairs} мест. Сначала освободите стулья.`);
+                // Сбрасываем значение к текущему количеству стульев
+                setChairCount(table.chairCount);
+                return;
+            }
+            
+            // Обновляем количество стульев в таблице
+            setTables(prevTables =>
+                prevTables.map(t => {
+                    if (t.id === table.id) {
+                        // Если новое количество стульев больше, добавляем пустые места
+                        const newPeople = [...t.people];
+                        while (newPeople.length < chairCount) {
+                            newPeople.push(null);
+                        }
+                        // Если новое количество стульев меньше, обрезаем массив (это на всякий случай, хотя проверка выше должна предотвратить такую ситуацию)
+                        const updatedPeople = newPeople.slice(0, chairCount);
+                        
+                        return {
+                            ...t,
+                            chairCount: chairCount,
+                            people: updatedPeople
+                        };
+                    }
+                    return t;
+                })
+            );
+        }
+    };
+
     // Group people by their group
     const getTableGroups = () => {
         if (!table) return [];
@@ -2112,7 +2167,7 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
         }
     };
 
-    // Function to handle drag start for group - FIXED VERSION
+    // Function to handle drag start for group
     const handleGroupDragStart = (e, group) => {
         // Set data on global variable
         window.currentDraggedGroup = {
@@ -2163,6 +2218,27 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
                             <p>Total Chairs: {table.chairCount}</p>
                             <p>Occupied Chairs: {table.people.filter(Boolean).length}</p>
                             <p>Free Chairs: {table.chairCount - table.people.filter(Boolean).length}</p>
+                        </div>
+
+                        {/* Секция изменения количества стульев */}
+                        <div className="chair-count-section">
+                            <h4>Изменить количество стульев</h4>
+                            <div className="chair-count-control">
+                                <input 
+                                    type="number" 
+                                    min="1"
+                                    value={chairCount} 
+                                    onChange={handleChairCountChange}
+                                    className="chair-count-input" 
+                                />
+                                <button 
+                                    className="apply-chair-count-btn"
+                                    onClick={applyChairCountChange}
+                                    disabled={chairCount === table.chairCount}
+                                >
+                                    Применить
+                                </button>
+                            </div>
                         </div>
 
                         <div className="groups-section-header">
@@ -2287,7 +2363,7 @@ const NewTable = ({ draggingGroup, setTables, setDraggingGroup, setPeople }) => 
                 width: 200,
                 height: 150,
                 people: item.group,
-                chairCount: item.group.length,
+                chairCount: 12, // Фиксированное количество стульев - 12
             };
 
             setTables((prevTables) => [newTable, ...prevTables]);

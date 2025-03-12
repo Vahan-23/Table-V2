@@ -1714,3 +1714,81 @@ button {
   border-radius: 4px;
   font-size: 10px;
 }
+
+.chair-count-section {
+  margin: 15px 0;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
+
+.chair-count-section h4 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  font-size: 16px;
+  color: #333;
+}
+
+.chair-count-control {
+  display: flex;
+  align-items: center;
+}
+
+.chair-count-input {
+  width: 80px;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+  text-align: center;
+  margin-right: 10px;
+}
+
+.apply-chair-count-btn {
+  padding: 8px 15px;
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.3s;
+}
+
+.apply-chair-count-btn:hover {
+  background-color: #3e8e41;
+}
+
+.apply-chair-count-btn:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+.close-details-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #333;
+}
+
+.table-details-content {
+  padding: 20px;
+}
+
+.table-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.table-stats p {
+  margin: 0;
+  padding: 10px;
+  background-color: #f5f5f5;
+  border-radius: 5px;
+  font-size: 14px;
+}
