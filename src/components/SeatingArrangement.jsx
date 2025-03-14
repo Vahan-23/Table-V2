@@ -508,12 +508,42 @@ const SeatingArrangement = () => {
         const newTables = [];
         const numTables = Math.max(1, parseInt(tableCount) || 10);
         const numChairs = Math.max(1, parseInt(chairCount) || 12);
+        const currentTime = Date.now();
 
-        for (let i = 0; i < numTables; i++) {
+        // Get container dimensions
+        const containerRect = tablesAreaRef.current.getBoundingClientRect();
+        const containerWidth = containerRect.width / zoom;
+        const containerHeight = containerRect.height / zoom;
+
+        // Estimate table size (approximate values)
+        const tableWidth = 300;
+        const tableHeight = 300;
+
+        // Calculate how many tables can fit per row with some spacing
+        const spacing = 20;
+        const tablesPerRow = Math.floor((containerWidth - spacing) / (tableWidth + spacing));
+
+        for (let i = 0; i < tableCount; i++) {
+            // Calculate position within grid layout
+            const row = Math.floor(i / tablesPerRow);
+            const col = i % tablesPerRow;
+
+            // Position the table
+            const x = col * (tableWidth + spacing) + spacing;
+            const y = row * (tableHeight + spacing) + spacing;
+
+            // Ensure the table is within boundaries
+            const safeX = Math.min(x, containerWidth - tableWidth - spacing);
+            const safeY = Math.min(y, containerHeight - tableHeight - spacing);
+
             newTables.push({
-                id: Date.now() + i,
+                id: currentTime + i, // Ensure unique IDs
                 people: [],
-                chairCount: numChairs
+                chairCount,
+                x: safeX,
+                y: safeY,
+                width: tableWidth,
+                height: tableHeight
             });
         }
 
@@ -1173,23 +1203,23 @@ const SeatingArrangement = () => {
         });
 
         // If there are still unseated groups, create new tables for them
-        const remainingGroups = Object.values(unseatedGrouped).filter(group => group.length > 0);
+        // const remainingGroups = Object.values(unseatedGrouped).filter(group => group.length > 0);
 
-        if (remainingGroups.length > 0) {
-            const newTables = remainingGroups.map(group => ({
-                id: Date.now() + Math.random(), // Ensure unique ID
-                people: group,
-                chairCount: group.length // Set chair count to match group size
-            }));
+        // if (remainingGroups.length > 0) {
+        //     const newTables = remainingGroups.map(group => ({
+        //         id: Date.now() + Math.random(), // Ensure unique ID
+        //         people: group,
+        //         chairCount: group.length // Set chair count to match group size
+        //     }));
 
-            updatedTables.push(...newTables);
-            anyGroupsSeated = true;
-        }
+        //     updatedTables.push(...newTables);
+        //     anyGroupsSeated = true;
+        // }
 
-        if (!anyGroupsSeated) {
-            alert('Բոլոր խմբերն արդեն նստած են սեղանների մոտ կամ հասանելի մարդիկ չկան:');
-            return;
-        }
+        // if (!anyGroupsSeated) {
+        //     alert('Բոլոր խմբերն արդեն նստած են սեղանների մոտ կամ հասանելի մարդիկ չկան:');
+        //     return;
+        // }
 
         // Update the tables state
         setTables(updatedTables);
