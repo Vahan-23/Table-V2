@@ -1307,7 +1307,7 @@ button {
 /* Dropdown menus */
 .dropdown-menu {
   position: absolute;
-  top: 100%;
+  top: 92%;
   right: 0;
   background-color: #fff;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
