@@ -5,7 +5,8 @@ import { HTML5Backend } from 'react-dnd-html5-backend';
 
 import './App.css';
 import TablesAreaComponent from './newhall';
-import MiniMap from './MiniMap';
+import MiniMap from './newMiniMap';
+// import MiniMap from './MiniMap';
 
 const SeatingArrangement = () => {
     const [tables, setTables] = useState([]);
@@ -53,14 +54,14 @@ const SeatingArrangement = () => {
         if (tableElement) {
             // Add a temporary highlight class
             tableElement.classList.add('table-highlight-pulse');
-            
+
             // Remove the class after animation completes
             setTimeout(() => {
                 tableElement.classList.remove('table-highlight-pulse');
             }, 1000);
         }
     };
-    
+
     // Handler to show table details
     const handleShowTableDetails = (tableId) => {
         setDetailsTableId(tableId);
@@ -1594,18 +1595,18 @@ const SeatingArrangement = () => {
                                 >+</button>
                             </div>
                         </div>
-                        <MiniMap 
-    tables={tables} 
-    tablesAreaRef={tablesAreaRef} 
-    zoom={zoom} 
-    setZoom={setZoom} 
-/>
+                        <MiniMap
+                            tables={tables}
+                            tablesAreaRef={tablesAreaRef}
+                            zoom={zoom}
+                        />
+
                         <div
                             className={`tables-area ${isDraggingCanvas ? 'dragging' : ''}`}
                             ref={tablesAreaRef}
                             onMouseDown={handleCanvasMouseDown}
                             onMouseMove={handleMouseMoveOnCanvas} // Добавить этот обработчик
-                            onDragOver ={e => e.preventDefault()}
+                            onDragOver={e => e.preventDefault()}
                             style={{
                                 transform: `scale(${zoom})`,
                                 transformOrigin: 'top left',
@@ -1744,24 +1745,24 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
 
     const handleDragStart = (e) => {
         if (!isDraggable) return;
-        
+
         // Prevent any default browser drag behavior
         e.preventDefault();
-        
+
         setIsDragging(true);
         setDragStartTime(Date.now());
         isDragOperation.current = false;
-    
+
         // Get current table position
         const tablePosition = { x: table.x || 0, y: table.y || 0 };
-        
+
         // Save initial mouse position
         const initialMousePos = { x: e.clientX, y: e.clientY };
-        
+
         // Store in ref for use during movement
         tableRef.current.tableStartPosition = tablePosition;
         tableRef.current.mouseStartPosition = initialMousePos;
-        
+
         e.stopPropagation();
     };
 
@@ -1798,50 +1799,50 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
         autoScrollSpeed.current = { x: 0, y: 0 };
     };
 
-    
+
 
     const handleTableMouseMove = (e) => {
         if (isDragging && tableRef.current) {
             // Mark this as a drag operation, not a click
             isDragOperation.current = true;
-    
+
             // Get the container and current zoom level
             const container = tableRef.current.parentElement;
             const zoom = parseFloat(getComputedStyle(container).getPropertyValue('--zoom-level') || 1);
-    
+
             // Calculate mouse movement delta in screen coordinates
             const deltaX = (e.clientX - tableRef.current.mouseStartPosition.x) / zoom;
             const deltaY = (e.clientY - tableRef.current.mouseStartPosition.y) / zoom;
-    
+
             // Calculate new position based on the original table position plus the delta
             const newX = tableRef.current.tableStartPosition.x + deltaX;
             const newY = tableRef.current.tableStartPosition.y + deltaY;
-    
+
             // Get the table's dimensions
             const tableWidth = table.width || 300;
             const tableHeight = table.height || 300;
-    
+
             // Calculate boundaries for the container
             const containerScrollWidth = container.scrollWidth / zoom;
             const containerScrollHeight = container.scrollHeight / zoom;
-    
+
             // Enforce boundaries
             const boundedX = Math.max(0, Math.min(containerScrollWidth - tableWidth, newX));
             const boundedY = Math.max(0, Math.min(containerScrollHeight - tableHeight, newY));
-    
+
             // Update table position
             setTables(prev => prev.map(t =>
                 t.id === table.id ? { ...t, x: boundedX, y: boundedY } : t
             ));
-            
+
             // Prevent default to avoid any browser scrolling behavior
             e.preventDefault();
         }
     };
-    
+
     // Function to stop auto-scrolling
 
-    
+
     const handleTableMouseUp = () => {
         // Определяем, был ли это клик или перетаскивание
         if (isDragging && !isDragOperation.current) {
@@ -1851,26 +1852,26 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
                 onShowDetails(table.id);
             }
         }
-      
+
         // Stop auto-scrolling
         stopAutoScroll();
-      
+
         // Очищаем временные данные
         if (tableRef.current) {
             tableRef.current.tableStartPosition = null;
             tableRef.current.mouseStartPosition = null;
             tableRef.current.lastMouseEvent = null;
         }
-      
+
         setIsDragging(false);
         setIsResizing(false);
         isDragOperation.current = false;
     };
-      useEffect(() => {
+    useEffect(() => {
         return () => {
-          stopAutoScroll();
+            stopAutoScroll();
         };
-      }, []);
+    }, []);
 
     useEffect(() => {
         if (isDragging || isResizing) {
@@ -1890,9 +1891,9 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
                 e.stopPropagation();
             }
         };
-        
+
         window.addEventListener('wheel', preventWheel, { passive: false });
-        
+
         return () => {
             window.removeEventListener('wheel', preventWheel);
         };
