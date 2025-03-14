@@ -14,7 +14,7 @@ const SeatingArrangement = () => {
     const [peopleInput, setPeopleInput] = useState('');
     const [showGroups, setShowGroups] = useState(true);
     const [draggingGroup, setDraggingGroup] = useState(null);
-    const [zoom, setZoom] = useState(1);
+    const [zoom, setZoom] = useState(0.2);
     const [chairCount, setChairCount] = useState(12);
     const [selectedTableId, setSelectedTableId] = useState(null);
     const [selectedChairIndex, setSelectedChairIndex] = useState(null);
@@ -53,14 +53,14 @@ const SeatingArrangement = () => {
         if (tableElement) {
             // Add a temporary highlight class
             tableElement.classList.add('table-highlight-pulse');
-
+            
             // Remove the class after animation completes
             setTimeout(() => {
                 tableElement.classList.remove('table-highlight-pulse');
             }, 1000);
         }
     };
-
+    
     // Handler to show table details
     const handleShowTableDetails = (tableId) => {
         setDetailsTableId(tableId);
@@ -716,17 +716,18 @@ const SeatingArrangement = () => {
         const newTables = [];
         const currentTime = Date.now();
 
-        // Define maximum container dimensions
-        const MAX_CONTAINER_WIDTH = 5000;
-        const MAX_CONTAINER_HEIGHT = 5000;
+        // Get container dimensions
+        const containerRect = tablesAreaRef.current.getBoundingClientRect();
+        const containerWidth = containerRect.width / zoom;
+        const containerHeight = containerRect.height / zoom;
 
-        // Fixed table dimensions
+        // Estimate table size (approximate values)
         const tableWidth = 300;
         const tableHeight = 300;
 
         // Calculate how many tables can fit per row with some spacing
         const spacing = 20;
-        const tablesPerRow = Math.floor((MAX_CONTAINER_WIDTH - spacing) / (tableWidth + spacing));
+        const tablesPerRow = Math.floor((containerWidth - spacing) / (tableWidth + spacing));
 
         for (let i = 0; i < tableCount; i++) {
             // Calculate position within grid layout
@@ -738,8 +739,8 @@ const SeatingArrangement = () => {
             const y = row * (tableHeight + spacing) + spacing;
 
             // Ensure the table is within boundaries
-            const safeX = Math.min(x, MAX_CONTAINER_WIDTH - tableWidth - spacing);
-            const safeY = Math.min(y, MAX_CONTAINER_HEIGHT - tableHeight - spacing);
+            const safeX = Math.min(x, containerWidth - tableWidth - spacing);
+            const safeY = Math.min(y, containerHeight - tableHeight - spacing);
 
             newTables.push({
                 id: currentTime + i, // Ensure unique IDs
@@ -747,8 +748,8 @@ const SeatingArrangement = () => {
                 chairCount,
                 x: safeX,
                 y: safeY,
-                width: tableWidth,  // Fixed width
-                height: tableHeight // Fixed height
+                width: tableWidth,
+                height: tableHeight
             });
         }
 
@@ -1015,11 +1016,12 @@ const SeatingArrangement = () => {
     };
 
     const handleAddTable = () => {
-        // Define maximum container dimensions
-        const MAX_CONTAINER_WIDTH = 5000;
-        const MAX_CONTAINER_HEIGHT = 5000;
+        // Get container dimensions
+        const containerRect = tablesAreaRef.current.getBoundingClientRect();
+        const containerWidth = containerRect.width / zoom;
+        const containerHeight = containerRect.height / zoom;
 
-        // Default fixed table size
+        // Default table size
         const tableWidth = 300;
         const tableHeight = 300;
 
@@ -1043,10 +1045,10 @@ const SeatingArrangement = () => {
             }
         });
 
-        // Find the first non-occupied position within MAX dimensions
+        // Find the first non-occupied position
         let found = false;
-        for (let gridY = 0; gridY < Math.floor(MAX_CONTAINER_HEIGHT / 100); gridY++) {
-            for (let gridX = 0; gridX < Math.floor(MAX_CONTAINER_WIDTH / 100); gridX++) {
+        for (let gridY = 0; gridY < Math.floor(containerHeight / 100); gridY++) {
+            for (let gridX = 0; gridX < Math.floor(containerWidth / 100); gridX++) {
                 if (!occupied.has(`${gridX},${gridY}`)) {
                     x = gridX * 100;
                     y = gridY * 100;
@@ -1058,8 +1060,8 @@ const SeatingArrangement = () => {
         }
 
         // Ensure the table is within boundaries
-        x = Math.min(x, MAX_CONTAINER_WIDTH - tableWidth - 20);
-        y = Math.min(y, MAX_CONTAINER_HEIGHT - tableHeight - 20);
+        x = Math.min(x, containerWidth - tableWidth - 20);
+        y = Math.min(y, containerHeight - tableHeight - 20);
 
         setTables([
             {
@@ -1068,13 +1070,12 @@ const SeatingArrangement = () => {
                 chairCount,
                 x: x,
                 y: y,
-                width: tableWidth,  // Fixed width
-                height: tableHeight // Fixed height
+                width: tableWidth,
+                height: tableHeight
             },
             ...tables
         ]);
     };
-
 
     const handleChairCountChange = (e) => {
         setChairCount(parseInt(e.target.value, 10));
@@ -1593,17 +1594,18 @@ const SeatingArrangement = () => {
                                 >+</button>
                             </div>
                         </div>
-                        <MiniMap
-                            tables={tables}
-                            tablesAreaRef={tablesAreaRef}
-                            zoom={zoom}
-                            setZoom={setZoom}
-                        />
+                        <MiniMap 
+    tables={tables} 
+    tablesAreaRef={tablesAreaRef} 
+    zoom={zoom} 
+    setZoom={setZoom} 
+/>
                         <div
                             className={`tables-area ${isDraggingCanvas ? 'dragging' : ''}`}
                             ref={tablesAreaRef}
                             onMouseDown={handleCanvasMouseDown}
-                            onMouseMove={handleMouseMoveOnCanvas}
+                            onMouseMove={handleMouseMoveOnCanvas} // Добавить этот обработчик
+                            onDragOver ={e => e.preventDefault()}
                             style={{
                                 transform: `scale(${zoom})`,
                                 transformOrigin: 'top left',
@@ -1612,8 +1614,6 @@ const SeatingArrangement = () => {
                                 width: `${100 / zoom}%`,
                                 height: `${100 / zoom}%`,
                                 minHeight: `${100 / zoom}%`,
-                                maxWidth: '5000px',
-                                maxHeight: '5000px',
                                 padding: '20px',
                                 position: 'relative',
                                 cursor: isDraggingCanvas ? 'grabbing' : 'default',
@@ -1646,7 +1646,7 @@ const SeatingArrangement = () => {
                                     onShowDetails={handleShowTableDetails}
                                     onDrop={(e) => handleTableDrop(e, table.id)}
                                     isTableHighlighted={isTableHighlighted(table.id)}
-                                    tables={tables}
+                                    tables={tables} // Pass all tables for the drop handler
                                 />
                             ))}
                         </div>
@@ -1734,6 +1734,7 @@ const SeatingArrangement = () => {
 
 const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDraggingGroup, people, setPeople, onChairClick, isDraggable, onShowDetails, onDrop, isTableHighlighted, tables }) => {
     const [isDragging, setIsDragging] = useState(false);
+    const [isResizing, setIsResizing] = useState(false);
     const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
     const [dragStartTime, setDragStartTime] = useState(null);
     const tableRef = useRef(null);
@@ -1743,27 +1744,24 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
 
     const handleDragStart = (e) => {
         if (!isDraggable) return;
-
+        
+        // Prevent any default browser drag behavior
+        e.preventDefault();
+        
         setIsDragging(true);
         setDragStartTime(Date.now());
         isDragOperation.current = false;
-
-        // Save initial table position from the current state
-        const tablePosition = {
-            x: table.x || 0,
-            y: table.y || 0
-        };
-
+    
+        // Get current table position
+        const tablePosition = { x: table.x || 0, y: table.y || 0 };
+        
         // Save initial mouse position
-        const initialMousePos = {
-            x: e.clientX,
-            y: e.clientY
-        };
-
-        // Save these to the ref for use during dragging
+        const initialMousePos = { x: e.clientX, y: e.clientY };
+        
+        // Store in ref for use during movement
         tableRef.current.tableStartPosition = tablePosition;
         tableRef.current.mouseStartPosition = initialMousePos;
-
+        
         e.stopPropagation();
     };
 
@@ -1791,7 +1789,7 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
             }
         }, 16); // ~60fps
     };
-
+    // Add this function to stop auto-scrolling
     const stopAutoScroll = () => {
         if (autoScrollInterval.current) {
             clearInterval(autoScrollInterval.current);
@@ -1800,98 +1798,148 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
         autoScrollSpeed.current = { x: 0, y: 0 };
     };
 
+    
+
     const handleTableMouseMove = (e) => {
         if (isDragging && tableRef.current) {
-            // Store the last mouse event for auto-scrolling
-            tableRef.current.lastMouseEvent = e;
-
             // Mark this as a drag operation, not a click
             isDragOperation.current = true;
-
+    
             // Get the container and current zoom level
             const container = tableRef.current.parentElement;
             const zoom = parseFloat(getComputedStyle(container).getPropertyValue('--zoom-level') || 1);
-
-            // Set fixed container maximum dimensions
-            const MAX_CONTAINER_WIDTH = 5000;
-            const MAX_CONTAINER_HEIGHT = 5000;
-
-            // Get container viewport dimensions and scroll position
-            const containerRect = container.getBoundingClientRect();
-
-            // Calculate mouse position relative to the viewport
-            const mouseX = e.clientX;
-            const mouseY = e.clientY;
-
-            // Auto-scroll logic - detect if mouse is near the edges
-            const scrollBorderSize = 40; // px from edge that triggers scrolling
-            const maxScrollSpeed = 15;
-
-            // Reset scroll speed
-            autoScrollSpeed.current = { x: 0, y: 0 };
-
-            // Calculate horizontal scroll speed
-            if (mouseX < containerRect.left + scrollBorderSize) {
-                // Near left edge - scroll left
-                const scrollFactor = 1 - ((mouseX - containerRect.left) / scrollBorderSize);
-                autoScrollSpeed.current.x = -Math.ceil(scrollFactor * maxScrollSpeed);
-            } else if (mouseX > containerRect.right - scrollBorderSize) {
-                // Near right edge - scroll right
-                const scrollFactor = 1 - ((containerRect.right - mouseX) / scrollBorderSize);
-                autoScrollSpeed.current.x = Math.ceil(scrollFactor * maxScrollSpeed);
-            }
-
-            // Calculate vertical scroll speed
-            if (mouseY < containerRect.top + scrollBorderSize) {
-                // Near top edge - scroll up
-                const scrollFactor = 1 - ((mouseY - containerRect.top) / scrollBorderSize);
-                autoScrollSpeed.current.y = -Math.ceil(scrollFactor * maxScrollSpeed);
-            } else if (mouseY > containerRect.bottom - scrollBorderSize) {
-                // Near bottom edge - scroll down
-                const scrollFactor = 1 - ((containerRect.bottom - mouseY) / scrollBorderSize);
-                autoScrollSpeed.current.y = Math.ceil(scrollFactor * maxScrollSpeed);
-            }
-
-            // Start auto-scrolling if needed
-            if (autoScrollSpeed.current.x !== 0 || autoScrollSpeed.current.y !== 0) {
-                startAutoScroll();
-            } else {
-                stopAutoScroll();
-            }
-
+    
             // Calculate mouse movement delta in screen coordinates
             const deltaX = (e.clientX - tableRef.current.mouseStartPosition.x) / zoom;
             const deltaY = (e.clientY - tableRef.current.mouseStartPosition.y) / zoom;
-
+    
             // Calculate new position based on the original table position plus the delta
             const newX = tableRef.current.tableStartPosition.x + deltaX;
             const newY = tableRef.current.tableStartPosition.y + deltaY;
-
-            // Get the table's fixed dimensions - use the original values
+    
+            // Get the table's dimensions
             const tableWidth = table.width || 300;
             const tableHeight = table.height || 300;
+    
+            // Calculate boundaries for the container
+            const containerScrollWidth = container.scrollWidth / zoom;
+            const containerScrollHeight = container.scrollHeight / zoom;
+    
+            // Enforce boundaries
+            const boundedX = Math.max(0, Math.min(containerScrollWidth - tableWidth, newX));
+            const boundedY = Math.max(0, Math.min(containerScrollHeight - tableHeight, newY));
+    
+            // Update table position
+            setTables(prev => prev.map(t =>
+                t.id === table.id ? { ...t, x: boundedX, y: boundedY } : t
+            ));
+            
+            // Prevent default to avoid any browser scrolling behavior
+            e.preventDefault();
+        }
+    };
+    
+    // Function to stop auto-scrolling
 
-            // Calculate boundaries, ensuring the table stays within the fixed maximum area
-            const boundedX = Math.max(0, Math.min(MAX_CONTAINER_WIDTH - tableWidth, newX));
-            const boundedY = Math.max(0, Math.min(MAX_CONTAINER_HEIGHT - tableHeight, newY));
+    
+    const handleTableMouseUp = () => {
+        // Определяем, был ли это клик или перетаскивание
+        if (isDragging && !isDragOperation.current) {
+            // Если это клик (а не перетаскивание) и прошло менее 200 мс, показываем детали
+            const elapsedTime = Date.now() - dragStartTime;
+            if (elapsedTime < 200) {
+                onShowDetails(table.id);
+            }
+        }
+      
+        // Stop auto-scrolling
+        stopAutoScroll();
+      
+        // Очищаем временные данные
+        if (tableRef.current) {
+            tableRef.current.tableStartPosition = null;
+            tableRef.current.mouseStartPosition = null;
+            tableRef.current.lastMouseEvent = null;
+        }
+      
+        setIsDragging(false);
+        setIsResizing(false);
+        isDragOperation.current = false;
+    };
+      useEffect(() => {
+        return () => {
+          stopAutoScroll();
+        };
+      }, []);
 
-            // IMPORTANT: Only update x and y, don't touch width and height
-            setTables(prev => prev.map(t => {
-                if (t.id === table.id) {
-                    // Only update x and y coordinates, maintain all other properties exactly
-                    return {
-                        ...t,
-                        x: boundedX,
-                        y: boundedY
-                    };
-                }
-                return t;
-            }));
+    useEffect(() => {
+        if (isDragging || isResizing) {
+            window.addEventListener('mousemove', handleTableMouseMove);
+            window.addEventListener('mouseup', handleTableMouseUp);
+            return () => {
+                window.removeEventListener('mousemove', handleTableMouseMove);
+                window.removeEventListener('mouseup', handleTableMouseUp);
+            };
+        }
+    }, [isDragging, isResizing, dragOffset]);
+
+    useEffect(() => {
+        const preventWheel = (e) => {
+            if (isDragging) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        };
+        
+        window.addEventListener('wheel', preventWheel, { passive: false });
+        
+        return () => {
+            window.removeEventListener('wheel', preventWheel);
+        };
+    }, [isDragging]);
+
+    const handleResizeStart = (e) => {
+        setIsResizing(true);
+        e.stopPropagation();
+    };
+
+    const handleMouseMove = (e) => {
+        if (isDragging) {
+            // Mark this as a drag operation, not a click
+            isDragOperation.current = true;
+
+            const container = tableRef.current.parentElement;
+            const zoom = parseFloat(container.style.getPropertyValue('--zoom-level') || 1);
+
+            // Calculate new position with exact 1:1 movement, accounting for zoom
+            const newX = (e.clientX - dragOffset.x) / zoom;
+            const newY = (e.clientY - dragOffset.y) / zoom;
+
+            // Calculate container boundaries
+            const containerRect = container.getBoundingClientRect();
+            const containerWidth = containerRect.width / zoom;
+            const containerHeight = containerRect.height / zoom;
+
+            // Calculate table dimensions
+            const tableRect = tableRef.current.getBoundingClientRect();
+            const tableWidth = tableRect.width / zoom;
+            const tableHeight = tableRect.height / zoom;
+
+            // Enforce boundaries
+            const boundedX = Math.max(0, Math.min(containerWidth - tableWidth, newX));
+            const boundedY = Math.max(0, Math.min(containerHeight - tableHeight, newY));
+
+            // Update table position with exact coordinates
+            setTables(prev => prev.map(t =>
+                t.id === table.id ? { ...t, x: boundedX, y: boundedY } : t
+            ));
+        } else if (isResizing) {
+            // Existing resizing code...
         }
     };
 
-    const handleTableMouseUp = () => {
-        // Determine if this was a click or drag
+    const handleMouseUp = (e) => {
+        // Detect if this was a click (not a drag)
         if (isDragging && !isDragOperation.current) {
             // If it's a click (not a drag) and less than 200ms, show details
             const elapsedTime = Date.now() - dragStartTime;
@@ -1900,28 +1948,19 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
             }
         }
 
-        // Stop auto-scrolling
-        stopAutoScroll();
-
-        // Clear temporary data
-        if (tableRef.current) {
-            tableRef.current.tableStartPosition = null;
-            tableRef.current.mouseStartPosition = null;
-            tableRef.current.lastMouseEvent = null;
-        }
-
         setIsDragging(false);
+        setIsResizing(false);
         isDragOperation.current = false;
+
+        if (tableRef.current) {
+            const rect = tableRef.current.getBoundingClientRect();
+            tableRef.current.x = e.clientX - rect.left;
+            tableRef.current.y = e.clientY - rect.top;
+        }
     };
 
     useEffect(() => {
-        return () => {
-            stopAutoScroll();
-        };
-    }, []);
-
-    useEffect(() => {
-        if (isDragging) {
+        if (isDragging || isResizing) {
             window.addEventListener('mousemove', handleTableMouseMove);
             window.addEventListener('mouseup', handleTableMouseUp);
             return () => {
@@ -1929,7 +1968,7 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
                 window.removeEventListener('mouseup', handleTableMouseUp);
             };
         }
-    }, [isDragging]);
+    }, [isDragging, isResizing]);
 
     // Enhanced drop target to handle both regular group drops and seated group transfers
     const [{ isOver }, drop] = useDrop({
@@ -2057,15 +2096,13 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
                 drop(node);
             }}
             className={`table-container ${isOver ? 'drop-target' : ''} ${isTableHighlighted ? 'highlighted-table' : ''}`}
-            data-id={table.id}
+            data-id={table.id} // Add this line
             onDrop={(e) => onDrop && onDrop(e)}
             onDragOver={(e) => e.preventDefault()}
             style={{
                 position: 'absolute',
                 left: `${table.x || 0}px`,
                 top: `${table.y || 0}px`,
-                width: `${table.width || 300}px`,  // Fixed width
-                height: `${table.height || 300}px`, // Fixed height
                 cursor: isDragging ? 'grabbing' : 'grab'
             }}
             onMouseDown={handleDragStart}
@@ -2073,6 +2110,7 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
             <div className="table-header">
                 <h3>Սեղան {table.id} (Աթոռներ: {table.chairCount})</h3>
                 <div className="table-buttons">
+                    {/* Remove info button since entire table is clickable now */}
                     <button
                         onClick={(e) => {
                             e.stopPropagation();
@@ -2085,7 +2123,9 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
                 </div>
             </div>
             <div className="table">
-                <div className="table-top">
+                <div
+                    className="table-top"
+                >
                     {chairs}
                 </div>
             </div>
