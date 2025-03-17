@@ -1,5 +1,26 @@
 /* Modern styles for the Seating Arrangement app */
 
+/* Скрываем стандартный скроллбар */
+::-webkit-scrollbar {
+  width: 33px; /* Ширина скролла */
+}
+
+/* Фон полосы прокрутки */
+::-webkit-scrollbar-track {
+  background: #333333d5; 
+  border-radius: 5px;
+}
+
+/* Ползунок скролла */
+::-webkit-scrollbar-thumb {
+  background: #3e8ed0; 
+  border-radius: 5px;
+}
+
+/* Эффект при наведении */
+::-webkit-scrollbar-thumb:hover {
+  background: #2c6ea3; 
+}
 * {
   margin: 0;
   padding: 0;
