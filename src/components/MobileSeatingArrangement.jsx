@@ -22,7 +22,7 @@ const MobileSeatingArrangement = ({ initialTables = [], initialPeople = [], init
   const [people, setPeople] = useState(initialPeople);
   const [halls, setHalls] = useState(initialHalls);
   const [currentHall, setCurrentHall] = useState(null);
-  const [zoom, setZoom] = useState(0.5); // Start with higher zoom for mobile
+  const [zoom, setZoom] = useState(1); // Start with higher zoom for mobile
   const [selectedTableId, setSelectedTableId] = useState(null);
   const [isTableDetailsOpen, setIsTableDetailsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -232,7 +232,7 @@ const MobileSeatingArrangement = ({ initialTables = [], initialPeople = [], init
       chairCount,
       x: 20,
       y: (tables.length * 320) + 20, // Position tables vertically for better mobile view
-      width: 300,
+      width: 265,
       height: 300
     };
     
@@ -509,10 +509,14 @@ const MobileSeatingArrangement = ({ initialTables = [], initialPeople = [], init
         data-id={table.id}
         style={{
           position: 'absolute',
-          left: `${table.x}px`,
+          left:'5%',
+          // left: `${table.x}px`,
           top: `${table.y}px`,
-          width: `${table.width}px`,
-          height: `${table.height}px`
+          // width: `${table.width}px`,
+          width:"88%",
+          height: `${table.height}px`,
+          overflow:'auto',
+          marginBottom:'20px'
         }}
       >
         <div className="mobile-table-header">
@@ -596,7 +600,7 @@ const MobileSeatingArrangement = ({ initialTables = [], initialPeople = [], init
           </select>
         </div>
         
-        <div className="mobile-zoom-controls">
+        {/* <div className="mobile-zoom-controls">
           <button 
             className="mobile-zoom-btn"
             onClick={() => setZoom(Math.max(0.3, zoom - 0.1))}
@@ -607,7 +611,7 @@ const MobileSeatingArrangement = ({ initialTables = [], initialPeople = [], init
             onClick={() => setZoom(Math.min(1.5, zoom + 0.1))}
           >+</button>
         </div>
-        
+         */}
         <div 
           className="mobile-tables-area"
           ref={tablesAreaRef}

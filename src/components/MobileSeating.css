@@ -1,7 +1,7 @@
 /* MobileSeating.css */
 /* Base styles and reset */
 * {
-    box-sizing: border-box;
+    /* box-sizing: border-box; */
     margin: 0;
     padding: 0;
   }
@@ -242,9 +242,10 @@
     position: absolute;
     width: 300px;
     background-color: white;
-    border-radius: 8px;
+    margin-top: 20px;
+    /* border-radius: 8px; */
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    padding: 10px;
+    /* padding: 10px; */
     transition: box-shadow 0.3s ease;
   }
   
@@ -264,9 +265,16 @@
   }
   
   .mobile-table-header {
-    display: flex;
+    position: fixed;
+    background-color:#3e8ed0;
+    /* top: 2%; */
+    width: 88%;
+    height: 3%;
+    /* margin-bottom: 10px; */
+    display: flex
+;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
     padding-bottom: 10px;
     border-bottom: 1px solid #eee;
   }
@@ -1108,7 +1116,7 @@
   
   @media (min-width: 768px) {
     .mobile-app {
-      max-width: 480px;
+      max-width: 100%;
       margin: 0 auto;
       border-left: 1px solid #ddd;
       border-right: 1px solid #ddd;
