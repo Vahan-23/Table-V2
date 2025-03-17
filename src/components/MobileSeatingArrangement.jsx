@@ -42,6 +42,30 @@ const MobileSeatingArrangement = ({ initialTables = [], initialPeople = [], init
   const initialTouchDistance = useRef(null);
   const mobileMenuRef = useRef(null);
   
+
+  const useOutsideClick = (callback) => {
+    const ref = useRef();
+  
+    useEffect(() => {
+      const handleClickOutside = (event) => {
+        if (ref.current && !ref.current.contains(event.target)) {
+          callback();
+        }
+      };
+  
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('touchstart', handleClickOutside);
+      
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+        document.removeEventListener('touchstart', handleClickOutside);
+      };
+    }, [callback]);
+  
+    return ref;
+  };
+  
+
   // Effect to handle click outside to close mobile menu
   useEffect(() => {
     function handleClickOutside(event) {
@@ -876,9 +900,9 @@ const MobileSeatingArrangement = ({ initialTables = [], initialPeople = [], init
   
   // Table Details Modal
   const TableDetailsModal = () => {
+    const modalRef = useOutsideClick(() => setIsTableDetailsOpen(false));
     const table = tables.find(t => t.id === selectedTableId);
     if (!table) return null;
-    
     // Group people by their group
     const getTableGroups = () => {
       const tablePeople = table.people.filter(Boolean);
@@ -898,7 +922,7 @@ const MobileSeatingArrangement = ({ initialTables = [], initialPeople = [], init
     };
     
     const tableGroups = getTableGroups();
-    
+
     // Remove group from table
     const handleRemoveGroup = (groupName) => {
       if (window.confirm(`Удалить группу ${groupName} со стола?`)) {
@@ -927,7 +951,7 @@ const MobileSeatingArrangement = ({ initialTables = [], initialPeople = [], init
     
     return (
       <div className="mobile-modal">
-        <div className="mobile-modal-content">
+        <div className="mobile-modal-content " ref={modalRef}>
           <div className="mobile-modal-header">
             <h3>Стол {table.id}</h3>
             <button 
@@ -1008,11 +1032,12 @@ const MobileSeatingArrangement = ({ initialTables = [], initialPeople = [], init
   
   // New Hall Modal
   const NewHallModal = () => {
+    const modalRef = useOutsideClick(() => setShowHallModal(false));
     const [hallName, setHallName] = useState('');
     
     return (
       <div className="mobile-modal">
-        <div className="mobile-modal-content">
+        <div className="mobile-modal-content" ref={modalRef}>
           <div className="mobile-modal-header">
             <h3>Создать новый зал</h3>
             <button 
@@ -1059,6 +1084,7 @@ const MobileSeatingArrangement = ({ initialTables = [], initialPeople = [], init
   
   // Add Person Modal
   const AddPersonModal = () => {
+    const modalRef = useOutsideClick(() => setShowAddPersonModal(false));
     const [localPeopleInput, setLocalPeopleInput] = useState(peopleInput);
     const [localGroupInput, setLocalGroupInput] = useState(groupInput);
     const [localShowGroupDropdown, setLocalShowGroupDropdown] = useState(false);
@@ -1083,7 +1109,7 @@ const MobileSeatingArrangement = ({ initialTables = [], initialPeople = [], init
     
     return (
       <div className="mobile-modal">
-        <div className="mobile-modal-content">
+        <div className="mobile-modal-content" ref={modalRef}>
           <div className="mobile-modal-header">
             <h3>Добавить гостя</h3>
             <button 
@@ -1173,6 +1199,7 @@ const MobileSeatingArrangement = ({ initialTables = [], initialPeople = [], init
   };
   // Chair Assignment Modal
   const ChairAssignModal = () => {
+    const modalRef = useOutsideClick(() => setShowChairAssignModal(false));
     if (selectedTableId === null || selectedChairIndex === null) return null;
     
     const table = tables.find(t => t.id === selectedTableId);
@@ -1183,7 +1210,7 @@ const MobileSeatingArrangement = ({ initialTables = [], initialPeople = [], init
     
     return (
       <div className="mobile-modal">
-        <div className="mobile-modal-content">
+        <div className="mobile-modal-content"  ref={modalRef}>
           <div className="mobile-modal-header">
             <h3>{person ? 'Управление местом' : 'Назначить место'}</h3>
             <button 
