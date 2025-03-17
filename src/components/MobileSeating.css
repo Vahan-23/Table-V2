@@ -1072,6 +1072,8 @@
 }
 
 .mobile-modal-content {
+  position: fixed;
+  top: 5%;
   width: calc(100% - 30px);
   /* max-width: 400px; */
   max-height: calc(100vh - 60px);
@@ -1120,6 +1122,7 @@
 
 .mobile-modal-body {
   padding: 15px;
+  width: 70%;
   /* overflow-y: auto; */
   flex: 1;
 }
@@ -1136,7 +1139,7 @@
 }
 
 .mobile-form-input {
-  width: 100%;
+  width: 80%;
   padding: 12px 15px;
   border: 1px solid #ddd;
   border-radius: 5px;
@@ -1147,6 +1150,7 @@
   display: flex;
   gap: 10px;
   margin-top: 20px;
+  justify-content: center;
 }
 
 .mobile-group-selection {
