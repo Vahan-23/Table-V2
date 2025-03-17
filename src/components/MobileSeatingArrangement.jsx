@@ -254,9 +254,10 @@ const MobileSeatingArrangement = ({ initialTables = [], initialPeople = [], init
       // Remove person from available people
       setPeople((prevPeople) => prevPeople.filter(p => p.name !== person.name));
       
+      // Close the modal but maintain the selected table
       setShowChairAssignModal(false);
-      setSelectedTableId(null);
       setSelectedChairIndex(null);
+      // Don't reset selectedTableId to keep focus on the current table
     }
   };
   
@@ -286,8 +287,8 @@ const MobileSeatingArrangement = ({ initialTables = [], initialPeople = [], init
       });
       
       setShowChairAssignModal(false);
-      setSelectedTableId(null);
       setSelectedChairIndex(null);
+      // Don't reset selectedTableId to keep focus on the current table
     }
   };
   
