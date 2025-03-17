@@ -22,7 +22,7 @@ const MobileSeatingArrangement = ({ initialTables = [], initialPeople = [], init
   const [people, setPeople] = useState(initialPeople);
   const [halls, setHalls] = useState(initialHalls);
   const [currentHall, setCurrentHall] = useState(null);
-  const [zoom, setZoom] = useState(1); // Start with higher zoom for mobile
+  const [zoom, setZoom] = useState(1); // Fixed at 100% now - no zooming
   const [selectedTableId, setSelectedTableId] = useState(null);
   const [isTableDetailsOpen, setIsTableDetailsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -112,72 +112,33 @@ const MobileSeatingArrangement = ({ initialTables = [], initialPeople = [], init
     localStorage.setItem('halls', JSON.stringify(halls));
   }, [halls]);
   
-  // Touch handlers for pinch-to-zoom
+  // Remove zoom functionality
   const handleTouchStart = (e) => {
-    if (e.touches.length === 2) {
-      // Calculate initial distance between two fingers
-      const dx = e.touches[0].clientX - e.touches[1].clientX;
-      const dy = e.touches[0].clientY - e.touches[1].clientY;
-      initialTouchDistance.current = Math.sqrt(dx * dx + dy * dy);
-    }
+    // No zoom functionality
   };
   
   const handleTouchMove = (e) => {
-    if (e.touches.length === 2 && initialTouchDistance.current !== null) {
-      e.preventDefault(); // Prevent default scrolling
-      
-      // Calculate new distance
-      const dx = e.touches[0].clientX - e.touches[1].clientX;
-      const dy = e.touches[0].clientY - e.touches[1].clientY;
-      const newDistance = Math.sqrt(dx * dx + dy * dy);
-      
-      // Calculate zoom factor
-      const scale = newDistance / initialTouchDistance.current;
-      
-      // Update zoom with limits
-      const newZoom = Math.min(Math.max(zoom * scale, 0.3), 1.5);
-      setZoom(newZoom);
-      
-      // Update initial distance for continuous zooming
-      initialTouchDistance.current = newDistance;
-    }
+    // No zoom functionality
   };
   
   const handleTouchEnd = () => {
-    initialTouchDistance.current = null;
+    // No zoom functionality
   };
   
-  // Drag handlers for panning the view
+  // Remove drag handlers for panning as we now show only one table
   const isDraggingView = useRef(false);
   const lastTouchPosition = useRef({ x: 0, y: 0 });
   
   const handleTouchStartDrag = (e) => {
-    if (e.touches.length === 1) {
-      isDraggingView.current = true;
-      lastTouchPosition.current = {
-        x: e.touches[0].clientX,
-        y: e.touches[0].clientY
-      };
-    }
+    // No panning functionality needed
   };
   
   const handleTouchMoveDrag = (e) => {
-    if (e.touches.length === 1 && isDraggingView.current && tablesAreaRef.current) {
-      const deltaX = e.touches[0].clientX - lastTouchPosition.current.x;
-      const deltaY = e.touches[0].clientY - lastTouchPosition.current.y;
-      
-      tablesAreaRef.current.scrollLeft -= deltaX;
-      tablesAreaRef.current.scrollTop -= deltaY;
-      
-      lastTouchPosition.current = {
-        x: e.touches[0].clientX,
-        y: e.touches[0].clientY
-      };
-    }
+    // No panning functionality needed
   };
   
   const handleTouchEndDrag = () => {
-    isDraggingView.current = false;
+    // No panning functionality needed
   };
   
   // Function to get existing groups
@@ -232,7 +193,7 @@ const MobileSeatingArrangement = ({ initialTables = [], initialPeople = [], init
       chairCount,
       x: 20,
       y: (tables.length * 320) + 20, // Position tables vertically for better mobile view
-      width: 265,
+      width: 300,
       height: 300
     };
     
@@ -477,100 +438,137 @@ const MobileSeatingArrangement = ({ initialTables = [], initialPeople = [], init
     }
   };
   
-  // Scroll to table (for mobile navigation)
-  const scrollToTable = (tableId) => {
-    const table = tables.find(t => t.id === tableId);
-    if (table && tablesAreaRef.current) {
-      tablesAreaRef.current.scrollLeft = 0;
-      tablesAreaRef.current.scrollTop = table.y * zoom;
-      
-      // Highlight the table
-      setSelectedTableId(tableId);
-      setTimeout(() => {
-        const tableElement = document.querySelector(`.mobile-table[data-id="${tableId}"]`);
-        if (tableElement) {
-          tableElement.classList.add('highlight-pulse');
-          setTimeout(() => {
-            tableElement.classList.remove('highlight-pulse');
-          }, 1500);
-        }
-      }, 100);
-    }
+  // Change table selection instead of scrolling
+  const selectTable = (tableId) => {
+    setSelectedTableId(tableId);
   };
   
-  // Table Component for Mobile
+  // Simplified Table Component for Mobile - only used in table list view now
   const MobileTable = ({ table }) => {
     const occupiedSeats = table.people.filter(Boolean).length;
-    const isSelected = selectedTableId === table.id;
     
     return (
-      <div 
-        className={`mobile-table ${isSelected ? 'mobile-table-selected' : ''}`}
-        data-id={table.id}
-        style={{
-          position: 'absolute',
-          left:'5%',
-          // left: `${table.x}px`,
-          top: `${table.y}px`,
-          // width: `${table.width}px`,
-          width:"88%",
-          height: `${table.height}px`,
-          overflow:'auto',
-          marginBottom:'20px'
-        }}
-      >
-        <div className="mobile-table-header">
-          <h3>Стол {table.id}</h3>
-          <div className="mobile-table-stats">
-            <span>{occupiedSeats}/{table.chairCount}</span>
-          </div>
-          <div className="mobile-table-actions">
-            <button 
-              className="mobile-table-info-btn" 
-              onClick={() => {
-                setSelectedTableId(table.id);
-                setIsTableDetailsOpen(true);
-              }}
-            >
-              i
-            </button>
-            <button 
-              className="mobile-table-delete-btn" 
-              onClick={() => handleDeleteTable(table.id)}
-            >
-              ×
-            </button>
+      <div className="mobile-table-item">
+        <div className="mobile-table-item-info">
+          <div className="mobile-table-item-name">Стол {table.id}</div>
+          <div className="mobile-table-item-stats">
+            {occupiedSeats}/{table.chairCount} мест занято
           </div>
         </div>
-        
-        <div className="mobile-table-body">
-          <div className="mobile-chairs-grid">
-            {table.people.map((person, index) => (
-              <div 
-                key={index}
-                className={`mobile-chair ${person ? 'occupied' : 'empty'}`}
-                onClick={() => handleChairClick(table.id, index)}
-              >
-                {person ? (
-                  <div className="mobile-chair-person">
-                    <span className="mobile-chair-name">{person.name}</span>
-                    <span className="mobile-chair-group">Группа {person.group}</span>
-                  </div>
-                ) : (
-                  <div className="mobile-chair-empty">
-                    <span>Пусто</span>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
+        <div className="mobile-table-item-actions">
+          <button 
+            className="mobile-table-view-btn"
+            onClick={() => {
+              setSelectedTableId(table.id);
+              setActiveView('hall');
+            }}
+          >
+            Просмотр
+          </button>
+          <button 
+            className="mobile-table-delete-btn"
+            onClick={() => handleDeleteTable(table.id)}
+          >
+            Удалить
+          </button>
         </div>
       </div>
     );
   };
   
-  // Hall View
+  // Hall View - Modified to show one table at a time with circular layout
   const MobileHallView = () => {
+    // Get the current selected table
+    const currentTable = tables.find(table => table.id === selectedTableId) || tables[0];
+    
+    // Set the first table as selected if none is selected and tables exist
+    useEffect(() => {
+      if (tables.length > 0 && !selectedTableId) {
+        setSelectedTableId(tables[0].id);
+      }
+    }, [tables, selectedTableId]);
+    
+    // Function to render chairs in a circular layout
+    const renderCircularTable = (table) => {
+      if (!table) return null;
+      
+      const chairs = [];
+      const angleStep = 360 / table.chairCount;
+      const radius = 120; // Adjust based on screen size
+
+      const nameOverlayStyle = {
+        position: 'absolute',
+        left: '50%',
+        top: '50%',
+        transform: 'translate(-50%, -50%)',
+        backgroundColor: 'rgba(255, 255, 255, 0.8)',
+        padding: '2px 6px',
+        color: "#211812",
+        borderRadius: '4px',
+        fontSize: '10px',
+        fontWeight: 'bold',
+        maxWidth: '55px',
+        textAlign: 'center',
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        zIndex: 5
+    };
+      
+      // Create chairs around the table
+      for (let i = 0; i < table.chairCount; i++) {
+        const angle = angleStep * i;
+        const radians = (angle * Math.PI) / 180;
+        
+        // Calculate position on the circle
+        const xPosition = radius * Math.cos(radians);
+        const yPosition = radius * Math.sin(radians);
+        
+        // Get person at this chair
+        const person = table.people[i];
+        const peopleOnTable = table.people || [];
+        chairs.push(
+          <div
+            key={i}
+            className={`mobile-circular-chair ${person ? 'occupied' : 'empty'}`}
+            style={{
+              backgroundImage: peopleOnTable[i] ? "url('/red1.png')" : "url('/green2.png')",
+              left: `calc(50% + ${xPosition}px - 30px)`, // 30px is half the chair width
+              top: `calc(50% + ${yPosition}px - 30px)`, // 30px is half the chair height
+              transform: `rotate(${angle + 90}deg)` // Rotate chair to face the table
+            }}
+            onClick={() => handleChairClick(table.id, i)}
+          >
+            {person ? (
+              <div className="mobile-chair-name-overlay">
+                {person.name}
+              </div>
+            ) : (
+              <div className="mobile-chair-number">
+                 {peopleOnTable[i] && (
+                    <div
+                        className="person-name-overlay"
+                        style={nameOverlayStyle}
+                    >
+                        {peopleOnTable[i].name}
+                    </div>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      }
+      
+      return (
+        <div className="mobile-circular-table-container">
+            <span className="mobile-table-number">Стол {table.id}</span>
+          <div className="mobile-circular-table">
+          </div>
+          {chairs}
+        </div>
+      );
+    };
+    
     return (
       <div className="mobile-hall-view">
         <div className="mobile-hall-header">
@@ -588,10 +586,10 @@ const MobileSeatingArrangement = ({ initialTables = [], initialPeople = [], init
         <div className="mobile-table-quick-nav">
           <select 
             value={selectedTableId || ''}
-            onChange={(e) => scrollToTable(parseInt(e.target.value))}
+            onChange={(e) => setSelectedTableId(parseInt(e.target.value))}
             className="mobile-table-select"
           >
-            <option value="">Перейти к столу...</option>
+            <option value="">Выберите стол...</option>
             {tables.map(table => (
               <option key={table.id} value={table.id}>
                 Стол {table.id} ({table.people.filter(Boolean).length}/{table.chairCount})
@@ -600,41 +598,40 @@ const MobileSeatingArrangement = ({ initialTables = [], initialPeople = [], init
           </select>
         </div>
         
-        {/* <div className="mobile-zoom-controls">
-          <button 
-            className="mobile-zoom-btn"
-            onClick={() => setZoom(Math.max(0.3, zoom - 0.1))}
-          >−</button>
-          <span className="mobile-zoom-level">{Math.round(zoom * 100)}%</span>
-          <button 
-            className="mobile-zoom-btn"
-            onClick={() => setZoom(Math.min(1.5, zoom + 0.1))}
-          >+</button>
-        </div>
-         */}
-        <div 
-          className="mobile-tables-area"
-          ref={tablesAreaRef}
-          onTouchStart={(e) => {
-            handleTouchStart(e);
-            handleTouchStartDrag(e);
-          }}
-          onTouchMove={(e) => {
-            handleTouchMove(e);
-            handleTouchMoveDrag(e);
-          }}
-          onTouchEnd={() => {
-            handleTouchEnd();
-            handleTouchEndDrag();
-          }}
-          style={{
-            transform: `scale(${zoom})`,
-            transformOrigin: 'top left'
-          }}
-        >
-          {tables.map(table => (
-            <MobileTable key={table.id} table={table} />
-          ))}
+        <div className="mobile-single-table-container">
+          {currentTable ? (
+            <div className="mobile-single-table-wrapper circular-view">
+              <div className="mobile-current-table-stats">
+                Занято {currentTable.people.filter(Boolean).length} из {currentTable.chairCount} мест
+              </div>
+              
+              <div className="mobile-circular-view-wrapper">
+                {renderCircularTable(currentTable)}
+              </div>
+              
+              <div className="mobile-table-actions-row">
+                <button 
+                  className="mobile-table-info-btn full-width" 
+                  onClick={() => {
+                    setSelectedTableId(currentTable.id);
+                    setIsTableDetailsOpen(true);
+                  }}
+                >
+                  Информация о столе
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="mobile-empty-table-message">
+              <p>Нет доступных столов</p>
+              <button 
+                className="mobile-primary-btn"
+                onClick={() => setActiveView('tables')}
+              >
+                Добавить столы
+              </button>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -786,31 +783,7 @@ const MobileSeatingArrangement = ({ initialTables = [], initialPeople = [], init
           
           {tables.length > 0 ? (
             tables.map(table => (
-              <div key={table.id} className="mobile-table-item">
-                <div className="mobile-table-item-info">
-                  <div className="mobile-table-item-name">Стол {table.id}</div>
-                  <div className="mobile-table-item-stats">
-                    {table.people.filter(Boolean).length}/{table.chairCount} мест занято
-                  </div>
-                </div>
-                <div className="mobile-table-item-actions">
-                  <button 
-                    className="mobile-table-view-btn"
-                    onClick={() => {
-                      setActiveView('hall');
-                      scrollToTable(table.id);
-                    }}
-                  >
-                    Просмотр
-                  </button>
-                  <button 
-                    className="mobile-table-delete-btn"
-                    onClick={() => handleDeleteTable(table.id)}
-                  >
-                    Удалить
-                  </button>
-                </div>
-              </div>
+              <MobileTable key={table.id} table={table} />
             ))
           ) : (
             <div className="mobile-empty-message">
@@ -1020,7 +993,7 @@ const MobileSeatingArrangement = ({ initialTables = [], initialPeople = [], init
                 onClick={() => {
                   setIsTableDetailsOpen(false);
                   setActiveView('hall');
-                  scrollToTable(table.id);
+                  // scrollToTable(table.id);
                 }}
               >
                 Перейти к размещению
