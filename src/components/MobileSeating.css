@@ -1073,12 +1073,13 @@
 
 .mobile-modal-content {
   width: calc(100% - 30px);
-  max-width: 400px;
+  /* max-width: 400px; */
   max-height: calc(100vh - 60px);
   background-color: white;
   border-radius: 10px;
-  overflow: hidden;
+  /* overflow: hidden; */
   display: flex;
+  align-items: center;
   flex-direction: column;
   animation: slideUp 0.3s ease;
 }
@@ -1119,7 +1120,7 @@
 
 .mobile-modal-body {
   padding: 15px;
-  overflow-y: auto;
+  /* overflow-y: auto; */
   flex: 1;
 }
 

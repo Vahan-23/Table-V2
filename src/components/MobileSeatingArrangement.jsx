@@ -1058,6 +1058,28 @@ const MobileSeatingArrangement = ({ initialTables = [], initialPeople = [], init
   
   // Add Person Modal
   const AddPersonModal = () => {
+    const [localPeopleInput, setLocalPeopleInput] = useState(peopleInput);
+    const [localGroupInput, setLocalGroupInput] = useState(groupInput);
+    const [localShowGroupDropdown, setLocalShowGroupDropdown] = useState(false);
+    
+    // Update parent state only when modal closes or form submits
+    useEffect(() => {
+      setLocalPeopleInput(peopleInput);
+      setLocalGroupInput(groupInput);
+    }, [peopleInput, groupInput]);
+    
+    const handleLocalSubmit = () => {
+      if (localPeopleInput && localGroupInput) {
+        const newPerson = { name: localPeopleInput, group: localGroupInput };
+        setPeople([...people, newPerson]);
+        setPeopleInput('');
+        setGroupInput('');
+        setShowAddPersonModal(false);
+      } else {
+        alert('Пожалуйста, заполните все поля.');
+      }
+    };
+    
     return (
       <div className="mobile-modal">
         <div className="mobile-modal-content">
@@ -1076,8 +1098,8 @@ const MobileSeatingArrangement = ({ initialTables = [], initialPeople = [], init
               <label>Имя гостя:</label>
               <input 
                 type="text"
-                value={peopleInput}
-                onChange={(e) => setPeopleInput(e.target.value)}
+                value={localPeopleInput}
+                onChange={(e) => setLocalPeopleInput(e.target.value)}
                 placeholder="Например: Иван Иванов"
                 className="mobile-form-input"
                 autoFocus
@@ -1089,14 +1111,14 @@ const MobileSeatingArrangement = ({ initialTables = [], initialPeople = [], init
               <div className="mobile-group-selection" ref={groupDropdownRef}>
                 <input 
                   type="text"
-                  value={groupInput}
-                  onChange={(e) => setGroupInput(e.target.value)}
+                  value={localGroupInput}
+                  onChange={(e) => setLocalGroupInput(e.target.value)}
                   placeholder="Номер группы"
                   className="mobile-form-input"
-                  onFocus={() => setShowGroupDropdown(true)}
+                  onFocus={() => setLocalShowGroupDropdown(true)}
                 />
                 
-                {showGroupDropdown && (
+                {localShowGroupDropdown && (
                   <div className="mobile-group-dropdown">
                     {getExistingGroups().length > 0 ? (
                       getExistingGroups().map((group) => (
@@ -1104,8 +1126,8 @@ const MobileSeatingArrangement = ({ initialTables = [], initialPeople = [], init
                           key={group}
                           className="mobile-group-option"
                           onClick={() => {
-                            setGroupInput(group);
-                            setShowGroupDropdown(false);
+                            setLocalGroupInput(group);
+                            setLocalShowGroupDropdown(false);
                           }}
                         >
                           {group}
@@ -1119,7 +1141,7 @@ const MobileSeatingArrangement = ({ initialTables = [], initialPeople = [], init
                     
                     <div 
                       className="mobile-group-option-new"
-                      onClick={() => setShowGroupDropdown(false)}
+                      onClick={() => setLocalShowGroupDropdown(false)}
                     >
                       + Новая группа
                     </div>
@@ -1131,8 +1153,8 @@ const MobileSeatingArrangement = ({ initialTables = [], initialPeople = [], init
             <div className="mobile-form-actions">
               <button 
                 className="mobile-primary-btn"
-                onClick={handleAddPerson}
-                disabled={!peopleInput.trim() || !groupInput.trim()}
+                onClick={handleLocalSubmit}
+                disabled={!localPeopleInput.trim() || !localGroupInput.trim()}
               >
                 Добавить
               </button>
@@ -1148,7 +1170,6 @@ const MobileSeatingArrangement = ({ initialTables = [], initialPeople = [], init
       </div>
     );
   };
-  
   // Chair Assignment Modal
   const ChairAssignModal = () => {
     if (selectedTableId === null || selectedChairIndex === null) return null;
