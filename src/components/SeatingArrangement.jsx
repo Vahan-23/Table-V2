@@ -13,7 +13,6 @@ const SeatingArrangement = () => {
     const [people, setPeople] = useState([]);
     const [groupInput, setGroupInput] = useState('');
     const [peopleInput, setPeopleInput] = useState('');
-    const [showGroups, setShowGroups] = useState(true);
     const [draggingGroup, setDraggingGroup] = useState(null);
     const [zoom, setZoom] = useState(0.2);
     const [chairCount, setChairCount] = useState(12);
@@ -44,23 +43,154 @@ const SeatingArrangement = () => {
     const zoomTimeout = useRef(null);
     const mousePosition = useRef({ x: 0, y: 0 });
     const zoomAnimFrame = useRef(null);
-
     const [detailsTableId, setDetailsTableId] = useState(null);
     const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+    const [groupSelectionActive, setGroupSelectionActive] = useState(false);
+    const [groupToPlace, setGroupToPlace] = useState(null);
+    const [targetTableId, setTargetTableId] = useState(null);
+    const [availableSeats, setAvailableSeats] = useState(0);
 
-    const highlightTable = (tableId) => {
-        // Find the table element
-        const tableElement = document.querySelector(`.table-container[data-id="${tableId}"]`);
-        if (tableElement) {
-            // Add a temporary highlight class
-            tableElement.classList.add('table-highlight-pulse');
 
-            // Remove the class after animation completes
-            setTimeout(() => {
-                tableElement.classList.remove('table-highlight-pulse');
-            }, 1000);
-        }
+    // Добавить этот компонент перед компонентом SeatingArrangement
+    const PeopleSelector = ({ people, maxSelection, onConfirm, onCancel }) => {
+        const [selected, setSelected] = useState([]);
+        
+        const toggleSelection = (person) => {
+            if (selected.includes(person)) {
+                setSelected(selected.filter(p => p !== person));
+            } else if (selected.length < maxSelection) {
+                setSelected([...selected, person]);
+            }
+        };
+        
+        const handleConfirm = () => {
+            onConfirm(selected);
+        };
+        
+        // Определяем, сколько еще мест осталось
+        const remainingSeats = maxSelection - selected.length;
+        
+        return (
+            <div className="people-selector">
+                <div className="people-selection-list">
+                    {people.map((person, index) => {
+                        // Человек блокируется только если он не выбран и нет свободных мест
+                        const isBlocked = !selected.includes(person) && remainingSeats === 0;
+                        
+                        return (
+                            <div 
+                                key={index} 
+                                className={`people-selection-item 
+                                    ${selected.includes(person) ? 'selected' : ''} 
+                                    ${isBlocked ? 'extra-person' : ''}`}
+                                onClick={() => !isBlocked && toggleSelection(person)}
+                                title={isBlocked ? 'Недостаточно свободных мест для этого человека' : ''}
+                            >
+                                <div className="selection-checkbox">
+                                    {selected.includes(person) ? '✓' : isBlocked ? '✕' : ''}
+                                </div>
+                                <div className="selection-info">
+                                    <span className="person-name">{person.name}</span>
+                                    <span className="person-group">Группа {person.group}</span>
+                                </div>
+                                {isBlocked && (
+                                    <div className="extra-person-badge">
+                                        Нет места
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+                
+                <div className="selection-status">
+                    Выбрано: {selected.length} из {maxSelection} доступных мест
+                    {remainingSeats === 0 && people.length > maxSelection && (
+                        <div className="extra-people-notice">
+                            {people.length - maxSelection} человек не могут быть размещены из-за недостатка мест
+                        </div>
+                    )}
+                </div>
+                
+                <div className="popup-buttons">
+                    <button 
+                        className="primary-btn" 
+                        onClick={handleConfirm}
+                        disabled={selected.length === 0}
+                    >
+                        Разместить выбранных людей ({selected.length})
+                    </button>
+                    <button className="cancel-btn" onClick={onCancel}>
+                        Отмена
+                    </button>
+                </div>
+            </div>
+        );
     };
+
+
+    const handlePlaceSelectedPeople = (selectedPeople) => {
+        if (!groupToPlace || !targetTableId) return;
+        
+        setTables((prevTables) => {
+            return prevTables.map(table => {
+                // Обрабатываем исходный стол (если это перемещение между столами)
+                if (groupToPlace.sourceTableId && table.id === groupToPlace.sourceTableId) {
+                    // Удаляем только выбранных людей из исходного стола
+                    return {
+                        ...table,
+                        people: table.people.map(person =>
+                            (person && selectedPeople.some(selected => selected.name === person.name))
+                                ? null
+                                : person
+                        )
+                    };
+                }
+                // Обрабатываем целевой стол
+                else if (table.id === targetTableId) {
+                    // Копируем текущих людей за столом
+                    const updatedPeople = [...table.people];
+                    
+                    // Находим свободные места и размещаем выбранных людей
+                    let seatsUsed = 0;
+                    for (let i = 0; i < updatedPeople.length && seatsUsed < selectedPeople.length; i++) {
+                        if (!updatedPeople[i]) {
+                            updatedPeople[i] = selectedPeople[seatsUsed];
+                            seatsUsed++;
+                        }
+                    }
+                    
+                    // Если остались свободные места, добавляем оставшихся выбранных людей
+                    while (seatsUsed < selectedPeople.length) {
+                        updatedPeople.push(selectedPeople[seatsUsed]);
+                        seatsUsed++;
+                    }
+                    
+                    return { ...table, people: updatedPeople };
+                }
+                return table;
+            });
+        });
+        
+        // Если это не перемещение между столами, удаляем выбранных людей из общего списка
+        if (!groupToPlace.sourceTableId) {
+            setPeople((prevPeople) => 
+                prevPeople.filter(person => 
+                    !selectedPeople.some(selected => selected.name === person.name)
+                )
+            );
+        }
+        
+        // Показываем уведомление о перемещении
+        showTransferNotification(groupToPlace.groupName, targetTableId);
+        
+        // Сбрасываем состояние выбора
+        setGroupSelectionActive(false);
+        setGroupToPlace(null);
+        setTargetTableId(null);
+        setAvailableSeats(0);
+    };
+
 
     // Handler to show table details
     const handleShowTableDetails = (tableId) => {
@@ -126,76 +256,87 @@ const SeatingArrangement = () => {
     const processGroupTransfer = (data, targetTableId, tables, setTables) => {
         const sourceTableId = data.tableId;
         const groupName = data.groupName;
-
-        // Don't process if dropped on the same table
+    
+        // Не обрабатываем, если перетаскивание на тот же стол
         if (sourceTableId === targetTableId) return;
-
-        // Find source and target tables
+    
+        // Находим исходный и целевой столы
         const sourceTable = tables.find(t => t.id === sourceTableId);
         const targetTable = tables.find(t => t.id === targetTableId);
-
+    
         if (!sourceTable || !targetTable) {
-            console.error('Source or target table not found');
+            console.error('Исходный или целевой стол не найден');
             return;
         }
-
-        // Get people from this group in the source table
+    
+        // Получаем людей из этой группы в исходном столе
         const groupPeople = sourceTable.people.filter(p => p && p.group === groupName);
-
+    
         if (groupPeople.length === 0) {
-            console.error('No people found to move');
+            console.error('Не найдены люди для перемещения');
             return;
         }
-
-        // Check if target table has enough free seats
+    
+        // Проверяем, есть ли свободные места на целевом столе
         const targetFreeSeats = targetTable.chairCount - targetTable.people.filter(Boolean).length;
-
-        if (targetFreeSeats < groupPeople.length) {
-            alert(`Not enough free seats at the table (need ${groupPeople.length}, available ${targetFreeSeats})`);
-            return;
-        }
-
-        // Update tables
-        setTables(prevTables => {
-            return prevTables.map(table => {
-                if (table.id === sourceTableId) {
-                    // Remove people from source table
-                    return {
-                        ...table,
-                        people: table.people.map(person =>
-                            (person && person.group === groupName) ? null : person
-                        )
-                    };
-                } else if (table.id === targetTableId) {
-                    // Add people to target table
-                    const newPeople = [...table.people];
-                    let peopleAdded = 0;
-
-                    // Fill empty seats first
-                    for (let i = 0; i < newPeople.length && peopleAdded < groupPeople.length; i++) {
-                        if (!newPeople[i]) {
-                            newPeople[i] = groupPeople[peopleAdded];
+    
+        // Если свободных мест достаточно, перемещаем всю группу
+        if (targetFreeSeats >= groupPeople.length) {
+            // Обновляем столы
+            setTables(prevTables => {
+                return prevTables.map(table => {
+                    if (table.id === sourceTableId) {
+                        // Удаляем людей из исходного стола
+                        return {
+                            ...table,
+                            people: table.people.map(person =>
+                                (person && person.group === groupName) ? null : person
+                            )
+                        };
+                    } else if (table.id === targetTableId) {
+                        // Добавляем людей на целевой стол
+                        const newPeople = [...table.people];
+                        let peopleAdded = 0;
+    
+                        // Заполняем сначала пустые места
+                        for (let i = 0; i < newPeople.length && peopleAdded < groupPeople.length; i++) {
+                            if (!newPeople[i]) {
+                                newPeople[i] = groupPeople[peopleAdded];
+                                peopleAdded++;
+                            }
+                        }
+    
+                        // Если есть еще люди для добавления, добавляем их
+                        while (peopleAdded < groupPeople.length) {
+                            newPeople.push(groupPeople[peopleAdded]);
                             peopleAdded++;
                         }
+    
+                        return {
+                            ...table,
+                            people: newPeople
+                        };
                     }
-
-                    // If there are still people to add, append them
-                    while (peopleAdded < groupPeople.length) {
-                        newPeople.push(groupPeople[peopleAdded]);
-                        peopleAdded++;
-                    }
-
-                    return {
-                        ...table,
-                        people: newPeople
-                    };
-                }
-                return table;
+                    return table;
+                });
             });
-        });
-
-        // Show transfer notification
-        showTransferNotification(groupName, targetTableId);
+    
+            // Показываем уведомление о перемещении
+            showTransferNotification(groupName, targetTableId);
+        } else if (targetFreeSeats > 0) {
+            // Если свободных мест недостаточно, но они есть, активируем выбор людей
+            setGroupToPlace({
+                groupName: groupName,
+                people: groupPeople,
+                sourceTableId: sourceTableId  // Сохраняем ID исходного стола для последующего удаления
+            });
+            setTargetTableId(targetTableId);
+            setAvailableSeats(targetFreeSeats);
+            setGroupSelectionActive(true);
+        } else {
+            // Если совсем нет мест, показываем сообщение
+            alert(`На столе нет свободных мест`);
+        }
     };
 
     // Function to display transfer notification
@@ -241,81 +382,6 @@ const SeatingArrangement = () => {
         };
     }, []);
 
-    // Improved smooth zoom function
-    const smoothZoom = (targetZoom, mouseX, mouseY) => {
-        // Cancel any ongoing animation
-        if (zoomAnimFrame.current) {
-            cancelAnimationFrame(zoomAnimFrame.current);
-        }
-
-        setIsZooming(true);
-        if (zoomTimeout.current) {
-            clearTimeout(zoomTimeout.current);
-        }
-
-        const container = tablesAreaRef.current;
-        if (!container) return;
-
-        // Set a reasonable duration for the animation (in ms)
-        const duration = 200;
-        const startTime = performance.now();
-        const startZoom = zoom;
-
-        // Use provided mouse coordinates or default to center
-        const rect = container.getBoundingClientRect();
-        const focusX = mouseX !== undefined ? mouseX : rect.width / 2;
-        const focusY = mouseY !== undefined ? mouseY : rect.height / 2;
-
-        // Calculate content coordinates under cursor before zoom change
-        const contentX = (container.scrollLeft + focusX) / startZoom;
-        const contentY = (container.scrollTop + focusY) / startZoom;
-
-        const animateZoomStep = (timestamp) => {
-            const elapsed = timestamp - startTime;
-            const progress = Math.min(elapsed / duration, 1);
-
-            // Easing function (ease-out cubic)
-            const easeProgress = 1 - Math.pow(1 - progress, 3);
-
-            // Calculate current zoom level
-            const currentZoom = startZoom + (targetZoom - startZoom) * easeProgress;
-
-            // Update zoom state
-            setZoom(currentZoom);
-
-            // Calculate new scroll position to keep point under cursor
-            const newScrollX = contentX * currentZoom - focusX;
-            const newScrollY = contentY * currentZoom - focusY;
-
-            // Apply scroll position
-            container.scrollLeft = newScrollX;
-            container.scrollTop = newScrollY;
-
-            if (progress < 1) {
-                zoomAnimFrame.current = requestAnimationFrame(animateZoomStep);
-            } else {
-                // Animation complete
-                zoomTimeout.current = setTimeout(() => {
-                    setIsZooming(false);
-                }, 100);
-            }
-        };
-
-        // Start animation
-        zoomAnimFrame.current = requestAnimationFrame(animateZoomStep);
-    };
-
-    // Handle zoom in button click
-    const handleZoomIn = () => {
-        const targetZoom = Math.min(zoom * 1.25, 1.0);  // Multiply by 1.25 to increase zoom
-        smoothZoom(targetZoom, mousePosition.current.x, mousePosition.current.y);
-    };
-
-    // Handle zoom out button click (for the - button)
-    const handleZoomOut = () => {
-        const targetZoom = Math.max(zoom / 1.25, 0.2);  // Divide by 1.25 to decrease zoom
-        smoothZoom(targetZoom, mousePosition.current.x, mousePosition.current.y);
-    };
     const handleButtonZoomIn = () => {
         // Get container information
         const container = tablesAreaRef.current;
@@ -419,18 +485,6 @@ const SeatingArrangement = () => {
     };
 
     const handleCanvasMouseMove = (e) => {
-        if (isDraggingCanvas && tablesAreaRef.current) {
-            // Calculate how much the mouse has moved
-            const deltaX = e.clientX - dragStartPos.x;
-            const deltaY = e.clientY - dragStartPos.y;
-
-            // Move in the opposite direction of mouse movement for natural "grabbing" feel
-            tablesAreaRef.current.scrollLeft = tablesAreaRef.current.initialScrollLeft - deltaX;
-            tablesAreaRef.current.scrollTop = tablesAreaRef.current.initialScrollTop - deltaY;
-        }
-    };
-
-    const handleMouseMove = (e) => {
         if (isDraggingCanvas && tablesAreaRef.current) {
             // Calculate how much the mouse has moved
             const deltaX = e.clientX - dragStartPos.x;
@@ -1677,7 +1731,12 @@ const SeatingArrangement = () => {
                                     onShowDetails={handleShowTableDetails}
                                     onDrop={(e) => handleTableDrop(e, table.id)}
                                     isTableHighlighted={isTableHighlighted(table.id)}
-                                    tables={tables} // Pass all tables for the drop handler
+                                    tables={tables}
+                                    // Добавляем новые пропсы
+                                    setGroupToPlace={setGroupToPlace}
+                                    setTargetTableId={setTargetTableId}
+                                    setAvailableSeats={setAvailableSeats}
+                                    setGroupSelectionActive={setGroupSelectionActive}
                                 />
                             ))}
                         </div>
@@ -1758,12 +1817,53 @@ const SeatingArrangement = () => {
                     </div>
                 </div>
             )}
+            {groupSelectionActive && groupToPlace && (
+                <div className="fullscreen-popup" onClick={() => setGroupSelectionActive(false)}>
+                    <div className="fullscreen-popup-content" onClick={(e) => e.stopPropagation()}>
+                        <h3 className="popup-title">Выберите {availableSeats} человек, которых разместить за столом</h3>
+
+                        <div className="selection-info">
+                            <p>Группа: {groupToPlace.groupName}</p>
+                            <p>Доступно мест: {availableSeats}</p>
+                            <p>Человек в группе: {groupToPlace.people.length}</p>
+                        </div>
+
+                        <PeopleSelector
+                            people={groupToPlace.people}
+                            maxSelection={availableSeats}
+                            onConfirm={(selectedPeople) => handlePlaceSelectedPeople(selectedPeople)}
+                            onCancel={() => setGroupSelectionActive(false)}
+                        />
+                    </div>
+                </div>
+            )}
         </DndProvider >
     )
 };
 
 
-const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDraggingGroup, people, setPeople, onChairClick, isDraggable, onShowDetails, onDrop, isTableHighlighted, tables }) => {
+
+
+const Table = ({ 
+    table, 
+    setTables, 
+    handleDeleteTable, 
+    draggingGroup, 
+    setDraggingGroup, 
+    people, 
+    setPeople, 
+    onChairClick, 
+    isDraggable, 
+    onShowDetails, 
+    onDrop, 
+    isTableHighlighted, 
+    tables,
+    // Добавляем новые пропсы
+    setGroupToPlace,
+    setTargetTableId,
+    setAvailableSeats,
+    setGroupSelectionActive
+}) => {
     const [isDragging, setIsDragging] = useState(false);
     const [isResizing, setIsResizing] = useState(false);
     const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
@@ -2008,8 +2108,11 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
             const itemType = monitor.getItemType();
 
             if (itemType === 'GROUP') {
-                // Handle regular group drop (from the people sidebar)
-                if (table.people.filter(Boolean).length + item.group.length <= table.chairCount) {
+                // Получаем количество свободных мест за столом
+                const freeSeats = table.chairCount - table.people.filter(Boolean).length;
+
+                // Если группа полностью помещается, размещаем всех как обычно
+                if (item.group.length <= freeSeats) {
                     setTables((prevTables) =>
                         prevTables.map(t =>
                             t.id === table.id
@@ -2024,17 +2127,24 @@ const Table = ({ table, setTables, handleDeleteTable, draggingGroup, setDragging
                             !item.group.some((groupPerson) => groupPerson.name === person.name)
                         )
                     );
+                } else if (freeSeats > 0) {
+                    // Если группа не помещается, но есть свободные места, активируем выбор
+                    setGroupToPlace({
+                        groupName: item.group[0].group,
+                        people: item.group
+                    });
+                    setTargetTableId(table.id);
+                    setAvailableSeats(freeSeats);
+                    setGroupSelectionActive(true);
+                    setDraggingGroup(null);
                 } else {
-                    alert(`The table cannot have more than ${table.chairCount} people`);
+                    alert(`За столом нет свободных мест`);
                 }
             } else if (itemType === 'SEATED_GROUP') {
                 // Pass the drop event to the parent component's handler
                 onDrop && onDrop(monitor.getDropResult());
             }
-        },
-        collect: (monitor) => ({
-            isOver: monitor.isOver()
-        })
+        }
     });
 
     const chairs = [];
