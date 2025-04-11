@@ -54,7 +54,7 @@ const SeatingArrangement = () => {
     // Добавить этот компонент перед компонентом SeatingArrangement
     const PeopleSelector = ({ people, maxSelection, onConfirm, onCancel }) => {
         const [selected, setSelected] = useState([]);
-        
+
         const toggleSelection = (person) => {
             if (selected.includes(person)) {
                 setSelected(selected.filter(p => p !== person));
@@ -62,24 +62,24 @@ const SeatingArrangement = () => {
                 setSelected([...selected, person]);
             }
         };
-        
+
         const handleConfirm = () => {
             onConfirm(selected);
         };
-        
+
         // Определяем, сколько еще мест осталось
         const remainingSeats = maxSelection - selected.length;
-        
+
         return (
             <div className="people-selector">
                 <div className="people-selection-list">
                     {people.map((person, index) => {
                         // Человек блокируется только если он не выбран и нет свободных мест
                         const isBlocked = !selected.includes(person) && remainingSeats === 0;
-                        
+
                         return (
-                            <div 
-                                key={index} 
+                            <div
+                                key={index}
                                 className={`people-selection-item 
                                     ${selected.includes(person) ? 'selected' : ''} 
                                     ${isBlocked ? 'extra-person' : ''}`}
@@ -102,7 +102,7 @@ const SeatingArrangement = () => {
                         );
                     })}
                 </div>
-                
+
                 <div className="selection-status">
                     Выбрано: {selected.length} из {maxSelection} доступных мест
                     {remainingSeats === 0 && people.length > maxSelection && (
@@ -111,10 +111,10 @@ const SeatingArrangement = () => {
                         </div>
                     )}
                 </div>
-                
+
                 <div className="popup-buttons">
-                    <button 
-                        className="primary-btn" 
+                    <button
+                        className="primary-btn"
                         onClick={handleConfirm}
                         disabled={selected.length === 0}
                     >
@@ -131,7 +131,7 @@ const SeatingArrangement = () => {
 
     const handlePlaceSelectedPeople = (selectedPeople) => {
         if (!groupToPlace || !targetTableId) return;
-        
+
         setTables((prevTables) => {
             return prevTables.map(table => {
                 // Обрабатываем исходный стол (если это перемещение между столами)
@@ -150,7 +150,7 @@ const SeatingArrangement = () => {
                 else if (table.id === targetTableId) {
                     // Копируем текущих людей за столом
                     const updatedPeople = [...table.people];
-                    
+
                     // Находим свободные места и размещаем выбранных людей
                     let seatsUsed = 0;
                     for (let i = 0; i < updatedPeople.length && seatsUsed < selectedPeople.length; i++) {
@@ -159,31 +159,31 @@ const SeatingArrangement = () => {
                             seatsUsed++;
                         }
                     }
-                    
+
                     // Если остались свободные места, добавляем оставшихся выбранных людей
                     while (seatsUsed < selectedPeople.length) {
                         updatedPeople.push(selectedPeople[seatsUsed]);
                         seatsUsed++;
                     }
-                    
+
                     return { ...table, people: updatedPeople };
                 }
                 return table;
             });
         });
-        
+
         // Если это не перемещение между столами, удаляем выбранных людей из общего списка
         if (!groupToPlace.sourceTableId) {
-            setPeople((prevPeople) => 
-                prevPeople.filter(person => 
+            setPeople((prevPeople) =>
+                prevPeople.filter(person =>
                     !selectedPeople.some(selected => selected.name === person.name)
                 )
             );
         }
-        
+
         // Показываем уведомление о перемещении
         showTransferNotification(groupToPlace.groupName, targetTableId);
-        
+
         // Сбрасываем состояние выбора
         setGroupSelectionActive(false);
         setGroupToPlace(null);
@@ -256,30 +256,30 @@ const SeatingArrangement = () => {
     const processGroupTransfer = (data, targetTableId, tables, setTables) => {
         const sourceTableId = data.tableId;
         const groupName = data.groupName;
-    
+
         // Не обрабатываем, если перетаскивание на тот же стол
         if (sourceTableId === targetTableId) return;
-    
+
         // Находим исходный и целевой столы
         const sourceTable = tables.find(t => t.id === sourceTableId);
         const targetTable = tables.find(t => t.id === targetTableId);
-    
+
         if (!sourceTable || !targetTable) {
             console.error('Исходный или целевой стол не найден');
             return;
         }
-    
+
         // Получаем людей из этой группы в исходном столе
         const groupPeople = sourceTable.people.filter(p => p && p.group === groupName);
-    
+
         if (groupPeople.length === 0) {
             console.error('Не найдены люди для перемещения');
             return;
         }
-    
+
         // Проверяем, есть ли свободные места на целевом столе
         const targetFreeSeats = targetTable.chairCount - targetTable.people.filter(Boolean).length;
-    
+
         // Если свободных мест достаточно, перемещаем всю группу
         if (targetFreeSeats >= groupPeople.length) {
             // Обновляем столы
@@ -297,7 +297,7 @@ const SeatingArrangement = () => {
                         // Добавляем людей на целевой стол
                         const newPeople = [...table.people];
                         let peopleAdded = 0;
-    
+
                         // Заполняем сначала пустые места
                         for (let i = 0; i < newPeople.length && peopleAdded < groupPeople.length; i++) {
                             if (!newPeople[i]) {
@@ -305,13 +305,13 @@ const SeatingArrangement = () => {
                                 peopleAdded++;
                             }
                         }
-    
+
                         // Если есть еще люди для добавления, добавляем их
                         while (peopleAdded < groupPeople.length) {
                             newPeople.push(groupPeople[peopleAdded]);
                             peopleAdded++;
                         }
-    
+
                         return {
                             ...table,
                             people: newPeople
@@ -320,7 +320,7 @@ const SeatingArrangement = () => {
                     return table;
                 });
             });
-    
+
             // Показываем уведомление о перемещении
             showTransferNotification(groupName, targetTableId);
         } else if (targetFreeSeats > 0) {
@@ -591,9 +591,10 @@ const SeatingArrangement = () => {
             const safeY = Math.min(y, containerHeight - tableHeight - spacing);
 
             newTables.push({
-                id: currentTime + i, // Ensure unique IDs
+                id: currentTime + i,
                 people: [],
                 chairCount,
+                shape: 'round', // Add this line
                 x: safeX,
                 y: safeY,
                 width: tableWidth,
@@ -1153,6 +1154,7 @@ const SeatingArrangement = () => {
                 id: Date.now(),
                 people: [],
                 chairCount,
+                shape: 'round', // Add this line
                 x: x,
                 y: y,
                 width: tableWidth,
@@ -1844,21 +1846,20 @@ const SeatingArrangement = () => {
 
 
 
-const Table = ({ 
-    table, 
-    setTables, 
-    handleDeleteTable, 
-    draggingGroup, 
-    setDraggingGroup, 
-    people, 
-    setPeople, 
-    onChairClick, 
-    isDraggable, 
-    onShowDetails, 
-    onDrop, 
-    isTableHighlighted, 
+const Table = ({
+    table,
+    setTables,
+    handleDeleteTable,
+    draggingGroup,
+    setDraggingGroup,
+    people,
+    setPeople,
+    onChairClick,
+    isDraggable,
+    onShowDetails,
+    onDrop,
+    isTableHighlighted,
     tables,
-    // Добавляем новые пропсы
     setGroupToPlace,
     setTargetTableId,
     setAvailableSeats,
@@ -1929,8 +1930,6 @@ const Table = ({
         autoScrollSpeed.current = { x: 0, y: 0 };
     };
 
-
-
     const handleTableMouseMove = (e) => {
         if (isDragging && tableRef.current) {
             // Mark this as a drag operation, not a click
@@ -1969,9 +1968,6 @@ const Table = ({
             e.preventDefault();
         }
     };
-
-    // Function to stop auto-scrolling
-
 
     const handleTableMouseUp = () => {
         // Определяем, был ли это клик или перетаскивание
@@ -2147,88 +2143,391 @@ const Table = ({
         }
     });
 
-    const chairs = [];
-    const angleStep = 360 / table.chairCount;
-    const radius = 140;
+    // Functions to render chairs based on table shape
+    const renderRoundChairs = () => {
+        const chairs = [];
+        const angleStep = 360 / table.chairCount;
+        const radius = 140;
+        const peopleOnTable = table.people || [];
 
-    const peopleOnTable = table.people || [];
+        for (let i = 0; i < table.chairCount; i++) {
+            const angle = angleStep * i;
+            const xPosition = radius * Math.cos((angle * Math.PI) / 180);
+            const yPosition = radius * Math.sin((angle * Math.PI) / 180);
 
-    for (let i = 0; i < table.chairCount; i++) {
-        const angle = angleStep * i;
-        const xPosition = radius * Math.cos((angle * Math.PI) / 180);
-        const yPosition = radius * Math.sin((angle * Math.PI) / 180);
+            const chairStyle = {
+                position: 'absolute',
+                transformOrigin: 'center',
+                width: '60px',
+                height: '60px',
+                backgroundImage: peopleOnTable[i] ? "url('/red1.png')" : "url('/green2.png')",
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                backgroundRepeat: 'no-repeat',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                borderRadius: '50%',
+                fontSize: '12px',
+                textAlign: 'center',
+                left: `calc(50% + ${xPosition}px)`,
+                top: `calc(50% + ${yPosition}px)`,
+                cursor: 'pointer'
+            };
 
-        const chairStyle = {
-            position: 'absolute',
-            transformOrigin: 'center',
-            width: '60px',
-            height: '60px',
-            backgroundImage: peopleOnTable[i] ? "url('/red1.png')" : "url('/green2.png')",
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            borderRadius: '50%',
-            fontSize: '12px',
-            textAlign: 'center',
-            left: `calc(50% + ${xPosition}px)`,
-            top: `calc(50% + ${yPosition}px)`,
-            cursor: 'pointer'
-        };
+            const nameOverlayStyle = {
+                position: 'absolute',
+                left: '50%',
+                top: '50%',
+                transform: 'translate(-50%, -50%)',
+                backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                padding: '2px 6px',
+                color: "#211812",
+                borderRadius: '4px',
+                fontSize: '10px',
+                fontWeight: 'bold',
+                maxWidth: '55px',
+                textAlign: 'center',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                zIndex: 5
+            };
 
-        const nameOverlayStyle = {
-            position: 'absolute',
-            left: '50%',
-            top: '50%',
-            transform: 'translate(-50%, -50%)',
-            backgroundColor: 'rgba(255, 255, 255, 0.8)',
-            padding: '2px 6px',
-            color: "#211812",
-            borderRadius: '4px',
-            fontSize: '10px',
-            fontWeight: 'bold',
-            maxWidth: '55px',
-            textAlign: 'center',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            zIndex: 5
-        };
+            if (angle >= 0 && angle < 90) {
+                chairStyle.transform = `rotate(${angle + 90}deg)`;
+            } else if (angle >= 90 && angle < 180) {
+                chairStyle.transform = `rotate(${angle + 90}deg)`;
+            } else if (angle >= 180 && angle < 270) {
+                chairStyle.transform = `rotate(${angle + 90}deg)`;
+            } else {
+                chairStyle.transform = `rotate(${angle + 90}deg)`;
+            }
 
-        if (angle >= 0 && angle < 90) {
-            chairStyle.transform = `rotate(${angle + 90}deg)`;
-        } else if (angle >= 90 && angle < 180) {
-            chairStyle.transform = `rotate(${angle + 90}deg)`;
-        } else if (angle >= 180 && angle < 270) {
-            chairStyle.transform = `rotate(${angle + 90}deg)`;
-        } else {
-            chairStyle.transform = `rotate(${angle + 90}deg)`;
+            chairs.push(
+                <div
+                    key={i}
+                    className="chair"
+                    style={chairStyle}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onChairClick(i);
+                    }}
+                    title={peopleOnTable[i] ? `Нажмите на стул, чтобы удалить ${peopleOnTable[i].name}` : "Нажмите на стул, чтобы добавить человека"}
+                >
+                    {peopleOnTable[i] && (
+                        <div
+                            className="person-name-overlay"
+                            style={nameOverlayStyle}
+                        >
+                            {peopleOnTable[i].name}
+                        </div>
+                    )}
+                </div>
+            );
         }
 
-        chairs.push(
-            <div
-                key={i}
-                className="chair"
-                style={chairStyle}
-                onClick={(e) => {
-                    e.stopPropagation(); // Prevent triggering table click
-                    onChairClick(i);
-                }}
-                title={peopleOnTable[i] ? `Նշեք աթոռը, որպեսզի հեռացնեք ${peopleOnTable[i].name}` : "Նշեք աթոռը մարդ ավելացնելու համար"}
-            >
-                {peopleOnTable[i] && (
-                    <div
-                        className="person-name-overlay"
-                        style={nameOverlayStyle}
-                    >
-                        {peopleOnTable[i].name}
-                    </div>
-                )}
-            </div>
-        );
-    }
+        return chairs;
+    };
+    const renderRectangleChairs = () => {
+        const chairs = [];
+        // Размеры стола и добавленная граница
+        const tableWidth = 400;
+        const tableHeight = 150;
+        const border = 50; // Граница
+        const peopleOnTable = table.people || [];
+
+        const totalChairs = table.chairCount;
+
+        let chairsLeft = 0;
+        let chairsRight = 0;
+        let chairsTop = 0;   
+        let chairsBottom = 0; 
+
+        // Изначально выделяем по 1 стулу слева и справа (если стульев больше 4)
+        if (totalChairs > 4) {
+            chairsLeft = 1;
+            chairsRight = 1;
+            // Оставшиеся стулья распределяются на верхнюю и нижнюю стороны
+            const remainingChairs = totalChairs - 2; // 2 стула на левой и правой стороне
+            const maxTopBottom = Math.floor(remainingChairs / 2);
+            chairsTop = maxTopBottom;
+            chairsBottom = remainingChairs - chairsTop;
+        } else {
+            // Если стульев меньше или равно 4, они распределяются только по верхней и нижней стороне
+            chairsTop = Math.ceil(totalChairs / 2);
+            chairsBottom = totalChairs - chairsTop;
+        }
+
+        let chairIndex = 0;
+
+        // Левый край стола
+        if (chairsLeft > 0) {
+            chairs.push(
+                <div
+                    key={chairIndex}
+                    className="chair"
+                    style={{
+                        position: 'absolute',
+                        width: '60px',
+                        height: '60px',
+                        backgroundImage: peopleOnTable[chairIndex] ? "url('/red1.png')" : "url('/green2.png')",
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        backgroundRepeat: 'no-repeat',
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        borderRadius: '50%',
+                        fontSize: '12px',
+                        textAlign: 'center',
+                        left: `calc(50% - ${250}px)`, // Позиция слева
+                        top: `calc(50% - ${15}px)`, // Центр по вертикали
+                        cursor: 'pointer',
+                        transform: 'rotate(270deg)' // Направлен влево
+                    }}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onChairClick(chairIndex);
+                    }}
+                    title={peopleOnTable[chairIndex] ? `Нажмите на стул, чтобы удалить ${peopleOnTable[chairIndex].name}` : "Нажмите на стул, чтобы добавить человека"}
+                >
+                    {peopleOnTable[chairIndex] && (
+                        <div
+                            className="person-name-overlay"
+                            style={{
+                                position: 'absolute',
+                                left: '50%',
+                                top: '50%',
+                                transform: 'translate(-50%, -50%)',
+                                backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                                padding: '2px 6px',
+                                color: "#211812",
+                                borderRadius: '4px',
+                                fontSize: '10px',
+                                fontWeight: 'bold',
+                                maxWidth: '55px',
+                                textAlign: 'center',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                zIndex: 5
+                            }}
+                        >
+                            {peopleOnTable[chairIndex].name}
+                        </div>
+                    )}
+                </div>
+            );
+
+            chairIndex++;
+        }
+
+        // Правая сторона стола
+        if (chairsRight > 0) {
+            chairs.push(
+                <div
+                    key={chairIndex}
+                    className="chair"
+                    style={{
+                        position: 'absolute',
+                        width: '60px',
+                        height: '60px',
+                        backgroundImage: peopleOnTable[chairIndex] ? "url('/red1.png')" : "url('/green2.png')",
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        backgroundRepeat: 'no-repeat',
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        borderRadius: '50%',
+                        fontSize: '12px',
+                        textAlign: 'center',
+                        left: `calc(50% + ${190}px)`, // Позиция справа
+                        top: `calc(50% - ${15}px)`, // Центр по вертикали
+                        cursor: 'pointer',
+                        transform: 'rotate(90deg)' // Направлен вправо
+                    }}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onChairClick(chairIndex);
+                    }}
+                    title={peopleOnTable[chairIndex] ? `Нажмите на стул, чтобы удалить ${peopleOnTable[chairIndex].name}` : "Нажмите на стул, чтобы добавить человека"}
+                >
+                    {peopleOnTable[chairIndex] && (
+                        <div
+                            className="person-name-overlay"
+                            style={{
+                                position: 'absolute',
+                                left: '50%',
+                                top: '50%',
+                                transform: 'translate(-50%, -50%)',
+                                backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                                padding: '2px 6px',
+                                color: "#211812",
+                                borderRadius: '4px',
+                                fontSize: '10px',
+                                fontWeight: 'bold',
+                                maxWidth: '55px',
+                                textAlign: 'center',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                zIndex: 5
+                            }}
+                        >
+                            {peopleOnTable[chairIndex].name}
+                        </div>
+                    )}
+                </div>
+            );
+
+            chairIndex++;
+        }
+
+        // Верхняя сторона стола
+        for (let i = 0; i < chairsTop; i++) {
+            const ratio = chairsTop === 1 ? 0.5 : i / (chairsTop - 1);
+            const xPosition = ((tableWidth - 50) * ratio) - tableWidth / 2;
+            const yPosition = -tableHeight / 2 - border + 10;
+
+            chairs.push(
+                <div
+                    key={chairIndex}
+                    className="chair"
+                    style={{
+                        position: 'absolute',
+                        width: '60px',
+                        height: '60px',
+                        backgroundImage: peopleOnTable[chairIndex] ? "url('/red1.png')" : "url('/green2.png')",
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        backgroundRepeat: 'no-repeat',
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        borderRadius: '50%',
+                        fontSize: '12px',
+                        textAlign: 'center',
+                        left: `calc(50% + ${xPosition}px)`,
+                        top: `calc(50% + ${yPosition}px)`,
+                        cursor: 'pointer',
+                        transform: 'rotate(0deg)' // Направлен вверх
+                    }}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onChairClick(chairIndex);
+                    }}
+                    title={peopleOnTable[chairIndex] ? `Нажмите на стул, чтобы удалить ${peopleOnTable[chairIndex].name}` : "Нажмите на стул, чтобы добавить человека"}
+                >
+                    {peopleOnTable[chairIndex] && (
+                        <div
+                            className="person-name-overlay"
+                            style={{
+                                position: 'absolute',
+                                left: '50%',
+                                top: '50%',
+                                transform: 'translate(-50%, -50%)',
+                                backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                                padding: '2px 6px',
+                                color: "#211812",
+                                borderRadius: '4px',
+                                fontSize: '10px',
+                                fontWeight: 'bold',
+                                maxWidth: '55px',
+                                textAlign: 'center',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                zIndex: 5
+                            }}
+                        >
+                            {peopleOnTable[chairIndex].name}
+                        </div>
+                    )}
+                </div>
+            );
+
+            chairIndex++;
+        }
+
+        // Нижняя сторона стола
+        for (let i = 0; i < chairsBottom; i++) {
+            const ratio = chairsBottom === 1 ? 0.5 : i / (chairsBottom - 1);
+            const xPosition = ((tableWidth - 50) * ratio) - tableWidth / 2;
+            const yPosition = tableHeight / 2;
+
+            chairs.push(
+                <div
+                    key={chairIndex}
+                    className="chair"
+                    style={{
+                        position: 'absolute',
+                        width: '60px',
+                        height: '60px',
+                        backgroundImage: peopleOnTable[chairIndex] ? "url('/red1.png')" : "url('/green2.png')",
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        backgroundRepeat: 'no-repeat',
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        borderRadius: '50%',
+                        fontSize: '12px',
+                        textAlign: 'center',
+                        left: `calc(50% + ${xPosition}px)`,
+                        top: `calc(50% + ${yPosition}px)`,
+                        cursor: 'pointer',
+                        transform: 'rotate(180deg)' // Направлен вниз
+                    }}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onChairClick(chairIndex);
+                    }}
+                    title={peopleOnTable[chairIndex] ? `Нажмите на стул, чтобы удалить ${peopleOnTable[chairIndex].name}` : "Нажмите на стул, чтобы добавить человека"}
+                >
+                    {peopleOnTable[chairIndex] && (
+                        <div
+                            className="person-name-overlay"
+                            style={{
+                                position: 'absolute',
+                                left: '50%',
+                                top: '50%',
+                                transform: 'translate(-50%, -50%)',
+                                backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                                padding: '2px 6px',
+                                color: "#211812",
+                                borderRadius: '4px',
+                                fontSize: '10px',
+                                fontWeight: 'bold',
+                                maxWidth: '55px',
+                                textAlign: 'center',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                zIndex: 5
+                            }}
+                        >
+                            {peopleOnTable[chairIndex].name}
+                        </div>
+                    )}
+                </div>
+            );
+
+            chairIndex++;
+        }
+
+        return chairs;
+    };
+
+
+
+
+
+
+
+    // Get current shape and render appropriate table
+    const shape = table.shape || 'round';
 
     return (
         <div
@@ -2237,7 +2536,7 @@ const Table = ({
                 drop(node);
             }}
             className={`table-container ${isOver ? 'drop-target' : ''} ${isTableHighlighted ? 'highlighted-table' : ''}`}
-            data-id={table.id} // Add this line
+            data-id={table.id}
             onDrop={(e) => onDrop && onDrop(e)}
             onDragOver={(e) => e.preventDefault()}
             style={{
@@ -2249,9 +2548,8 @@ const Table = ({
             onMouseDown={handleDragStart}
         >
             <div className="table-header">
-                <h3>Սեղան {table.id} (Աթոռներ: {table.chairCount})</h3>
+                <h3>Сеղան {table.id} (Աթոռներ: {table.chairCount})</h3>
                 <div className="table-buttons">
-                    {/* Remove info button since entire table is clickable now */}
                     <button
                         onClick={(e) => {
                             e.stopPropagation();
@@ -2263,18 +2561,42 @@ const Table = ({
                     </button>
                 </div>
             </div>
-            <div className="table">
-                <div
-                    className="table-top"
-                >
-                    {chairs}
+
+            {shape === 'rectangle' ? (
+                // Для прямоугольного стола сохраняем класс table, но перезаписываем его стиль
+                <div className="table" style={{
+                    margin: "20px",
+                    width: "400px",
+                    height: "150px",
+                    border: "30px solid #e7d8c7",
+                    borderRadius: "0%",
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    backgroundImage: "url('/table2.png')",
+                    backgroundSize: "100% 100%",
+                    backgroundRepeat: "no-repeat",
+                    // backgroundPosition: "center"
+                }}>
+
+                    {renderRectangleChairs()}
                 </div>
-            </div>
-        </div>
+            ) : (
+                // Оригинальный круглый стол - полностью без изменений
+                <div className="table">
+                    <div className="table-top">
+                        {renderRoundChairs()}
+                    </div>
+                </div>
+            )
+            }
+        </div >
     );
+
 };
 
 const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeople }) => {
+    const [tableShape, setTableShape] = useState(table ? (table.shape || 'round') : 'round');
     // Локальное состояние для отслеживания изменений количества стульев
     const [chairCount, setChairCount] = useState(table ? table.chairCount : 12);
 
@@ -2282,8 +2604,25 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
     useEffect(() => {
         if (table) {
             setChairCount(table.chairCount);
+            setTableShape(table.shape || 'round'); // Add this line
         }
     }, [table]);
+
+    const applyTableShapeChange = () => {
+        if (table && tableShape !== table.shape) {
+            setTables(prevTables =>
+                prevTables.map(t => {
+                    if (t.id === table.id) {
+                        return {
+                            ...t,
+                            shape: tableShape
+                        };
+                    }
+                    return t;
+                })
+            );
+        }
+    };
 
     // Обработчик изменения количества стульев
     const handleChairCountChange = (e) => {
@@ -2428,6 +2767,85 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
             <div className="table-details-content">
                 {table ? (
                     <>
+                        <div style={{
+                            marginTop: '15px',
+                            padding: '10px',
+                            border: '1px solid #eee',
+                            borderRadius: '5px'
+                        }}>
+                            <h4 style={{
+                                margin: '0 0 10px 0',
+                                fontSize: '14px',
+                                fontWeight: 'bold'
+                            }}>Изменить форму стола</h4>
+
+                            <div style={{
+                                display: 'flex',
+                                justifyContent: 'space-around',
+                                margin: '10px 0'
+                            }}>
+                                <div
+                                    style={{
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'center',
+                                        cursor: 'pointer',
+                                        padding: '8px',
+                                        borderRadius: '5px',
+                                        backgroundColor: tableShape === 'round' ? 'rgba(52, 152, 219, 0.2)' : 'transparent'
+                                    }}
+                                    onClick={() => setTableShape('round')}
+                                >
+                                    <div style={{
+                                        width: '60px',
+                                        height: '60px',
+                                        backgroundColor: '#8B4513',
+                                        borderRadius: '50%',
+                                        marginBottom: '5px'
+                                    }}></div>
+                                    <span>Круглый</span>
+                                </div>
+
+                                <div
+                                    style={{
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'center',
+                                        cursor: 'pointer',
+                                        padding: '8px',
+                                        borderRadius: '5px',
+                                        backgroundColor: tableShape === 'rectangle' ? 'rgba(52, 152, 219, 0.2)' : 'transparent'
+                                    }}
+                                    onClick={() => setTableShape('rectangle')}
+                                >
+                                    <div style={{
+                                        width: '60px',
+                                        height: '40px',
+                                        backgroundColor: 'white',
+                                        border: '2px solid #8B4513',
+                                        borderRadius: '5px',
+                                        marginBottom: '5px'
+                                    }}></div>
+                                    <span>Прямоугольный</span>
+                                </div>
+                            </div>
+
+                            <button
+                                style={{
+                                    padding: '5px 10px',
+                                    backgroundColor: '#3498db',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '5px',
+                                    cursor: 'pointer',
+                                    opacity: (table && tableShape === (table.shape || 'round')) ? 0.5 : 1
+                                }}
+                                onClick={applyTableShapeChange}
+                                disabled={table && tableShape === (table.shape || 'round')}
+                            >
+                                Применить
+                            </button>
+                        </div>
                         <div className="table-stats">
                             <p>Total Chairs: {table.chairCount}</p>
                             <p>Occupied Chairs: {table.people.filter(Boolean).length}</p>
