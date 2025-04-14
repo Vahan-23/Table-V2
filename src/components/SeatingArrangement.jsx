@@ -49,7 +49,94 @@ const SeatingArrangement = () => {
     const [groupToPlace, setGroupToPlace] = useState(null);
     const [targetTableId, setTargetTableId] = useState(null);
     const [availableSeats, setAvailableSeats] = useState(0);
+    
+    // Добавляем новые состояния для отслеживания позиции перетаскивания
+    const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
 
+
+    const handleCanvasDrop = (e) => {
+        e.preventDefault();
+        window.lastDropEvent = e; // Сохраняем последнее событие drop
+        
+        console.log("Drop event on canvas triggered!");
+        
+        // Если нет перетаскиваемой группы, выходим
+        if (!draggingGroup) {
+            console.log("No dragging group found");
+            return;
+        }
+        
+        // Проверяем, было ли уже перетаскивание на стол
+        if (window.droppedOnTable) {
+            console.log("Already dropped on table, skipping canvas drop");
+            window.droppedOnTable = false;
+            return;
+        }
+        
+        // Получаем координаты холста
+        const rect = tablesAreaRef.current.getBoundingClientRect();
+        
+        // Вычисляем позицию клика относительно холста с учетом масштабирования и прокрутки
+        const x = (e.clientX - rect.left + tablesAreaRef.current.scrollLeft) / zoom;
+        const y = (e.clientY - rect.top + tablesAreaRef.current.scrollTop) / zoom;
+        
+        console.log(`Creating table at position: ${x}, ${y}`);
+        
+        // Создаем новый стол
+        const newTable = {
+            id: Date.now(),
+            x: x - 150,
+            y: y - 150,
+            width: 300,
+            height: 300,
+            people: draggingGroup,
+            chairCount: chairCount,
+            shape: 'round',
+        };
+        
+        // Добавляем новый стол
+        setTables(prevTables => [newTable, ...prevTables]);
+        
+        // Удаляем перенесенных людей из общего списка
+        setPeople(prevPeople => 
+            prevPeople.filter(person => 
+                !draggingGroup.some(groupPerson => groupPerson.name === person.name)
+            )
+        );
+        
+        // Показываем уведомление о создании стола
+        const notification = document.createElement('div');
+        notification.className = 'transfer-notification';
+        notification.textContent = `Создан новый стол с группой ${draggingGroup[0]?.group || ''}`;
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.classList.add('show');
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => {
+                    document.body.removeChild(notification);
+                }, 300);
+            }, 2000);
+        }, 100);
+        
+        // Очищаем состояние перетаскивания
+        setDraggingGroup(null);
+    };
+
+    // Обработчик для отслеживания позиции перетаскивания
+    const handleCanvasDragOver = (e) => {
+        e.preventDefault();
+        e.stopPropagation(); // Предотвращаем всплытие события
+        
+        if (draggingGroup) {
+            const rect = tablesAreaRef.current.getBoundingClientRect();
+            setDragPosition({
+                x: (e.clientX - rect.left + tablesAreaRef.current.scrollLeft) / zoom,
+                y: (e.clientY - rect.top + tablesAreaRef.current.scrollTop) / zoom,
+            });
+        }
+    };
 
     // Добавить этот компонент перед компонентом SeatingArrangement
     const PeopleSelector = ({ people, maxSelection, onConfirm, onCancel }) => {
@@ -1631,7 +1718,6 @@ const SeatingArrangement = () => {
                     <div className="groups-header">
                         <div className="data-management">
                             <div className="data-buttons">
-
                                 <button
                                     className="secondary-btn create-all-tables-btn"
                                     onClick={createTablesForAllGroups}
@@ -1670,14 +1756,14 @@ const SeatingArrangement = () => {
                             <div className="zoom-buttons">
                                 <button
                                     className="zoom-btn zoom-out-btn"
-                                    onClick={handleButtonZoomOut}  // CHANGE THIS to handleZoomIn (this will decrease zoom)
+                                    onClick={handleButtonZoomOut}
                                 >−</button>
                                 <span className="zoom-percentage">
                                     {Math.round(zoom * 100)}%
                                 </span>
                                 <button
                                     className="zoom-btn zoom-in-btn"
-                                    onClick={handleButtonZoomIn}  // CHANGE THIS to handleZoomOut (this will increase zoom)
+                                    onClick={handleButtonZoomIn}
                                 >+</button>
                             </div>
                         </div>
@@ -1688,11 +1774,23 @@ const SeatingArrangement = () => {
                         />
 
                         <div
-                            className={`tables-area ${isDraggingCanvas ? 'dragging' : ''}`}
+                            className={`tables-area ${isDraggingCanvas ? 'dragging' : ''} ${draggingGroup ? 'active-drop-area' : ''}`}
                             ref={tablesAreaRef}
                             onMouseDown={handleCanvasMouseDown}
-                            onMouseMove={handleMouseMoveOnCanvas} // Добавить этот обработчик
-                            onDragOver={e => e.preventDefault()}
+                            onMouseMove={handleMouseMoveOnCanvas}
+                            onDragOver={(e) => {
+                                handleCanvasDragOver(e);
+                                // Визуально показываем, что здесь можно отпустить
+                                e.currentTarget.style.backgroundColor = 'rgba(52, 152, 219, 0.05)';
+                            }}
+                            onDragLeave={(e) => {
+                                // Убираем подсветку при уходе
+                                e.currentTarget.style.backgroundColor = '';
+                            }}
+                            onDrop={(e) => {
+                                e.currentTarget.style.backgroundColor = '';
+                                handleCanvasDrop(e);
+                            }}
                             style={{
                                 transform: `scale(${zoom})`,
                                 transformOrigin: 'top left',
@@ -1703,19 +1801,42 @@ const SeatingArrangement = () => {
                                 minHeight: `${100 / zoom}%`,
                                 padding: '20px',
                                 position: 'relative',
-                                cursor: isDraggingCanvas ? 'grabbing' : 'default',
+                                cursor: isDraggingCanvas ? 'grabbing' : (draggingGroup ? 'copy' : 'default'),
                                 '--zoom-level': zoom,
                                 transition: isZooming ? 'transform 0.1s ease-out' : 'none',
                                 willChange: 'transform',
                             }}
                         >
+                            {/* Показываем визуальный индикатор при перетаскивании группы */}
                             {draggingGroup && (
-                                <NewTable
-                                    draggingGroup={draggingGroup}
-                                    setTables={setTables}
-                                    setDraggingGroup={setDraggingGroup}
-                                    setPeople={setPeople}
-                                />
+                                <div 
+                                    className="new-table-preview" 
+                                    style={{
+                                        position: 'absolute',
+                                        left: `${dragPosition.x - 150}px`,
+                                        top: `${dragPosition.y - 150}px`,
+                                        width: '300px',
+                                        height: '300px',
+                                        borderRadius: '50%',
+                                        border: '2px dashed #3498db',
+                                        backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                                        pointerEvents: 'none',
+                                        display: 'flex',
+                                        justifyContent: 'center',
+                                        alignItems: 'center',
+                                        zIndex: 1
+                                    }}
+                                >
+                                    <div style={{
+                                        backgroundColor: 'rgba(52, 152, 219, 0.7)',
+                                        color: 'white',
+                                        padding: '8px 12px',
+                                        borderRadius: '4px',
+                                        fontSize: '14px'
+                                    }}>
+                                        Отпустите для создания стола
+                                    </div>
+                                </div>
                             )}
 
                             {tables.map((table) => (
@@ -1734,7 +1855,6 @@ const SeatingArrangement = () => {
                                     onDrop={(e) => handleTableDrop(e, table.id)}
                                     isTableHighlighted={isTableHighlighted(table.id)}
                                     tables={tables}
-                                    // Добавляем новые пропсы
                                     setGroupToPlace={setGroupToPlace}
                                     setTargetTableId={setTargetTableId}
                                     setAvailableSeats={setAvailableSeats}
@@ -3061,13 +3181,21 @@ const Group = ({ group, groupName, setDraggingGroup }) => {
     const [{ isDragging }, drag] = useDrag({
         type: 'GROUP',
         item: () => {
-            // Set dragging state when drag begins
+            console.log("Drag started for group:", groupName); // Отладочный вывод
+            // Устанавливаем состояние перетаскивания когда начинается drag
             setDraggingGroup(group);
-            return { group };
+            return { group, groupName };
         },
-        end: () => {
-            // Clear dragging state when drag operation ends
-            setDraggingGroup(null);
+        end: (item, monitor) => {
+            console.log("Drag ended for group:", groupName); // Отладочный вывод
+            console.log("Drop result:", monitor.getDropResult());
+            console.log("Did drop:", monitor.didDrop());
+            
+            // В любом случае очищаем состояние перетаскивания
+            // Это решает проблему "застрявшей" группы
+            setTimeout(() => {
+                setDraggingGroup(null);
+            }, 100);
         },
         collect: (monitor) => ({
             isDragging: monitor.isDragging(),
@@ -3078,71 +3206,6 @@ const Group = ({ group, groupName, setDraggingGroup }) => {
         <div ref={drag} className="group-card" style={{ opacity: isDragging ? 0.5 : 1 }}>
             <div className="group-name">Խումբ {groupName}</div>
             <div className="group-count">{group.length} чел.</div>
-        </div>
-    );
-};
-
-const NewTable = ({ draggingGroup, setTables, setDraggingGroup, setPeople }) => {
-    const [{ isOver }, drop] = useDrop({
-        accept: 'GROUP',
-        drop: (item) => {
-            const newTable = {
-                id: `table-${Date.now()}`,
-                x: 200,
-                y: 200,
-                width: 200,
-                height: 150,
-                people: item.group,
-                chairCount: 12, // Фиксированное количество стульев - 12
-            };
-
-            setTables((prevTables) => [newTable, ...prevTables]);
-            setPeople((prevPeople) =>
-                prevPeople.filter((person) =>
-                    !item.group.some((groupPerson) => groupPerson.name === person.name)
-                )
-            );
-
-            // Clear dragging state after successful drop
-            setDraggingGroup(null);
-        },
-        collect: (monitor) => ({
-            isOver: monitor.isOver(),
-        }),
-    });
-
-    return (
-        <div
-            ref={drop}
-            className={`new-table-dropzone ${isOver ? 'hovered' : ''}`}
-            style={{
-                marginBottom: '20px',
-                padding: '15px',
-                border: '2px dashed #3498db',
-                borderRadius: '8px',
-                backgroundColor: isOver ? 'rgba(52, 152, 219, 0.47)' : 'rgba(52, 152, 219, 0.05)',
-                transition: 'all 0.3s ease'
-            }}
-        >
-            <div className="dropzone-content" style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                textAlign: 'center',
-                padding: '20px'
-            }}>
-                <div className="dropzone-icon" style={{
-                    fontSize: '32px',
-                    color: '#3498db',
-                    marginBottom: '10px'
-                }}>+</div>
-                <div className="dropzone-text" style={{
-                    fontSize: '16px',
-                    fontWeight: 'bold',
-                    color: '#333'
-                }}>Քաշեք խումբը այստեղ՝ նոր սեղան ստեղծելու համար</div>
-            </div>
         </div>
     );
 };

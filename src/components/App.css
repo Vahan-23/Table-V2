@@ -532,6 +532,30 @@ button {
   cursor: grabbing;
 }
 
+.active-drop-area {
+  background-color: rgba(52, 152, 219, 0.05);
+  border: 2px dashed rgba(52, 152, 219, 0.3);
+}
+
+.new-table-preview {
+  animation: pulse 1.5s infinite;
+  box-shadow: 0 0 10px rgba(52, 152, 219, 0.5);
+}
+
+@keyframes pulse {
+  0% {
+      transform: scale(1);
+      opacity: 0.7;
+  }
+  50% {
+      transform: scale(1.02);
+      opacity: 0.9;
+  }
+  100% {
+      transform: scale(1);
+      opacity: 0.7;
+  }
+}
 /* Table Styles */
 .table-container {
   /* background-color: white; */
@@ -1780,10 +1804,75 @@ button {
 
 /* Table drop target highlight */
 .table-container.drop-target {
-  outline: 2px dashed #3498db;
-  outline-offset: 5px;
-  background-color: rgba(52, 152, 219, 0.1);
+  outline: 3px solid #27ae60 !important;
+  box-shadow: 0 0 15px rgba(39, 174, 96, 0.5);
+  animation: pulse-green 1.5s infinite;
 }
+
+.table-container.drop-target::after {
+  content: "Добавить группу к столу";
+  position: absolute;
+  top: -30px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #27ae60;
+  color: white;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  z-index: 100;
+}
+
+.tables-area.active-drop-area {
+  background-color: rgba(52, 152, 219, 0.05);
+  border: 2px dashed rgba(52, 152, 219, 0.3);
+}
+
+.tables-area.create-table-zone::after {
+  content: "Отпустите для создания нового стола";
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #3498db;
+  color: white;
+  padding: 6px 15px;
+  border-radius: 4px;
+  font-size: 14px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+}
+.new-table-preview {
+  animation: pulse-blue 1.5s infinite;
+  box-shadow: 0 0 20px rgba(52, 152, 219, 0.4);
+}
+
+@keyframes pulse-green {
+  0% {
+    box-shadow: 0 0 5px rgba(39, 174, 96, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(39, 174, 96, 0.8);
+  }
+  100% {
+    box-shadow: 0 0 5px rgba(39, 174, 96, 0.5);
+  }
+}
+
+@keyframes pulse-blue {
+  0% {
+    box-shadow: 0 0 5px rgba(52, 152, 219, 0.4);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(52, 152, 219, 0.7);
+    transform: scale(1.02);
+  }
+  100% {
+    box-shadow: 0 0 5px rgba(52, 152, 219, 0.4);
+    transform: scale(1);
+  }}
 
 /* Highlighted table when details are shown */
 .table-container.highlighted-table {
