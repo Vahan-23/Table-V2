@@ -2241,8 +2241,8 @@ const Table = ({
 
         let chairsLeft = 0;
         let chairsRight = 0;
-        let chairsTop = 0;   
-        let chairsBottom = 0; 
+        let chairsTop = 0;
+        let chairsBottom = 0;
 
         // Изначально выделяем по 1 стулу слева и справа (если стульев больше 4)
         if (totalChairs > 4) {
@@ -2597,9 +2597,65 @@ const Table = ({
 
 const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeople }) => {
     const [tableShape, setTableShape] = useState(table ? (table.shape || 'round') : 'round');
+    const [tableName, setTableName] = useState(table ? (table.name || `Стол ${table.id}`) : '');
     // Локальное состояние для отслеживания изменений количества стульев
     const [chairCount, setChairCount] = useState(table ? table.chairCount : 12);
 
+
+    const applyTableNameChange = () => {
+        if (table) {
+            setTables(prevTables =>
+                prevTables.map(t => {
+                    if (t.id === table.id) {
+                        return {
+                            ...t,
+                            name: tableName
+                        };
+                    }
+                    return t;
+                })
+            );
+        }
+    };
+
+    // Обновляйте локальное состояние при изменении стола
+    useEffect(() => {
+        if (table) {
+            setChairCount(table.chairCount);
+            setTableShape(table.shape || 'round');
+            setTableName(table.name || `Стол ${table.id}`); // Добавьте эту строку
+        }
+    }, [table]);
+    const handleRemovePerson = (personName) => {
+        if (window.confirm(`Вы уверены, что хотите удалить ${personName} с этого стола?`)) {
+            // Обновляем таблицы, удаляя выбранного человека
+            setTables(prevTables =>
+                prevTables.map(t => {
+                    if (t.id === table.id) {
+                        return {
+                            ...t,
+                            people: t.people.map(person =>
+                                (person && person.name === personName) ? null : person
+                            )
+                        };
+                    }
+                    return t;
+                })
+            );
+
+            // Возвращаем человека в общий список
+            const personToReturn = table.people.find(p => p && p.name === personName);
+            if (personToReturn) {
+                setPeople(prevPeople => {
+                    // Проверяем, что человека еще нет в списке
+                    if (!prevPeople.some(p => p.name === personName)) {
+                        return [...prevPeople, personToReturn];
+                    }
+                    return prevPeople;
+                });
+            }
+        }
+    };
     // Обновляем локальное состояние при изменении стола
     useEffect(() => {
         if (table) {
@@ -2763,7 +2819,25 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
                 <h3>Table Details {table ? `${table.id}` : ''}</h3>
                 <button className="close-details-btn" onClick={onClose}>×</button>
             </div>
-
+            <div className="table-name-section">
+                <h4>Изменить название стола</h4>
+                <div className="table-name-control">
+                    <input
+                        type="text"
+                        value={tableName}
+                        onChange={(e) => setTableName(e.target.value)}
+                        className="table-name-input"
+                        placeholder="Введите название стола"
+                    />
+                    <button
+                        className="apply-table-name-btn"
+                        onClick={applyTableNameChange}
+                        disabled={table && tableName === (table.name || `Стол ${table.id}`)}
+                    >
+                        Применить
+                    </button>
+                </div>
+            </div>
             <div className="table-details-content">
                 {table ? (
                     <>
@@ -2899,6 +2973,16 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
                                             {group.people.map((person, personIndex) => (
                                                 <div key={personIndex} className="group-person">
                                                     {person.name}
+                                                    <button
+                                                        className="remove-person-btn"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation(); // Чтобы не срабатывал drag группы при нажатии на кнопку
+                                                            handleRemovePerson(person.name);
+                                                        }}
+                                                        title="Удалить этого человека"
+                                                    >
+                                                        ✕
+                                                    </button>
                                                 </div>
                                             ))}
                                         </div>
