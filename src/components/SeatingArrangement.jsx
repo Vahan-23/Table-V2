@@ -2236,15 +2236,15 @@ const Table = ({
         const tableHeight = 150;
         const border = 50; // Граница
         const peopleOnTable = table.people || [];
-    
+
         const totalChairs = table.chairCount;
-    
+
         // Распределяем стулья по сторонам стола
         let chairsLeft = 0;
         let chairsRight = 0;
         let chairsTop = 0;
         let chairsBottom = 0;
-    
+
         // Изначально выделяем по 1 стулу слева и справа (если стульев больше 4)
         if (totalChairs > 4) {
             chairsLeft = 1;
@@ -2259,17 +2259,17 @@ const Table = ({
             chairsTop = Math.ceil(totalChairs / 2);
             chairsBottom = totalChairs - chairsTop;
         }
-    
+
         let chairIndex = 0;
-    
+
         // Важно: для каждого стула обрабатываем отдельный индекс
         // и фиксируем индекс стула при создании обработчика событий
-    
+
         // Левый край стола
         if (chairsLeft > 0) {
             const leftChairIndex = chairIndex; // Фиксируем индекс для левого стула
             const person = peopleOnTable[leftChairIndex];
-            
+
             chairs.push(
                 <div
                     key={`left-${leftChairIndex}`}
@@ -2326,15 +2326,15 @@ const Table = ({
                     )}
                 </div>
             );
-    
+
             chairIndex++;
         }
-    
+
         // Правая сторона стола
         if (chairsRight > 0) {
             const rightChairIndex = chairIndex; // Фиксируем индекс для правого стула
             const person = peopleOnTable[rightChairIndex];
-            
+
             chairs.push(
                 <div
                     key={`right-${rightChairIndex}`}
@@ -2391,10 +2391,10 @@ const Table = ({
                     )}
                 </div>
             );
-    
+
             chairIndex++;
         }
-    
+
         // Верхняя сторона стола
         for (let i = 0; i < chairsTop; i++) {
             const topChairIndex = chairIndex; // Фиксируем индекс для верхнего стула
@@ -2402,7 +2402,7 @@ const Table = ({
             const ratio = chairsTop === 1 ? 0.5 : i / (chairsTop - 1);
             const xPosition = ((tableWidth - 50) * ratio) - tableWidth / 2;
             const yPosition = -tableHeight / 2 - border + 10;
-    
+
             chairs.push(
                 <div
                     key={`top-${topChairIndex}`}
@@ -2459,10 +2459,10 @@ const Table = ({
                     )}
                 </div>
             );
-    
+
             chairIndex++;
         }
-    
+
         // Нижняя сторона стола
         for (let i = 0; i < chairsBottom; i++) {
             const bottomChairIndex = chairIndex; // Фиксируем индекс для нижнего стула
@@ -2470,7 +2470,7 @@ const Table = ({
             const ratio = chairsBottom === 1 ? 0.5 : i / (chairsBottom - 1);
             const xPosition = ((tableWidth - 50) * ratio) - tableWidth / 2;
             const yPosition = tableHeight / 2;
-    
+
             chairs.push(
                 <div
                     key={`bottom-${bottomChairIndex}`}
@@ -2527,10 +2527,10 @@ const Table = ({
                     )}
                 </div>
             );
-    
+
             chairIndex++;
         }
-    
+
         return chairs;
     };
 
@@ -2562,7 +2562,7 @@ const Table = ({
             onMouseDown={handleDragStart}
         >
             <div className="table-header">
-                <h3>Сеղան {table.id} (Աթոռներ: {table.chairCount})</h3>
+                <h3>{table.name || `Сеղан ${table.id}`} (Աթոռներ: {table.chairCount})</h3>
                 <div className="table-buttons">
                     <button
                         onClick={(e) => {
