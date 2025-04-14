@@ -49,39 +49,46 @@ const SeatingArrangement = () => {
     const [groupToPlace, setGroupToPlace] = useState(null);
     const [targetTableId, setTargetTableId] = useState(null);
     const [availableSeats, setAvailableSeats] = useState(0);
-    
+
     // Добавляем новые состояния для отслеживания позиции перетаскивания
     const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
 
 
     const handleCanvasDrop = (e) => {
         e.preventDefault();
-        window.lastDropEvent = e; // Сохраняем последнее событие drop
-        
+
         console.log("Drop event on canvas triggered!");
-        
+
         // Если нет перетаскиваемой группы, выходим
         if (!draggingGroup) {
             console.log("No dragging group found");
             return;
         }
-        
-        // Проверяем, было ли уже перетаскивание на стол
-        if (window.droppedOnTable) {
-            console.log("Already dropped on table, skipping canvas drop");
-            window.droppedOnTable = false;
-            return;
+
+        // ВАЖНО: Проверяем, происходит ли событие drop на таблице или её потомке
+        let target = e.target;
+        while (target) {
+            if (target.classList && (
+                target.classList.contains('table-container') ||
+                target.classList.contains('table') ||
+                target.classList.contains('chair') ||
+                target.classList.contains('table-top')
+            )) {
+                console.log("Drop occurred on a table element, skipping canvas drop");
+                return;
+            }
+            target = target.parentElement;
         }
-        
+
+        console.log("Creating new table on canvas");
+
         // Получаем координаты холста
         const rect = tablesAreaRef.current.getBoundingClientRect();
-        
+
         // Вычисляем позицию клика относительно холста с учетом масштабирования и прокрутки
         const x = (e.clientX - rect.left + tablesAreaRef.current.scrollLeft) / zoom;
         const y = (e.clientY - rect.top + tablesAreaRef.current.scrollTop) / zoom;
-        
-        console.log(`Creating table at position: ${x}, ${y}`);
-        
+
         // Создаем новый стол
         const newTable = {
             id: Date.now(),
@@ -93,23 +100,23 @@ const SeatingArrangement = () => {
             chairCount: chairCount,
             shape: 'round',
         };
-        
+
         // Добавляем новый стол
         setTables(prevTables => [newTable, ...prevTables]);
-        
+
         // Удаляем перенесенных людей из общего списка
-        setPeople(prevPeople => 
-            prevPeople.filter(person => 
+        setPeople(prevPeople =>
+            prevPeople.filter(person =>
                 !draggingGroup.some(groupPerson => groupPerson.name === person.name)
             )
         );
-        
+
         // Показываем уведомление о создании стола
         const notification = document.createElement('div');
         notification.className = 'transfer-notification';
         notification.textContent = `Создан новый стол с группой ${draggingGroup[0]?.group || ''}`;
         document.body.appendChild(notification);
-        
+
         setTimeout(() => {
             notification.classList.add('show');
             setTimeout(() => {
@@ -119,16 +126,19 @@ const SeatingArrangement = () => {
                 }, 300);
             }, 2000);
         }, 100);
-        
+
         // Очищаем состояние перетаскивания
         setDraggingGroup(null);
     };
+
+    // Fix for Table component - modify the onDrop handler to stop propagation
+    // Inside the Table component where you define the drop ref:
 
     // Обработчик для отслеживания позиции перетаскивания
     const handleCanvasDragOver = (e) => {
         e.preventDefault();
         e.stopPropagation(); // Предотвращаем всплытие события
-        
+
         if (draggingGroup) {
             const rect = tablesAreaRef.current.getBoundingClientRect();
             setDragPosition({
@@ -306,6 +316,9 @@ const SeatingArrangement = () => {
     };
 
     const handleTableDrop = (e, tableId) => {
+        // Stop event propagation to prevent canvas from handling it
+        e.stopPropagation();
+
         // If there's drag data in the global variable, use it
         if (window.currentDraggedGroup) {
             const data = window.currentDraggedGroup;
@@ -1780,8 +1793,25 @@ const SeatingArrangement = () => {
                             onMouseMove={handleMouseMoveOnCanvas}
                             onDragOver={(e) => {
                                 handleCanvasDragOver(e);
-                                // Визуально показываем, что здесь можно отпустить
-                                e.currentTarget.style.backgroundColor = 'rgba(52, 152, 219, 0.05)';
+                                // Показываем, что здесь можно отпустить (но только если событие не происходит на столе)
+                                let onTable = false;
+                                let target = e.target;
+                                while (target) {
+                                    if (target.classList && (
+                                        target.classList.contains('table-container') ||
+                                        target.classList.contains('table') ||
+                                        target.classList.contains('chair') ||
+                                        target.classList.contains('table-top')
+                                    )) {
+                                        onTable = true;
+                                        break;
+                                    }
+                                    target = target.parentElement;
+                                }
+
+                                if (!onTable) {
+                                    e.currentTarget.style.backgroundColor = 'rgba(52, 152, 219, 0.05)';
+                                }
                             }}
                             onDragLeave={(e) => {
                                 // Убираем подсветку при уходе
@@ -1809,8 +1839,8 @@ const SeatingArrangement = () => {
                         >
                             {/* Показываем визуальный индикатор при перетаскивании группы */}
                             {draggingGroup && (
-                                <div 
-                                    className="new-table-preview" 
+                                <div
+                                    className="new-table-preview"
                                     style={{
                                         position: 'absolute',
                                         left: `${dragPosition.x - 150}px`,
@@ -2224,26 +2254,72 @@ const Table = ({
             const itemType = monitor.getItemType();
 
             if (itemType === 'GROUP') {
-                // Получаем количество свободных мест за столом
+                // Проверяем, не был ли объект уже размещен
                 const freeSeats = table.chairCount - table.people.filter(Boolean).length;
 
                 // Если группа полностью помещается, размещаем всех как обычно
                 if (item.group.length <= freeSeats) {
+                    // Отмечаем объект как размещенный
+                    item.isPlaced = true;
+
+                    // Находим индексы пустых мест
+                    const emptyIndexes = [];
+                    table.people.forEach((person, index) => {
+                        if (!person) emptyIndexes.push(index);
+                    });
+
+                    // Создаем копию массива людей
+                    const updatedPeople = [...table.people];
+
+                    // Размещаем людей в пустые места
+                    for (let i = 0; i < Math.min(item.group.length, emptyIndexes.length); i++) {
+                        updatedPeople[emptyIndexes[i]] = item.group[i];
+                    }
+
+                    // Добавляем оставшихся в конец, если нужно
+                    for (let i = emptyIndexes.length; i < item.group.length; i++) {
+                        updatedPeople.push(item.group[i]);
+                    }
+
+                    // Обновляем стол
                     setTables((prevTables) =>
                         prevTables.map(t =>
                             t.id === table.id
-                                ? { ...t, people: [...t.people, ...item.group] }
+                                ? { ...t, people: updatedPeople }
                                 : t
                         )
                     );
 
+                    // Очищаем состояние перетаскивания
                     setDraggingGroup(null);
+
+                    // Удаляем перенесенных людей из общего списка
                     setPeople((prevPeople) =>
                         prevPeople.filter((person) =>
                             !item.group.some((groupPerson) => groupPerson.name === person.name)
                         )
                     );
+
+                    // Показываем уведомление
+                    const notification = document.createElement('div');
+                    notification.className = 'transfer-notification';
+                    notification.textContent = `Группа ${item.group[0]?.group || ''} добавлена на стол ${table.id}`;
+                    document.body.appendChild(notification);
+
+                    setTimeout(() => {
+                        notification.classList.add('show');
+                        setTimeout(() => {
+                            notification.classList.remove('show');
+                            setTimeout(() => {
+                                document.body.removeChild(notification);
+                            }, 300);
+                        }, 2000);
+                    }, 100);
+
                 } else if (freeSeats > 0) {
+                    // Отмечаем объект как размещенный
+                    item.isPlaced = true;
+
                     // Если группа не помещается, но есть свободные места, активируем выбор
                     setGroupToPlace({
                         groupName: item.group[0].group,
@@ -2255,12 +2331,16 @@ const Table = ({
                     setDraggingGroup(null);
                 } else {
                     alert(`За столом нет свободных мест`);
+                    setDraggingGroup(null);
                 }
             } else if (itemType === 'SEATED_GROUP') {
-                // Pass the drop event to the parent component's handler
+                // Обработка перемещения группы между столами
                 onDrop && onDrop(monitor.getDropResult());
             }
-        }
+        },
+        collect: (monitor) => ({
+            isOver: monitor.isOver()
+        })
     });
 
     // Functions to render chairs based on table shape
@@ -2671,8 +2751,10 @@ const Table = ({
             }}
             className={`table-container ${isOver ? 'drop-target' : ''} ${isTableHighlighted ? 'highlighted-table' : ''}`}
             data-id={table.id}
-            onDrop={(e) => onDrop && onDrop(e)}
-            onDragOver={(e) => e.preventDefault()}
+            onDragOver={(e) => {
+                // Предотвращаем default действие, чтобы разрешить drop
+                e.preventDefault();
+            }}
             style={{
                 position: 'absolute',
                 left: `${table.x || 0}px`,
@@ -3181,21 +3263,16 @@ const Group = ({ group, groupName, setDraggingGroup }) => {
     const [{ isDragging }, drag] = useDrag({
         type: 'GROUP',
         item: () => {
-            console.log("Drag started for group:", groupName); // Отладочный вывод
-            // Устанавливаем состояние перетаскивания когда начинается drag
+            console.log("Drag started for group:", groupName);
+            // Добавим дополнительное свойство для отслеживания, был ли размещен объект
             setDraggingGroup(group);
-            return { group, groupName };
+            return { group, groupName, isPlaced: false };
         },
         end: (item, monitor) => {
-            console.log("Drag ended for group:", groupName); // Отладочный вывод
-            console.log("Drop result:", monitor.getDropResult());
-            console.log("Did drop:", monitor.didDrop());
-            
-            // В любом случае очищаем состояние перетаскивания
-            // Это решает проблему "застрявшей" группы
-            setTimeout(() => {
-                setDraggingGroup(null);
-            }, 100);
+            console.log("Drag ended for group:", groupName);
+
+            // В любом случае сбрасываем состояние перетаскивания по окончании операции
+            setDraggingGroup(null);
         },
         collect: (monitor) => ({
             isDragging: monitor.isDragging(),
