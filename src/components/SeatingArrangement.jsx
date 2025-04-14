@@ -2236,14 +2236,15 @@ const Table = ({
         const tableHeight = 150;
         const border = 50; // Граница
         const peopleOnTable = table.people || [];
-
+    
         const totalChairs = table.chairCount;
-
+    
+        // Распределяем стулья по сторонам стола
         let chairsLeft = 0;
         let chairsRight = 0;
         let chairsTop = 0;
         let chairsBottom = 0;
-
+    
         // Изначально выделяем по 1 стулу слева и справа (если стульев больше 4)
         if (totalChairs > 4) {
             chairsLeft = 1;
@@ -2258,20 +2259,26 @@ const Table = ({
             chairsTop = Math.ceil(totalChairs / 2);
             chairsBottom = totalChairs - chairsTop;
         }
-
+    
         let chairIndex = 0;
-
+    
+        // Важно: для каждого стула обрабатываем отдельный индекс
+        // и фиксируем индекс стула при создании обработчика событий
+    
         // Левый край стола
         if (chairsLeft > 0) {
+            const leftChairIndex = chairIndex; // Фиксируем индекс для левого стула
+            const person = peopleOnTable[leftChairIndex];
+            
             chairs.push(
                 <div
-                    key={chairIndex}
+                    key={`left-${leftChairIndex}`}
                     className="chair"
                     style={{
                         position: 'absolute',
                         width: '60px',
                         height: '60px',
-                        backgroundImage: peopleOnTable[chairIndex] ? "url('/red1.png')" : "url('/green2.png')",
+                        backgroundImage: person ? "url('/red1.png')" : "url('/green2.png')",
                         backgroundSize: 'cover',
                         backgroundPosition: 'center',
                         backgroundRepeat: 'no-repeat',
@@ -2288,11 +2295,11 @@ const Table = ({
                     }}
                     onClick={(e) => {
                         e.stopPropagation();
-                        onChairClick(chairIndex);
+                        onChairClick(leftChairIndex); // Используем сохраненный индекс
                     }}
-                    title={peopleOnTable[chairIndex] ? `Нажмите на стул, чтобы удалить ${peopleOnTable[chairIndex].name}` : "Нажмите на стул, чтобы добавить человека"}
+                    title={person ? `Нажмите на стул, чтобы удалить ${person.name}` : "Нажмите на стул, чтобы добавить человека"}
                 >
-                    {peopleOnTable[chairIndex] && (
+                    {person && (
                         <div
                             className="person-name-overlay"
                             style={{
@@ -2314,26 +2321,29 @@ const Table = ({
                                 zIndex: 5
                             }}
                         >
-                            {peopleOnTable[chairIndex].name}
+                            {person.name}
                         </div>
                     )}
                 </div>
             );
-
+    
             chairIndex++;
         }
-
+    
         // Правая сторона стола
         if (chairsRight > 0) {
+            const rightChairIndex = chairIndex; // Фиксируем индекс для правого стула
+            const person = peopleOnTable[rightChairIndex];
+            
             chairs.push(
                 <div
-                    key={chairIndex}
+                    key={`right-${rightChairIndex}`}
                     className="chair"
                     style={{
                         position: 'absolute',
                         width: '60px',
                         height: '60px',
-                        backgroundImage: peopleOnTable[chairIndex] ? "url('/red1.png')" : "url('/green2.png')",
+                        backgroundImage: person ? "url('/red1.png')" : "url('/green2.png')",
                         backgroundSize: 'cover',
                         backgroundPosition: 'center',
                         backgroundRepeat: 'no-repeat',
@@ -2350,11 +2360,11 @@ const Table = ({
                     }}
                     onClick={(e) => {
                         e.stopPropagation();
-                        onChairClick(chairIndex);
+                        onChairClick(rightChairIndex); // Используем сохраненный индекс
                     }}
-                    title={peopleOnTable[chairIndex] ? `Нажмите на стул, чтобы удалить ${peopleOnTable[chairIndex].name}` : "Нажмите на стул, чтобы добавить человека"}
+                    title={person ? `Нажмите на стул, чтобы удалить ${person.name}` : "Нажмите на стул, чтобы добавить человека"}
                 >
-                    {peopleOnTable[chairIndex] && (
+                    {person && (
                         <div
                             className="person-name-overlay"
                             style={{
@@ -2376,30 +2386,32 @@ const Table = ({
                                 zIndex: 5
                             }}
                         >
-                            {peopleOnTable[chairIndex].name}
+                            {person.name}
                         </div>
                     )}
                 </div>
             );
-
+    
             chairIndex++;
         }
-
+    
         // Верхняя сторона стола
         for (let i = 0; i < chairsTop; i++) {
+            const topChairIndex = chairIndex; // Фиксируем индекс для верхнего стула
+            const person = peopleOnTable[topChairIndex];
             const ratio = chairsTop === 1 ? 0.5 : i / (chairsTop - 1);
             const xPosition = ((tableWidth - 50) * ratio) - tableWidth / 2;
             const yPosition = -tableHeight / 2 - border + 10;
-
+    
             chairs.push(
                 <div
-                    key={chairIndex}
+                    key={`top-${topChairIndex}`}
                     className="chair"
                     style={{
                         position: 'absolute',
                         width: '60px',
                         height: '60px',
-                        backgroundImage: peopleOnTable[chairIndex] ? "url('/red1.png')" : "url('/green2.png')",
+                        backgroundImage: person ? "url('/red1.png')" : "url('/green2.png')",
                         backgroundSize: 'cover',
                         backgroundPosition: 'center',
                         backgroundRepeat: 'no-repeat',
@@ -2416,11 +2428,11 @@ const Table = ({
                     }}
                     onClick={(e) => {
                         e.stopPropagation();
-                        onChairClick(chairIndex);
+                        onChairClick(topChairIndex); // Используем сохраненный индекс
                     }}
-                    title={peopleOnTable[chairIndex] ? `Нажмите на стул, чтобы удалить ${peopleOnTable[chairIndex].name}` : "Нажмите на стул, чтобы добавить человека"}
+                    title={person ? `Нажмите на стул, чтобы удалить ${person.name}` : "Нажмите на стул, чтобы добавить человека"}
                 >
-                    {peopleOnTable[chairIndex] && (
+                    {person && (
                         <div
                             className="person-name-overlay"
                             style={{
@@ -2442,30 +2454,32 @@ const Table = ({
                                 zIndex: 5
                             }}
                         >
-                            {peopleOnTable[chairIndex].name}
+                            {person.name}
                         </div>
                     )}
                 </div>
             );
-
+    
             chairIndex++;
         }
-
+    
         // Нижняя сторона стола
         for (let i = 0; i < chairsBottom; i++) {
+            const bottomChairIndex = chairIndex; // Фиксируем индекс для нижнего стула
+            const person = peopleOnTable[bottomChairIndex];
             const ratio = chairsBottom === 1 ? 0.5 : i / (chairsBottom - 1);
             const xPosition = ((tableWidth - 50) * ratio) - tableWidth / 2;
             const yPosition = tableHeight / 2;
-
+    
             chairs.push(
                 <div
-                    key={chairIndex}
+                    key={`bottom-${bottomChairIndex}`}
                     className="chair"
                     style={{
                         position: 'absolute',
                         width: '60px',
                         height: '60px',
-                        backgroundImage: peopleOnTable[chairIndex] ? "url('/red1.png')" : "url('/green2.png')",
+                        backgroundImage: person ? "url('/red1.png')" : "url('/green2.png')",
                         backgroundSize: 'cover',
                         backgroundPosition: 'center',
                         backgroundRepeat: 'no-repeat',
@@ -2482,11 +2496,11 @@ const Table = ({
                     }}
                     onClick={(e) => {
                         e.stopPropagation();
-                        onChairClick(chairIndex);
+                        onChairClick(bottomChairIndex); // Используем сохраненный индекс
                     }}
-                    title={peopleOnTable[chairIndex] ? `Нажмите на стул, чтобы удалить ${peopleOnTable[chairIndex].name}` : "Нажмите на стул, чтобы добавить человека"}
+                    title={person ? `Нажмите на стул, чтобы удалить ${person.name}` : "Нажмите на стул, чтобы добавить человека"}
                 >
-                    {peopleOnTable[chairIndex] && (
+                    {person && (
                         <div
                             className="person-name-overlay"
                             style={{
@@ -2508,15 +2522,15 @@ const Table = ({
                                 zIndex: 5
                             }}
                         >
-                            {peopleOnTable[chairIndex].name}
+                            {person.name}
                         </div>
                     )}
                 </div>
             );
-
+    
             chairIndex++;
         }
-
+    
         return chairs;
     };
 
