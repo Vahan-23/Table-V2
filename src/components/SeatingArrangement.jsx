@@ -3,14 +3,23 @@ import { useDrag, useDrop } from 'react-dnd';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 
+import './HallElement.css';
+import './ElementProperties.css';
 import './App.css';
-import TablesAreaComponent from './newhall';
+
+
+
 import MiniMap from './newMiniMap';
 // import MiniMap from './MiniMap';
 
+import { HallElementsManager, ElementProperties } from './index';
+import { ItemTypes as HallElementItemTypes, HallElementsCatalog } from './HallElements'
+
+
 const ItemTypes = {
     GROUP: 'GROUP', // Для групп из сайдбара
-    SEATED_GROUP: 'SEATED_GROUP' // Для групп, перетаскиваемых со стола
+    SEATED_GROUP: 'SEATED_GROUP', // Для групп, перетаскиваемых со стола
+    HALL_ELEMENT: 'HALL_ELEMENT'
 };
 
 const SeatingArrangement = () => {
@@ -54,12 +63,24 @@ const SeatingArrangement = () => {
     const [groupToPlace, setGroupToPlace] = useState(null);
     const [targetTableId, setTargetTableId] = useState(null);
     const [availableSeats, setAvailableSeats] = useState(0);
-
+    const [activeMode, setActiveMode] = useState('tables'); // 'tables' или 'elements'
+    const [hallElements, setHallElements] = useState([]);
+    const [selectedElementId, setSelectedElementId] = useState(null);
 
 
     // Добавляем новые состояния для отслеживания позиции перетаскивания
     const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
 
+
+    const handleCanvasClick = (e) => {
+        // Проверяем, что клик был именно по фону холста,
+        // а не по столу или элементу зала (они должны останавливать всплытие события)
+        if (e.target === tablesAreaRef.current) {
+            setSelectedElementId(null);
+            // Опционально: можно вернуть режим к столам, если хотите
+            // setActiveMode('tables');
+        }
+    };
 
     const handleCanvasDrop = (e) => {
         e.preventDefault();
@@ -360,7 +381,7 @@ const SeatingArrangement = () => {
     };
 
     // Process group transfer between tables
-    const processGroupTransfer = (data, targetTableId , tables, setTables ) => {
+    const processGroupTransfer = (data, targetTableId, tables, setTables) => {
         const sourceTableId = data.sourceTableId;
         const groupName = data.groupName;
 
@@ -649,7 +670,11 @@ const SeatingArrangement = () => {
 
         const updatedHalls = halls.map(hall =>
             hall.id === currentHall.id
-                ? { ...hall, tables: tables }
+                ? {
+                    ...hall,
+                    tables: tables,
+                    hallElements: hallElements // Добавляем элементы зала
+                }
                 : hall
         );
 
@@ -728,10 +753,19 @@ const SeatingArrangement = () => {
         setShowHallModal(false);
     };
 
-    // Load a hall configuration
+    // Функция загрузки зала
     const loadHall = (hall) => {
         setCurrentHall(hall);
-        setTables(hall.tables);
+        setTables(hall.tables || []);
+
+        // Загружаем элементы зала, если они есть
+        setHallElements(hall.hallElements || []);
+
+        // Сбрасываем выбор элемента
+        setSelectedElementId(null);
+
+        // Устанавливаем режим столов по умолчанию
+        setActiveMode('tables');
     };
 
     // Delete a hall
@@ -1554,6 +1588,7 @@ const SeatingArrangement = () => {
                                         </div>
                                     )}
                                 </li>
+                               
                                 <li
                                     className={`nav-item ${activeNavSection === 'people' ? 'active' : ''}`}
                                     onMouseEnter={() => setHoveredSection('people')}
@@ -1762,6 +1797,31 @@ const SeatingArrangement = () => {
                             setTables={setTables}
                         />
                     </div>
+                        <div className="hall-elements-catalog-container" style={{
+                            marginBottom: '15px',
+                            padding: '10px',
+                            backgroundColor: 'white',
+                            borderRadius: '8px',
+                            boxShadow: '0 2px 5px rgba(0,0,0,0.15)',
+                        }}>
+                            <HallElementsCatalog onAddElement={(element) => {
+                                // Задаем начальные координаты в центре видимой области
+                                const tablesArea = tablesAreaRef.current;
+                                const rect = tablesArea.getBoundingClientRect();
+                                const centerX = (tablesArea.scrollLeft + rect.width / 2) / zoom;
+                                const centerY = (tablesArea.scrollTop + rect.height / 2) / zoom;
+
+                                // Модифицируем элемент с новыми координатами
+                                const newElement = {
+                                    ...element,
+                                    x: centerX - element.width / 2,
+                                    y: centerY - element.height / 2
+                                };
+
+                                // Добавляем элемент в массив
+                                setHallElements(prev => [...prev, newElement]);
+                            }} />
+                        </div>
                     <TableDetailsPopup
                         table={getDetailsTable()}
                         tables={tables}
@@ -1798,36 +1858,12 @@ const SeatingArrangement = () => {
                             ref={tablesAreaRef}
                             onMouseDown={handleCanvasMouseDown}
                             onMouseMove={handleMouseMoveOnCanvas}
-                            onDragOver={(e) => {
-                                handleCanvasDragOver(e);
-                                // Показываем, что здесь можно отпустить (но только если событие не происходит на столе)
-                                let onTable = false;
-                                let target = e.target;
-                                while (target) {
-                                    if (target.classList && (
-                                        target.classList.contains('table-container') ||
-                                        target.classList.contains('table') ||
-                                        target.classList.contains('chair') ||
-                                        target.classList.contains('table-top')
-                                    )) {
-                                        onTable = true;
-                                        break;
-                                    }
-                                    target = target.parentElement;
-                                }
-
-                                if (!onTable) {
-                                    e.currentTarget.style.backgroundColor = 'rgba(52, 152, 219, 0.05)';
-                                }
-                            }}
+                            onClick={handleCanvasClick} // <-- Добавляем этот обработчик
+                            onDragOver={handleCanvasDragOver}
                             onDragLeave={(e) => {
-                                // Убираем подсветку при уходе
                                 e.currentTarget.style.backgroundColor = '';
                             }}
-                            onDrop={(e) => {
-                                e.currentTarget.style.backgroundColor = '';
-                                handleCanvasDrop(e);
-                            }}
+                            onDrop={handleCanvasDrop}
                             style={{
                                 transform: `scale(${zoom})`,
                                 transformOrigin: 'top left',
@@ -1846,23 +1882,21 @@ const SeatingArrangement = () => {
                         >
                             {/* Показываем визуальный индикатор при перетаскивании группы */}
                             {draggingGroup && (
-                                <div
-                                    className="new-table-preview"
-                                    style={{
-                                        position: 'absolute',
-                                        left: `${dragPosition.x - 150}px`,
-                                        top: `${dragPosition.y - 150}px`,
-                                        width: '300px',
-                                        height: '300px',
-                                        borderRadius: '50%',
-                                        border: '2px dashed #3498db',
-                                        backgroundColor: 'rgba(52, 152, 219, 0.1)',
-                                        pointerEvents: 'none',
-                                        display: 'flex',
-                                        justifyContent: 'center',
-                                        alignItems: 'center',
-                                        zIndex: 1
-                                    }}
+                                <div className="new-table-preview" style={{
+                                    position: 'absolute',
+                                    left: `${dragPosition.x - 150}px`,
+                                    top: `${dragPosition.y - 150}px`,
+                                    width: '300px',
+                                    height: '300px',
+                                    borderRadius: '50%',
+                                    border: '2px dashed #3498db',
+                                    backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                                    pointerEvents: 'none',
+                                    display: 'flex',
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    zIndex: 1
+                                }}
                                 >
                                     <div style={{
                                         backgroundColor: 'rgba(52, 152, 219, 0.7)',
@@ -1876,6 +1910,7 @@ const SeatingArrangement = () => {
                                 </div>
                             )}
 
+                            {/* Отображаем столы независимо от режима */}
                             {tables.map((table) => (
                                 <Table
                                     key={table.id}
@@ -1899,6 +1934,20 @@ const SeatingArrangement = () => {
                                     showTransferNotification={showTransferNotification}
                                 />
                             ))}
+
+                            {/* Добавляем компонент HallElementsManager */}
+                            <HallElementsManager
+                                tablesAreaRef={tablesAreaRef}
+                                zoom={zoom}
+                                elements={hallElements}
+                                setElements={setHallElements}
+                                selectedElementId={selectedElementId}
+                                // setSelectedElementId={setSelectedElementId}
+                                setSelectedElementId={(elementId) => {
+                                    setSelectedElementId(elementId); // Выбираем элемент
+                                    setActiveMode('elements');      // Переключаем режим
+                                }}
+                            />
                         </div>
                     </div>
                 </div>
@@ -1997,6 +2046,17 @@ const SeatingArrangement = () => {
                     </div>
                 </div>
             )}
+            {activeMode === 'elements' && selectedElementId && (
+                <ElementProperties
+                    element={hallElements.find(el => el.id === selectedElementId)}
+                    onUpdate={(updatedElement) => {
+                        setHallElements(prevElements =>
+                            prevElements.map(el => el.id === updatedElement.id ? updatedElement : el)
+                        );
+                    }}
+                    onClose={() => setSelectedElementId(null)}
+                />
+            )}
         </DndProvider >
     )
 };
@@ -2021,7 +2081,9 @@ const Table = ({
     setGroupToPlace,
     setTargetTableId,
     setAvailableSeats,
-    setGroupSelectionActive
+    setGroupSelectionActive,
+    setSelectedElementId, 
+    setActiveMode
 }) => {
     const [isDragging, setIsDragging] = useState(false);
     const [isResizing, setIsResizing] = useState(false);
@@ -2184,7 +2246,7 @@ const Table = ({
             }
         }, 16); // ~60fps
     };
-    
+
     // Add this function to stop auto-scrolling
     const stopAutoScroll = () => {
         if (autoScrollInterval.current) {
@@ -2257,7 +2319,7 @@ const Table = ({
         setIsResizing(false);
         isDragOperation.current = false;
     };
-    
+
     useEffect(() => {
         return () => {
             stopAutoScroll();
@@ -2381,11 +2443,11 @@ const Table = ({
                     });
 
                     const updatedPeople = [...table.people];
-                    
+
                     for (let i = 0; i < Math.min(item.group.length, emptyIndexes.length); i++) {
                         updatedPeople[emptyIndexes[i]] = item.group[i];
                     }
-                    
+
                     for (let i = emptyIndexes.length; i < item.group.length; i++) {
                         updatedPeople.push(item.group[i]);
                     }
@@ -2405,7 +2467,7 @@ const Table = ({
                     );
 
                     showTransferNotification(item.group[0]?.group || '', table.id);
-                } 
+                }
                 else if (freeSeats > 0) {
                     setGroupToPlace({
                         groupName: item.group[0].group,
@@ -2415,19 +2477,19 @@ const Table = ({
                     setAvailableSeats(freeSeats);
                     setGroupSelectionActive(true);
                     setDraggingGroup(null);
-                } 
+                }
                 else {
                     alert(`На столе нет свободных мест`);
                     setDraggingGroup(null);
                 }
-            } 
+            }
             else if (itemType === ItemTypes.SEATED_GROUP) {
                 // Обработка групп, перетаскиваемых с других столов
                 console.log('Обработка перетаскивания группы между столами:', item);
-                
+
                 // Используем локальную функцию processGroupTransfer
                 processGroupTransfer(item, table.id);
-                
+
                 // Возвращаем результат, который будет доступен в dropResult у drag источника
                 return { success: true, targetTableId: table.id };
             }
@@ -2523,7 +2585,7 @@ const Table = ({
 
         return chairs;
     };
-    
+
     const renderRectangleChairs = () => {
         const chairs = [];
         // Размеры стола и добавленная граница

@@ -1,0 +1,207 @@
+.element-properties {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 280px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+    z-index: 2000;
+    overflow: hidden;
+    animation: slide-in 0.3s forwards;
+    font-family: Arial, sans-serif;
+}
+
+@keyframes slide-in {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+.properties-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 15px;
+    background-color: #3498db;
+    color: white;
+}
+
+.properties-header h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 500;
+}
+
+.close-properties-btn {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 0;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+}
+
+.close-properties-btn:hover {
+    opacity: 1;
+}
+
+.properties-content {
+    padding: 15px;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.property-group {
+    margin-bottom: 15px;
+}
+
+.property-group label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 13px;
+    color: #555;
+    font-weight: 500;
+}
+
+.property-input {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    transition: border-color 0.2s;
+}
+
+.property-input:focus {
+    border-color: #3498db;
+    outline: none;
+}
+
+.dimensions {
+    display: flex;
+    gap: 10px;
+}
+
+.dimensions > div {
+    flex: 1;
+}
+
+.rotation-control,
+.opacity-control,
+.zindex-control,
+.color-picker {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.rotation-slider,
+.opacity-slider {
+    flex: 1;
+    cursor: pointer;
+}
+
+.rotation-input {
+    width: 60px;
+    padding: 5px 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 13px;
+}
+
+.color-input {
+    width: 40px;
+    height: 30px;
+    padding: 0;
+    border: 1px solid #ddd;
+    cursor: pointer;
+}
+
+.color-text {
+    flex: 1;
+    padding: 5px 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 13px;
+}
+
+.opacity-value {
+    width: 45px;
+    font-size: 13px;
+    text-align: center;
+}
+
+.zindex-btn {
+    width: 30px;
+    height: 30px;
+    background-color: #f5f5f5;
+    border: 1px solid #ddd;
+    border-radius: 50%;
+    font-size: 16px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.zindex-btn:hover {
+    background-color: #e0e0e0;
+}
+
+.zindex-value {
+    width: 30px;
+    text-align: center;
+    font-size: 14px;
+}
+
+.element-type {
+    background-color: #f5f5f5;
+    padding: 10px;
+    border-radius: 4px;
+    font-size: 13px;
+}
+
+.type-label {
+    color: #666;
+}
+
+.type-value {
+    font-weight: 500;
+    color: #333;
+}
+
+.rotation-presets {
+    display: flex;
+    gap: 5px;
+    padding: 10px 15px 15px;
+    border-top: 1px solid #eee;
+    justify-content: center;
+}
+
+.rotate-btn {
+    padding: 5px 10px;
+    background-color: #f5f5f5;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.rotate-btn:hover {
+    background-color: #e0e0e0;
+}
+
+@media (max-width: 768px) {
+    .element-properties {
+        width: 250px;
+    }
+    
+    .properties-content {
+        max-height: 60vh;
+    }
+}

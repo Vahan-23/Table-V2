@@ -1,0 +1,149 @@
+.hall-elements-catalog {
+    padding: 10px;
+    background-color: #f5f5f5;
+    border-radius: 8px;
+}
+
+.catalog-title {
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 15px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #ddd;
+    color: #333;
+}
+
+.catalog-items {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 500px;
+    overflow-y: auto;
+    padding-right: 5px;
+}
+
+.hall-element-catalog-item {
+    transition: all 0.2s ease;
+}
+
+.hall-element-catalog-item:hover {
+    background-color: #f0f0f0;
+    transform: translateY(-2px);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+}
+
+.hall-element {
+    transition: transform 0.1s, box-shadow 0.3s;
+}
+
+.hall-element.selected {
+    z-index: 1000;
+}
+
+.hall-element:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.element-controls {
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.hall-element.selected .element-controls {
+    opacity: 1;
+}
+
+.resize-handle {
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.hall-element.selected .resize-handle {
+    opacity: 1;
+}
+
+.element-controls button {
+    transition: transform 0.1s, background-color 0.2s;
+}
+
+.element-controls button:hover {
+    transform: scale(1.1);
+}
+
+.element-controls button:active {
+    transform: scale(0.95);
+}
+
+.hall-elements-panel {
+    transition: all 0.3s ease;
+}
+
+/* Стили для разных типов элементов */
+.hall-element[data-type="entrance"],
+.hall-element[data-type="exit"] {
+    background-color: rgba(77, 175, 124, 0.8);
+}
+
+.hall-element[data-type="stairs"] {
+    background-color: rgba(149, 165, 166, 0.8);
+}
+
+.hall-element[data-type="stage"] {
+    background-color: rgba(41, 128, 185, 0.8);
+}
+
+.hall-element[data-type="dj"],
+.hall-element[data-type="dancefloor"] {
+    background-color: rgba(142, 68, 173, 0.8);
+}
+
+.hall-element[data-type="bar"],
+.hall-element[data-type="buffet"] {
+    background-color: rgba(230, 126, 34, 0.8);
+}
+
+.hall-element[data-type="wardrobe"],
+.hall-element[data-type="toilet"],
+.hall-element[data-type="reception"] {
+    background-color: rgba(189, 195, 199, 0.8);
+}
+
+.hall-element[data-type="column"],
+.hall-element[data-type="wall"] {
+    background-color: rgba(127, 140, 141, 0.8);
+}
+
+.hall-element[data-type="plant"] {
+    background-color: rgba(39, 174, 96, 0.8);
+}
+
+.hall-element[data-type="vip"] {
+    background-color: rgba(241, 196, 15, 0.8);
+}
+
+.hall-element[data-type="technical"] {
+    background-color: rgba(192, 57, 43, 0.8);
+}
+
+/* Адаптивные стили для мобильных устройств */
+@media (max-width: 768px) {
+    .hall-elements-panel {
+        width: 200px;
+    }
+    
+    .catalog-items {
+        max-height: 300px;
+    }
+}
+
+/* Стили для перетаскивания */
+.hall-element-catalog-item.dragging {
+    opacity: 0.5;
+}
+
+/* Стили для областей, куда можно перетащить элементы */
+.hall-drop-target {
+    outline: 2px dashed #3498db;
+    outline-offset: 2px;
+    background-color: rgba(52, 152, 219, 0.05);
+}
