@@ -8,6 +8,11 @@ import TablesAreaComponent from './newhall';
 import MiniMap from './newMiniMap';
 // import MiniMap from './MiniMap';
 
+const ItemTypes = {
+    GROUP: 'GROUP', // Для групп из сайдбара
+    SEATED_GROUP: 'SEATED_GROUP' // Для групп, перетаскиваемых со стола
+};
+
 const SeatingArrangement = () => {
     const [tables, setTables] = useState([]);
     const [people, setPeople] = useState([]);
@@ -49,6 +54,8 @@ const SeatingArrangement = () => {
     const [groupToPlace, setGroupToPlace] = useState(null);
     const [targetTableId, setTargetTableId] = useState(null);
     const [availableSeats, setAvailableSeats] = useState(0);
+
+
 
     // Добавляем новые состояния для отслеживания позиции перетаскивания
     const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
@@ -353,8 +360,8 @@ const SeatingArrangement = () => {
     };
 
     // Process group transfer between tables
-    const processGroupTransfer = (data, targetTableId, tables, setTables) => {
-        const sourceTableId = data.tableId;
+    const processGroupTransfer = (data, targetTableId , tables, setTables ) => {
+        const sourceTableId = data.sourceTableId;
         const groupName = data.groupName;
 
         // Не обрабатываем, если перетаскивание на тот же стол
@@ -365,7 +372,7 @@ const SeatingArrangement = () => {
         const targetTable = tables.find(t => t.id === targetTableId);
 
         if (!sourceTable || !targetTable) {
-            console.error('Исходный или целевой стол не найден');
+            console.error('Исходный или целевой стол не найден', { sourceTableId, targetTableId, tablesCount: tables.length });
             return;
         }
 
@@ -373,7 +380,7 @@ const SeatingArrangement = () => {
         const groupPeople = sourceTable.people.filter(p => p && p.group === groupName);
 
         if (groupPeople.length === 0) {
-            console.error('Не найдены люди для перемещения');
+            console.error('Не найдены люди для перемещения', { groupName, sourceTableId });
             return;
         }
 
@@ -1889,6 +1896,7 @@ const SeatingArrangement = () => {
                                     setTargetTableId={setTargetTableId}
                                     setAvailableSeats={setAvailableSeats}
                                     setGroupSelectionActive={setGroupSelectionActive}
+                                    showTransferNotification={showTransferNotification}
                                 />
                             ))}
                         </div>
@@ -2024,6 +2032,111 @@ const Table = ({
     // Track if we're actually dragging or just clicking
     const isDragOperation = useRef(false);
 
+    // Функция для показа уведомления о перемещении
+    const showTransferNotification = (groupName, tableId) => {
+        const notification = document.createElement('div');
+        notification.className = 'transfer-notification';
+        notification.textContent = `Group ${groupName} moved to table ${tableId}`;
+        document.body.appendChild(notification);
+
+        setTimeout(() => {
+            notification.classList.add('show');
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => {
+                    document.body.removeChild(notification);
+                }, 300);
+            }, 2000);
+        }, 100);
+    };
+
+    // Функция для обработки перемещения группы между столами
+    const processGroupTransfer = (data, targetTableId) => {
+        const sourceTableId = data.sourceTableId;
+        const groupName = data.groupName;
+
+        // Не обрабатываем, если перетаскивание на тот же стол
+        if (sourceTableId === targetTableId) return;
+
+        // Находим исходный и целевой столы
+        const sourceTable = tables.find(t => t.id === sourceTableId);
+        const targetTable = tables.find(t => t.id === targetTableId);
+
+        if (!sourceTable || !targetTable) {
+            console.error('Исходный или целевой стол не найден', { sourceTableId, targetTableId, tablesCount: tables.length });
+            return;
+        }
+
+        // Получаем людей из этой группы в исходном столе
+        const groupPeople = sourceTable.people.filter(p => p && p.group === groupName);
+
+        if (groupPeople.length === 0) {
+            console.error('Не найдены люди для перемещения', { groupName, sourceTableId });
+            return;
+        }
+
+        // Проверяем, есть ли свободные места на целевом столе
+        const targetFreeSeats = targetTable.chairCount - targetTable.people.filter(Boolean).length;
+
+        // Если свободных мест достаточно, перемещаем всю группу
+        if (targetFreeSeats >= groupPeople.length) {
+            // Обновляем столы
+            setTables(prevTables => {
+                return prevTables.map(table => {
+                    if (table.id === sourceTableId) {
+                        // Удаляем людей из исходного стола
+                        return {
+                            ...table,
+                            people: table.people.map(person =>
+                                (person && person.group === groupName) ? null : person
+                            )
+                        };
+                    } else if (table.id === targetTableId) {
+                        // Добавляем людей на целевой стол
+                        const newPeople = [...table.people];
+                        let peopleAdded = 0;
+
+                        // Заполняем сначала пустые места
+                        for (let i = 0; i < newPeople.length && peopleAdded < groupPeople.length; i++) {
+                            if (!newPeople[i]) {
+                                newPeople[i] = groupPeople[peopleAdded];
+                                peopleAdded++;
+                            }
+                        }
+
+                        // Если есть еще люди для добавления, добавляем их
+                        while (peopleAdded < groupPeople.length) {
+                            newPeople.push(groupPeople[peopleAdded]);
+                            peopleAdded++;
+                        }
+
+                        return {
+                            ...table,
+                            people: newPeople
+                        };
+                    }
+                    return table;
+                });
+            });
+
+            // Показываем уведомление о перемещении
+            showTransferNotification(groupName, targetTableId);
+        } else if (targetFreeSeats > 0) {
+            // Если свободных мест недостаточно, но они есть, активируем выбор людей
+            setGroupToPlace({
+                groupName: groupName,
+                people: groupPeople,
+                sourceTableId: sourceTableId  // Сохраняем ID исходного стола для последующего удаления
+            });
+            setTargetTableId(targetTableId);
+            setAvailableSeats(targetFreeSeats);
+            setGroupSelectionActive(true);
+        } else {
+            // Если совсем нет мест, показываем сообщение
+            alert(`На столе нет свободных мест`);
+        }
+    };
+
     const handleDragStart = (e) => {
         if (!isDraggable) return;
 
@@ -2071,6 +2184,7 @@ const Table = ({
             }
         }, 16); // ~60fps
     };
+    
     // Add this function to stop auto-scrolling
     const stopAutoScroll = () => {
         if (autoScrollInterval.current) {
@@ -2143,6 +2257,7 @@ const Table = ({
         setIsResizing(false);
         isDragOperation.current = false;
     };
+    
     useEffect(() => {
         return () => {
             stopAutoScroll();
@@ -2249,78 +2364,49 @@ const Table = ({
 
     // Enhanced drop target to handle both regular group drops and seated group transfers
     const [{ isOver }, drop] = useDrop({
-        accept: ['GROUP', 'SEATED_GROUP'],
+        accept: [ItemTypes.GROUP, ItemTypes.SEATED_GROUP],
         drop: (item, monitor) => {
             const itemType = monitor.getItemType();
+            console.log('Получено перетаскивание типа:', itemType, 'с данными:', item);
 
-            if (itemType === 'GROUP') {
-                // Проверяем, не был ли объект уже размещен
+            if (itemType === ItemTypes.GROUP) {
+                // Обработка обычных групп из бокового меню
                 const freeSeats = table.chairCount - table.people.filter(Boolean).length;
 
-                // Если группа полностью помещается, размещаем всех как обычно
                 if (item.group.length <= freeSeats) {
-                    // Отмечаем объект как размещенный
-                    item.isPlaced = true;
-
-                    // Находим индексы пустых мест
+                    // Нашей существующей логике обработки для групп из бокового меню
                     const emptyIndexes = [];
                     table.people.forEach((person, index) => {
                         if (!person) emptyIndexes.push(index);
                     });
 
-                    // Создаем копию массива людей
                     const updatedPeople = [...table.people];
-
-                    // Размещаем людей в пустые места
+                    
                     for (let i = 0; i < Math.min(item.group.length, emptyIndexes.length); i++) {
                         updatedPeople[emptyIndexes[i]] = item.group[i];
                     }
-
-                    // Добавляем оставшихся в конец, если нужно
+                    
                     for (let i = emptyIndexes.length; i < item.group.length; i++) {
                         updatedPeople.push(item.group[i]);
                     }
 
-                    // Обновляем стол
                     setTables((prevTables) =>
                         prevTables.map(t =>
-                            t.id === table.id
-                                ? { ...t, people: updatedPeople }
-                                : t
+                            t.id === table.id ? { ...t, people: updatedPeople } : t
                         )
                     );
 
-                    // Очищаем состояние перетаскивания
                     setDraggingGroup(null);
 
-                    // Удаляем перенесенных людей из общего списка
                     setPeople((prevPeople) =>
                         prevPeople.filter((person) =>
                             !item.group.some((groupPerson) => groupPerson.name === person.name)
                         )
                     );
 
-                    // Показываем уведомление
-                    const notification = document.createElement('div');
-                    notification.className = 'transfer-notification';
-                    notification.textContent = `Группа ${item.group[0]?.group || ''} добавлена на стол ${table.id}`;
-                    document.body.appendChild(notification);
-
-                    setTimeout(() => {
-                        notification.classList.add('show');
-                        setTimeout(() => {
-                            notification.classList.remove('show');
-                            setTimeout(() => {
-                                document.body.removeChild(notification);
-                            }, 300);
-                        }, 2000);
-                    }, 100);
-
-                } else if (freeSeats > 0) {
-                    // Отмечаем объект как размещенный
-                    item.isPlaced = true;
-
-                    // Если группа не помещается, но есть свободные места, активируем выбор
+                    showTransferNotification(item.group[0]?.group || '', table.id);
+                } 
+                else if (freeSeats > 0) {
                     setGroupToPlace({
                         groupName: item.group[0].group,
                         people: item.group
@@ -2329,17 +2415,25 @@ const Table = ({
                     setAvailableSeats(freeSeats);
                     setGroupSelectionActive(true);
                     setDraggingGroup(null);
-                } else {
-                    alert(`За столом нет свободных мест`);
+                } 
+                else {
+                    alert(`На столе нет свободных мест`);
                     setDraggingGroup(null);
                 }
-            } else if (itemType === 'SEATED_GROUP') {
-                // Обработка перемещения группы между столами
-                onDrop && onDrop(monitor.getDropResult());
+            } 
+            else if (itemType === ItemTypes.SEATED_GROUP) {
+                // Обработка групп, перетаскиваемых с других столов
+                console.log('Обработка перетаскивания группы между столами:', item);
+                
+                // Используем локальную функцию processGroupTransfer
+                processGroupTransfer(item, table.id);
+                
+                // Возвращаем результат, который будет доступен в dropResult у drag источника
+                return { success: true, targetTableId: table.id };
             }
         },
         collect: (monitor) => ({
-            isOver: monitor.isOver()
+            isOver: !!monitor.isOver()
         })
     });
 
@@ -2429,6 +2523,7 @@ const Table = ({
 
         return chairs;
     };
+    
     const renderRectangleChairs = () => {
         const chairs = [];
         // Размеры стола и добавленная граница
@@ -2734,12 +2829,6 @@ const Table = ({
         return chairs;
     };
 
-
-
-
-
-
-
     // Get current shape and render appropriate table
     const shape = table.shape || 'round';
 
@@ -2764,7 +2853,7 @@ const Table = ({
             onMouseDown={handleDragStart}
         >
             <div className="table-header">
-                <h3>{table.name || `Сеղан ${table.id}`} (Աթոռներ: {table.chairCount})</h3>
+                <h3>{table.name || `Сеղան ${table.id}`} (Աթոռներ: {table.chairCount})</h3>
                 <div className="table-buttons">
                     <button
                         onClick={(e) => {
@@ -2808,7 +2897,6 @@ const Table = ({
             }
         </div >
     );
-
 };
 
 const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeople }) => {
@@ -2817,6 +2905,66 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
     // Локальное состояние для отслеживания изменений количества стульев
     const [chairCount, setChairCount] = useState(table ? table.chairCount : 12);
 
+
+    const DraggableGroup = ({ group, tableId, onRemoveGroup, onRemovePerson }) => {
+        const [{ isDragging }, drag] = useDrag({
+            type: ItemTypes.SEATED_GROUP,
+            item: () => ({
+                sourceTableId: tableId,
+                groupName: group.groupName,
+                people: group.people
+            }),
+            end: (item, monitor) => {
+                const dropResult = monitor.getDropResult();
+                // Если перетаскивание завершилось успешно на принимающем элементе
+                if (dropResult) {
+                    console.log('Перетаскивание завершено с результатом:', dropResult);
+                }
+            },
+            collect: (monitor) => ({
+                isDragging: !!monitor.isDragging()
+            })
+        });
+
+        return (
+            <div
+                ref={drag}
+                className="table-group-item"
+                style={{ opacity: isDragging ? 0.5 : 1 }}
+            >
+                <div className="group-info">
+                    <span className="group-name">Group {group.groupName}</span>
+                    <span className="group-count">{group.people.length} people</span>
+                </div>
+
+                <div className="group-people">
+                    {group.people.map((person, personIndex) => (
+                        <div key={personIndex} className="group-person">
+                            {person.name}
+                            <button
+                                className="remove-person-btn"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onRemovePerson(person.name);
+                                }}
+                                title="Удалить этого человека"
+                            >
+                                ✕
+                            </button>
+                        </div>
+                    ))}
+                </div>
+
+                <button
+                    className="remove-group-btn"
+                    onClick={() => onRemoveGroup(group.groupName)}
+                    title="Remove this group from the table"
+                >
+                    ✕
+                </button>
+            </div>
+        );
+    };
 
     const applyTableNameChange = () => {
         if (table) {
@@ -2992,32 +3140,22 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
         }
     };
 
+
     // Function to handle drag start for group
     const handleGroupDragStart = (e, group) => {
-        // Set data on global variable
-        window.currentDraggedGroup = {
-            tableId: table.id,
+        // Убедитесь, что у вас есть доступ к `table.id` внутри этой функции
+        const itemData = {
+            sourceTableId: table.id, // ID стола, С КОТОРОГО перетаскивают
             groupName: group.groupName,
-            people: group.people
+            people: group.people,
+            type: ItemTypes.SEATED_GROUP // Указываем тип
         };
-
-        // Add dragging class for visual feedback
-        e.currentTarget.classList.add('dragging');
-
-        try {
-            // Try to set data in dataTransfer
-            e.dataTransfer.setData('text/plain', 'SEATED_GROUP');
-            e.dataTransfer.setData('application/json', JSON.stringify({
-                tableId: table.id,
-                groupName: group.groupName,
-                people: group.people
-            }));
-
-            // Set drag effect
-            e.dataTransfer.effectAllowed = 'move';
-        } catch (error) {
-            console.error('Error setting drag data:', error);
-        }
+        // react-dnd сам передаст эти данные через monitor.getItem()
+        // Глобальную переменную и dataTransfer больше не используем
+        e.dataTransfer.effectAllowed = 'move'; // Можно оставить для визуального эффекта
+        // e.dataTransfer.setData(...) - УБРАТЬ
+        // window.currentDraggedGroup = itemData; - УБРАТЬ
+        return itemData; // Возвращаем данные для react-dnd
     };
 
     // Handle drag end
@@ -3173,44 +3311,13 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
                         {tableGroups.length > 0 ? (
                             <div className="table-groups-list">
                                 {tableGroups.map((group, index) => (
-                                    <div
+                                    <DraggableGroup
                                         key={index}
-                                        className="table-group-item"
-                                        draggable="true"
-                                        onDragStart={(e) => handleGroupDragStart(e, group)}
-                                        onDragEnd={handleDragEnd}
-                                    >
-                                        <div className="group-info">
-                                            <span className="group-name">Group {group.groupName}</span>
-                                            <span className="group-count">{group.people.length} people</span>
-                                        </div>
-
-                                        <div className="group-people">
-                                            {group.people.map((person, personIndex) => (
-                                                <div key={personIndex} className="group-person">
-                                                    {person.name}
-                                                    <button
-                                                        className="remove-person-btn"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation(); // Чтобы не срабатывал drag группы при нажатии на кнопку
-                                                            handleRemovePerson(person.name);
-                                                        }}
-                                                        title="Удалить этого человека"
-                                                    >
-                                                        ✕
-                                                    </button>
-                                                </div>
-                                            ))}
-                                        </div>
-
-                                        <button
-                                            className="remove-group-btn"
-                                            onClick={() => handleRemoveGroup(group.groupName)}
-                                            title="Remove this group from the table"
-                                        >
-                                            ✕
-                                        </button>
-                                    </div>
+                                        group={group}
+                                        tableId={table.id}
+                                        onRemoveGroup={handleRemoveGroup}
+                                        onRemovePerson={handleRemovePerson}
+                                    />
                                 ))}
                             </div>
                         ) : (
