@@ -2966,8 +2966,28 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
     const [tableName, setTableName] = useState(table ? (table.name || `Стол ${table.id}`) : '');
     // Локальное состояние для отслеживания изменений количества стульев
     const [chairCount, setChairCount] = useState(table ? table.chairCount : 12);
+    const popupRef = useRef(null);
+    useEffect(() => {
+        // 3. Функция для проверки клика снаружи
+        const handleClickOutside = (event) => {
+            // Проверяем, что ref существует и клик был не по элементу панели или его дочерним элементам
+            if (popupRef.current && !popupRef.current.contains(event.target)) {
+                onClose(); // 4. Закрываем панель
+            }
+        };
 
+        // Добавляем слушатель, только если панель открыта
+        if (isOpen) {
+            // Используем 'mousedown', т.к. он срабатывает раньше 'click' и может предотвратить
+            // нежелательные срабатывания на элементах внутри панели при быстром клике
+            document.addEventListener('mousedown', handleClickOutside);
+        }
 
+        // 5. Функция очистки для удаления слушателя
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [isOpen, onClose]); 
     const DraggableGroup = ({ group, tableId, onRemoveGroup, onRemovePerson }) => {
         const [{ isDragging }, drag] = useDrag({
             type: ItemTypes.SEATED_GROUP,
@@ -3230,7 +3250,7 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
     };
 
     return (
-        <div className={`table-details-popup ${isOpen ? 'open' : ''}`}>
+        <div ref={popupRef} className={`table-details-popup ${isOpen ? 'open' : ''}`}>
             <div className="table-details-header">
                 <h3>Table Details {table ? `${table.id}` : ''}</h3>
                 <button className="close-details-btn" onClick={onClose}>×</button>
