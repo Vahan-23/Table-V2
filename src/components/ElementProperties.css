@@ -79,13 +79,24 @@
     outline: none;
 }
 
-.dimensions {
+/* Стили для контроля размера шрифта */
+.font-size-control {
     display: flex;
+    align-items: center;
     gap: 10px;
 }
 
-.dimensions > div {
+.font-size-slider {
     flex: 1;
+    cursor: pointer;
+}
+
+.font-size-input {
+    width: 60px;
+    padding: 5px 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 13px;
 }
 
 .rotation-control,

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useDrag } from 'react-dnd';
 import { useDrop } from 'react-dnd';
+
 // Определяем типы элементов для drag-and-drop
 const ItemTypes = {
     HALL_ELEMENT: 'HALL_ELEMENT',
@@ -30,24 +31,23 @@ const ElementIcons = {
 export const HallElementsCatalog = ({ onAddElement }) => {
     // Список всех доступных элементов
     const elementTypes = [
-        { id: 'entrance', name: 'Вход', icon: ElementIcons.entrance, width: 80, height: 60 },
-        { id: 'exit', name: 'Выход', icon: ElementIcons.exit, width: 80, height: 60 },
-        { id: 'stairs', name: 'Лестница', icon: ElementIcons.stairs, width: 70, height: 100 },
-        { id: 'stage', name: 'Сцена', icon: ElementIcons.stage, width: 200, height: 150 },
-        { id: 'dj', name: 'DJ зона', icon: ElementIcons.dj, width: 100, height: 80 },
-        { id: 'dancefloor', name: 'Танцпол', icon: ElementIcons.dancefloor, width: 200, height: 200 },
-        { id: 'bar', name: 'Бар', icon: ElementIcons.bar, width: 150, height: 80 },
-        { id: 'buffet', name: 'Буфет', icon: ElementIcons.buffet, width: 150, height: 80 },
-        { id: 'wardrobe', name: 'Гардероб', icon: ElementIcons.wardrobe, width: 120, height: 60 },
-        { id: 'toilet', name: 'Туалет', icon: ElementIcons.toilet, width: 80, height: 80 },
-        { id: 'reception', name: 'Ресепшн', icon: ElementIcons.reception, width: 150, height: 60 },
-        { id: 'column', name: 'Колонна', icon: ElementIcons.column, width: 40, height: 40 },
-        { id: 'wall', name: 'Стена', icon: ElementIcons.wall, width: 200, height: 20 },
-        { id: 'plant', name: 'Растение', icon: ElementIcons.plant, width: 50, height: 50 },
-        { id: 'vip', name: 'VIP зона', icon: ElementIcons.vip, width: 150, height: 150 },
-        { id: 'technical', name: 'Техническое помещение', icon: ElementIcons.technical, width: 100, height: 100 },
+        { id: 'entrance', name: 'Вход', icon: ElementIcons.entrance, fontSize: 24 },
+        { id: 'exit', name: 'Выход', icon: ElementIcons.exit, fontSize: 24 },
+        { id: 'stairs', name: 'Лестница', icon: ElementIcons.stairs, fontSize: 24 },
+        { id: 'stage', name: 'Сцена', icon: ElementIcons.stage, fontSize: 24 },
+        { id: 'dj', name: 'DJ зона', icon: ElementIcons.dj, fontSize: 24 },
+        { id: 'dancefloor', name: 'Танцпол', icon: ElementIcons.dancefloor, fontSize: 24 },
+        { id: 'bar', name: 'Бар', icon: ElementIcons.bar, fontSize: 24 },
+        { id: 'buffet', name: 'Буфет', icon: ElementIcons.buffet, fontSize: 24 },
+        { id: 'wardrobe', name: 'Гардероб', icon: ElementIcons.wardrobe, fontSize: 24 },
+        { id: 'toilet', name: 'Туалет', icon: ElementIcons.toilet, fontSize: 24 },
+        { id: 'reception', name: 'Ресепшн', icon: ElementIcons.reception, fontSize: 24 },
+        { id: 'column', name: 'Колонна', icon: ElementIcons.column, fontSize: 24 },
+        { id: 'wall', name: 'Стена', icon: ElementIcons.wall, fontSize: 24 },
+        { id: 'plant', name: 'Растение', icon: ElementIcons.plant, fontSize: 24 },
+        { id: 'vip', name: 'VIP зона', icon: ElementIcons.vip, fontSize: 24 },
+        { id: 'technical', name: 'Техническое помещение', icon: ElementIcons.technical, fontSize: 24 },
     ];
-
 
     // Функция для создания нового элемента при перетаскивании
     const handleAddElement = (elementType) => {
@@ -56,8 +56,7 @@ export const HallElementsCatalog = ({ onAddElement }) => {
             type: elementType.id,
             name: elementType.name,
             icon: elementType.icon,
-            width: elementType.width,
-            height: elementType.height,
+            fontSize: elementType.fontSize, // Используем fontSize вместо width/height
             x: 100, // Начальная позиция по X
             y: 100, // Начальная позиция по Y
             rotation: 0, // Начальный угол поворота (в градусах)
@@ -136,11 +135,10 @@ export const HallElement = ({
     const [resizeDirection, setResizeDirection] = useState('');
     const elementRef = useRef(null);
     const wasDragged = useRef(false);
+    
     // Обработчики перетаскивания элемента
     const handleMouseDown = (e) => {
         e.stopPropagation();
-        // --- УБИРАЕМ ВЫЗОВ onSelect ОТСЮДА ---
-        // onSelect(element.id); // <--- УБРАТЬ ЭТУ СТРОКУ
         setIsDragging(true);
         wasDragged.current = false; // Сбрасываем флаг перетаскивания
         setDragStart({
@@ -148,7 +146,6 @@ export const HallElement = ({
             y: e.clientY,
         });
     };
-
 
     const handleMouseMove = (e) => {
         if (isDragging && !isResizing) {
@@ -171,37 +168,39 @@ export const HallElement = ({
                 y: e.clientY,
             });
         } else if (isResizing) {
-             wasDragged.current = true; // Ресайз - это тоже своего рода перетаскивание
-            // ... (существующая логика ресайза) ...
+            wasDragged.current = true; // Ресайз - это тоже своего рода перетаскивание
+            
+            // Изменяем логику ресайза: теперь меняем fontSize вместо width/height
             const dx = (e.clientX - dragStart.x) / zoom;
-            const dy = (e.clientY - dragStart.y) / zoom;
-
-            let newWidth = element.width;
-            let newHeight = element.height;
-            let newX = element.x;
-            let newY = element.y;
-
+            
+            // Увеличиваем чувствительность изменения размера шрифта
+            // Коэффициент 0.8 делает изменение более заметным
+            const fontSizeChange = dx * 0.8;
+            let newFontSize = element.fontSize;
+            
+            // Увеличиваем при растягивании вправо, уменьшаем при растягивании влево
             if (resizeDirection.includes('right')) {
-                newWidth = Math.max(20, element.width + dx);
+                newFontSize = Math.max(10, element.fontSize + fontSizeChange);
+            } else if (resizeDirection.includes('left')) {
+                newFontSize = Math.max(10, element.fontSize - fontSizeChange);
             }
-            if (resizeDirection.includes('bottom')) {
-                newHeight = Math.max(20, element.height + dy);
+            
+            // Также меняем размер при вертикальном растягивании с увеличенной чувствительностью
+            if (resizeDirection.includes('bottom') || resizeDirection.includes('top')) {
+                const dy = (e.clientY - dragStart.y) / zoom;
+                const verticalFontSizeChange = dy * 0.8; // Тот же коэффициент для вертикального изменения
+                
+                if (resizeDirection.includes('bottom')) {
+                    newFontSize = Math.max(10, newFontSize + verticalFontSizeChange);
+                } else if (resizeDirection.includes('top')) {
+                    newFontSize = Math.max(10, newFontSize - verticalFontSizeChange);
+                }
             }
-            if (resizeDirection.includes('left')) {
-                newWidth = Math.max(20, element.width - dx);
-                newX = element.x + dx;
-            }
-            if (resizeDirection.includes('top')) {
-                newHeight = Math.max(20, element.height - dy);
-                newY = element.y + dy;
-            }
-
+            
+            // Обновляем элемент с новым размером шрифта
             onUpdate({
                 ...element,
-                width: newWidth,
-                height: newHeight,
-                x: newX,
-                y: newY,
+                fontSize: newFontSize,
             });
 
             setDragStart({
@@ -297,20 +296,20 @@ export const HallElement = ({
                 position: 'absolute',
                 left: `${element.x}px`,
                 top: `${element.y}px`,
-                width: `${element.width}px`,
-                height: `${element.height}px`,
+                padding: '10px', // Добавляем паддинг для удобства
                 transform: `rotate(${element.rotation}deg)`,
-                backgroundColor: element.color,
+                backgroundColor: 'transparent', // Делаем фон прозрачным
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
-                border: selected ? '2px solid #2196F3' : '1px solid #aaa',
+                border: selected ? '2px solid #2196F3' : '1px dashed rgba(170, 170, 170, 0.5)', // Делаем границу более легкой
                 borderRadius: '4px',
                 cursor: isDragging ? 'grabbing' : 'grab',
                 userSelect: 'none',
-                zIndex: selected ? 1000 : 1,
-                boxShadow: selected ? '0 0 8px rgba(33, 150, 243, 0.5)' : 'none',
+                zIndex: selected ? 1000 : element.zIndex || 1,
+                boxShadow: 'none', // Убираем тень
+                opacity: element.opacity || 1,
             }}
             onMouseDown={handleMouseDown}
             onDoubleClick={handleDoubleClick}
@@ -318,7 +317,7 @@ export const HallElement = ({
             <div
                 className="element-icon"
                 style={{
-                    fontSize: '24px',
+                    fontSize: `${element.fontSize}px`, // Используем fontSize для размера иконки
                     marginBottom: '5px',
                 }}
             >
@@ -340,10 +339,14 @@ export const HallElement = ({
                         border: '1px solid #ccc',
                         borderRadius: '2px',
                         padding: '2px',
+                        fontSize: `${Math.max(12, element.fontSize / 2)}px`, // Адаптивный размер шрифта для имени
                     }}
                 />
             ) : (
-                <div className="element-name" style={{ fontSize: '12px', textAlign: 'center' }}>
+                <div className="element-name" style={{ 
+                    fontSize: `${Math.max(12, element.fontSize / 2)}px`, // Адаптивный размер шрифта для имени
+                    textAlign: 'center' 
+                }}>
                     {element.customName}
                 </div>
             )}
@@ -352,7 +355,7 @@ export const HallElement = ({
             {selected && (
                 <div className="element-controls" style={{
                     position: 'absolute',
-                    top: '-30px',
+                    top: `-${Math.max(30, element.fontSize * 0.6)}px`,
                     left: '0',
                     right: '0',
                     display: 'flex',
@@ -368,13 +371,14 @@ export const HallElement = ({
                             border: 'none',
                             background: '#fff',
                             borderRadius: '50%',
-                            width: '24px',
-                            height: '24px',
+                            width: `${Math.max(24, element.fontSize * 0.5)}px`,
+                            height: `${Math.max(24, element.fontSize * 0.5)}px`,
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             cursor: 'pointer',
                             boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                            fontSize: `${Math.max(16, element.fontSize * 0.3)}px`
                         }}
                     >
                         ↺
@@ -388,13 +392,14 @@ export const HallElement = ({
                             border: 'none',
                             background: '#fff',
                             borderRadius: '50%',
-                            width: '24px',
-                            height: '24px',
+                            width: `${Math.max(24, element.fontSize * 0.5)}px`,
+                            height: `${Math.max(24, element.fontSize * 0.5)}px`,
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             cursor: 'pointer',
                             boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                            fontSize: `${Math.max(16, element.fontSize * 0.3)}px`
                         }}
                     >
                         ↻
@@ -406,13 +411,14 @@ export const HallElement = ({
                             background: '#f44336',
                             color: 'white',
                             borderRadius: '50%',
-                            width: '24px',
-                            height: '24px',
+                            width: `${Math.max(24, element.fontSize * 0.5)}px`,
+                            height: `${Math.max(24, element.fontSize * 0.5)}px`,
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             cursor: 'pointer',
                             boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                            fontSize: `${Math.max(16, element.fontSize * 0.3)}px`
                         }}
                     >
                         ✕
@@ -429,8 +435,8 @@ export const HallElement = ({
                             position: 'absolute',
                             top: '-5px',
                             left: '-5px',
-                            width: '10px',
-                            height: '10px',
+                            width: `${Math.max(10, element.fontSize * 0.2)}px`,
+                            height: `${Math.max(10, element.fontSize * 0.2)}px`,
                             backgroundColor: '#2196F3',
                             borderRadius: '50%',
                             cursor: 'nwse-resize',
@@ -443,8 +449,8 @@ export const HallElement = ({
                             position: 'absolute',
                             top: '-5px',
                             right: '-5px',
-                            width: '10px',
-                            height: '10px',
+                            width: `${Math.max(10, element.fontSize * 0.2)}px`,
+                            height: `${Math.max(10, element.fontSize * 0.2)}px`,
                             backgroundColor: '#2196F3',
                             borderRadius: '50%',
                             cursor: 'nesw-resize',
@@ -457,8 +463,8 @@ export const HallElement = ({
                             position: 'absolute',
                             bottom: '-5px',
                             left: '-5px',
-                            width: '10px',
-                            height: '10px',
+                            width: `${Math.max(10, element.fontSize * 0.2)}px`,
+                            height: `${Math.max(10, element.fontSize * 0.2)}px`,
                             backgroundColor: '#2196F3',
                             borderRadius: '50%',
                             cursor: 'nesw-resize',
@@ -471,8 +477,8 @@ export const HallElement = ({
                             position: 'absolute',
                             bottom: '-5px',
                             right: '-5px',
-                            width: '10px',
-                            height: '10px',
+                            width: `${Math.max(10, element.fontSize * 0.2)}px`,
+                            height: `${Math.max(10, element.fontSize * 0.2)}px`,
                             backgroundColor: '#2196F3',
                             borderRadius: '50%',
                             cursor: 'nwse-resize',
@@ -515,13 +521,12 @@ export const HallElementsManager = ({
                     type: elementData.id,
                     name: elementData.name,
                     icon: elementData.icon,
-                    width: elementData.width,
-                    height: elementData.height,
-                    x: x - (elementData.width / 2), // Центрируем элемент по курсору
-                    y: y - (elementData.height / 2),
+                    fontSize: elementData.fontSize, // Заменяем width/height на fontSize
+                    x: x, // Располагаем по курсору
+                    y: y,
                     rotation: 0,
                     customName: elementData.name,
-                    color: '#1e90ff',
+                    color: 'transparent', // Прозрачный фон по умолчанию
                 };
 
                 console.log("Adding new element:", newElement); // Отладочный лог
@@ -547,6 +552,7 @@ export const HallElementsManager = ({
             drop(null); // Убираем привязку ref
         };
     }, [drop, tablesAreaRef]); // Зависимости для useEffect
+    
     // Добавление нового элемента
     const handleAddElement = (element) => {
         setElements((prevElements) => [...prevElements, element]);

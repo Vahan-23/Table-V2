@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react';
 
 // Компонент для редактирования свойств элемента зала
-const ElementProperties = ({ element, onUpdate, onClose }) => {
+const ElementProperties = ({ element, onUpdate, onClose, onDelete }) => {
     // Состояния для всех редактируемых свойств
     const [name, setName] = useState(element?.customName || '');
-    const [width, setWidth] = useState(element?.width || 100);
-    const [height, setHeight] = useState(element?.height || 100);
-    const [color, setColor] = useState(element?.color || '#1e90ff');
+    const [fontSize, setFontSize] = useState(element?.fontSize || 24); // Новое свойство для размера шрифта
     const [rotation, setRotation] = useState(element?.rotation || 0);
     const [opacity, setOpacity] = useState(element?.opacity || 1);
     const [zIndex, setZIndex] = useState(element?.zIndex || 1);
@@ -15,9 +13,7 @@ const ElementProperties = ({ element, onUpdate, onClose }) => {
     useEffect(() => {
         if (element) {
             setName(element.customName || element.name || '');
-            setWidth(element.width || 100);
-            setHeight(element.height || 100);
-            setColor(element.color || '#1e90ff');
+            setFontSize(element.fontSize || 24); // Используем fontSize вместо width/height
             setRotation(element.rotation || 0);
             setOpacity(element.opacity || 1);
             setZIndex(element.zIndex || 1);
@@ -31,9 +27,7 @@ const ElementProperties = ({ element, onUpdate, onClose }) => {
         onUpdate({
             ...element,
             customName: name,
-            width: Number(width),
-            height: Number(height),
-            color: color,
+            fontSize: Number(fontSize), // Заменяем width/height на fontSize
             rotation: Number(rotation),
             opacity: Number(opacity),
             zIndex: Number(zIndex)
@@ -45,7 +39,7 @@ const ElementProperties = ({ element, onUpdate, onClose }) => {
         if (element) {
             applyChanges();
         }
-    }, [name, width, height, color, rotation, opacity, zIndex]);
+    }, [name, fontSize, rotation, opacity, zIndex]); // Удалено color из зависимостей
 
     // Если элемент не выбран, не отображаем панель
     if (!element) return null;
@@ -59,7 +53,29 @@ const ElementProperties = ({ element, onUpdate, onClose }) => {
 
             <div className="properties-content">
                 <div className="property-group">
-                    <label htmlFor="element-name">Название:</label>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+                        <label htmlFor="element-name">Название:</label>
+                        <button 
+                            onClick={() => {
+                                if (window.confirm('Вы уверены, что хотите удалить этот элемент?')) {
+                                    onDelete(element.id);
+                                    onClose();
+                                }
+                            }} 
+                            className="delete-element-btn"
+                            style={{
+                                backgroundColor: '#f44336',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '4px',
+                                padding: '4px 8px',
+                                fontSize: '12px',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            Удалить элемент
+                        </button>
+                    </div>
                     <input
                         id="element-name"
                         type="text"
@@ -69,30 +85,35 @@ const ElementProperties = ({ element, onUpdate, onClose }) => {
                     />
                 </div>
 
-                <div className="property-group dimensions">
-                    <div>
-                        <label htmlFor="element-width">Ширина:</label>
+                <div className="property-group">
+                    <label htmlFor="element-font-size">Размер шрифта:</label>
+                    <div className="font-size-control">
                         <input
-                            id="element-width"
+                            id="element-font-size"
+                            type="range"
+                            min="10"
+                            max="200"
+                            value={fontSize}
+                            onChange={(e) => setFontSize(Number(e.target.value))}
+                            className="font-size-slider"
+                            style={{
+                                background: 'linear-gradient(to right, #3498db, #3498db ' + (fontSize-10)/190*100 + '%, #ddd ' + (fontSize-10)/190*100 + '%, #ddd)',
+                                height: '6px',
+                                borderRadius: '3px'
+                            }}
+                        />
+                        <input
                             type="number"
                             min="10"
+                            max="200"
                             step="1"
-                            value={width}
-                            onChange={(e) => setWidth(Math.max(10, Number(e.target.value)))}
-                            className="property-input"
+                            value={fontSize}
+                            onChange={(e) => setFontSize(Math.max(10, Math.min(200, Number(e.target.value))))}
+                            className="font-size-input"
                         />
                     </div>
-                    <div>
-                        <label htmlFor="element-height">Высота:</label>
-                        <input
-                            id="element-height"
-                            type="number"
-                            min="10"
-                            step="1"
-                            value={height}
-                            onChange={(e) => setHeight(Math.max(10, Number(e.target.value)))}
-                            className="property-input"
-                        />
+                    <div className="font-size-preview" style={{ marginTop: '5px', fontSize: '12px', color: '#666' }}>
+                        Текущий размер: {fontSize}px
                     </div>
                 </div>
 
@@ -124,24 +145,7 @@ const ElementProperties = ({ element, onUpdate, onClose }) => {
                     </div>
                 </div>
 
-                <div className="property-group">
-                    <label htmlFor="element-color">Цвет:</label>
-                    <div className="color-picker">
-                        <input
-                            id="element-color"
-                            type="color"
-                            value={color}
-                            onChange={(e) => setColor(e.target.value)}
-                            className="color-input"
-                        />
-                        <input
-                            type="text"
-                            value={color}
-                            onChange={(e) => setColor(e.target.value)}
-                            className="color-text"
-                        />
-                    </div>
-                </div>
+
 
                 <div className="property-group">
                     <label htmlFor="element-opacity">Прозрачность:</label>

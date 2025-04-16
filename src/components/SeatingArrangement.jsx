@@ -1588,7 +1588,7 @@ const SeatingArrangement = () => {
                                         </div>
                                     )}
                                 </li>
-                               
+
                                 <li
                                     className={`nav-item ${activeNavSection === 'people' ? 'active' : ''}`}
                                     onMouseEnter={() => setHoveredSection('people')}
@@ -1788,40 +1788,31 @@ const SeatingArrangement = () => {
                     </div>
                 </div>
                 <div className="main-content">
-                    <div className="sidebar">
-                        <PeopleSection
-                            people={people}
-                            tables={tables}
-                            handleDeletePerson={handleDeletePerson}
-                            setPeople={setPeople}
-                            setTables={setTables}
-                        />
+                    <div className="hall-elements-catalog-container" style={{
+                        marginBottom: '15px',
+                        padding: '10px',
+                        backgroundColor: 'white',
+                        borderRadius: '8px',
+                        boxShadow: '0 2px 5px rgba(0,0,0,0.15)',
+                    }}>
+                        <HallElementsCatalog onAddElement={(element) => {
+                            // Задаем начальные координаты в центре видимой области
+                            const tablesArea = tablesAreaRef.current;
+                            const rect = tablesArea.getBoundingClientRect();
+                            const centerX = (tablesArea.scrollLeft + rect.width / 2) / zoom;
+                            const centerY = (tablesArea.scrollTop + rect.height / 2) / zoom;
+
+                            // Модифицируем элемент с новыми координатами
+                            const newElement = {
+                                ...element,
+                                x: centerX - element.width / 2,
+                                y: centerY - element.height / 2
+                            };
+
+                            // Добавляем элемент в массив
+                            setHallElements(prev => [...prev, newElement]);
+                        }} />
                     </div>
-                        <div className="hall-elements-catalog-container" style={{
-                            marginBottom: '15px',
-                            padding: '10px',
-                            backgroundColor: 'white',
-                            borderRadius: '8px',
-                            boxShadow: '0 2px 5px rgba(0,0,0,0.15)',
-                        }}>
-                            <HallElementsCatalog onAddElement={(element) => {
-                                // Задаем начальные координаты в центре видимой области
-                                const tablesArea = tablesAreaRef.current;
-                                const rect = tablesArea.getBoundingClientRect();
-                                const centerX = (tablesArea.scrollLeft + rect.width / 2) / zoom;
-                                const centerY = (tablesArea.scrollTop + rect.height / 2) / zoom;
-
-                                // Модифицируем элемент с новыми координатами
-                                const newElement = {
-                                    ...element,
-                                    x: centerX - element.width / 2,
-                                    y: centerY - element.height / 2
-                                };
-
-                                // Добавляем элемент в массив
-                                setHallElements(prev => [...prev, newElement]);
-                            }} />
-                        </div>
                     <TableDetailsPopup
                         table={getDetailsTable()}
                         tables={tables}
@@ -2055,6 +2046,14 @@ const SeatingArrangement = () => {
                         );
                     }}
                     onClose={() => setSelectedElementId(null)}
+                    onDelete={(elementId) => {
+                        // Удаляем элемент из массива
+                        setHallElements(prevElements =>
+                            prevElements.filter(el => el.id !== elementId)
+                        );
+                        // Сбрасываем выделение
+                        setSelectedElementId(null);
+                    }}
                 />
             )}
         </DndProvider >
@@ -2082,7 +2081,7 @@ const Table = ({
     setTargetTableId,
     setAvailableSeats,
     setGroupSelectionActive,
-    setSelectedElementId, 
+    setSelectedElementId,
     setActiveMode
 }) => {
     const [isDragging, setIsDragging] = useState(false);
@@ -2987,7 +2986,7 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
-    }, [isOpen, onClose]); 
+    }, [isOpen, onClose]);
     const DraggableGroup = ({ group, tableId, onRemoveGroup, onRemovePerson }) => {
         const [{ isDragging }, drag] = useDrag({
             type: ItemTypes.SEATED_GROUP,
