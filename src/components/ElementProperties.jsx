@@ -92,7 +92,7 @@ const ElementProperties = ({ element, onUpdate, onClose, onDelete }) => {
                             id="element-font-size"
                             type="range"
                             min="10"
-                            max="200"
+                            max="1000"
                             value={fontSize}
                             onChange={(e) => setFontSize(Number(e.target.value))}
                             className="font-size-slider"
@@ -105,10 +105,10 @@ const ElementProperties = ({ element, onUpdate, onClose, onDelete }) => {
                         <input
                             type="number"
                             min="10"
-                            max="200"
+                            max="1000"
                             step="1"
                             value={fontSize}
-                            onChange={(e) => setFontSize(Math.max(10, Math.min(200, Number(e.target.value))))}
+                            onChange={(e) => setFontSize(Math.max(10, Math.min(1000, Number(e.target.value))))}
                             className="font-size-input"
                         />
                     </div>
