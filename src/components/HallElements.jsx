@@ -1,122 +1,117 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { useDrag } from 'react-dnd';
-import { useDrop } from 'react-dnd';
+import React, { useState, useRef, useEffect, memo, useMemo } from 'react';
+import { useDrag , useDrop} from 'react-dnd';
 
-// Определяем типы элементов для drag-and-drop
+// Define item types for drag-and-drop
 const ItemTypes = {
     HALL_ELEMENT: 'HALL_ELEMENT',
 };
 
-// Иконки для элементов (используем простые Unicode символы, в реальном приложении лучше использовать SVG)
+// PNG image paths instead of emoji
 const ElementIcons = {
-    entrance: '🚪',
-    exit: '↪️',
-    stairs: '🔃',
-    stage: '🎭',
-    dj: '🎧',
-    dancefloor: '💃',
-    bar: '🍹',
-    buffet: '🍽️',
-    wardrobe: '🧥',
-    toilet: '🚻',
-    reception: '📋',
-    column: '🏛️',
-    wall: '🧱',
-    plant: '🌿',
-    vip: '⭐',
-    technical: '🔧',
+    entrance: 'elements\\open.png',
+    exit: 'elements\\exit.png',
+    stairs: 'elements\\stairs.png',
+    stage: 'elements\\scene.png',
+    dj: 'elements\\dj.png',
+    dancefloor: 'elements\\dance.png',
+    bar: 'elements\\bar.png',
+    buffet: 'elements\\bufet.png',
+    wardrobe: 'elements\\garderob.png',
+    toilet: 'elements\\wc.png',
+    reception: 'elements\\reception.png',
+    column: 'elements\\column.png',
+    wall: 'elements\\pat.png',
+    plant: 'elements\\flower.png',
+    vip: 'elements\\vip.png',
+    technical: 'elements\\technic.png',
 };
 
-// Компонент каталога элементов зала (отображается в сайдбаре)
-export const HallElementsCatalog = ({ onAddElement }) => {
-    // Список всех доступных элементов
-    const elementTypes = [
-        { id: 'entrance', name: 'Вход', icon: ElementIcons.entrance, fontSize: 24 },
-        { id: 'exit', name: 'Выход', icon: ElementIcons.exit, fontSize: 24 },
-        { id: 'stairs', name: 'Лестница', icon: ElementIcons.stairs, fontSize: 24 },
-        { id: 'stage', name: 'Сцена', icon: ElementIcons.stage, fontSize: 24 },
-        { id: 'dj', name: 'DJ зона', icon: ElementIcons.dj, fontSize: 24 },
-        { id: 'dancefloor', name: 'Танцпол', icon: ElementIcons.dancefloor, fontSize: 24 },
-        { id: 'bar', name: 'Бар', icon: ElementIcons.bar, fontSize: 24 },
-        { id: 'buffet', name: 'Буфет', icon: ElementIcons.buffet, fontSize: 24 },
-        { id: 'wardrobe', name: 'Гардероб', icon: ElementIcons.wardrobe, fontSize: 24 },
-        { id: 'toilet', name: 'Туалет', icon: ElementIcons.toilet, fontSize: 24 },
-        { id: 'reception', name: 'Ресепшн', icon: ElementIcons.reception, fontSize: 24 },
-        { id: 'column', name: 'Колонна', icon: ElementIcons.column, fontSize: 24 },
-        { id: 'wall', name: 'Стена', icon: ElementIcons.wall, fontSize: 24 },
-        { id: 'plant', name: 'Растение', icon: ElementIcons.plant, fontSize: 24 },
-        { id: 'vip', name: 'VIP зона', icon: ElementIcons.vip, fontSize: 24 },
-        { id: 'technical', name: 'Техническое помещение', icon: ElementIcons.technical, fontSize: 24 },
-    ];
-
-    // Функция для создания нового элемента при перетаскивании
-    const handleAddElement = (elementType) => {
-        onAddElement({
-            id: Date.now(), // Генерируем уникальный ID
+// Memoized individual catalog item
+const DraggableCatalogItem = memo(({ elementType }) => {
+    const [{ isDragging }, drag] = useDrag({
+        type: ItemTypes.HALL_ELEMENT,
+        item: () => ({
             type: elementType.id,
-            name: elementType.name,
-            icon: elementType.icon,
-            fontSize: elementType.fontSize, // Используем fontSize вместо width/height
-            x: 100, // Начальная позиция по X
-            y: 100, // Начальная позиция по Y
-            rotation: 0, // Начальный угол поворота (в градусах)
-            customName: elementType.name, // Настраиваемое имя (по умолчанию равно типу)
-            color: '#1e90ff', // Цвет по умолчанию
-        });
-    };
+            elementData: elementType,
+        }),
+        collect: (monitor) => ({
+            isDragging: monitor.isDragging(),
+        }),
+    });
 
-    // Компонент для элемента каталога (с поддержкой перетаскивания)
-    const DraggableCatalogItem = ({ elementType }) => {
-        const [{ isDragging }, drag] = useDrag({
-            type: ItemTypes.HALL_ELEMENT,
-            item: () => ({
-                type: elementType.id,
-                elementData: elementType,
-            }),
-            end: (item, monitor) => {
-                // Если элемент был успешно перетащен в зону зала, добавляем его
-            },
-            collect: (monitor) => ({
-                isDragging: monitor.isDragging(),
-            }),
-        });
-
-        return (
-            <div
-                ref={drag}
-                className="hall-element-catalog-item"
-                style={{
-                    opacity: isDragging ? 0.5 : 1,
-                    cursor: 'move',
-                    padding: '8px',
-                    margin: '5px',
-                    border: '1px solid #ddd',
-                    borderRadius: '4px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    backgroundColor: 'white',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                }}
-            >
-                <div className="element-icon" style={{ fontSize: '24px', marginRight: '10px' }}>
-                    {elementType.icon}
-                </div>
-                <div className="element-name">{elementType.name}</div>
+    return (
+        <div
+            ref={drag}
+            className="hall-element-catalog-item"
+            style={{
+                opacity: isDragging ? 0.5 : 1,
+                cursor: 'move',
+                padding: '8px',
+                margin: '5px',
+                border: '1px solid #ddd',
+                borderRadius: '4px',
+                display: 'flex',
+                alignItems: 'center',
+                backgroundColor: 'white',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+            }}
+        >
+            <div className="element-icon" style={{ marginRight: '10px' }}>
+                <img 
+                    src={elementType.icon} 
+                    alt={elementType.name}
+                    style={{ 
+                        width: '24px', 
+                        height: '24px',
+                        objectFit: 'contain' 
+                    }} 
+                />
             </div>
-        );
-    };
+            <div className="element-name">{elementType.name}</div>
+        </div>
+    );
+});
+
+// Create the element list just once - outside the component
+const elementTypes = [
+    { id: 'entrance', name: 'Вход', icon: ElementIcons.entrance, fontSize: 24 },
+    { id: 'exit', name: 'Выход', icon: ElementIcons.exit, fontSize: 24 },
+    { id: 'stairs', name: 'Лестница', icon: ElementIcons.stairs, fontSize: 24 },
+    { id: 'stage', name: 'Сцена', icon: ElementIcons.stage, fontSize: 24 },
+    { id: 'dj', name: 'DJ зона', icon: ElementIcons.dj, fontSize: 24 },
+    { id: 'dancefloor', name: 'Танцпол', icon: ElementIcons.dancefloor, fontSize: 24 },
+    { id: 'bar', name: 'Бар', icon: ElementIcons.bar, fontSize: 24 },
+    { id: 'buffet', name: 'Буфет', icon: ElementIcons.buffet, fontSize: 24 },
+    { id: 'wardrobe', name: 'Гардероб', icon: ElementIcons.wardrobe, fontSize: 24 },
+    { id: 'toilet', name: 'Туалет', icon: ElementIcons.toilet, fontSize: 24 },
+    { id: 'reception', name: 'Ресепшн', icon: ElementIcons.reception, fontSize: 24 },
+    { id: 'column', name: 'Колонна', icon: ElementIcons.column, fontSize: 24 },
+    { id: 'wall', name: 'Стена', icon: ElementIcons.wall, fontSize: 24 },
+    { id: 'plant', name: 'Растение', icon: ElementIcons.plant, fontSize: 24 },
+    { id: 'vip', name: 'VIP зона', icon: ElementIcons.vip, fontSize: 24 },
+    { id: 'technical', name: 'Техническое помещение', icon: ElementIcons.technical, fontSize: 24 },
+];
+
+// Heavily memoized catalog component
+export const HallElementsCatalog = memo(({ onAddElement }) => {
+    // Pre-render catalog items just once with useMemo
+    const catalogItems = useMemo(() => 
+        elementTypes.map((elementType) => (
+            <DraggableCatalogItem key={elementType.id} elementType={elementType} />
+        )),
+    []);
 
     return (
         <div className="hall-elements-catalog">
             <h3 className="catalog-title">Элементы зала</h3>
             <div className="catalog-items">
-                {elementTypes.map((elementType) => (
-                    <DraggableCatalogItem key={elementType.id} elementType={elementType} />
-                ))}
+                {catalogItems}
             </div>
         </div>
     );
-};
+});
+
+
 
 // Компонент для отображения и управления элементами зала на холсте
 export const HallElement = ({
@@ -129,107 +124,201 @@ export const HallElement = ({
 }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [editName, setEditName] = useState(element.customName);
-    const [isDragging, setIsDragging] = useState(false);
-    const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-    const [isResizing, setIsResizing] = useState(false);
-    const [resizeDirection, setResizeDirection] = useState('');
     const elementRef = useRef(null);
-    const wasDragged = useRef(false);
     
-    // Обработчики перетаскивания элемента
+    // Новый подход: используем refs для всех состояний drag and resize
+    // это предотвращает ненужные ререндеры во время операций
+    const dragInfo = useRef({
+        isDragging: false,
+        startX: 0,
+        startY: 0,
+        origX: 0,
+        origY: 0,
+        wasDragged: false
+    });
+    
+    const resizeInfo = useRef({
+        isResizing: false,
+        direction: '',
+        startX: 0,
+        startY: 0,
+        origFontSize: 0
+    });
+
+    // Обработчик начала перетаскивания
     const handleMouseDown = (e) => {
+        if (e.button !== 0) return; // Только левая кнопка мыши
         e.stopPropagation();
-        setIsDragging(true);
-        wasDragged.current = false; // Сбрасываем флаг перетаскивания
-        setDragStart({
-            x: e.clientX,
-            y: e.clientY,
-        });
+        
+        // Запоминаем начальное состояние
+        dragInfo.current = {
+            isDragging: true,
+            startX: e.clientX,
+            startY: e.clientY, 
+            origX: element.x,
+            origY: element.y,
+            wasDragged: false
+        };
+        
+        // Предотвращаем выделение текста
+        document.body.style.userSelect = 'none';
+        document.body.style.cursor = 'grabbing';
+        
+        // Добавляем слушателей событий на window
+        window.addEventListener('mousemove', handleMouseMove);
+        window.addEventListener('mouseup', handleMouseUp);
     };
 
+    // Обработчик движения мыши при перетаскивании
     const handleMouseMove = (e) => {
-        if (isDragging && !isResizing) {
-            const dx = e.clientX - dragStart.x;
-            const dy = e.clientY - dragStart.y;
-
-            // Если было существенное смещение, считаем это перетаскиванием
+        // Если мы перетаскиваем элемент
+        if (dragInfo.current.isDragging) {
+            // Вычисляем смещение от начальной точки
+            const dx = e.clientX - dragInfo.current.startX;
+            const dy = e.clientY - dragInfo.current.startY;
+            
+            // Если было значительное смещение, помечаем как перетаскивание
             if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
-                wasDragged.current = true;
-            }
-
-            onUpdate({
-                ...element,
-                x: element.x + (dx / zoom),
-                y: element.y + (dy / zoom),
-            });
-
-            setDragStart({
-                x: e.clientX,
-                y: e.clientY,
-            });
-        } else if (isResizing) {
-            wasDragged.current = true; // Ресайз - это тоже своего рода перетаскивание
-            
-            // Изменяем логику ресайза: теперь меняем fontSize вместо width/height
-            const dx = (e.clientX - dragStart.x) / zoom;
-            
-            // Увеличиваем чувствительность изменения размера шрифта
-            // Коэффициент 0.8 делает изменение более заметным
-            const fontSizeChange = dx * 0.8;
-            let newFontSize = element.fontSize;
-            
-            // Увеличиваем при растягивании вправо, уменьшаем при растягивании влево
-            if (resizeDirection.includes('right')) {
-                newFontSize = Math.max(10, element.fontSize + fontSizeChange);
-            } else if (resizeDirection.includes('left')) {
-                newFontSize = Math.max(10, element.fontSize - fontSizeChange);
+                dragInfo.current.wasDragged = true;
             }
             
-            // Также меняем размер при вертикальном растягивании с увеличенной чувствительностью
-            if (resizeDirection.includes('bottom') || resizeDirection.includes('top')) {
-                const dy = (e.clientY - dragStart.y) / zoom;
-                const verticalFontSizeChange = dy * 0.8; // Тот же коэффициент для вертикального изменения
+            // Вычисляем новые координаты
+            const newX = dragInfo.current.origX + (dx / zoom);
+            const newY = dragInfo.current.origY + (dy / zoom);
+            
+            // Обновляем позицию элемента через CSS transform для плавности
+            if (elementRef.current) {
+                elementRef.current.style.left = `${newX}px`;
+                elementRef.current.style.top = `${newY}px`;
+            }
+        }
+        // Если изменяем размер
+        else if (resizeInfo.current.isResizing) {
+            // Вычисляем смещение от начальной точки
+            const dx = (e.clientX - resizeInfo.current.startX) / zoom;
+            const dy = (e.clientY - resizeInfo.current.startY) / zoom;
+            
+            // Коэффициент для плавного изменения размера
+            const fontSizeChangeFactor = 0.2;
+            let newFontSize = resizeInfo.current.origFontSize;
+            
+            // Применяем изменение размера в зависимости от направления
+            if (resizeInfo.current.direction.includes('right')) {
+                newFontSize = Math.max(10, resizeInfo.current.origFontSize + dx * fontSizeChangeFactor);
+            } else if (resizeInfo.current.direction.includes('left')) {
+                newFontSize = Math.max(10, resizeInfo.current.origFontSize - dx * fontSizeChangeFactor);
+            }
+            
+            if (resizeInfo.current.direction.includes('bottom')) {
+                newFontSize = Math.max(10, newFontSize + dy * fontSizeChangeFactor);
+            } else if (resizeInfo.current.direction.includes('top')) {
+                newFontSize = Math.max(10, newFontSize - dy * fontSizeChangeFactor);
+            }
+            
+            // Применяем новый размер через DOM для плавности
+            if (elementRef.current) {
+                const iconElement = elementRef.current.querySelector('.element-icon img');
+                if (iconElement) {
+                    iconElement.style.width = `${newFontSize}px`;
+                    iconElement.style.height = `${newFontSize}px`;
+                }
                 
-                if (resizeDirection.includes('bottom')) {
-                    newFontSize = Math.max(10, newFontSize + verticalFontSizeChange);
-                } else if (resizeDirection.includes('top')) {
-                    newFontSize = Math.max(10, newFontSize - verticalFontSizeChange);
+                const nameElement = elementRef.current.querySelector('.element-name');
+                if (nameElement) {
+                    nameElement.style.fontSize = `${Math.max(12, newFontSize / 2)}px`;
                 }
             }
             
-            // Обновляем элемент с новым размером шрифта
+            dragInfo.current.wasDragged = true; // помечаем, что было перетаскивание/ресайз
+        }
+    };
+
+    // Обработчик окончания перетаскивания
+    const handleMouseUp = (e) => {
+        // Если было перетаскивание и значительное смещение
+        if (dragInfo.current.isDragging && dragInfo.current.wasDragged) {
+            const dx = e.clientX - dragInfo.current.startX;
+            const dy = e.clientY - dragInfo.current.startY;
+            
+            // Вычисляем финальные координаты
+            const newX = Math.round(dragInfo.current.origX + (dx / zoom));
+            const newY = Math.round(dragInfo.current.origY + (dy / zoom));
+            
+            // Обновляем состояние через колбэк
             onUpdate({
                 ...element,
-                fontSize: newFontSize,
-            });
-
-            setDragStart({
-                x: e.clientX,
-                y: e.clientY,
+                x: newX,
+                y: newY
             });
         }
-    };
-
-    const handleMouseUp = () => {
-        // Если кнопка мыши отпущена, и НЕ было перетаскивания, значит это клик
-        if (isDragging && !wasDragged.current) {
-            onSelect(element.id); // Вызываем onSelect (setSelectedElementId) только здесь
+        // Если было изменение размера
+        else if (resizeInfo.current.isResizing && dragInfo.current.wasDragged) {
+            const dx = (e.clientX - resizeInfo.current.startX) / zoom;
+            const dy = (e.clientY - resizeInfo.current.startY) / zoom;
+            
+            const fontSizeChangeFactor = 0.2;
+            let newFontSize = resizeInfo.current.origFontSize;
+            
+            if (resizeInfo.current.direction.includes('right')) {
+                newFontSize = Math.max(10, resizeInfo.current.origFontSize + dx * fontSizeChangeFactor);
+            } else if (resizeInfo.current.direction.includes('left')) {
+                newFontSize = Math.max(10, resizeInfo.current.origFontSize - dx * fontSizeChangeFactor);
+            }
+            
+            if (resizeInfo.current.direction.includes('bottom')) {
+                newFontSize = Math.max(10, newFontSize + dy * fontSizeChangeFactor);
+            } else if (resizeInfo.current.direction.includes('top')) {
+                newFontSize = Math.max(10, newFontSize - dy * fontSizeChangeFactor);
+            }
+            
+            newFontSize = Math.round(newFontSize);
+            
+            // Обновляем состояние через колбэк
+            onUpdate({
+                ...element,
+                fontSize: newFontSize
+            });
         }
-        setIsDragging(false);
-        setIsResizing(false);
-        // Сбрасываем флаг на всякий случай
-        wasDragged.current = false;
+        // Если был просто клик (нажали и отпустили без движения)
+        else if (dragInfo.current.isDragging && !dragInfo.current.wasDragged) {
+            onSelect(element.id);
+        }
+        
+        // Сбрасываем состояния
+        dragInfo.current.isDragging = false;
+        dragInfo.current.wasDragged = false;
+        resizeInfo.current.isResizing = false;
+        
+        // Восстанавливаем стили документа
+        document.body.style.userSelect = '';
+        document.body.style.cursor = '';
+        
+        // Удаляем слушателей событий
+        window.removeEventListener('mousemove', handleMouseMove);
+        window.removeEventListener('mouseup', handleMouseUp);
     };
 
-    // Обработчики для изменения размера элемента
+    // Обработчик начала изменения размера
     const handleResizeStart = (e, direction) => {
         e.stopPropagation();
-        setIsResizing(true);
-        setResizeDirection(direction);
-        setDragStart({
-            x: e.clientX,
-            y: e.clientY,
-        });
+        e.preventDefault();
+        
+        // Запоминаем начальное состояние
+        resizeInfo.current = {
+            isResizing: true,
+            direction: direction,
+            startX: e.clientX,
+            startY: e.clientY,
+            origFontSize: element.fontSize
+        };
+        
+        // Предотвращаем выделение текста
+        document.body.style.userSelect = 'none';
+        document.body.style.cursor = direction === 'top-left' || direction === 'bottom-right' ? 'nwse-resize' : 'nesw-resize';
+        
+        // Добавляем слушателей событий на window
+        window.addEventListener('mousemove', handleMouseMove);
+        window.addEventListener('mouseup', handleMouseUp);
     };
 
     // Обработчик двойного клика для редактирования названия
@@ -239,12 +328,11 @@ export const HallElement = ({
         setEditName(element.customName);
     };
 
-    // Обработчик изменения имени
+    // Обработчики для редактирования имени
     const handleNameChange = (e) => {
         setEditName(e.target.value);
     };
 
-    // Обработчик сохранения имени
     const handleNameSave = () => {
         onUpdate({
             ...element,
@@ -253,7 +341,6 @@ export const HallElement = ({
         setIsEditing(false);
     };
 
-    // Обработчик нажатия Enter при редактировании
     const handleKeyPress = (e) => {
         if (e.key === 'Enter') {
             handleNameSave();
@@ -275,19 +362,6 @@ export const HallElement = ({
         onDelete(element.id);
     };
 
-    // Подключаем обработчики к window при dragging/resizing
-    React.useEffect(() => {
-        if (isDragging || isResizing) {
-            window.addEventListener('mousemove', handleMouseMove);
-            window.addEventListener('mouseup', handleMouseUp); // handleMouseUp теперь обрабатывает и клик, и конец перетаскивания
-            return () => {
-                window.removeEventListener('mousemove', handleMouseMove);
-                window.removeEventListener('mouseup', handleMouseUp);
-            };
-        }
-    }, [isDragging, isResizing, dragStart, zoom]); // Зависимости
-
-
     return (
         <div
             ref={elementRef}
@@ -296,32 +370,37 @@ export const HallElement = ({
                 position: 'absolute',
                 left: `${element.x}px`,
                 top: `${element.y}px`,
-                padding: '10px', // Добавляем паддинг для удобства
+                padding: '10px',
                 transform: `rotate(${element.rotation}deg)`,
-                backgroundColor: 'transparent', // Делаем фон прозрачным
+                backgroundColor: 'transparent',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
-                border: selected ? '2px solid #2196F3' : '1px dashed rgba(170, 170, 170, 0.5)', // Делаем границу более легкой
+                border: selected ? '2px solid #2196F3' : '1px dashed rgba(170, 170, 170, 0.5)',
                 borderRadius: '4px',
-                cursor: isDragging ? 'grabbing' : 'grab',
+                cursor: dragInfo.current.isDragging ? 'grabbing' : 'grab',
                 userSelect: 'none',
-                zIndex: selected ? 1000 : element.zIndex || 1,
-                boxShadow: 'none', // Убираем тень
+                // zIndex: selected ? 1000 : element.zIndex || 1,
+                boxShadow: 'none',
                 opacity: element.opacity || 1,
+                touchAction: 'none', // Отключаем стандартную обработку тач-событий
             }}
             onMouseDown={handleMouseDown}
             onDoubleClick={handleDoubleClick}
         >
-            <div
-                className="element-icon"
-                style={{
-                    fontSize: `${element.fontSize}px`, // Используем fontSize для размера иконки
-                    marginBottom: '5px',
-                }}
-            >
-                {element.icon}
+            <div className="element-icon" style={{ marginBottom: '5px' }}>
+                <img 
+                    src={element.icon} 
+                    alt={element.customName}
+                    style={{ 
+                        width: `${element.fontSize}px`, 
+                        height: `${element.fontSize}px`,
+                        objectFit: 'contain',
+                        pointerEvents: 'none' // Предотвращает захват перетаскивания картинкой
+                    }} 
+                    draggable="false"
+                />
             </div>
 
             {isEditing ? (
@@ -339,13 +418,14 @@ export const HallElement = ({
                         border: '1px solid #ccc',
                         borderRadius: '2px',
                         padding: '2px',
-                        fontSize: `${Math.max(12, element.fontSize / 2)}px`, // Адаптивный размер шрифта для имени
+                        fontSize: `${Math.max(12, element.fontSize / 2)}px`,
                     }}
                 />
             ) : (
                 <div className="element-name" style={{ 
-                    fontSize: `${Math.max(12, element.fontSize / 2)}px`, // Адаптивный размер шрифта для имени
-                    textAlign: 'center' 
+                    fontSize: `${Math.max(12, element.fontSize / 2)}px`,
+                    textAlign: 'center',
+                    pointerEvents: 'none' // Предотвращает захват перетаскивания текстом
                 }}>
                     {element.customName}
                 </div>
@@ -360,7 +440,8 @@ export const HallElement = ({
                     right: '0',
                     display: 'flex',
                     justifyContent: 'center',
-                    gap: '5px'
+                    gap: '5px',
+                    pointerEvents: 'auto' // Обеспечиваем работу кнопок
                 }}>
                     <button
                         onClick={(e) => {
@@ -440,6 +521,7 @@ export const HallElement = ({
                             backgroundColor: '#2196F3',
                             borderRadius: '50%',
                             cursor: 'nwse-resize',
+                            pointerEvents: 'auto' // Обеспечиваем работу маркеров
                         }}
                         onMouseDown={(e) => handleResizeStart(e, 'top-left')}
                     ></div>
@@ -454,6 +536,7 @@ export const HallElement = ({
                             backgroundColor: '#2196F3',
                             borderRadius: '50%',
                             cursor: 'nesw-resize',
+                            pointerEvents: 'auto' // Обеспечиваем работу маркеров
                         }}
                         onMouseDown={(e) => handleResizeStart(e, 'top-right')}
                     ></div>
@@ -468,6 +551,7 @@ export const HallElement = ({
                             backgroundColor: '#2196F3',
                             borderRadius: '50%',
                             cursor: 'nesw-resize',
+                            pointerEvents: 'auto' // Обеспечиваем работу маркеров
                         }}
                         onMouseDown={(e) => handleResizeStart(e, 'bottom-left')}
                     ></div>
@@ -482,6 +566,7 @@ export const HallElement = ({
                             backgroundColor: '#2196F3',
                             borderRadius: '50%',
                             cursor: 'nwse-resize',
+                            pointerEvents: 'auto' // Обеспечиваем работу маркеров
                         }}
                         onMouseDown={(e) => handleResizeStart(e, 'bottom-right')}
                     ></div>
@@ -501,93 +586,88 @@ export const HallElementsManager = ({
     setSelectedElementId,
     activeMode
 }) => {
+    // Отдельный ref для слоя элементов
+    const elementsLayerRef = useRef(null);
+    
+    // Используем useDrop для приема перетаскиваемых элементов
     const [, drop] = useDrop({
         accept: ItemTypes.HALL_ELEMENT,
         drop: (item, monitor) => {
-            console.log("Drop event detected!", item); // Отладочный лог
-
             const offset = monitor.getClientOffset();
             if (offset && tablesAreaRef.current) {
                 const containerRect = tablesAreaRef.current.getBoundingClientRect();
-                const x = (offset.x - containerRect.left + tablesAreaRef.current.scrollLeft) / zoom;
-                const y = (offset.y - containerRect.top + tablesAreaRef.current.scrollTop) / zoom;
-
-                console.log("Calculated position:", x, y); // Отладочный лог
-
-                // Создаем элемент с правильной позицией
+                const scrollLeft = tablesAreaRef.current.scrollLeft || 0;
+                const scrollTop = tablesAreaRef.current.scrollTop || 0;
+                
+                // Вычисляем позицию с учетом скролла и зума
+                const x = Math.round((offset.x - containerRect.left + scrollLeft) / zoom);
+                const y = Math.round((offset.y - containerRect.top + scrollTop) / zoom);
+                
+                // Создаем новый элемент
                 const elementData = item.elementData;
                 const newElement = {
                     id: Date.now(),
                     type: elementData.id,
                     name: elementData.name,
                     icon: elementData.icon,
-                    fontSize: elementData.fontSize, // Заменяем width/height на fontSize
-                    x: x, // Располагаем по курсору
+                    fontSize: elementData.fontSize,
+                    x: x,
                     y: y,
                     rotation: 0,
                     customName: elementData.name,
-                    color: 'transparent', // Прозрачный фон по умолчанию
+                    color: 'transparent',
+                    zIndex: Math.max(0, ...elements.map(el => el.zIndex || 0)) + 1, // Ставим поверх других
                 };
-
-                console.log("Adding new element:", newElement); // Отладочный лог
-
-                // Добавляем элемент
+                
+                // Добавляем элемент и выделяем его
                 setElements(prevElements => [...prevElements, newElement]);
                 setSelectedElementId(newElement.id);
+                
+                return { success: true };
             }
-
-            return { success: true };
+            return { success: false };
         }
     });
-
+    
+    // Применяем ref drop к tablesAreaRef при монтировании компонента
     useEffect(() => {
-        // Применяем ref drop к tablesAreaRef.current при монтировании компонента
         if (tablesAreaRef.current) {
             drop(tablesAreaRef.current);
-            console.log("Drop ref applied to canvas"); // Отладочный лог
         }
-
-        // Это выполнится при размонтировании компонента или изменении зависимостей
-        return () => {
-            drop(null); // Убираем привязку ref
-        };
-    }, [drop, tablesAreaRef]); // Зависимости для useEffect
+    }, [drop, tablesAreaRef]);
     
-    // Добавление нового элемента
-    const handleAddElement = (element) => {
-        setElements((prevElements) => [...prevElements, element]);
-        setSelectedElementId(element.id);
+    // Снятие выделения при клике на пустую область
+    const handleAreaClick = (e) => {
+        // Проверяем, что клик был на самой области, а не на элементе
+        if (e.target === elementsLayerRef.current || e.target === tablesAreaRef.current) {
+            setSelectedElementId(null);
+        }
     };
-
+    
     // Обновление элемента
     const handleUpdateElement = (updatedElement) => {
-        setElements((prevElements) =>
-            prevElements.map((el) =>
+        setElements(prevElements =>
+            prevElements.map(el =>
                 el.id === updatedElement.id ? updatedElement : el
             )
         );
     };
-
+    
     // Удаление элемента
     const handleDeleteElement = (elementId) => {
-        setElements((prevElements) =>
-            prevElements.filter((el) => el.id !== elementId)
+        setElements(prevElements =>
+            prevElements.filter(el => el.id !== elementId)
         );
         if (selectedElementId === elementId) {
             setSelectedElementId(null);
         }
     };
 
-    // Снятие выделения при клике на пустую область
-    const handleAreaClick = () => {
-        setSelectedElementId(null);
-    };
-
     return (
         <>
-            {/* Применяем drop к родительскому контейнеру через ref из props */}
+            {/* Слой для элементов зала с обработчиком клика */}
             <div
-                ref={drop}
+                ref={elementsLayerRef}
                 className="hall-elements-layer"
                 onClick={handleAreaClick}
                 style={{
@@ -596,7 +676,7 @@ export const HallElementsManager = ({
                     left: 0,
                     right: 0,
                     bottom: 0,
-                    pointerEvents: 'none'
+                    pointerEvents: 'none' // Обеспечиваем работу кликов
                 }}
             />
 

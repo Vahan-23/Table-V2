@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useDrag, useDrop } from 'react-dnd';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
@@ -765,7 +765,7 @@ const SeatingArrangement = () => {
         setSelectedElementId(null);
 
         // Устанавливаем режим столов по умолчанию
-        setActiveMode('tables');
+        // setActiveMode('tables');
     };
 
     // Delete a hall
@@ -1795,7 +1795,9 @@ const SeatingArrangement = () => {
                         borderRadius: '8px',
                         boxShadow: '0 2px 5px rgba(0,0,0,0.15)',
                     }}>
+                        
                         <HallElementsCatalog onAddElement={(element) => {
+                            console.log('test');
                             // Задаем начальные координаты в центре видимой области
                             const tablesArea = tablesAreaRef.current;
                             const rect = tablesArea.getBoundingClientRect();
@@ -1926,7 +1928,6 @@ const SeatingArrangement = () => {
                                 />
                             ))}
 
-                            {/* Добавляем компонент HallElementsManager */}
                             <HallElementsManager
                                 tablesAreaRef={tablesAreaRef}
                                 zoom={zoom}
