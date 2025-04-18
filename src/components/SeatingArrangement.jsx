@@ -1788,6 +1788,16 @@ const SeatingArrangement = () => {
                     </div>
                 </div>
                 <div className="main-content">
+                   
+                    <TableDetailsPopup
+                        table={getDetailsTable()}
+                        tables={tables}
+                        setTables={setTables}
+                        isOpen={isDetailsOpen}
+                        onClose={handleCloseTableDetails}
+                        setPeople={setPeople}
+                    />
+                    <div className="figmaContainer">
                     <div className="hall-elements-catalog-container" style={{
                         marginBottom: '15px',
                         padding: '10px',
@@ -1815,17 +1825,9 @@ const SeatingArrangement = () => {
                             setHallElements(prev => [...prev, newElement]);
                         }} />
                     </div>
-                    <TableDetailsPopup
-                        table={getDetailsTable()}
-                        tables={tables}
-                        setTables={setTables}
-                        isOpen={isDetailsOpen}
-                        onClose={handleCloseTableDetails}
-                        setPeople={setPeople}
-                    />
-                    <div className="figmaContainer">
                         <div className="zoom-controls">
                             <label>Մասշտաբ:</label>
+
                             <div className="zoom-buttons">
                                 <button
                                     className="zoom-btn zoom-out-btn"
@@ -1839,6 +1841,7 @@ const SeatingArrangement = () => {
                                     onClick={handleButtonZoomIn}
                                 >+</button>
                             </div>
+                            
                         </div>
                         <MiniMap
                             tables={tables}

@@ -15,15 +15,15 @@ const ElementIcons = {
     dj: 'elements\\dj.png',
     dancefloor: 'elements\\dance.png',
     bar: 'elements\\bar.png',
-    buffet: 'elements\\bufet.png',
+    // buffet: 'elements\\bufet.png',
     wardrobe: 'elements\\garderob.png',
     toilet: 'elements\\wc.png',
     reception: 'elements\\reception.png',
     column: 'elements\\column.png',
     wall: 'elements\\pat.png',
-    plant: 'elements\\flower.png',
+    // plant: 'elements\\flower.png',
     vip: 'elements\\vip.png',
-    technical: 'elements\\technic.png',
+    // technical: 'elements\\technic.png',
 };
 
 // Memoized individual catalog item
@@ -81,15 +81,15 @@ const elementTypes = [
     { id: 'dj', name: 'DJ зона', icon: ElementIcons.dj, fontSize: 24 },
     { id: 'dancefloor', name: 'Танцпол', icon: ElementIcons.dancefloor, fontSize: 24 },
     { id: 'bar', name: 'Бар', icon: ElementIcons.bar, fontSize: 24 },
-    { id: 'buffet', name: 'Буфет', icon: ElementIcons.buffet, fontSize: 24 },
+    // { id: 'buffet', name: 'Буфет', icon: ElementIcons.buffet, fontSize: 24 },
     { id: 'wardrobe', name: 'Гардероб', icon: ElementIcons.wardrobe, fontSize: 24 },
     { id: 'toilet', name: 'Туалет', icon: ElementIcons.toilet, fontSize: 24 },
     { id: 'reception', name: 'Ресепшн', icon: ElementIcons.reception, fontSize: 24 },
     { id: 'column', name: 'Колонна', icon: ElementIcons.column, fontSize: 24 },
-    { id: 'wall', name: 'Стена', icon: ElementIcons.wall, fontSize: 24 },
-    { id: 'plant', name: 'Растение', icon: ElementIcons.plant, fontSize: 24 },
+    // { id: 'wall', name: 'Стена', icon: ElementIcons.wall, fontSize: 24 },
+    // { id: 'plant', name: 'Растение', icon: ElementIcons.plant, fontSize: 24 },
     { id: 'vip', name: 'VIP зона', icon: ElementIcons.vip, fontSize: 24 },
-    { id: 'technical', name: 'Техническое помещение', icon: ElementIcons.technical, fontSize: 24 },
+    // { id: 'technical', name: 'Техническое помещение', icon: ElementIcons.technical, fontSize: 24 },
 ];
 
 // Heavily memoized catalog component
@@ -225,7 +225,7 @@ export const HallElement = ({
                 
                 const nameElement = elementRef.current.querySelector('.element-name');
                 if (nameElement) {
-                    nameElement.style.fontSize = `${Math.max(12, newFontSize / 2)}px`;
+                    nameElement.style.fontSize = `${Math.max(12, newFontSize / 8)}px`;
                 }
             }
             
@@ -377,7 +377,7 @@ export const HallElement = ({
                 flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
-                border: selected ? '2px solid #2196F3' : '1px dashed rgba(170, 170, 170, 0.5)',
+                // border: selected ? '2px solid #2196F3' : '1px dashed rgba(170, 170, 170, 0.5)',
                 borderRadius: '4px',
                 cursor: dragInfo.current.isDragging ? 'grabbing' : 'grab',
                 userSelect: 'none',
@@ -423,7 +423,7 @@ export const HallElement = ({
                 />
             ) : (
                 <div className="element-name" style={{ 
-                    fontSize: `${Math.max(12, element.fontSize / 2)}px`,
+                    fontSize: `${Math.max(12, element.fontSize / 8)}px`,
                     textAlign: 'center',
                     pointerEvents: 'none' // Предотвращает захват перетаскивания текстом
                 }}>

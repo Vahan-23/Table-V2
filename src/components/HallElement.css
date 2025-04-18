@@ -15,7 +15,8 @@
 
 .catalog-items {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    justify-content: center;
     gap: 8px;
     max-height: 500px;
     overflow-y: auto;
