@@ -2218,5 +2218,281 @@ button {
   font-style: italic;
 }
 
+/* Карточка группы */
+.group-card {
+  position: relative;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
 
-/* NEW TABLE STYLE */
+.group-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Стили модального окна */
+.group-management-modal {
+  width: 90%;
+  max-width: 800px;
+  max-height: 80vh;
+  padding: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.popup-title {
+  padding: 16px 20px;
+  margin: 0;
+  font-size: 18px;
+  background-color: #f5f5f5;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.group-management-content {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Секция текущих участников */
+.current-members-section h4,
+.add-members-section h4 {
+  margin-top: 0;
+  margin-bottom: 12px;
+  font-size: 16px;
+  color: #333;
+}
+
+.members-list {
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.member-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  background-color: #f9f9f9;
+  transition: background-color 0.2s ease;
+}
+
+.member-item:hover {
+  background-color: #f0f0f0;
+}
+
+.member-name {
+  font-weight: 500;
+}
+
+.remove-member-btn {
+  background-color: #ff4d4f;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  font-size: 12px;
+}
+
+.remove-member-btn:hover {
+  background-color: #ff7875;
+}
+
+.empty-members-message {
+  padding: 20px;
+  text-align: center;
+  color: #999;
+  font-style: italic;
+}
+
+/* Секция добавления участников */
+.search-container {
+  margin-bottom: 12px;
+}
+
+.search-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.available-members-list {
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.available-member-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  background-color: #f9f9f9;
+  transition: background-color 0.2s ease;
+}
+
+.available-member-item:hover {
+  background-color: #f0f0f0;
+}
+
+.member-group {
+  font-size: 12px;
+  color: #666;
+  margin-left: 10px;
+  flex: 1;
+}
+
+.add-member-btn {
+  background-color: #52c41a;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  font-size: 14px;
+}
+
+.add-member-btn:hover {
+  background-color: #73d13d;
+}
+
+.empty-available-message {
+  padding: 20px;
+  text-align: center;
+  color: #999;
+  font-style: italic;
+}
+
+/* Секция добавления нового участника */
+.add-new-person-section {
+  margin-top: 10px;
+}
+
+.show-add-section-btn {
+  background-color: #1890ff;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  font-size: 14px;
+  width: 100%;
+}
+
+.show-add-section-btn:hover {
+  background-color: #40a9ff;
+}
+
+.new-person-form {
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 12px;
+}
+
+.new-person-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+
+.new-person-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+.add-new-person-btn {
+  background-color: #52c41a;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  flex: 1;
+}
+
+.add-new-person-btn:hover {
+  background-color: #73d13d;
+}
+
+.add-new-person-btn:disabled {
+  background-color: #d9d9d9;
+  cursor: not-allowed;
+}
+
+.cancel-new-person-btn {
+  background-color: #f5f5f5;
+  color: #333;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex: 1;
+}
+
+.cancel-new-person-btn:hover {
+  background-color: #e8e8e8;
+}
+
+/* Кнопки внизу модального окна */
+.popup-buttons {
+  padding: 16px 20px;
+  background-color: #f5f5f5;
+  border-top: 1px solid #e0e0e0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.save-changes-btn {
+  min-width: 120px;
+}
+
+/* Анимация для модального окна */
+.fullscreen-popup-content {
+  animation: modalFadeIn 0.3s ease;
+}
+
+@keyframes modalFadeIn {
+  from {
+      opacity: 0;
+      transform: translateY(20px);
+  }
+  to {
+      opacity: 1;
+      transform: translateY(0);
+  }
+}

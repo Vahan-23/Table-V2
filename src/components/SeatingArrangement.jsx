@@ -1433,22 +1433,43 @@ const SeatingArrangement = () => {
         );
     };
 
-    const renderGroups = () => {
-        const groupedPeople = people.reduce((acc, person) => {
-            if (!acc[person.group]) acc[person.group] = [];
-            acc[person.group].push(person);
-            return acc;
-        }, {});
-
-        return Object.entries(groupedPeople).map(([groupName, group], index) => (
+   // Исправленная функция renderGroups для компонента SeatingArrangement
+const renderGroups = () => {
+    console.log("renderGroups called with people:", people);
+    
+    // Проверка, что people существует и является массивом
+    if (!people || !Array.isArray(people) || people.length === 0) {
+        console.log("No people available or people is not an array");
+        return <div className="empty-groups">Нет доступных групп</div>;
+    }
+    
+    const groupedPeople = people.reduce((acc, person) => {
+        if (!acc[person.group]) acc[person.group] = [];
+        acc[person.group].push(person);
+        return acc;
+    }, {});
+    
+    console.log("Grouped people:", groupedPeople);
+    
+    // Если нет групп, показываем сообщение
+    if (Object.keys(groupedPeople).length === 0) {
+        return <div className="empty-groups">Нет доступных групп</div>;
+    }
+    
+    return Object.entries(groupedPeople).map(([groupName, group], index) => {
+        console.log(`Rendering Group ${groupName} with ${group.length} members`);
+        return (
             <Group
-                key={index}
+                key={`group-${groupName}-${index}`}
                 group={group}
                 groupName={groupName}
                 setDraggingGroup={setDraggingGroup}
+                people={people}
+                setPeople={setPeople}
             />
-        ));
-    };
+        );
+    });
+};
 
     const handleChairClick = (tableId, chairIndex) => {
         const table = tables.find(t => t.id === tableId);
@@ -3451,19 +3472,21 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
     );
 };
 // Group component with proper end callback to clear dragging state
-const Group = ({ group, groupName, setDraggingGroup }) => {
+// Модифицируем компонент Group, чтобы открывать модальное окно при клике
+// Модифицируем компонент Group, чтобы открывать модальное окно при клике
+// Модифицируем компонент Group, чтобы открывать модальное окно при клике
+// Модифицируем компонент Group для отладки и исправления проблем с сохранением
+// Модифицируем компонент Group, чтобы открывать модальное окно при клике
+const Group = ({ group, groupName, setDraggingGroup, people, setPeople }) => {
     const [{ isDragging }, drag] = useDrag({
         type: 'GROUP',
         item: () => {
             console.log("Drag started for group:", groupName);
-            // Добавим дополнительное свойство для отслеживания, был ли размещен объект
             setDraggingGroup(group);
             return { group, groupName, isPlaced: false };
         },
         end: (item, monitor) => {
             console.log("Drag ended for group:", groupName);
-
-            // В любом случае сбрасываем состояние перетаскивания по окончании операции
             setDraggingGroup(null);
         },
         collect: (monitor) => ({
@@ -3471,10 +3494,243 @@ const Group = ({ group, groupName, setDraggingGroup }) => {
         }),
     });
 
+    // Добавляем состояние для управления отображением модального окна
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    
+    // Обработчик клика для отображения модального окна
+    const handleGroupClick = (e) => {
+        // Предотвращаем запуск операции перетаскивания при клике
+        e.stopPropagation();
+        setIsModalOpen(true);
+    };
+    
+    // Обработчик для закрытия модального окна
+    const handleCloseModal = () => {
+        setIsModalOpen(false);
+    };
+
     return (
-        <div ref={drag} className="group-card" style={{ opacity: isDragging ? 0.5 : 1 }}>
-            <div className="group-name">Խումբ {groupName}</div>
-            <div className="group-count">{group.length} чел.</div>
+        <>
+            <div 
+                ref={drag} 
+                className="group-card" 
+                style={{ opacity: isDragging ? 0.5 : 1 }}
+                onClick={handleGroupClick}
+            >
+                <div className="group-name">Խումբ {groupName}</div>
+                <div className="group-count">{group.length} чел.</div>
+            </div>
+            
+            {isModalOpen && (
+                <GroupManagementModal 
+                    group={group}
+                    groupName={groupName}
+                    onClose={handleCloseModal}
+                    people={people}
+                    setPeople={setPeople}
+                />
+            )}
+        </>
+    );
+};
+
+// Создаем упрощенный компонент модального окна для управления участниками группы
+const GroupManagementModal = ({ group, groupName, onClose, people, setPeople }) => {
+    // Локальное состояние для отслеживания изменений в списке участников
+    const [groupMembers, setGroupMembers] = useState([...group]);
+    
+    // Состояние для отображения секции добавления нового участника
+    const [showAddSection, setShowAddSection] = useState(false);
+    
+    // Состояние для нового имени участника
+    const [newPersonName, setNewPersonName] = useState('');
+    
+    // Обработчик удаления участника из группы
+    const handleRemoveMember = (memberName) => {
+        console.log("Removing member:", memberName);
+        
+        // Удаляем участника из локального состояния
+        const updatedGroupMembers = groupMembers.filter(
+            member => member.name !== memberName
+        );
+        console.log("Updated group members:", updatedGroupMembers);
+        setGroupMembers(updatedGroupMembers);
+    };
+    
+    // Обработчик добавления нового участника
+    const handleAddNewPerson = () => {
+        if (!newPersonName.trim()) {
+            return; // Не добавляем пустое имя
+        }
+        
+        console.log("Adding new person:", newPersonName);
+        
+        // Проверяем, существует ли уже участник с таким именем
+        if (people && Array.isArray(people)) {
+            const existingPerson = people.find(p => p.name === newPersonName);
+            if (existingPerson) {
+                alert('Участник с таким именем уже существует!');
+                return;
+            }
+        }
+        
+        // Создаем нового участника
+        const newPerson = {
+            name: newPersonName,
+            group: groupName
+        };
+        
+        // Добавляем его в группу
+        const updatedGroupMembers = [...groupMembers, newPerson];
+        console.log("Updated group members with new person:", updatedGroupMembers);
+        setGroupMembers(updatedGroupMembers);
+        
+        // Очищаем поле ввода
+        setNewPersonName('');
+        
+        // Скрываем секцию добавления нового участника
+        setShowAddSection(false);
+    };
+    
+    // Обработчик сохранения изменений
+    const handleSaveChanges = () => {
+        console.log("handleSaveChanges called");
+        console.log("- Current groupMembers:", groupMembers);
+        console.log("- Original people:", people);
+        console.log("- setPeople is function:", typeof setPeople === 'function');
+        
+        // Проверяем, что setPeople и people существуют
+        if (setPeople && typeof setPeople === 'function') {
+            if (people && Array.isArray(people)) {
+                // Сохраняем текущий people для отладки
+                const oldPeople = [...people];
+                
+                // Обновляем общий список людей
+                setPeople(prevPeople => {
+                    console.log("setPeople callback called with prevPeople:", prevPeople);
+                    
+                    // Удаляем всех участников данной группы
+                    const peopleWithoutGroup = prevPeople.filter(
+                        person => person.group !== groupName
+                    );
+                    console.log("- People without current group:", peopleWithoutGroup);
+                    
+                    // Добавляем обновленный список участников группы
+                    const updatedPeople = [...peopleWithoutGroup, ...groupMembers];
+                    console.log("- Final updated people:", updatedPeople);
+                    
+                    return updatedPeople;
+                });
+                
+                console.log("setPeople called, waiting for state update...");
+                
+                // Добавляем таймаут для проверки, что состояние обновилось
+                setTimeout(() => {
+                    console.log("Timeout check - old people:", oldPeople);
+                    console.log("Timeout check - current people:", people);
+                    const hasChanged = JSON.stringify(oldPeople) !== JSON.stringify(people);
+                    console.log("Timeout check - state changed:", hasChanged);
+                }, 100);
+            } else {
+                console.warn('people is undefined or not an array');
+            }
+        } else {
+            console.error('setPeople is not a function:', setPeople);
+        }
+        
+        // Закрываем модальное окно
+        onClose();
+    };
+    
+    return (
+        <div className="fullscreen-popup" onClick={onClose}>
+            <div className="fullscreen-popup-content group-management-modal" onClick={e => e.stopPropagation()}>
+                <h3 className="popup-title">Управление группой {groupName}</h3>
+                
+                <div className="group-management-content">
+                    {/* Список текущих участников группы */}
+                    <div className="current-members-section">
+                        <h4>Участники группы ({groupMembers.length})</h4>
+                        
+                        <div className="members-list">
+                            {groupMembers.length > 0 ? (
+                                groupMembers.map((member, index) => (
+                                    <div key={index} className="member-item">
+                                        <span className="member-name">{member.name}</span>
+                                        <button 
+                                            className="remove-member-btn"
+                                            onClick={() => handleRemoveMember(member.name)}
+                                            title="Удалить из группы"
+                                        >
+                                            ✕
+                                        </button>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="empty-members-message">
+                                    В этой группе нет участников
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                    
+                    {/* Секция добавления нового участника */}
+                    <div className="add-new-person-section">
+                        {showAddSection ? (
+                            <div className="new-person-form">
+                                <input
+                                    type="text"
+                                    placeholder="Имя нового участника"
+                                    value={newPersonName}
+                                    onChange={e => setNewPersonName(e.target.value)}
+                                    className="new-person-input"
+                                />
+                                <div className="new-person-buttons">
+                                    <button 
+                                        className="add-new-person-btn"
+                                        onClick={handleAddNewPerson}
+                                        disabled={!newPersonName.trim()}
+                                    >
+                                        Добавить
+                                    </button>
+                                    <button 
+                                        className="cancel-new-person-btn"
+                                        onClick={() => {
+                                            setShowAddSection(false);
+                                            setNewPersonName('');
+                                        }}
+                                    >
+                                        Отмена
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <button 
+                                className="show-add-section-btn"
+                                onClick={() => setShowAddSection(true)}
+                            >
+                                + Создать нового участника
+                            </button>
+                        )}
+                    </div>
+                </div>
+                
+                <div className="popup-buttons">
+                    <button
+                        className="primary-btn save-changes-btn"
+                        onClick={handleSaveChanges}
+                    >
+                        Сохранить изменения
+                    </button>
+                    
+                    <button
+                        className="cancel-btn"
+                        onClick={onClose}
+                    >
+                        Отмена
+                    </button>
+                </div>
+            </div>
         </div>
     );
 };
