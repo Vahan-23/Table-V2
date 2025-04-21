@@ -74,21 +74,21 @@ const DraggableCatalogItem = memo(({ elementType }) => {
 
 // Create the element list just once - outside the component
 const elementTypes = [
-    { id: 'entrance', name: 'Вход', icon: ElementIcons.entrance, fontSize: 24 },
-    { id: 'exit', name: 'Выход', icon: ElementIcons.exit, fontSize: 24 },
-    { id: 'stairs', name: 'Лестница', icon: ElementIcons.stairs, fontSize: 24 },
-    { id: 'stage', name: 'Сцена', icon: ElementIcons.stage, fontSize: 24 },
-    { id: 'dj', name: 'DJ зона', icon: ElementIcons.dj, fontSize: 24 },
-    { id: 'dancefloor', name: 'Танцпол', icon: ElementIcons.dancefloor, fontSize: 24 },
-    { id: 'bar', name: 'Бар', icon: ElementIcons.bar, fontSize: 24 },
+    { id: 'entrance', name: 'Вход', icon: ElementIcons.entrance, fontSize: 340 },
+    { id: 'exit', name: 'Выход', icon: ElementIcons.exit, fontSize: 340 },
+    { id: 'stairs', name: 'Лестница', icon: ElementIcons.stairs, fontSize: 340 },
+    { id: 'stage', name: 'Сцена', icon: ElementIcons.stage, fontSize: 340 },
+    { id: 'dj', name: 'DJ зона', icon: ElementIcons.dj, fontSize: 340 },
+    { id: 'dancefloor', name: 'Танцпол', icon: ElementIcons.dancefloor, fontSize: 340 },
+    { id: 'bar', name: 'Бар', icon: ElementIcons.bar, fontSize: 340 },
     // { id: 'buffet', name: 'Буфет', icon: ElementIcons.buffet, fontSize: 24 },
-    { id: 'wardrobe', name: 'Гардероб', icon: ElementIcons.wardrobe, fontSize: 24 },
-    { id: 'toilet', name: 'Туалет', icon: ElementIcons.toilet, fontSize: 24 },
-    { id: 'reception', name: 'Ресепшн', icon: ElementIcons.reception, fontSize: 24 },
-    { id: 'column', name: 'Колонна', icon: ElementIcons.column, fontSize: 24 },
+    { id: 'wardrobe', name: 'Гардероб', icon: ElementIcons.wardrobe, fontSize: 340 },
+    { id: 'toilet', name: 'Туалет', icon: ElementIcons.toilet, fontSize: 340 },
+    { id: 'reception', name: 'Ресепшн', icon: ElementIcons.reception, fontSize: 340 },
+    { id: 'column', name: 'Колонна', icon: ElementIcons.column, fontSize: 340 },
     // { id: 'wall', name: 'Стена', icon: ElementIcons.wall, fontSize: 24 },
     // { id: 'plant', name: 'Растение', icon: ElementIcons.plant, fontSize: 24 },
-    { id: 'vip', name: 'VIP зона', icon: ElementIcons.vip, fontSize: 24 },
+    { id: 'vip', name: 'VIP зона', icon: ElementIcons.vip, fontSize: 340 },
     // { id: 'technical', name: 'Техническое помещение', icon: ElementIcons.technical, fontSize: 24 },
 ];
 
