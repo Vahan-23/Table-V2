@@ -1,0 +1,297 @@
+/* Стили для панели групп */
+.groups-panel {
+    width: 100%;
+}
+
+.groups-panel-content {
+    padding: 12px;
+}
+
+.groups-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+/* Стили для группы */
+.group-item {
+    background-color: #333;
+    border-radius: 4px;
+    padding: 10px 12px;
+    cursor: grab;
+    transition: all 0.2s;
+    border-left: 4px solid #3498db;
+}
+
+.group-item:hover {
+    background-color: #444;
+    transform: translateY(-2px);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.group-item.dragging {
+    opacity: 0.5;
+    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.3);
+}
+
+.group-name {
+    font-weight: bold;
+    color: #fff; /* изменено с черного на белый для читаемости */
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+
+.group-count {
+    font-size: 12px;
+    color: #aaa;
+}
+
+.no-groups-message {
+    padding: 20px;
+    text-align: center;
+    color: #999;
+    font-style: italic;
+}
+
+.groups-actions {
+    margin-top: 12px;
+}
+
+.auto-place-button {
+    background: linear-gradient(45deg, #3498db, #2980b9);
+    border: none;
+    border-radius: 4px;
+    color: white;
+    padding: 10px;
+    width: 100%;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.auto-place-button:hover {
+    background: linear-gradient(45deg, #2980b9, #1f6b9a);
+    transform: translateY(-1px);
+}
+
+/* Стили для модального окна */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+.modal-content {
+    background-color: #2a2a2a;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 500px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
+}
+
+.modal-header {
+    padding: 15px 20px;
+    border-bottom: 1px solid #444;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #333;
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: #fff;
+    font-size: 18px;
+}
+
+.close-button {
+    background: none;
+    border: none;
+    color: #aaa;
+    font-size: 22px;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.close-button:hover {
+    color: #fff;
+}
+
+.modal-body {
+    padding: 20px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.members-section {
+    margin-bottom: 20px;
+}
+
+.members-section h4 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    color: #ddd;
+    font-size: 16px;
+}
+
+.members-list {
+    border: 1px solid #444;
+    border-radius: 4px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.member-item {
+    padding: 10px 15px;
+    border-bottom: 1px solid #444;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.member-item:last-child {
+    border-bottom: none;
+}
+
+.member-item span {
+    color: #000000; /* изменено для контраста */
+}
+
+.remove-button {
+    background: none;
+    border: none;
+    color: #e74c3c;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 0 5px;
+}
+
+.remove-button:hover {
+    color: #ff6b6b;
+}
+
+.empty-message {
+    padding: 15px;
+    text-align: center;
+    color: #999;
+    font-style: italic;
+}
+
+.add-member-section {
+    margin-bottom: 15px;
+}
+
+.show-add-button {
+    width: 100%;
+    padding: 10px;
+    background-color: #3498db;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.show-add-button:hover {
+    background-color: #2980b9;
+}
+
+.add-form {
+    padding: 15px;
+    border-radius: 4px;
+    background-color: #333;
+    margin-bottom: 15px;
+}
+
+.form-group {
+    margin-bottom: 10px;
+}
+
+.form-input {
+    width: 100%;
+    padding: 8px 12px;
+    border-radius: 4px;
+    border: 1px solid #555;
+    background-color: #222;
+    color: #ddd;
+    font-size: 14px;
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: #3498db;
+}
+
+.form-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.add-button {
+    flex: 1;
+    padding: 8px;
+    background-color: #2ecc71;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.add-button:hover {
+    background-color: #27ae60;
+}
+
+.add-button.disabled {
+    background-color: #444;
+    cursor: not-allowed;
+}
+
+.cancel-button {
+    flex: 1;
+    padding: 8px;
+    background-color: #4a4a4a;
+    color: #ddd;
+    border: 1px solid #555;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.cancel-button:hover {
+    background-color: #555;
+}
+
+.modal-footer {
+    padding: 15px 20px;
+    border-top: 1px solid #444;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    background-color: #333;
+}
+
+.save-button {
+    padding: 8px 16px;
+    background-color: #3498db;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.save-button:hover {
+    background-color: #2980b9;
+}

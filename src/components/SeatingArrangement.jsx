@@ -8,12 +8,11 @@ import './ElementProperties.css';
 import './App.css';
 
 
-
-import MiniMap from './newMiniMap';
-// import MiniMap from './MiniMap';
-
 import { HallElementsManager, ElementProperties } from './index';
 import { ItemTypes as HallElementItemTypes, HallElementsCatalog } from './HallElements'
+import SidebarLayout from './SidebarLayout';
+import GroupsPanel from './GroupsPanel';
+import ElementsPanel from './ElementsPanel';
 
 
 const ItemTypes = {
@@ -1433,43 +1432,43 @@ const SeatingArrangement = () => {
         );
     };
 
-   // Исправленная функция renderGroups для компонента SeatingArrangement
-const renderGroups = () => {
-    console.log("renderGroups called with people:", people);
-    
-    // Проверка, что people существует и является массивом
-    if (!people || !Array.isArray(people) || people.length === 0) {
-        console.log("No people available or people is not an array");
-        return <div className="empty-groups">Нет доступных групп</div>;
-    }
-    
-    const groupedPeople = people.reduce((acc, person) => {
-        if (!acc[person.group]) acc[person.group] = [];
-        acc[person.group].push(person);
-        return acc;
-    }, {});
-    
-    console.log("Grouped people:", groupedPeople);
-    
-    // Если нет групп, показываем сообщение
-    if (Object.keys(groupedPeople).length === 0) {
-        return <div className="empty-groups">Нет доступных групп</div>;
-    }
-    
-    return Object.entries(groupedPeople).map(([groupName, group], index) => {
-        console.log(`Rendering Group ${groupName} with ${group.length} members`);
-        return (
-            <Group
-                key={`group-${groupName}-${index}`}
-                group={group}
-                groupName={groupName}
-                setDraggingGroup={setDraggingGroup}
-                people={people}
-                setPeople={setPeople}
-            />
-        );
-    });
-};
+    // Исправленная функция renderGroups для компонента SeatingArrangement
+    const renderGroups = () => {
+        console.log("renderGroups called with people:", people);
+
+        // Проверка, что people существует и является массивом
+        if (!people || !Array.isArray(people) || people.length === 0) {
+            console.log("No people available or people is not an array");
+            return <div className="empty-groups">Нет доступных групп</div>;
+        }
+
+        const groupedPeople = people.reduce((acc, person) => {
+            if (!acc[person.group]) acc[person.group] = [];
+            acc[person.group].push(person);
+            return acc;
+        }, {});
+
+        console.log("Grouped people:", groupedPeople);
+
+        // Если нет групп, показываем сообщение
+        if (Object.keys(groupedPeople).length === 0) {
+            return <div className="empty-groups">Нет доступных групп</div>;
+        }
+
+        return Object.entries(groupedPeople).map(([groupName, group], index) => {
+            console.log(`Rendering Group ${groupName} with ${group.length} members`);
+            return (
+                <Group
+                    key={`group-${groupName}-${index}`}
+                    group={group}
+                    groupName={groupName}
+                    setDraggingGroup={setDraggingGroup}
+                    people={people}
+                    setPeople={setPeople}
+                />
+            );
+        });
+    };
 
     const handleChairClick = (tableId, chairIndex) => {
         const table = tables.find(t => t.id === tableId);
@@ -1582,7 +1581,7 @@ const renderGroups = () => {
             <div className="app-container">
                 <header className="app-header">
                     <div className="header-top">
-                        <div className="logo">Նստատեղերի դասավորություն</div>
+                        <div className="logo">Tables</div>
                         <nav className="main-nav">
                             <ul className="nav-list">
                                 <li
@@ -1790,26 +1789,8 @@ const renderGroups = () => {
 
                     {showHallModal && <HallModal />}
                 </header>
-                <div className="groups-container">
-                    <div className="groups-header">
-                        <div className="data-management">
-                            <div className="data-buttons">
-                                <button
-                                    className="secondary-btn create-all-tables-btn"
-                                    onClick={createTablesForAllGroups}
-                                >
-                                    Ավտոմատ դասավորել խմբերը
-                                </button>
-                            </div>
-                        </div>
-                        <h3 className="groups-title">Հասանելի խմբեր (քաշեք համապատասխան սեղանի վրա)</h3>
-                        <div className="groups-wrapper">
-                            {renderGroups()}
-                        </div>
-                    </div>
-                </div>
                 <div className="main-content">
-                   
+
                     <TableDetailsPopup
                         table={getDetailsTable()}
                         tables={tables}
@@ -1817,38 +1798,25 @@ const renderGroups = () => {
                         isOpen={isDetailsOpen}
                         onClose={handleCloseTableDetails}
                         setPeople={setPeople}
+                        
                     />
                     <div className="figmaContainer">
-                    <div className="hall-elements-catalog-container" style={{
-                        marginBottom: '15px',
-                        padding: '10px',
-                        backgroundColor: 'white',
-                        borderRadius: '8px',
-                        boxShadow: '0 2px 5px rgba(0,0,0,0.15)',
-                    }}>
+                       <SidebarLayout position='right' >
                         
-                        <HallElementsCatalog onAddElement={(element) => {
-                            console.log('test');
-                            // Задаем начальные координаты в центре видимой области
-                            const tablesArea = tablesAreaRef.current;
-                            const rect = tablesArea.getBoundingClientRect();
-                            const centerX = (tablesArea.scrollLeft + rect.width / 2) / zoom;
-                            const centerY = (tablesArea.scrollTop + rect.height / 2) / zoom;
+                            <GroupsPanel
+                                defaultExpanded={false}
+                                groups={people}
+                                setDraggingGroup={setDraggingGroup}
+                                createTablesForAllGroups={createTablesForAllGroups}
+                                updateGroups={setPeople}
+                            />
+                            <ElementsPanel
+                            defaultExpanded={false}
+                            onAddElement={(elementType) => {
+                            }} />
 
-                            // Модифицируем элемент с новыми координатами
-                            const newElement = {
-                                ...element,
-                                x: centerX - element.width / 2,
-                                y: centerY - element.height / 2
-                            };
-
-                            // Добавляем элемент в массив
-                            setHallElements(prev => [...prev, newElement]);
-                        }} />
-                    </div>
-                        <div className="zoom-controls">
-                            <label>Մասշտաբ:</label>
-
+                        </SidebarLayout>
+                       <div className="zoom-controls">
                             <div className="zoom-buttons">
                                 <button
                                     className="zoom-btn zoom-out-btn"
@@ -1862,14 +1830,8 @@ const renderGroups = () => {
                                     onClick={handleButtonZoomIn}
                                 >+</button>
                             </div>
-                            
-                        </div>
-                        <MiniMap
-                            tables={tables}
-                            tablesAreaRef={tablesAreaRef}
-                            zoom={zoom}
-                        />
 
+                        </div>
                         <div
                             className={`tables-area ${isDraggingCanvas ? 'dragging' : ''} ${draggingGroup ? 'active-drop-area' : ''}`}
                             ref={tablesAreaRef}
@@ -2985,12 +2947,83 @@ const Table = ({
     );
 };
 
+// Модифицированный компонент DraggableGroup
+const DraggableGroup = ({ group, tableId, onRemoveGroup, onRemovePerson, onDragStart }) => {
+    const [{ isDragging }, drag] = useDrag({
+        type: ItemTypes.SEATED_GROUP,
+        item: () => {
+            console.log("Drag started for group from table details:", group.groupName);
+            
+            // Вызываем функцию закрытия панели деталей при начале перетаскивания
+            if (onDragStart) {
+                onDragStart();
+            }
+            
+            return {
+                sourceTableId: tableId,
+                groupName: group.groupName,
+                people: group.people
+            };
+        },
+        end: (item, monitor) => {
+            const dropResult = monitor.getDropResult();
+            // Если перетаскивание завершилось успешно на принимающем элементе
+            if (dropResult) {
+                console.log('Перетаскивание завершено с результатом:', dropResult);
+            }
+        },
+        collect: (monitor) => ({
+            isDragging: !!monitor.isDragging()
+        })
+    });
+
+    return (
+        <div
+            ref={drag}
+            className="table-group-item"
+            style={{ opacity: isDragging ? 0.5 : 1 }}
+        >
+            <div className="group-info">
+                <span className="group-name2">Group {group.groupName}</span>
+                <span className="group-count">{group.people.length} people</span>
+            </div>
+
+            <div className="group-people">
+                {group.people.map((person, personIndex) => (
+                    <div key={personIndex} className="group-person">
+                        {person.name}
+                        <button
+                            className="remove-person-btn"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onRemovePerson(person.name);
+                            }}
+                            title="Удалить этого человека"
+                        >
+                            ✕
+                        </button>
+                    </div>
+                ))}
+            </div>
+
+            <button
+                className="remove-group-btn"
+                onClick={() => onRemoveGroup(group.groupName)}
+                title="Remove this group from the table"
+            >
+                ✕
+            </button>
+        </div>
+    );
+};
+
 const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeople }) => {
     const [tableShape, setTableShape] = useState(table ? (table.shape || 'round') : 'round');
     const [tableName, setTableName] = useState(table ? (table.name || `Стол ${table.id}`) : '');
     // Локальное состояние для отслеживания изменений количества стульев
     const [chairCount, setChairCount] = useState(table ? table.chairCount : 12);
     const popupRef = useRef(null);
+    
     useEffect(() => {
         // 3. Функция для проверки клика снаружи
         const handleClickOutside = (event) => {
@@ -3012,66 +3045,13 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
             document.removeEventListener('mousedown', handleClickOutside);
         };
     }, [isOpen, onClose]);
-    const DraggableGroup = ({ group, tableId, onRemoveGroup, onRemovePerson }) => {
-        const [{ isDragging }, drag] = useDrag({
-            type: ItemTypes.SEATED_GROUP,
-            item: () => ({
-                sourceTableId: tableId,
-                groupName: group.groupName,
-                people: group.people
-            }),
-            end: (item, monitor) => {
-                const dropResult = monitor.getDropResult();
-                // Если перетаскивание завершилось успешно на принимающем элементе
-                if (dropResult) {
-                    console.log('Перетаскивание завершено с результатом:', dropResult);
-                }
-            },
-            collect: (monitor) => ({
-                isDragging: !!monitor.isDragging()
-            })
-        });
-
-        return (
-            <div
-                ref={drag}
-                className="table-group-item"
-                style={{ opacity: isDragging ? 0.5 : 1 }}
-            >
-                <div className="group-info">
-                    <span className="group-name">Group {group.groupName}</span>
-                    <span className="group-count">{group.people.length} people</span>
-                </div>
-
-                <div className="group-people">
-                    {group.people.map((person, personIndex) => (
-                        <div key={personIndex} className="group-person">
-                            {person.name}
-                            <button
-                                className="remove-person-btn"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    onRemovePerson(person.name);
-                                }}
-                                title="Удалить этого человека"
-                            >
-                                ✕
-                            </button>
-                        </div>
-                    ))}
-                </div>
-
-                <button
-                    className="remove-group-btn"
-                    onClick={() => onRemoveGroup(group.groupName)}
-                    title="Remove this group from the table"
-                >
-                    ✕
-                </button>
-            </div>
-        );
+    
+    // Функция для закрытия панели деталей
+    // Эта функция будет передана в компонент DraggableGroup
+    const handleDragStart = () => {
+        onClose(); // Закрываем панель деталей при начале перетаскивания
     };
-
+    
     const applyTableNameChange = () => {
         if (table) {
             setTables(prevTables =>
@@ -3096,6 +3076,7 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
             setTableName(table.name || `Стол ${table.id}`); // Добавьте эту строку
         }
     }, [table]);
+    
     const handleRemovePerson = (personName) => {
         if (window.confirm(`Вы уверены, что хотите удалить ${personName} с этого стола?`)) {
             // Обновляем таблицы, удаляя выбранного человека
@@ -3126,6 +3107,7 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
             }
         }
     };
+    
     // Обновляем локальное состояние при изменении стола
     useEffect(() => {
         if (table) {
@@ -3246,33 +3228,6 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
         }
     };
 
-
-    // Function to handle drag start for group
-    const handleGroupDragStart = (e, group) => {
-        // Убедитесь, что у вас есть доступ к `table.id` внутри этой функции
-        const itemData = {
-            sourceTableId: table.id, // ID стола, С КОТОРОГО перетаскивают
-            groupName: group.groupName,
-            people: group.people,
-            type: ItemTypes.SEATED_GROUP // Указываем тип
-        };
-        // react-dnd сам передаст эти данные через monitor.getItem()
-        // Глобальную переменную и dataTransfer больше не используем
-        e.dataTransfer.effectAllowed = 'move'; // Можно оставить для визуального эффекта
-        // e.dataTransfer.setData(...) - УБРАТЬ
-        // window.currentDraggedGroup = itemData; - УБРАТЬ
-        return itemData; // Возвращаем данные для react-dnd
-    };
-
-    // Handle drag end
-    const handleDragEnd = (e) => {
-        e.currentTarget.classList.remove('dragging');
-        // Clear the global variable after a small delay to allow for drop processing
-        setTimeout(() => {
-            window.currentDraggedGroup = null;
-        }, 100);
-    };
-
     return (
         <div ref={popupRef} className={`table-details-popup ${isOpen ? 'open' : ''}`}>
             <div className="table-details-header">
@@ -3294,7 +3249,7 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
                         onClick={applyTableNameChange}
                         disabled={table && tableName === (table.name || `Стол ${table.id}`)}
                     >
-                        Применить
+                        Ок
                     </button>
                 </div>
             </div>
@@ -3333,7 +3288,7 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
                                     <div style={{
                                         width: '60px',
                                         height: '60px',
-                                        backgroundColor: '#8B4513',
+                                        backgroundColor: 'rgb(26 26 26)',
                                         borderRadius: '50%',
                                         marginBottom: '5px'
                                     }}></div>
@@ -3356,7 +3311,7 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
                                         width: '60px',
                                         height: '40px',
                                         backgroundColor: 'white',
-                                        border: '2px solid #8B4513',
+                                        border: '2px solid rgb(26 26 26)',
                                         borderRadius: '5px',
                                         marginBottom: '5px'
                                     }}></div>
@@ -3423,6 +3378,7 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
                                         tableId={table.id}
                                         onRemoveGroup={handleRemoveGroup}
                                         onRemovePerson={handleRemovePerson}
+                                        onDragStart={handleDragStart} // Передаем функцию закрытия
                                     />
                                 ))}
                             </div>
@@ -3496,14 +3452,14 @@ const Group = ({ group, groupName, setDraggingGroup, people, setPeople }) => {
 
     // Добавляем состояние для управления отображением модального окна
     const [isModalOpen, setIsModalOpen] = useState(false);
-    
+
     // Обработчик клика для отображения модального окна
     const handleGroupClick = (e) => {
         // Предотвращаем запуск операции перетаскивания при клике
         e.stopPropagation();
         setIsModalOpen(true);
     };
-    
+
     // Обработчик для закрытия модального окна
     const handleCloseModal = () => {
         setIsModalOpen(false);
@@ -3511,18 +3467,18 @@ const Group = ({ group, groupName, setDraggingGroup, people, setPeople }) => {
 
     return (
         <>
-            <div 
-                ref={drag} 
-                className="group-card" 
+            <div
+                ref={drag}
+                className="group-card"
                 style={{ opacity: isDragging ? 0.5 : 1 }}
                 onClick={handleGroupClick}
             >
                 <div className="group-name">Խումբ {groupName}</div>
                 <div className="group-count">{group.length} чел.</div>
             </div>
-            
+
             {isModalOpen && (
-                <GroupManagementModal 
+                <GroupManagementModal
                     group={group}
                     groupName={groupName}
                     onClose={handleCloseModal}
@@ -3538,17 +3494,17 @@ const Group = ({ group, groupName, setDraggingGroup, people, setPeople }) => {
 const GroupManagementModal = ({ group, groupName, onClose, people, setPeople }) => {
     // Локальное состояние для отслеживания изменений в списке участников
     const [groupMembers, setGroupMembers] = useState([...group]);
-    
+
     // Состояние для отображения секции добавления нового участника
     const [showAddSection, setShowAddSection] = useState(false);
-    
+
     // Состояние для нового имени участника
     const [newPersonName, setNewPersonName] = useState('');
-    
+
     // Обработчик удаления участника из группы
     const handleRemoveMember = (memberName) => {
         console.log("Removing member:", memberName);
-        
+
         // Удаляем участника из локального состояния
         const updatedGroupMembers = groupMembers.filter(
             member => member.name !== memberName
@@ -3556,15 +3512,15 @@ const GroupManagementModal = ({ group, groupName, onClose, people, setPeople }) 
         console.log("Updated group members:", updatedGroupMembers);
         setGroupMembers(updatedGroupMembers);
     };
-    
+
     // Обработчик добавления нового участника
     const handleAddNewPerson = () => {
         if (!newPersonName.trim()) {
             return; // Не добавляем пустое имя
         }
-        
+
         console.log("Adding new person:", newPersonName);
-        
+
         // Проверяем, существует ли уже участник с таким именем
         if (people && Array.isArray(people)) {
             const existingPerson = people.find(p => p.name === newPersonName);
@@ -3573,57 +3529,57 @@ const GroupManagementModal = ({ group, groupName, onClose, people, setPeople }) 
                 return;
             }
         }
-        
+
         // Создаем нового участника
         const newPerson = {
             name: newPersonName,
             group: groupName
         };
-        
+
         // Добавляем его в группу
         const updatedGroupMembers = [...groupMembers, newPerson];
         console.log("Updated group members with new person:", updatedGroupMembers);
         setGroupMembers(updatedGroupMembers);
-        
+
         // Очищаем поле ввода
         setNewPersonName('');
-        
+
         // Скрываем секцию добавления нового участника
         setShowAddSection(false);
     };
-    
+
     // Обработчик сохранения изменений
     const handleSaveChanges = () => {
         console.log("handleSaveChanges called");
         console.log("- Current groupMembers:", groupMembers);
         console.log("- Original people:", people);
         console.log("- setPeople is function:", typeof setPeople === 'function');
-        
+
         // Проверяем, что setPeople и people существуют
         if (setPeople && typeof setPeople === 'function') {
             if (people && Array.isArray(people)) {
                 // Сохраняем текущий people для отладки
                 const oldPeople = [...people];
-                
+
                 // Обновляем общий список людей
                 setPeople(prevPeople => {
                     console.log("setPeople callback called with prevPeople:", prevPeople);
-                    
+
                     // Удаляем всех участников данной группы
                     const peopleWithoutGroup = prevPeople.filter(
                         person => person.group !== groupName
                     );
                     console.log("- People without current group:", peopleWithoutGroup);
-                    
+
                     // Добавляем обновленный список участников группы
                     const updatedPeople = [...peopleWithoutGroup, ...groupMembers];
                     console.log("- Final updated people:", updatedPeople);
-                    
+
                     return updatedPeople;
                 });
-                
+
                 console.log("setPeople called, waiting for state update...");
-                
+
                 // Добавляем таймаут для проверки, что состояние обновилось
                 setTimeout(() => {
                     console.log("Timeout check - old people:", oldPeople);
@@ -3637,27 +3593,27 @@ const GroupManagementModal = ({ group, groupName, onClose, people, setPeople }) 
         } else {
             console.error('setPeople is not a function:', setPeople);
         }
-        
+
         // Закрываем модальное окно
         onClose();
     };
-    
+
     return (
         <div className="fullscreen-popup" onClick={onClose}>
             <div className="fullscreen-popup-content group-management-modal" onClick={e => e.stopPropagation()}>
                 <h3 className="popup-title">Управление группой {groupName}</h3>
-                
+
                 <div className="group-management-content">
                     {/* Список текущих участников группы */}
                     <div className="current-members-section">
                         <h4>Участники группы ({groupMembers.length})</h4>
-                        
+
                         <div className="members-list">
                             {groupMembers.length > 0 ? (
                                 groupMembers.map((member, index) => (
                                     <div key={index} className="member-item">
                                         <span className="member-name">{member.name}</span>
-                                        <button 
+                                        <button
                                             className="remove-member-btn"
                                             onClick={() => handleRemoveMember(member.name)}
                                             title="Удалить из группы"
@@ -3673,7 +3629,7 @@ const GroupManagementModal = ({ group, groupName, onClose, people, setPeople }) 
                             )}
                         </div>
                     </div>
-                    
+
                     {/* Секция добавления нового участника */}
                     <div className="add-new-person-section">
                         {showAddSection ? (
@@ -3686,14 +3642,14 @@ const GroupManagementModal = ({ group, groupName, onClose, people, setPeople }) 
                                     className="new-person-input"
                                 />
                                 <div className="new-person-buttons">
-                                    <button 
+                                    <button
                                         className="add-new-person-btn"
                                         onClick={handleAddNewPerson}
                                         disabled={!newPersonName.trim()}
                                     >
                                         Добавить
                                     </button>
-                                    <button 
+                                    <button
                                         className="cancel-new-person-btn"
                                         onClick={() => {
                                             setShowAddSection(false);
@@ -3705,7 +3661,7 @@ const GroupManagementModal = ({ group, groupName, onClose, people, setPeople }) 
                                 </div>
                             </div>
                         ) : (
-                            <button 
+                            <button
                                 className="show-add-section-btn"
                                 onClick={() => setShowAddSection(true)}
                             >
@@ -3714,7 +3670,7 @@ const GroupManagementModal = ({ group, groupName, onClose, people, setPeople }) 
                         )}
                     </div>
                 </div>
-                
+
                 <div className="popup-buttons">
                     <button
                         className="primary-btn save-changes-btn"
@@ -3722,7 +3678,7 @@ const GroupManagementModal = ({ group, groupName, onClose, people, setPeople }) 
                     >
                         Сохранить изменения
                     </button>
-                    
+
                     <button
                         className="cancel-btn"
                         onClick={onClose}

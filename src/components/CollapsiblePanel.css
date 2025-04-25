@@ -1,0 +1,76 @@
+/* Стили для панели в стиле Photoshop */
+.collapsible-panel {
+    border-bottom: 1px solid #3a3a3a;
+    background-color: #252525;
+    color: #e0e0e0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    width: 100%;
+  }
+  
+  .panel-header {
+    padding: 4px 12px;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.2s;
+    display: flex;
+    align-items: center;
+  }
+  
+  .panel-header:hover {
+    background-color: #333333;
+  }
+  
+  .header-content {
+    display: flex;
+    align-items: center;
+    width: 100%;
+  }
+  
+  .expand-icon {
+    display: inline-block;
+    font-size: 10px;
+    margin-right: 8px;
+    transition: transform 0.3s;
+    color: #999;
+  }
+  
+  .expand-icon.expanded {
+    transform: rotate(90deg);
+  }
+  
+  .panel-title {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+    flex: 1;
+  }
+  
+  .panel-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out;
+    background-color: #2a2a2a;
+  }
+  
+  .panel-content.expanded {
+    max-height: 500px; /* Или другое достаточно большое значение */
+    overflow-y: auto;
+  }
+  
+  /* Scrollbar стиль */
+  .panel-content::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  .panel-content::-webkit-scrollbar-track {
+    background: #333;
+  }
+  
+  .panel-content::-webkit-scrollbar-thumb {
+    background: #555;
+    border-radius: 3px;
+  }
+  
+  .panel-content::-webkit-scrollbar-thumb:hover {
+    background: #666;
+  }
