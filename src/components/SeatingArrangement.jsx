@@ -2050,6 +2050,8 @@ const SeatingArrangement = () => {
 
 
 
+// Модифицированный Table компонент с ручным поворотом всего контейнера
+// Полный компонент Table с вращением только для прямоугольных столов
 const Table = ({
     table,
     setTables,
@@ -2067,18 +2069,97 @@ const Table = ({
     setGroupToPlace,
     setTargetTableId,
     setAvailableSeats,
-    setGroupSelectionActive,
-    setSelectedElementId,
-    setActiveMode
+    setGroupSelectionActive
 }) => {
     const [isDragging, setIsDragging] = useState(false);
     const [isResizing, setIsResizing] = useState(false);
     const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
     const [dragStartTime, setDragStartTime] = useState(null);
+    const [isRotating, setIsRotating] = useState(false);
+    const [rotateStartAngle, setRotateStartAngle] = useState(0);
     const tableRef = useRef(null);
+    const rotateHandleRef = useRef(null);
 
     // Track if we're actually dragging or just clicking
     const isDragOperation = useRef(false);
+
+    // Получаем форму стола
+    const shape = table.shape || 'round';
+    const isRectangleTable = shape === 'rectangle';
+    
+    // Получаем текущий угол поворота
+    const rotation = table.rotation || 0;
+
+    // Функция для ручного поворота стола
+    const handleRotateStart = (e) => {
+        if (!tableRef.current || !isRectangleTable) return;
+        
+        // Остановка всплытия события
+        e.stopPropagation();
+        e.preventDefault();
+        
+        console.log('ROTATION START'); // Отладочный вывод
+        
+        setIsRotating(true);
+        
+        // Вычисляем центр стола
+        const rect = tableRef.current.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        
+        // Вычисляем начальный угол
+        const startAngle = Math.atan2(
+            e.clientY - centerY,
+            e.clientX - centerX
+        ) * (180 / Math.PI);
+        
+        console.log('Start angle:', startAngle, 'Current rotation:', table.rotation || 0);
+        
+        setRotateStartAngle(startAngle - (table.rotation || 0));
+        
+        // Обрабатываем события на уровне документа
+        document.addEventListener('mousemove', handleRotateMove);
+        document.addEventListener('mouseup', handleRotateEnd);
+    };
+    
+    const handleRotateMove = (e) => {
+        if (!isRotating || !tableRef.current) return;
+        
+        // Вычисляем центр стола
+        const rect = tableRef.current.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        
+        // Вычисляем новый угол
+        const currentAngle = Math.atan2(
+            e.clientY - centerY,
+            e.clientX - centerX
+        ) * (180 / Math.PI);
+        
+        // Получаем разницу поворота
+        let newRotation = currentAngle - rotateStartAngle;
+        
+        // Нормализуем угол поворота до диапазона 0-360
+        newRotation = (newRotation + 360) % 360;
+        
+        // Обновляем поворот стола
+        setTables(prevTables => 
+            prevTables.map(t => {
+                if (t.id === table.id) {
+                    return { ...t, rotation: newRotation };
+                }
+                return t;
+            })
+        );
+    };
+    
+    const handleRotateEnd = () => {
+        setIsRotating(false);
+        
+        // Удаляем обработчики событий
+        document.removeEventListener('mousemove', handleRotateMove);
+        document.removeEventListener('mouseup', handleRotateEnd);
+    };
 
     // Функция для показа уведомления о перемещении
     const showTransferNotification = (groupName, tableId) => {
@@ -2399,17 +2480,6 @@ const Table = ({
         }
     };
 
-    useEffect(() => {
-        if (isDragging || isResizing) {
-            window.addEventListener('mousemove', handleTableMouseMove);
-            window.addEventListener('mouseup', handleTableMouseUp);
-            return () => {
-                window.removeEventListener('mousemove', handleTableMouseMove);
-                window.removeEventListener('mouseup', handleTableMouseUp);
-            };
-        }
-    }, [isDragging, isResizing]);
-
     // Enhanced drop target to handle both regular group drops and seated group transfers
     const [{ isOver }, drop] = useDrop({
         accept: [ItemTypes.GROUP, ItemTypes.SEATED_GROUP],
@@ -2605,10 +2675,7 @@ const Table = ({
 
         let chairIndex = 0;
 
-        // Важно: для каждого стула обрабатываем отдельный индекс
-        // и фиксируем индекс стула при создании обработчика событий
-
-        // Левый край стола
+        // Leftmost chairs
         if (chairsLeft > 0) {
             const leftChairIndex = chairIndex; // Фиксируем индекс для левого стула
             const person = peopleOnTable[leftChairIndex];
@@ -2673,7 +2740,7 @@ const Table = ({
             chairIndex++;
         }
 
-        // Правая сторона стола
+        // Rightmost chairs
         if (chairsRight > 0) {
             const rightChairIndex = chairIndex; // Фиксируем индекс для правого стула
             const person = peopleOnTable[rightChairIndex];
@@ -2738,7 +2805,7 @@ const Table = ({
             chairIndex++;
         }
 
-        // Верхняя сторона стола
+        // Top chairs
         for (let i = 0; i < chairsTop; i++) {
             const topChairIndex = chairIndex; // Фиксируем индекс для верхнего стула
             const person = peopleOnTable[topChairIndex];
@@ -2806,7 +2873,7 @@ const Table = ({
             chairIndex++;
         }
 
-        // Нижняя сторона стола
+        // Bottom chairs
         for (let i = 0; i < chairsBottom; i++) {
             const bottomChairIndex = chairIndex; // Фиксируем индекс для нижнего стула
             const person = peopleOnTable[bottomChairIndex];
@@ -2876,9 +2943,25 @@ const Table = ({
 
         return chairs;
     };
-
-    // Get current shape and render appropriate table
-    const shape = table.shape || 'round';
+    
+    // Стили для кнопки вращения - показываем только для прямоугольных столов
+    const rotateHandleStyles = isRectangleTable ? {
+        position: 'absolute',
+        top: '-25px',
+        right: '-25px',
+        width: '36px',
+        height: '36px',
+        backgroundColor: '#3498db',
+        border: '2px solid white',
+        borderRadius: '50%',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        cursor: isRotating ? 'grabbing' : 'grab',
+        zIndex: 100,
+        boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
+        transition: 'transform 0.2s, background-color 0.2s'
+    } : null;
 
     return (
         <div
@@ -2896,7 +2979,11 @@ const Table = ({
                 position: 'absolute',
                 left: `${table.x || 0}px`,
                 top: `${table.y || 0}px`,
-                cursor: isDragging ? 'grabbing' : 'grab'
+                cursor: isDragging ? 'grabbing' : 'grab',
+                // Применяем поворот только к прямоугольным столам
+                transform: isRectangleTable ? `rotate(${rotation}deg)` : 'none',
+                transformOrigin: 'center center',
+                transition: isRotating ? 'none' : 'transform 0.3s ease'
             }}
             onMouseDown={handleDragStart}
         >
@@ -2915,8 +3002,11 @@ const Table = ({
                 </div>
             </div>
 
+            {/* Кнопка поворота - только для прямоугольных столов */}
+            
+
             {shape === 'rectangle' ? (
-                // Для прямоугольного стола сохраняем класс table, но перезаписываем его стиль
+                // Прямоугольный стол
                 <div className="table" style={{
                     margin: "20px",
                     width: "400px",
@@ -2928,22 +3018,19 @@ const Table = ({
                     alignItems: "center",
                     backgroundImage: "url('/table2.png')",
                     backgroundSize: "100% 100%",
-                    backgroundRepeat: "no-repeat",
-                    // backgroundPosition: "center"
+                    backgroundRepeat: "no-repeat"
                 }}>
-
                     {renderRectangleChairs()}
                 </div>
             ) : (
-                // Оригинальный круглый стол - полностью без изменений
+                // Круглый стол
                 <div className="table">
                     <div className="table-top">
                         {renderRoundChairs()}
                     </div>
                 </div>
-            )
-            }
-        </div >
+            )}
+        </div>
     );
 };
 
@@ -3020,27 +3107,30 @@ const DraggableGroup = ({ group, tableId, onRemoveGroup, onRemovePerson, onDragS
 const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeople }) => {
     const [tableShape, setTableShape] = useState(table ? (table.shape || 'round') : 'round');
     const [tableName, setTableName] = useState(table ? (table.name || `Стол ${table.id}`) : '');
+    // Добавляем состояние для отслеживания угла поворота
+    const [tableRotation, setTableRotation] = useState(table ? (table.rotation || 0) : 0);
     // Локальное состояние для отслеживания изменений количества стульев
     const [chairCount, setChairCount] = useState(table ? table.chairCount : 12);
     const popupRef = useRef(null);
     
+    // Определяем, является ли стол прямоугольным
+    const isRectangleTable = tableShape === 'rectangle';
+    
     useEffect(() => {
-        // 3. Функция для проверки клика снаружи
+        // Функция для проверки клика снаружи
         const handleClickOutside = (event) => {
             // Проверяем, что ref существует и клик был не по элементу панели или его дочерним элементам
             if (popupRef.current && !popupRef.current.contains(event.target)) {
-                onClose(); // 4. Закрываем панель
+                onClose(); // Закрываем панель
             }
         };
 
         // Добавляем слушатель, только если панель открыта
         if (isOpen) {
-            // Используем 'mousedown', т.к. он срабатывает раньше 'click' и может предотвратить
-            // нежелательные срабатывания на элементах внутри панели при быстром клике
             document.addEventListener('mousedown', handleClickOutside);
         }
 
-        // 5. Функция очистки для удаления слушателя
+        // Функция очистки для удаления слушателя
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
@@ -3052,6 +3142,17 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
         onClose(); // Закрываем панель деталей при начале перетаскивания
     };
     
+    // Обновляем локальное состояние при изменении стола
+    useEffect(() => {
+        if (table) {
+            setChairCount(table.chairCount);
+            setTableShape(table.shape || 'round');
+            setTableName(table.name || `Стол ${table.id}`);
+            setTableRotation(table.rotation || 0);
+        }
+    }, [table]);
+    
+    // Применение изменения имени стола
     const applyTableNameChange = () => {
         if (table) {
             setTables(prevTables =>
@@ -3067,55 +3168,8 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
             );
         }
     };
-
-    // Обновляйте локальное состояние при изменении стола
-    useEffect(() => {
-        if (table) {
-            setChairCount(table.chairCount);
-            setTableShape(table.shape || 'round');
-            setTableName(table.name || `Стол ${table.id}`); // Добавьте эту строку
-        }
-    }, [table]);
     
-    const handleRemovePerson = (personName) => {
-        if (window.confirm(`Вы уверены, что хотите удалить ${personName} с этого стола?`)) {
-            // Обновляем таблицы, удаляя выбранного человека
-            setTables(prevTables =>
-                prevTables.map(t => {
-                    if (t.id === table.id) {
-                        return {
-                            ...t,
-                            people: t.people.map(person =>
-                                (person && person.name === personName) ? null : person
-                            )
-                        };
-                    }
-                    return t;
-                })
-            );
-
-            // Возвращаем человека в общий список
-            const personToReturn = table.people.find(p => p && p.name === personName);
-            if (personToReturn) {
-                setPeople(prevPeople => {
-                    // Проверяем, что человека еще нет в списке
-                    if (!prevPeople.some(p => p.name === personName)) {
-                        return [...prevPeople, personToReturn];
-                    }
-                    return prevPeople;
-                });
-            }
-        }
-    };
-    
-    // Обновляем локальное состояние при изменении стола
-    useEffect(() => {
-        if (table) {
-            setChairCount(table.chairCount);
-            setTableShape(table.shape || 'round'); // Add this line
-        }
-    }, [table]);
-
+    // Применение изменения формы стола
     const applyTableShapeChange = () => {
         if (table && tableShape !== table.shape) {
             setTables(prevTables =>
@@ -3131,7 +3185,47 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
             );
         }
     };
-
+    
+    // Функция для сброса поворота стола
+    const resetTableRotation = () => {
+        if (table && isRectangleTable) {
+            applyTableRotationChange(0);
+        }
+    };
+    
+    // Функция для применения изменения поворота
+    const applyTableRotationChange = (newRotation) => {
+        if (table && isRectangleTable) {
+            // Нормализуем угол поворота от 0 до 359 градусов
+            const normalizedRotation = ((newRotation % 360) + 360) % 360;
+            
+            setTableRotation(normalizedRotation);
+            
+            setTables(prevTables =>
+                prevTables.map(t => {
+                    if (t.id === table.id) {
+                        return {
+                            ...t,
+                            rotation: normalizedRotation
+                        };
+                    }
+                    return t;
+                })
+            );
+        }
+    };
+    
+    // Обработчик изменения слайдера поворота
+    const handleRotationSliderChange = (e) => {
+        const newRotation = parseInt(e.target.value, 10);
+        setTableRotation(newRotation);
+    };
+    
+    // Применяем новое значение после завершения движения слайдера
+    const handleRotationSliderComplete = () => {
+        applyTableRotationChange(tableRotation);
+    };
+    
     // Обработчик изменения количества стульев
     const handleChairCountChange = (e) => {
         const newCount = parseInt(e.target.value, 10);
@@ -3227,6 +3321,38 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
             setPeople(prevPeople => [...prevPeople, ...groupPeople]);
         }
     };
+    
+    // Функция для удаления отдельного человека из стола
+    const handleRemovePerson = (personName) => {
+        if (window.confirm(`Вы уверены, что хотите удалить ${personName} с этого стола?`)) {
+            // Обновляем таблицы, удаляя выбранного человека
+            setTables(prevTables =>
+                prevTables.map(t => {
+                    if (t.id === table.id) {
+                        return {
+                            ...t,
+                            people: t.people.map(person =>
+                                (person && person.name === personName) ? null : person
+                            )
+                        };
+                    }
+                    return t;
+                })
+            );
+
+            // Возвращаем человека в общий список
+            const personToReturn = table.people.find(p => p && p.name === personName);
+            if (personToReturn) {
+                setPeople(prevPeople => {
+                    // Проверяем, что человека еще нет в списке
+                    if (!prevPeople.some(p => p.name === personName)) {
+                        return [...prevPeople, personToReturn];
+                    }
+                    return prevPeople;
+                });
+            }
+        }
+    };
 
     return (
         <div ref={popupRef} className={`table-details-popup ${isOpen ? 'open' : ''}`}>
@@ -3234,6 +3360,7 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
                 <h3>Table Details {table ? `${table.id}` : ''}</h3>
                 <button className="close-details-btn" onClick={onClose}>×</button>
             </div>
+            
             <div className="table-name-section">
                 <h4>Изменить название стола</h4>
                 <div className="table-name-control">
@@ -3253,6 +3380,7 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
                     </button>
                 </div>
             </div>
+            
             <div className="table-details-content">
                 {table ? (
                     <>
@@ -3335,6 +3463,139 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
                                 Применить
                             </button>
                         </div>
+                        
+                        {/* Элементы управления поворотом - только для прямоугольных столов */}
+                        {isRectangleTable && (
+                            <div style={{
+                                marginTop: '15px',
+                                padding: '10px',
+                                border: '1px solid #eee',
+                                borderRadius: '5px'
+                            }}>
+                                <h4 style={{
+                                    margin: '0 0 10px 0',
+                                    fontSize: '14px',
+                                    fontWeight: 'bold'
+                                }}>Поворот стола</h4>
+                                
+                                <div style={{
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center'
+                                }}>
+                                    {/* Визуальный индикатор текущего поворота */}
+                                    <div style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        width: '100%',
+                                        marginBottom: '15px'
+                                    }}>
+                                        <div style={{
+                                            width: '120px',
+                                            height: '70px',
+                                            border: '2px solid #7b5c3e',
+                                            borderRadius: '5px',
+                                            backgroundColor: '#e7d8c7',
+                                            transform: `rotate(${tableRotation}deg)`,
+                                            transition: 'transform 0.3s ease',
+                                            display: 'flex',
+                                            justifyContent: 'center',
+                                            alignItems: 'center',
+                                            margin: '0 15px'
+                                        }}>
+                                            <div style={{
+                                                width: '80%',
+                                                height: '4px',
+                                                backgroundColor: '#7b5c3e',
+                                                position: 'relative'
+                                            }}>
+                                                <div style={{
+                                                    position: 'absolute',
+                                                    top: '-5px',
+                                                    right: '-5px',
+                                                    width: '0',
+                                                    height: '0',
+                                                    borderTop: '7px solid transparent',
+                                                    borderBottom: '7px solid transparent',
+                                                    borderLeft: '10px solid #7b5c3e'
+                                                }}></div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div style={{
+                                            fontSize: '18px',
+                                            fontWeight: 'bold',
+                                            width: '60px',
+                                            textAlign: 'center'
+                                        }}>
+                                            {Math.round(tableRotation)}°
+                                        </div>
+                                    </div>
+                                    
+                                    {/* Слайдер для произвольного поворота */}
+                                    <div style={{
+                                        width: '100%',
+                                        marginBottom: '15px'
+                                    }}>
+                                        <div style={{
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            marginBottom: '5px'
+                                        }}>
+                                            <span style={{fontSize: '12px'}}>0°</span>
+                                            <span style={{fontSize: '12px'}}>180°</span>
+                                            <span style={{fontSize: '12px'}}>359°</span>
+                                        </div>
+                                        <input
+                                            type="range"
+                                            min="0"
+                                            max="359"
+                                            value={tableRotation}
+                                            onChange={handleRotationSliderChange}
+                                            onMouseUp={handleRotationSliderComplete}
+                                            onTouchEnd={handleRotationSliderComplete}
+                                            style={{
+                                                width: '100%',
+                                                height: '20px',
+                                                outline: 'none',
+                                            }}
+                                        />
+                                    </div>
+                                    
+                                    {/* Сбросить кнопку вращения */}
+                                    <button 
+                                        style={{
+                                            padding: '8px 15px',
+                                            backgroundColor: '#e74c3c',
+                                            color: 'white',
+                                            border: 'none',
+                                            borderRadius: '5px',
+                                            cursor: 'pointer',
+                                            width: '100%',
+                                            opacity: tableRotation === 0 ? 0.5 : 1
+                                        }}
+                                        onClick={resetTableRotation}
+                                        disabled={tableRotation === 0}
+                                    >
+                                        Сбросить поворот (0°)
+                                    </button>
+                                    
+                                    <div style={{
+                                        marginTop: '10px',
+                                        padding: '8px',
+                                        backgroundColor: '#f9f9f9',
+                                        borderRadius: '5px',
+                                        fontSize: '12px',
+                                        color: '#666',
+                                        textAlign: 'center'
+                                    }}>
+                                        <i>Подсказка: Вы также можете поворачивать стол, перетаскивая синюю ручку в правом верхнем углу стола</i>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                        
                         <div className="table-stats">
                             <p>Total Chairs: {table.chairCount}</p>
                             <p>Occupied Chairs: {table.people.filter(Boolean).length}</p>
@@ -3378,7 +3639,7 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
                                         tableId={table.id}
                                         onRemoveGroup={handleRemoveGroup}
                                         onRemovePerson={handleRemovePerson}
-                                        onDragStart={handleDragStart} // Передаем функцию закрытия
+                                        onDragStart={handleDragStart}
                                     />
                                 ))}
                             </div>

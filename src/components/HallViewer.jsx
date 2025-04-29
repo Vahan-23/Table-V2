@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import './a.css'; // Предполагаем, что стили импортированы из предоставленного CSS файла
+import './hallview.css'; // Предполагаем, что стили импортированы из предоставленного CSS файла
 
 const HallViewer = ({ hallData: initialHallData, onDataChange }) => {
   const [hallData, setHallData] = useState(initialHallData);
