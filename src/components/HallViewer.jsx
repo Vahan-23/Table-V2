@@ -108,6 +108,27 @@ const [sidePanelTab, setSidePanelTab] = useState('groups'); // 'groups', 'tableD
 const sidePanelRef = useRef(null);
 
 
+
+useEffect(() => {
+  if (tablesAreaRef.current && hallData) {
+    // Рассчитываем размеры содержимого зала
+    const tables = hallData.tables || [];
+    const maxX = Math.max(...tables.map(t => (t.x || 0) + 400), 0); // 400 - ширина стола
+    const maxY = Math.max(...tables.map(t => (t.y || 0) + 150), 0); // 150 - высота стола
+
+    // Устанавливаем минимальные размеры контейнера
+    tablesAreaRef.current.style.minWidth = `${maxX}px`;
+    tablesAreaRef.current.style.minHeight = `${maxY}px`;
+
+    // Центрируем зал
+    const containerWidth = tablesAreaRef.current.offsetWidth;
+    const containerHeight = tablesAreaRef.current.offsetHeight;
+    tablesAreaRef.current.scrollLeft = (maxX * zoom - containerWidth) / 2;
+    tablesAreaRef.current.scrollTop = (maxY * zoom - containerHeight) / 2;
+  }
+}, [hallData, zoom]);
+
+
 // When a table is selected, open side panel with table details
 useEffect(() => {
   if (detailsTableId) {
@@ -268,18 +289,19 @@ const handleEndDragView = useCallback(() => {
 useEffect(() => {
   const tablesArea = tablesAreaRef.current;
   if (tablesArea) {
-    // Add wheel event for zooming
     tablesArea.addEventListener('wheel', handleWheel, { passive: false });
-    
-    // Add mousedown for starting drag
     tablesArea.addEventListener('mousedown', handleStartDragView);
-    
+
+    // Принудительно обновляем размеры контейнера
+    tablesArea.style.width = `${100 / zoom}%`;
+    tablesArea.style.height = `${100 / zoom}%`;
+
     return () => {
       tablesArea.removeEventListener('wheel', handleWheel);
       tablesArea.removeEventListener('mousedown', handleStartDragView);
     };
   }
-}, [handleWheel]);
+}, [handleWheel, handleStartDragView, zoom]);
 
 // Add document-level event listeners for drag handling
 useEffect(() => {
