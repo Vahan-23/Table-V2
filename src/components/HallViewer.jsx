@@ -48,7 +48,7 @@ const HallViewer = ({ hallData: initialHallData, onDataChange }) => {
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
   const [sidePanelTab, setSidePanelTab] = useState('groups');
   const sidePanelRef = useRef(null);
-  
+
   const [isDraggingView, setIsDraggingView] = useState(false);
   const [dragStartPosition, setDragStartPosition] = useState({ x: 0, y: 0 });
   const [initialScrollPosition, setInitialScrollPosition] = useState({ x: 0, y: 0 });
@@ -61,23 +61,23 @@ const HallViewer = ({ hallData: initialHallData, onDataChange }) => {
   const ClientListItem = ({ group, onDragStart, onViewDetails }) => {
     const [isDragging, setIsDragging] = useState(false);
     const elementRef = useRef(null);
-  
+
     // Функция для начала перетаскивания
     const startDrag = (e) => {
       if (isDraggingActive) return;
-      
+
       // Предотвращаем стандартное перетаскивание браузера
       e.preventDefault();
-      
+
       // Получаем размеры и положение элемента
       const rect = elementRef.current.getBoundingClientRect();
-      
+
       // Вычисляем смещение мыши относительно элемента
       dragOffset = {
         x: e.clientX - rect.left,
         y: e.clientY - rect.top
       };
-      
+
       // Создаем элемент для перетаскивания
       dragImage = document.createElement('div');
       dragImage.className = 'drag-image';
@@ -100,7 +100,7 @@ const HallViewer = ({ hallData: initialHallData, onDataChange }) => {
           </div>
         </div>
       `;
-      
+
       // Позиционируем элемент и добавляем на страницу
       dragImage.style.position = 'fixed';
       dragImage.style.left = `${e.clientX - dragOffset.x}px`;
@@ -108,34 +108,34 @@ const HallViewer = ({ hallData: initialHallData, onDataChange }) => {
       dragImage.style.pointerEvents = 'none';
       dragImage.style.zIndex = '1000';
       document.body.appendChild(dragImage);
-      
+
       // Устанавливаем флаги перетаскивания
       isDraggingActive = true;
       currentDraggedItem = group;
       setIsDragging(true);
-      
+
       // Вызываем функцию onDragStart
       onDragStart(group);
-      
+
       // Добавляем обработчики для перемещения и завершения перетаскивания
       document.addEventListener('mousemove', onDragMove);
       document.addEventListener('mouseup', onDragEnd);
-      
+
       // Изменяем курсор на всей странице
       document.body.style.cursor = 'grabbing';
     };
-    
+
     // Функция для перемещения при перетаскивании
     const onDragMove = (e) => {
       if (!isDraggingActive || !dragImage) return;
-      
+
       // Перемещаем элемент перетаскивания за курсором
       dragImage.style.left = `${e.clientX - dragOffset.x}px`;
       dragImage.style.top = `${e.clientY - dragOffset.y}px`;
-      
+
       // Ищем элемент под курсором, который может быть целью для сброса
       const elementsUnderCursor = document.elementsFromPoint(e.clientX, e.clientY);
-      
+
       // Проверяем, есть ли среди элементов под курсором таблица
       let tableElement = null;
       for (const element of elementsUnderCursor) {
@@ -144,89 +144,89 @@ const HallViewer = ({ hallData: initialHallData, onDataChange }) => {
           break;
         }
       }
-      
+
       // Убираем подсветку со всех столов
       document.querySelectorAll('.table-container').forEach(table => {
         table.classList.remove('drop-target');
       });
-      
+
       // Подсвечиваем текущий стол, если он есть
       if (tableElement) {
         tableElement.classList.add('drop-target');
       }
     };
-    
+
     // Функция завершения перетаскивания
-   // Исправленная функция onDragEnd, которая правильно обрабатывает элемент при отпускании на стол
-const onDragEnd = (e) => {
-  // Даже если что-то пойдет не так, всегда сбрасываем состояние
-  const savedDraggedItem = currentDraggedItem; // Сохраняем перед сбросом
-  
-  // Сбрасываем состояние перетаскивания
-  isDraggingActive = false;
-  setIsDragging(false);
-  
-  // Удаляем обработчики событий
-  document.removeEventListener('mousemove', onDragMove);
-  document.removeEventListener('mouseup', onDragEnd);
-  
-  // Перед удалением элемента перетаскивания, проверяем, есть ли под ним стол
-  let tableElement = null;
-  let tableId = null;
-  
-  // Важно! Проверяем элементы под позицией мыши, а не под элементом перетаскивания
-  const elementsUnderCursor = document.elementsFromPoint(e.clientX, e.clientY);
-  
-  // Поиск стола среди элементов под курсором
-  for (const element of elementsUnderCursor) {
-    if (element.classList.contains('table-container')) {
-      tableElement = element;
-      // Получаем ID стола из атрибута data-id
-      tableId = element.getAttribute('data-id');
-      console.log('Найден стол с ID:', tableId);
-      break;
-    }
-  }
-  
-  // Удаляем элемент перетаскивания
-  if (dragImage && dragImage.parentNode) {
-    dragImage.parentNode.removeChild(dragImage);
-  }
-  dragImage = null;
-  
-  // Восстанавливаем курсор
-  document.body.style.cursor = '';
-  
-  // Если нашли стол и у нас есть сохраненный элемент, вызываем обработчик
-  if (tableElement && tableId && savedDraggedItem) {
-    console.log('Вызываем handleTableDrop с ID стола:', tableId, 'и элементом:', savedDraggedItem);
-    
-    // Вызываем функцию handleTableDrop
-    handleTableDrop(tableId, savedDraggedItem);
-  } else {
-    console.log('Стол не найден или нет перетаскиваемого элемента:', {
-      tableElement: !!tableElement,
-      tableId,
-      hasDraggedItem: !!savedDraggedItem
-    });
-  }
-  
-  // Сбрасываем глобальное состояние перетаскивания
-  onDragStart(null);
-  currentDraggedItem = null;
-  
-  // Убираем подсветку со всех столов
-  document.querySelectorAll('.table-container').forEach(table => {
-    table.classList.remove('drop-target');
-  });
-};
-  
+    // Исправленная функция onDragEnd, которая правильно обрабатывает элемент при отпускании на стол
+    const onDragEnd = (e) => {
+      // Даже если что-то пойдет не так, всегда сбрасываем состояние
+      const savedDraggedItem = currentDraggedItem; // Сохраняем перед сбросом
+
+      // Сбрасываем состояние перетаскивания
+      isDraggingActive = false;
+      setIsDragging(false);
+
+      // Удаляем обработчики событий
+      document.removeEventListener('mousemove', onDragMove);
+      document.removeEventListener('mouseup', onDragEnd);
+
+      // Перед удалением элемента перетаскивания, проверяем, есть ли под ним стол
+      let tableElement = null;
+      let tableId = null;
+
+      // Важно! Проверяем элементы под позицией мыши, а не под элементом перетаскивания
+      const elementsUnderCursor = document.elementsFromPoint(e.clientX, e.clientY);
+
+      // Поиск стола среди элементов под курсором
+      for (const element of elementsUnderCursor) {
+        if (element.classList.contains('table-container')) {
+          tableElement = element;
+          // Получаем ID стола из атрибута data-id
+          tableId = element.getAttribute('data-id');
+          console.log('Найден стол с ID:', tableId);
+          break;
+        }
+      }
+
+      // Удаляем элемент перетаскивания
+      if (dragImage && dragImage.parentNode) {
+        dragImage.parentNode.removeChild(dragImage);
+      }
+      dragImage = null;
+
+      // Восстанавливаем курсор
+      document.body.style.cursor = '';
+
+      // Если нашли стол и у нас есть сохраненный элемент, вызываем обработчик
+      if (tableElement && tableId && savedDraggedItem) {
+        console.log('Вызываем handleTableDrop с ID стола:', tableId, 'и элементом:', savedDraggedItem);
+
+        // Вызываем функцию handleTableDrop
+        handleTableDrop(tableId, savedDraggedItem);
+      } else {
+        console.log('Стол не найден или нет перетаскиваемого элемента:', {
+          tableElement: !!tableElement,
+          tableId,
+          hasDraggedItem: !!savedDraggedItem
+        });
+      }
+
+      // Сбрасываем глобальное состояние перетаскивания
+      onDragStart(null);
+      currentDraggedItem = null;
+
+      // Убираем подсветку со всех столов
+      document.querySelectorAll('.table-container').forEach(table => {
+        table.classList.remove('drop-target');
+      });
+    };
+
     return (
       <div
         ref={elementRef}
         className="client-list-item"
         onMouseDown={startDrag} // Используем mousedown вместо drag events
-        style={{ 
+        style={{
           backgroundColor: isDragging ? '#2c3e50' : '#333',
           borderRadius: '6px',
           marginBottom: '8px',
@@ -249,7 +249,7 @@ const onDragEnd = (e) => {
             {group.guestCount} {group.guestCount === 1 ? 'гость' : group.guestCount < 5 ? 'гостя' : 'гостей'}
           </div>
         </div>
-        
+
         <button
           onClick={(e) => {
             e.preventDefault();
@@ -284,7 +284,7 @@ const onDragEnd = (e) => {
       </div>
     );
   };
-  
+
   useEffect(() => {
     if (tablesAreaRef.current && hallData) {
       // Рассчитываем размеры содержимого зала
@@ -310,16 +310,16 @@ const onDragEnd = (e) => {
       setIsSidePanelOpen(true);
       setSidePanelTab('tableDetails');
     }
-  }, [detailsTableId]);  
+  }, [detailsTableId]);
 
   // Handle table click to show details
   const handleTableClick = (tableId) => {
     // If it's the same table that's already selected, do nothing
     if (tableId === detailsTableId) return;
-    
+
     // Set the new selected table
     setDetailsTableId(tableId);
-    
+
     // Ensure side panel is open and showing table details
     setIsSidePanelOpen(true);
     setSidePanelTab('tableDetails');
@@ -329,13 +329,13 @@ const onDragEnd = (e) => {
     // Initialize from localStorage or from props
     const savedHallData = localStorage.getItem('hallData');
     const savedGroups = localStorage.getItem('groups');
-    
+
     if (savedHallData) {
       setHallData(JSON.parse(savedHallData));
     } else {
       setHallData(initialHallData);
     }
-    
+
     if (savedGroups) {
       setGroups(JSON.parse(savedGroups));
     }
@@ -344,15 +344,20 @@ const onDragEnd = (e) => {
   // Add click outside listener to close side panel
   useEffect(() => {
     if (!isSidePanelOpen) return;
-    
+  
     const handleClickOutside = (event) => {
       // Don't close panel if actively dragging
       if (draggingGroup) return;
-      
+  
       // Check if the mouse event target is related to dragging
       const isDragHandle = event.target.closest('.drag-handle');
       if (isDragHandle) return;
-      
+  
+      // Check if the click is inside any of the fullscreen popups
+      const isPopupClick = event.target.closest('.fullscreen-popup-content') || 
+                          event.target.classList.contains('fullscreen-popup');
+      if (isPopupClick) return;
+  
       if (sidePanelRef.current && !sidePanelRef.current.contains(event.target)) {
         // Don't close panel if this is a table click 
         // (tables have their own click handler for switching details)
@@ -362,9 +367,9 @@ const onDragEnd = (e) => {
         }
       }
     };
-    
+  
     document.addEventListener('mousedown', handleClickOutside);
-    
+  
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
@@ -376,7 +381,7 @@ const onDragEnd = (e) => {
       localStorage.setItem('hallData', JSON.stringify(hallData));
     }
     localStorage.setItem('groups', JSON.stringify(groups));
-    
+
     // Notify parent if needed
     if (onDataChange) {
       onDataChange(hallData);
@@ -393,16 +398,16 @@ const onDragEnd = (e) => {
     // Only zoom if Ctrl key is pressed
     if (e.ctrlKey) {
       e.preventDefault();
-      
+
       // Get current mouse position relative to the tables area
       const rect = tablesAreaRef.current.getBoundingClientRect();
       const mouseX = e.clientX - rect.left;
       const mouseY = e.clientY - rect.top;
-      
+
       // Get the position in the unzoomed content
       const contentX = (tablesAreaRef.current.scrollLeft + mouseX) / zoom;
       const contentY = (tablesAreaRef.current.scrollTop + mouseY) / zoom;
-      
+
       // Calculate new zoom level
       let newZoom;
       if (e.deltaY < 0) {
@@ -412,10 +417,10 @@ const onDragEnd = (e) => {
         // Zoom out
         newZoom = Math.max(zoom / 1.1, 0.2);
       }
-      
+
       // Update zoom
       setZoom(newZoom);
-      
+
       // Adjust scroll position to keep mouse over same content
       setTimeout(() => {
         if (tablesAreaRef.current) {
@@ -433,7 +438,7 @@ const onDragEnd = (e) => {
       e.preventDefault();
       setIsDraggingView(true);
       setDragStartPosition({ x: e.clientX, y: e.clientY });
-      setInitialScrollPosition({ 
+      setInitialScrollPosition({
         x: tablesAreaRef.current.scrollLeft,
         y: tablesAreaRef.current.scrollTop
       });
@@ -443,11 +448,11 @@ const onDragEnd = (e) => {
   // Handle dragging view
   const handleDragView = useCallback((e) => {
     if (!isDraggingView) return;
-    
+
     if (tablesAreaRef.current) {
       const dx = e.clientX - dragStartPosition.x;
       const dy = e.clientY - dragStartPosition.y;
-      
+
       tablesAreaRef.current.scrollLeft = initialScrollPosition.x - dx;
       tablesAreaRef.current.scrollTop = initialScrollPosition.y - dy;
     }
@@ -481,7 +486,7 @@ const onDragEnd = (e) => {
     if (isDraggingView) {
       document.addEventListener('mousemove', handleDragView);
       document.addEventListener('mouseup', handleEndDragView);
-      
+
       return () => {
         document.removeEventListener('mousemove', handleDragView);
         document.removeEventListener('mouseup', handleEndDragView);
@@ -498,17 +503,17 @@ const onDragEnd = (e) => {
     setError(null);
 
     const reader = new FileReader();
-    
+
     reader.onload = (e) => {
       try {
         const parsedData = JSON.parse(e.target.result);
         setHallData(parsedData);
-        
+
         // If callback provided to notify parent component
         if (onDataChange) {
           onDataChange(parsedData);
         }
-        
+
         setIsLoading(false);
       } catch (error) {
         setError("Ошибка при чтении JSON файла. Проверьте формат файла.");
@@ -522,7 +527,7 @@ const onDragEnd = (e) => {
     };
 
     reader.readAsText(file);
-    
+
     // Reset input value to allow selecting the same file again
     event.target.value = "";
   };
@@ -565,7 +570,7 @@ const onDragEnd = (e) => {
           if (table.id === selectedTableId) {
             const updatedPeople = [...(table.people || [])];
             updatedPeople[selectedChairIndex] = null;
-            
+
             return {
               ...table,
               people: updatedPeople
@@ -573,13 +578,13 @@ const onDragEnd = (e) => {
           }
           return table;
         });
-        
+
         return {
           ...prevData,
           tables: updatedTables
         };
       });
-      
+
       setIsPopupVisible(false);
       setSelectedTableId(null);
       setSelectedChairIndex(null);
@@ -598,19 +603,19 @@ const onDragEnd = (e) => {
         phone: group.phone,
         email: group.email
       };
-      
+
       setHallData(prevData => {
         const updatedTables = prevData.tables.map(table => {
           if (table.id === selectedTableId) {
             const updatedPeople = [...(table.people || [])];
-            
+
             // Ensure the people array is long enough
             while (updatedPeople.length <= selectedChairIndex) {
               updatedPeople.push(null);
             }
-            
+
             updatedPeople[selectedChairIndex] = person;
-            
+
             return {
               ...table,
               people: updatedPeople
@@ -618,13 +623,13 @@ const onDragEnd = (e) => {
           }
           return table;
         });
-        
+
         return {
           ...prevData,
           tables: updatedTables
         };
       });
-      
+
       setIsPopupVisible(false);
       setSelectedTableId(null);
       setSelectedChairIndex(null);
@@ -650,9 +655,9 @@ const onDragEnd = (e) => {
         email: groupEmail.trim(),
         guestCount: guestCount,
       };
-      
+
       setGroups([...groups, newGroup]);
-      
+
       // Reset form
       setGroupName('');
       setGroupPhone('');
@@ -671,7 +676,7 @@ const onDragEnd = (e) => {
   const closeGroupDetails = () => {
     setViewingGroupDetails(null);
   };
-  
+
   // Упрощенный обработчик начала перетаскивания
   const handleDragStart = useCallback((group) => {
     // Просто устанавливаем draggingGroup
@@ -693,21 +698,21 @@ const onDragEnd = (e) => {
   // Get table details for the details panel
   const getTableDetails = () => {
     if (!detailsTableId || !hallData || !hallData.tables) return null;
-    
+
     const table = hallData.tables.find(t => t.id === detailsTableId);
     if (!table) return null;
-    
+
     const occupiedSeats = (table.people || []).filter(Boolean).length;
     const availableSeats = table.chairCount - occupiedSeats;
-    
+
     // Get booking information if available
     let bookingInfo = null;
     const seatedPeople = (table.people || []).filter(Boolean);
-    
+
     if (seatedPeople.length > 0 && seatedPeople[0].booking) {
       bookingInfo = seatedPeople[0].booking;
     }
-    
+
     return {
       table,
       occupiedSeats,
@@ -718,216 +723,356 @@ const onDragEnd = (e) => {
   };
 
   // Table details panel component
-  const TableDetailsPanel = () => {
-    const details = getTableDetails();
+ // Table details panel component with added client seating functionality
+const TableDetailsPanel = () => {
+  const details = getTableDetails();
+  const [showClientSelection, setShowClientSelection] = useState(false);
+  
+  if (!details) return null;
+
+  const occupiedPercentage = Math.round((details.occupiedSeats / details.table.chairCount) * 100);
+  
+  // New function to handle client selection for seating
+  const handleSelectClientForSeating = (group) => {
+    if (details.availableSeats < group.guestCount) {
+      alert(`На столе недостаточно свободных мест для клиента "${group.name}". Нужно: ${group.guestCount}, доступно: ${details.availableSeats}`);
+      return;
+    }
     
-    if (!details) return null;
+    // Set up pending booking with the selected client
+    setPendingBooking({
+      tableId: details.table.id,
+      group,
+      availableSeats: details.availableSeats
+    });
     
-    const occupiedPercentage = Math.round((details.occupiedSeats / details.table.chairCount) * 100);
+    // Set default booking times
+    const now = new Date();
+    setBookingTime(`${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`);
     
-    return (
-      <div style={{ width: '100%', height: '100%' }}>
-        <div style={{ 
-          padding: '15px', 
-          borderBottom: '1px solid #3a3a3a',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
-        }}>
-          <h3 style={{ margin: 0 }}>Детали стола {details.table.id}</h3>
-        </div>
-        
-        <CollapsiblePanel 
-          title="Заполненность"
-          defaultExpanded={true}
-        >
-          <div style={{ padding: '15px' }}>
-            <div style={{ marginBottom: '10px' }}>
-              <span style={{ fontSize: '13px', color: '#999' }}>Занято мест:</span>
-              <span style={{ 
-                float: 'right', 
-                fontWeight: 'bold',
-                color: details.occupiedSeats === details.table.chairCount ? '#ff5555' : '#55aa55'
-              }}>
-                {details.occupiedSeats} из {details.table.chairCount} ({occupiedPercentage}%)
-              </span>
-            </div>
-            
-            <div style={{ 
-              height: '8px', 
-              backgroundColor: '#444', 
-              borderRadius: '4px',
-              overflow: 'hidden',
-              marginBottom: '15px'
+    // Set default end time 2 hours later
+    const endTime = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+    setBookingEndTime(`${endTime.getHours().toString().padStart(2, '0')}:${endTime.getMinutes().toString().padStart(2, '0')}`);
+    
+    // Show the booking modal
+    setShowBookingModal(true);
+    setShowClientSelection(false);
+  };
+
+  return (
+    <div style={{ width: '100%', height: '100%' }}>
+      <div style={{
+        padding: '15px',
+        borderBottom: '1px solid #3a3a3a',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center'
+      }}>
+        <h3 style={{ margin: 0 }}>Детали стола {details.table.id}</h3>
+      </div>
+
+      <CollapsiblePanel
+        title="Заполненность"
+        defaultExpanded={true}
+      >
+        <div style={{ padding: '15px' }}>
+          <div style={{ marginBottom: '10px' }}>
+            <span style={{ fontSize: '13px', color: '#999' }}>Занято мест:</span>
+            <span style={{
+              float: 'right',
+              fontWeight: 'bold',
+              color: details.occupiedSeats === details.table.chairCount ? '#ff5555' : '#55aa55'
             }}>
-              <div style={{ 
-                height: '100%', 
-                width: `${occupiedPercentage}%`,
-                backgroundColor: occupiedPercentage === 100 ? '#ff5555' : '#55aa55',
-                borderRadius: '4px'
-              }}></div>
+              {details.occupiedSeats} из {details.table.chairCount} ({occupiedPercentage}%)
+            </span>
+          </div>
+
+          <div style={{
+            height: '8px',
+            backgroundColor: '#444',
+            borderRadius: '4px',
+            overflow: 'hidden',
+            marginBottom: '15px'
+          }}>
+            <div style={{
+              height: '100%',
+              width: `${occupiedPercentage}%`,
+              backgroundColor: occupiedPercentage === 100 ? '#ff5555' : '#55aa55',
+              borderRadius: '4px'
+            }}></div>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+            <div style={{
+              backgroundColor: '#333',
+              padding: '10px',
+              borderRadius: '4px',
+              textAlign: 'center',
+              flex: '1',
+              marginRight: '5px'
+            }}>
+              <div style={{ fontSize: '18px', fontWeight: 'bold' }}>{details.occupiedSeats}</div>
+              <div style={{ fontSize: '12px', color: '#999' }}>Занято</div>
             </div>
-            
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-              <div style={{
-                backgroundColor: '#333',
-                padding: '10px',
-                borderRadius: '4px',
-                textAlign: 'center',
-                flex: '1',
-                marginRight: '5px'
-              }}>
-                <div style={{ fontSize: '18px', fontWeight: 'bold' }}>{details.occupiedSeats}</div>
-                <div style={{ fontSize: '12px', color: '#999' }}>Занято</div>
-              </div>
-              
-              <div style={{
-                backgroundColor: '#333',
-                padding: '10px',
-                borderRadius: '4px',
-                textAlign: 'center',
-                flex: '1',
-                marginLeft: '5px'
-              }}>
-                <div style={{ fontSize: '18px', fontWeight: 'bold' }}>{details.availableSeats}</div>
-                <div style={{ fontSize: '12px', color: '#999' }}>Свободно</div>
-              </div>
+
+            <div style={{
+              backgroundColor: '#333',
+              padding: '10px',
+              borderRadius: '4px',
+              textAlign: 'center',
+              flex: '1',
+              marginLeft: '5px'
+            }}>
+              <div style={{ fontSize: '18px', fontWeight: 'bold' }}>{details.availableSeats}</div>
+              <div style={{ fontSize: '12px', color: '#999' }}>Свободно</div>
             </div>
           </div>
-        </CollapsiblePanel>
-        
-        {/* Reservation Time Section */}
-        {details.bookingInfo && (
-          <div style={{ 
-            padding: '15px',
-            borderBottom: '1px solid #333',
-            marginBottom: '10px'
-          }}>
-            <h4 style={{ 
-              margin: '0 0 10px 0',
-              fontSize: '14px',
-              color: '#ccc'
-            }}>Время бронирования</h4>
-            
+          
+          {/* Add button to seat a client if there are free seats */}
+          {details.availableSeats > 0 && (
+            <button
+              onClick={() => setShowClientSelection(true)}
+              style={{
+                width: '100%',
+                backgroundColor: '#3498db',
+                padding: '8px 12px',
+                border: 'none',
+                borderRadius: '4px',
+                color: 'white',
+                cursor: 'pointer',
+                fontWeight: 'bold',
+                marginTop: '10px'
+              }}
+            >
+              Посадить клиента
+            </button>
+          )}
+          
+          {/* Client selection dropdown panel */}
+          {showClientSelection && (
             <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              backgroundColor: '#333',
-              padding: '12px',
-              borderRadius: '6px',
-              alignItems: 'center'
+              marginTop: '10px',
+              backgroundColor: '#2c3e50',
+              borderRadius: '4px',
+              padding: '10px',
+              position: 'relative'
             }}>
-              <div>
-                <div style={{ fontSize: '16px', fontWeight: 'bold' }}>
-                  {details.bookingInfo.time} - {details.bookingInfo.endTime}
-                </div>
-                {details.bookingInfo.note && (
-                  <div style={{ fontSize: '12px', color: '#aaa', marginTop: '5px' }}>
-                    Примечание: {details.bookingInfo.note}
+              <div style={{
+                position: 'absolute',
+                top: '8px',
+                right: '8px',
+                cursor: 'pointer',
+                fontSize: '16px',
+                width: '24px',
+                height: '24px',
+                borderRadius: '50%',
+                backgroundColor: '#34495e',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#eee'
+              }} onClick={() => setShowClientSelection(false)}>
+                ×
+              </div>
+              
+              <h4 style={{ margin: '0 0 10px 0', color: '#eee', fontSize: '14px' }}>
+                Выберите клиента для размещения:
+              </h4>
+              
+              <div style={{
+                maxHeight: '200px',
+                overflowY: 'auto',
+                padding: '5px'
+              }}>
+                {groups.length > 0 ? (
+                  groups.map((group, index) => (
+                    <div
+                      key={index}
+                      onClick={() => handleSelectClientForSeating(group)}
+                      style={{
+                        backgroundColor: '#34495e',
+                        padding: '10px',
+                        borderRadius: '4px',
+                        marginBottom: '5px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        transition: 'background-color 0.2s'
+                      }}
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.backgroundColor = '#2980b9';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.backgroundColor = '#34495e';
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontWeight: 'bold', color: '#eee' }}>{group.name}</div>
+                        <div style={{ fontSize: '12px', color: '#bbb' }}>
+                          {group.guestCount} {group.guestCount === 1 ? 'гость' : group.guestCount < 5 ? 'гостя' : 'гостей'}
+                        </div>
+                      </div>
+                      
+                      <div style={{
+                        backgroundColor: group.guestCount <= details.availableSeats ? '#27ae60' : '#e74c3c',
+                        padding: '3px 6px',
+                        borderRadius: '3px',
+                        fontSize: '12px',
+                        color: 'white'
+                      }}>
+                        {group.guestCount <= details.availableSeats ? 'Поместится' : 'Не поместится'}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div style={{
+                    padding: '15px',
+                    color: '#bbb',
+                    textAlign: 'center',
+                    fontStyle: 'italic'
+                  }}>
+                    Нет доступных клиентов
                   </div>
                 )}
               </div>
-              
-              <div style={{
-                backgroundColor: '#2c3e50',
-                padding: '6px 10px',
-                borderRadius: '4px',
-                fontSize: '12px',
-                color: '#3498db'
-              }}>
-                Бронь
+            </div>
+          )}
+        </div>
+      </CollapsiblePanel>
+
+      {/* Reservation Time Section */}
+      {details.bookingInfo && (
+        <div style={{
+          padding: '15px',
+          borderBottom: '1px solid #333',
+          marginBottom: '10px'
+        }}>
+          <h4 style={{
+            margin: '0 0 10px 0',
+            fontSize: '14px',
+            color: '#ccc'
+          }}>Время бронирования</h4>
+
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            backgroundColor: '#333',
+            padding: '12px',
+            borderRadius: '6px',
+            alignItems: 'center'
+          }}>
+            <div>
+              <div style={{ fontSize: '16px', fontWeight: 'bold' }}>
+                {details.bookingInfo.time} - {details.bookingInfo.endTime}
               </div>
+              {details.bookingInfo.note && (
+                <div style={{ fontSize: '12px', color: '#aaa', marginTop: '5px' }}>
+                  Примечание: {details.bookingInfo.note}
+                </div>
+              )}
+            </div>
+
+            <div style={{
+              backgroundColor: '#2c3e50',
+              padding: '6px 10px',
+              borderRadius: '4px',
+              fontSize: '12px',
+              color: '#3498db'
+            }}>
+              Бронь
             </div>
           </div>
-        )}
-        
-        <CollapsiblePanel 
-          title={`Клиенты за столом (${details.seatedPeople.length})`}
-          defaultExpanded={true}
-        >
-          <div style={{ padding: '10px' }}>
-            {details.seatedPeople.length > 0 ? (
-              <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
-                {details.seatedPeople.map((person, index) => (
-                  <div 
-                    key={index}
+        </div>
+      )}
+
+      <CollapsiblePanel
+        title={`Клиенты за столом (${details.seatedPeople.length})`}
+        defaultExpanded={true}
+      >
+        <div style={{ padding: '10px' }}>
+          {details.seatedPeople.length > 0 ? (
+            <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+              {details.seatedPeople.map((person, index) => (
+                <div
+                  key={index}
+                  style={{
+                    padding: '8px',
+                    backgroundColor: '#333',
+                    borderRadius: '4px',
+                    marginBottom: '5px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}
+                >
+                  <div>
+                    <div style={{ fontWeight: 'bold' }}>{person.name}</div>
+                    {person.phone && (
+                      <div style={{ fontSize: '11px', color: '#999' }}>
+                        Телефон: {person.phone}
+                      </div>
+                    )}
+                    {person.email && (
+                      <div style={{ fontSize: '11px', color: '#999' }}>
+                        Email: {person.email}
+                      </div>
+                    )}
+                    {person.booking && (
+                      <div style={{ fontSize: '10px', color: '#aaa', marginTop: '3px' }}>
+                        Время: {person.booking.time} - {person.booking.endTime}
+                      </div>
+                    )}
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      // Set up state for removal popup
+                      setSelectedTableId(details.table.id);
+                      // Find the index of this person in the table
+                      const personIndex = details.table.people.findIndex(p => p && p.name === person.name);
+                      if (personIndex !== -1) {
+                        setSelectedChairIndex(personIndex);
+                        setPersonToRemove(person);
+                        setIsRemoveMode(true);
+                        setIsPopupVisible(true);
+                      }
+                    }}
                     style={{
-                      padding: '8px',
-                      backgroundColor: '#333',
-                      borderRadius: '4px',
-                      marginBottom: '5px',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center'
+                      background: 'none',
+                      border: 'none',
+                      color: '#ff5555',
+                      cursor: 'pointer',
+                      fontSize: '16px'
                     }}
                   >
-                    <div>
-                      <div style={{ fontWeight: 'bold' }}>{person.name}</div>
-                      {person.phone && (
-                        <div style={{ fontSize: '11px', color: '#999' }}>
-                          Телефон: {person.phone}
-                        </div>
-                      )}
-                      {person.email && (
-                        <div style={{ fontSize: '11px', color: '#999' }}>
-                          Email: {person.email}
-                        </div>
-                      )}
-                      {person.booking && (
-                        <div style={{ fontSize: '10px', color: '#aaa', marginTop: '3px' }}>
-                          Время: {person.booking.time} - {person.booking.endTime}
-                        </div>
-                      )}
-                    </div>
-                    
-                    <button
-                      onClick={() => {
-                        // Set up state for removal popup
-                        setSelectedTableId(details.table.id);
-                        // Find the index of this person in the table
-                        const personIndex = details.table.people.findIndex(p => p && p.name === person.name);
-                        if (personIndex !== -1) {
-                          setSelectedChairIndex(personIndex);
-                          setPersonToRemove(person);
-                          setIsRemoveMode(true);
-                          setIsPopupVisible(true);
-                        }
-                      }}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: '#ff5555',
-                        cursor: 'pointer',
-                        fontSize: '16px'
-                      }}
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div style={{ 
-                padding: '20px', 
-                textAlign: 'center', 
-                color: '#999',
-                fontStyle: 'italic'
-              }}>
-                За этим столом никто не сидит
-              </div>
-            )}
-          </div>
-        </CollapsiblePanel>
-      </div>
-    );
-  };
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{
+              padding: '20px',
+              textAlign: 'center',
+              color: '#999',
+              fontStyle: 'italic'
+            }}>
+              За этим столом никто не сидит
+            </div>
+          )}
+        </div>
+      </CollapsiblePanel>
+    </div>
+  );
+};
 
   // Client management panel component - Redesigned to be more compact
   const GroupsPanel = () => {
     return (
       <div style={{ width: '100%', height: '100%' }}>
-        <div style={{ 
-          padding: '15px', 
+        <div style={{
+          padding: '15px',
           borderBottom: '1px solid #3a3a3a',
           display: 'flex',
           justifyContent: 'space-between',
@@ -935,13 +1080,13 @@ const onDragEnd = (e) => {
         }}>
           <h3 style={{ margin: 0 }}>Управление клиентами</h3>
         </div>
-        
+
         <div style={{ padding: '15px' }}>
           <button
             className="primary-btn"
             onClick={() => setShowGroupForm(true)}
-            style={{ 
-              width: '100%', 
+            style={{
+              width: '100%',
               backgroundColor: '#2ecc71',
               padding: '12px',
               border: 'none',
@@ -954,11 +1099,11 @@ const onDragEnd = (e) => {
           >
             Добавить нового клиента
           </button>
-          
+
           {/* Quick instructions for users */}
-          <div style={{ 
-            backgroundColor: '#2c3e50', 
-            padding: '10px 12px', 
+          <div style={{
+            backgroundColor: '#2c3e50',
+            padding: '10px 12px',
             borderRadius: '4px',
             fontSize: '12px',
             color: '#ecf0f1',
@@ -972,15 +1117,15 @@ const onDragEnd = (e) => {
               Перетащите клиента на стол для размещения. Нажмите на <strong>i</strong> для просмотра деталей.
             </div>
           </div>
-          
-          <div style={{ 
+
+          <div style={{
             marginBottom: '15px',
             borderBottom: '1px solid #3a3a3a',
             paddingBottom: '5px'
           }}>
-            <div style={{ 
-              fontSize: '14px', 
-              fontWeight: 'bold', 
+            <div style={{
+              fontSize: '14px',
+              fontWeight: 'bold',
               color: '#aaa',
               marginBottom: '10px',
               display: 'flex',
@@ -993,9 +1138,9 @@ const onDragEnd = (e) => {
                 </span>
               )}
             </div>
-            
-            <div style={{ 
-              display: 'flex', 
+
+            <div style={{
+              display: 'flex',
               flexDirection: 'column',
               maxHeight: '400px',
               overflowY: 'auto',
@@ -1004,15 +1149,15 @@ const onDragEnd = (e) => {
               {groups.length > 0 ? (
                 groups.map((group, index) => (
                   <ClientListItem
-                    key={index} 
-                    group={group} 
+                    key={index}
+                    group={group}
                     onDragStart={handleDragStart}
                     onViewDetails={handleViewGroupDetails}
                   />
                 ))
               ) : (
-                <div style={{ 
-                  color: '#999', 
+                <div style={{
+                  color: '#999',
                   fontStyle: 'italic',
                   padding: '15px 10px',
                   textAlign: 'center',
@@ -1031,42 +1176,42 @@ const onDragEnd = (e) => {
 
   // Handle table drop handler for groups - updated with useCallback and proper state reset
   const handleTableDrop = useCallback((tableId, group) => {
-    console.log('handleTableDrop вызван с:', {tableId, group});
-    
+    console.log('handleTableDrop вызван с:', { tableId, group });
+
     // Преобразуем tableId в число, если он передается как строка
     const numericTableId = parseInt(tableId, 10) || tableId;
-    
+
     const table = hallData.tables.find(t => t.id === numericTableId);
-    
+
     if (!table) {
       console.error(`Стол с ID ${numericTableId} не найден`);
       return;
     }
-    
+
     // Проверка доступных мест
     const occupiedSeats = table.people ? table.people.filter(Boolean).length : 0;
     const availableSeats = table.chairCount - occupiedSeats;
-    
+
     if (group.guestCount > availableSeats) {
       alert(`На столе недостаточно свободных мест для клиента "${group.name}". Нужно: ${group.guestCount}, доступно: ${availableSeats}`);
       return;
     }
-    
+
     // Устанавливаем ожидающее бронирование
     setPendingBooking({
       tableId: numericTableId,
       group,
       availableSeats
     });
-    
+
     // Set default booking times if they're empty
     const now = new Date();
     setBookingTime(`${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`);
-    
+
     // Set default end time 2 hours later
     const endTime = new Date(now.getTime() + 2 * 60 * 60 * 1000);
     setBookingEndTime(`${endTime.getHours().toString().padStart(2, '0')}:${endTime.getMinutes().toString().padStart(2, '0')}`);
-    
+
     // Show the booking modal
     setShowBookingModal(true);
   }, [hallData]);
@@ -1080,15 +1225,15 @@ const onDragEnd = (e) => {
   // Confirm booking and assign seats - Fixed to prevent panel closing and with proper state reset
   const confirmBooking = useCallback(() => {
     console.log('confirmBooking called with:', pendingBooking);
-    
+
     if (!pendingBooking) {
       // Ensure dragging state is reset
       setDraggingGroup(null);
       return;
     }
-    
+
     const { tableId, group } = pendingBooking;
-    
+
     // Add booking time and note to the group
     const bookingDetails = {
       time: bookingTime,
@@ -1096,16 +1241,16 @@ const onDragEnd = (e) => {
       note: bookingNote,
       timestamp: new Date().toISOString()
     };
-    
+
     console.log('Setting up booking with details:', bookingDetails);
-    
+
     // Add people from the group to empty chairs
     setHallData(prevData => {
       const updatedTables = prevData.tables.map(t => {
         if (t.id === tableId) {
           // Make a copy of the people array or initialize it
           const tablePeople = [...(t.people || [])];
-          
+
           // Find empty seats
           const emptySeats = [];
           for (let i = 0; i < t.chairCount; i++) {
@@ -1113,30 +1258,30 @@ const onDragEnd = (e) => {
               emptySeats.push(i);
             }
           }
-          
+
           console.log(`Found ${emptySeats.length} empty seats for table ${tableId}`);
-          
+
           // Place client in first empty seat
           if (emptySeats.length > 0) {
-            tablePeople[emptySeats[0]] = { 
+            tablePeople[emptySeats[0]] = {
               name: group.name,
               group: group.name,
               phone: group.phone,
               email: group.email,
               booking: bookingDetails
             };
-            
+
             // If there are additional guests, create placeholder entries
             // for the remaining seats (up to guestCount)
             for (let i = 1; i < Math.min(group.guestCount, emptySeats.length); i++) {
-              tablePeople[emptySeats[i]] = { 
+              tablePeople[emptySeats[i]] = {
                 name: `Гость ${group.name} ${i}`,
                 group: group.name,
                 booking: bookingDetails
               };
             }
           }
-          
+
           return {
             ...t,
             people: tablePeople
@@ -1144,36 +1289,36 @@ const onDragEnd = (e) => {
         }
         return t;
       });
-      
+
       return {
         ...prevData,
         tables: updatedTables
       };
     });
-    
+
     // Show notification
     const notification = document.createElement('div');
-notification.className = 'transfer-notification';
-notification.textContent = `Клиент "${group.name}" размещен за столом ${tableId}`;
-document.body.appendChild(notification);
+    notification.className = 'transfer-notification';
+    notification.textContent = `Клиент "${group.name}" размещен за столом ${tableId}`;
+    document.body.appendChild(notification);
 
-setTimeout(() => {
-  notification.classList.add('show');
-  setTimeout(() => {
-    notification.classList.remove('show');
     setTimeout(() => {
-      document.body.removeChild(notification);
-    }, 300);
-  }, 2000);
-}, 100);
-    
+      notification.classList.add('show');
+      setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => {
+          document.body.removeChild(notification);
+        }, 300);
+      }, 2000);
+    }, 100);
+
     // Reset booking state
     setShowBookingModal(false);
     setPendingBooking(null);
     setBookingTime('');
     setBookingEndTime('');
     setBookingNote('');
-    
+
     // Ensure dragging state is reset
     setDraggingGroup(null);
   }, [pendingBooking, bookingTime, bookingEndTime, bookingNote]);
@@ -1185,7 +1330,7 @@ setTimeout(() => {
     setBookingTime('');
     setBookingEndTime('');
     setBookingNote('');
-    
+
     // Ensure dragging state is reset
     setDraggingGroup(null);
   }, []);
@@ -1333,10 +1478,10 @@ setTimeout(() => {
             borderRadius: '50%',
             fontSize: '12px',
             textAlign: 'center',
-            left: `calc(50% - ${250}px)`, 
+            left: `calc(50% - ${250}px)`,
             top: `calc(50% - ${15}px)`,
             cursor: 'pointer',
-            transform: 'rotate(270deg)' 
+            transform: 'rotate(270deg)'
           }}
           onClick={(e) => {
             e.stopPropagation();
@@ -1399,9 +1544,9 @@ setTimeout(() => {
             fontSize: '12px',
             textAlign: 'center',
             left: `calc(50% + ${190}px)`,
-            top: `calc(50% - ${15}px)`, 
+            top: `calc(50% - ${15}px)`,
             cursor: 'pointer',
-            transform: 'rotate(90deg)' 
+            transform: 'rotate(90deg)'
           }}
           onClick={(e) => {
             e.stopPropagation();
@@ -1582,7 +1727,7 @@ setTimeout(() => {
   // Render hall elements (entrances, bathrooms, etc.)
   const renderHallElements = () => {
     if (!hallData.hallElements) return null;
-    
+
     return hallData.hallElements.map(element => {
       return (
         <div
@@ -1597,13 +1742,13 @@ setTimeout(() => {
             zIndex: element.zIndex || 1
           }}
         >
-          <img 
-            src={element.icon} 
-            alt={element.name} 
-            style={{ 
+          <img
+            src={element.icon}
+            alt={element.name}
+            style={{
               width: `${element.fontSize || 100}px`,
               height: 'auto',
-            }} 
+            }}
           />
           <div className="element-label" style={{ textAlign: 'center', marginTop: '5px' }}>
             {element.customName || element.name}
@@ -1633,7 +1778,7 @@ setTimeout(() => {
         <div className="table-header">
           <h3>Стол {table.id} (Стульев: {table.chairCount})</h3>
         </div>
-        
+
         {table.shape === 'rectangle' ? (
           <div className="table" style={{
             margin: "20px",
@@ -1660,11 +1805,11 @@ setTimeout(() => {
       </div>
     );
   };
-  
+
 
   return (
     <DndProvider backend={HTML5Backend}>
-      <div className="app-container" style={{ 
+      <div className="app-container" style={{
         display: 'flex',
         flexDirection: 'column',
         height: '100vh',
@@ -1672,7 +1817,7 @@ setTimeout(() => {
         position: 'relative'
       }}>
         {/* Compact header */}
-        <header className="app-header" style={{ 
+        <header className="app-header" style={{
           padding: '10px 15px',
           backgroundColor: '#0a0a1d',
           color: 'white',
@@ -1683,18 +1828,18 @@ setTimeout(() => {
           alignItems: 'center'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-            <div style={{ 
-              fontSize: '20px', 
+            <div style={{
+              fontSize: '20px',
               fontWeight: 'bold',
               whiteSpace: 'nowrap'
             }}>
               {hallData?.name || 'Зал без названия'}
             </div>
-            
+
             <div style={{ display: 'flex', gap: '10px' }}>
-              <button 
-                onClick={() => { 
-                  setIsSidePanelOpen(true); 
+              <button
+                onClick={() => {
+                  setIsSidePanelOpen(true);
                   setSidePanelTab('groups');
                 }}
                 style={{
@@ -1711,7 +1856,7 @@ setTimeout(() => {
                 }}
               >
                 <span>Клиенты</span>
-                <span style={{ 
+                <span style={{
                   backgroundColor: '#555',
                   borderRadius: '50%',
                   width: '20px',
@@ -1724,11 +1869,11 @@ setTimeout(() => {
                   {groups.length}
                 </span>
               </button>
-              
+
               {detailsTableId && (
-                <button 
-                  onClick={() => { 
-                    setIsSidePanelOpen(true); 
+                <button
+                  onClick={() => {
+                    setIsSidePanelOpen(true);
                     setSidePanelTab('tableDetails');
                   }}
                   style={{
@@ -1746,7 +1891,7 @@ setTimeout(() => {
               )}
             </div>
           </div>
-          
+
           <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
               <button
@@ -1766,7 +1911,7 @@ setTimeout(() => {
                   cursor: 'pointer'
                 }}
               >−</button>
-              <span style={{ 
+              <span style={{
                 color: 'white',
                 fontSize: '14px',
                 width: '40px',
@@ -1792,7 +1937,7 @@ setTimeout(() => {
                 }}
               >+</button>
             </div>
-            
+
             <div className="import-container">
               <input
                 type="file"
@@ -1802,8 +1947,8 @@ setTimeout(() => {
                 className="file-input"
                 style={{ display: 'none' }}
               />
-              <label 
-                htmlFor="import-file" 
+              <label
+                htmlFor="import-file"
                 className="import-button"
                 style={{
                   backgroundColor: '#2ecc71',
@@ -1823,9 +1968,9 @@ setTimeout(() => {
             </div>
           </div>
         </header>
-        
+
         {/* Main content with hall view and side panel */}
-        <div style={{ 
+        <div style={{
           flex: 1,
           display: 'flex',
           position: 'relative',
@@ -1833,7 +1978,7 @@ setTimeout(() => {
           backgroundColor: '#f7f7f7'
         }}>
           {/* Collapsible side panel */}
-          <div 
+          <div
             ref={sidePanelRef}
             style={{
               width: isSidePanelOpen ? '300px' : '0',
@@ -1859,25 +2004,25 @@ setTimeout(() => {
                   fontSize: '20px',
                   color: '#999'
                 }}
-                onClick={() => setIsSidePanelOpen(false)}
+                  onClick={() => setIsSidePanelOpen(false)}
                 >
                   ×
                 </div>
-                
+
                 {sidePanelTab === 'groups' && <GroupsPanel />}
                 {sidePanelTab === 'tableDetails' && <TableDetailsPanel />}
               </>
             )}
           </div>
-          
+
           {/* Hall view */}
           {hallData ? (
-            <div 
-              style={{ 
+            <div
+              style={{
                 flex: 1,
                 overflow: 'hidden',
                 position: 'relative',
-                backgroundColor: '#f7f7f7' 
+                backgroundColor: '#f7f7f7'
               }}
             >
               <div
@@ -1907,11 +2052,11 @@ setTimeout(() => {
                 {hallData.tables && hallData.tables.map((table) => (
                   <DroppableTable key={table.id} table={table} />
                 ))}
-                
+
                 {/* Render hall elements */}
                 {renderHallElements()}
               </div>
-              
+
               {/* Floating action button for clients */}
               {!isSidePanelOpen && (
                 <button
@@ -1965,11 +2110,11 @@ setTimeout(() => {
             </div>
           )}
         </div>
-        
+
         {/* Fullscreen popup for chair selection/removal */}
         {isPopupVisible && (
-          <div 
-            className="fullscreen-popup" 
+          <div
+            className="fullscreen-popup"
             onClick={closePopup}
             style={{
               position: 'fixed',
@@ -1984,8 +2129,8 @@ setTimeout(() => {
               zIndex: 1000
             }}
           >
-            <div 
-              className="fullscreen-popup-content" 
+            <div
+              className="fullscreen-popup-content"
               onClick={(e) => e.stopPropagation()}
               style={{
                 backgroundColor: 'white',
@@ -2000,14 +2145,14 @@ setTimeout(() => {
               {isRemoveMode ? (
                 // Remove Person Popup
                 <div className="remove-person-popup">
-                  <h3 style={{ 
+                  <h3 style={{
                     textAlign: 'center',
                     marginTop: 0,
                     marginBottom: '20px'
                   }}>
                     Убрать клиента с места?
                   </h3>
-                  
+
                   <div style={{
                     backgroundColor: '#f5f5f5',
                     padding: '15px',
@@ -2039,7 +2184,7 @@ setTimeout(() => {
                       </p>
                     )}
                   </div>
-                  
+
                   <p style={{
                     textAlign: 'center',
                     marginBottom: '20px',
@@ -2047,14 +2192,14 @@ setTimeout(() => {
                   }}>
                     Вы уверены, что хотите убрать этого клиента с места?
                   </p>
-                  
+
                   <div style={{
                     display: 'flex',
                     justifyContent: 'center',
                     gap: '15px'
                   }}>
-                    <button 
-                      onClick={handleRemovePerson} 
+                    <button
+                      onClick={handleRemovePerson}
                       style={{
                         padding: '10px 20px',
                         backgroundColor: '#e74c3c',
@@ -2067,9 +2212,9 @@ setTimeout(() => {
                     >
                       Убрать
                     </button>
-                    
-                    <button 
-                      onClick={closePopup} 
+
+                    <button
+                      onClick={closePopup}
                       style={{
                         padding: '10px 20px',
                         backgroundColor: '#7f8c8d',
@@ -2153,8 +2298,8 @@ setTimeout(() => {
                       </div>
                     )}
                   </div>
-                  <button 
-                    onClick={closePopup} 
+                  <button
+                    onClick={closePopup}
                     style={{
                       display: 'block',
                       margin: '0 auto',
@@ -2181,11 +2326,11 @@ setTimeout(() => {
             </div>
           </div>
         )}
-        
+
         {/* Client creation form - Enhanced with additional fields */}
         {showGroupForm && (
-          <div 
-            className="fullscreen-popup" 
+          <div
+            className="fullscreen-popup"
             onClick={() => setShowGroupForm(false)}
             style={{
               position: 'fixed',
@@ -2200,8 +2345,8 @@ setTimeout(() => {
               zIndex: 1000
             }}
           >
-            <div 
-              className="fullscreen-popup-content" 
+            <div
+              className="fullscreen-popup-content"
               onClick={(e) => e.stopPropagation()}
               style={{
                 backgroundColor: 'white',
@@ -2218,7 +2363,7 @@ setTimeout(() => {
               }}>
                 Добавление нового клиента
               </h3>
-              
+
               <div>
                 <div style={{ marginBottom: '20px' }}>
                   <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
@@ -2228,7 +2373,7 @@ setTimeout(() => {
                     type="text"
                     value={groupName}
                     onChange={(e) => setGroupName(e.target.value)}
-                    style={{ 
+                    style={{
                       width: '100%',
                       padding: '10px',
                       borderRadius: '4px',
@@ -2237,7 +2382,7 @@ setTimeout(() => {
                     placeholder="Например: Иван Иванов"
                   />
                 </div>
-                
+
                 <div style={{ marginBottom: '20px' }}>
                   <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
                     Телефон:
@@ -2246,7 +2391,7 @@ setTimeout(() => {
                     type="tel"
                     value={groupPhone}
                     onChange={(e) => setGroupPhone(e.target.value)}
-                    style={{ 
+                    style={{
                       width: '100%',
                       padding: '10px',
                       borderRadius: '4px',
@@ -2255,7 +2400,7 @@ setTimeout(() => {
                     placeholder="+7 (___) ___-__-__"
                   />
                 </div>
-                
+
                 <div style={{ marginBottom: '20px' }}>
                   <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
                     Email:
@@ -2264,7 +2409,7 @@ setTimeout(() => {
                     type="email"
                     value={groupEmail}
                     onChange={(e) => setGroupEmail(e.target.value)}
-                    style={{ 
+                    style={{
                       width: '100%',
                       padding: '10px',
                       borderRadius: '4px',
@@ -2273,7 +2418,7 @@ setTimeout(() => {
                     placeholder="example@mail.com"
                   />
                 </div>
-                
+
                 <div style={{ marginBottom: '20px' }}>
                   <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
                     Количество гостей:
@@ -2283,7 +2428,7 @@ setTimeout(() => {
                     min="1"
                     value={guestCount}
                     onChange={(e) => setGuestCount(Math.max(1, parseInt(e.target.value) || 1))}
-                    style={{ 
+                    style={{
                       width: '100px',
                       padding: '10px',
                       borderRadius: '4px',
@@ -2291,7 +2436,7 @@ setTimeout(() => {
                     }}
                   />
                 </div>
-                
+
                 <div style={{
                   display: 'flex',
                   justifyContent: 'center',
@@ -2300,7 +2445,7 @@ setTimeout(() => {
                   <button
                     onClick={handleAddGroup}
                     disabled={!groupName.trim() || guestCount < 1}
-                    style={{ 
+                    style={{
                       padding: '10px 20px',
                       backgroundColor: !groupName.trim() || guestCount < 1 ? '#aaa' : '#2ecc71',
                       color: 'white',
@@ -2313,10 +2458,10 @@ setTimeout(() => {
                   >
                     Добавить клиента
                   </button>
-                  
+
                   <button
                     onClick={() => setShowGroupForm(false)}
-                    style={{ 
+                    style={{
                       padding: '10px 20px',
                       backgroundColor: '#7f8c8d',
                       color: 'white',
@@ -2333,11 +2478,11 @@ setTimeout(() => {
             </div>
           </div>
         )}
-        
+
         {/* Client details view */}
         {viewingGroupDetails && (
-          <div 
-            className="fullscreen-popup" 
+          <div
+            className="fullscreen-popup"
             onClick={closeGroupDetails}
             style={{
               position: 'fixed',
@@ -2352,7 +2497,7 @@ setTimeout(() => {
               zIndex: 1000
             }}
           >
-            <div className="fullscreen-popup-content" 
+            <div className="fullscreen-popup-content"
               onClick={(e) => e.stopPropagation()}
               style={{
                 backgroundColor: 'white',
@@ -2387,7 +2532,7 @@ setTimeout(() => {
                   {viewingGroupDetails.guestCount} {viewingGroupDetails.guestCount === 1 ? 'гость' : viewingGroupDetails.guestCount < 5 ? 'гостя' : 'гостей'}
                 </div>
               </div>
-              
+
               <div style={{ marginBottom: '25px' }}>
                 <div style={{
                   display: 'grid',
@@ -2406,7 +2551,7 @@ setTimeout(() => {
                       {viewingGroupDetails.phone || 'Не указан'}
                     </div>
                   </div>
-                  
+
                   <div style={{
                     backgroundColor: '#f5f5f5',
                     borderRadius: '8px',
@@ -2421,11 +2566,11 @@ setTimeout(() => {
                   </div>
                 </div>
               </div>
-              
+
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px' }}>
                 <button
                   onClick={closeGroupDetails}
-                  style={{ 
+                  style={{
                     flex: '1',
                     padding: '10px',
                     backgroundColor: '#7f8c8d',
@@ -2438,7 +2583,7 @@ setTimeout(() => {
                 >
                   Закрыть
                 </button>
-                
+
                 <button
                   onClick={() => {
                     // Find an empty table with enough seats
@@ -2452,7 +2597,7 @@ setTimeout(() => {
                         const bOccupied = (b.people || []).filter(Boolean).length;
                         return (a.chairCount - aOccupied) - (b.chairCount - bOccupied);
                       });
-                    
+
                     if (emptierTables.length > 0) {
                       // Trigger the table drop with the first suitable table
                       handleTableDrop(emptierTables[0].id, viewingGroupDetails);
@@ -2461,7 +2606,7 @@ setTimeout(() => {
                       alert('Нет свободных столов с достаточным количеством мест для этого клиента');
                     }
                   }}
-                  style={{ 
+                  style={{
                     flex: '1',
                     padding: '10px',
                     backgroundColor: '#2ecc71',
@@ -2479,11 +2624,11 @@ setTimeout(() => {
             </div>
           </div>
         )}
-        
+
         {/* Booking confirmation modal - Fixed to prevent panel closing issue */}
         {showBookingModal && pendingBooking && (
-          <div 
-            className="fullscreen-popup" 
+          <div
+            className="fullscreen-popup"
             onClick={(e) => e.stopPropagation()} // Prevent click propagation
             style={{
               position: 'fixed',
@@ -2498,8 +2643,8 @@ setTimeout(() => {
               zIndex: 1000
             }}
           >
-            <div 
-              className="fullscreen-popup-content" 
+            <div
+              className="fullscreen-popup-content"
               onClick={(e) => e.stopPropagation()} // Prevent click propagation
               style={{
                 backgroundColor: 'white',
@@ -2516,13 +2661,13 @@ setTimeout(() => {
               }}>
                 Подтверждение бронирования
               </h3>
-              
+
               <div>
                 <div style={{ marginBottom: '20px' }}>
                   <h4 style={{ margin: '0 0 10px 0' }}>Информация о бронировании</h4>
-                  <div style={{ 
-                    backgroundColor: '#f5f5f5', 
-                    padding: '15px', 
+                  <div style={{
+                    backgroundColor: '#f5f5f5',
+                    padding: '15px',
                     borderRadius: '8px',
                     marginBottom: '15px'
                   }}>
@@ -2532,7 +2677,7 @@ setTimeout(() => {
                     <p style={{ margin: '0 0 0 0' }}><strong>Доступно мест:</strong> {pendingBooking.availableSeats}</p>
                   </div>
                 </div>
-                
+
                 <div style={{ marginBottom: '20px' }}>
                   <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
                     Время бронирования:
@@ -2542,7 +2687,7 @@ setTimeout(() => {
                       type="time"
                       value={bookingTime}
                       onChange={(e) => setBookingTime(e.target.value)}
-                      style={{ 
+                      style={{
                         flex: '1',
                         padding: '10px',
                         borderRadius: '4px',
@@ -2554,7 +2699,7 @@ setTimeout(() => {
                       type="time"
                       value={bookingEndTime}
                       onChange={(e) => setBookingEndTime(e.target.value)}
-                      style={{ 
+                      style={{
                         flex: '1',
                         padding: '10px',
                         borderRadius: '4px',
@@ -2563,7 +2708,7 @@ setTimeout(() => {
                     />
                   </div>
                 </div>
-                
+
                 <div style={{ marginBottom: '20px' }}>
                   <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
                     Примечание (необязательно):
@@ -2571,7 +2716,7 @@ setTimeout(() => {
                   <textarea
                     value={bookingNote}
                     onChange={(e) => setBookingNote(e.target.value)}
-                    style={{ 
+                    style={{
                       width: '100%',
                       minHeight: '80px',
                       resize: 'vertical',
@@ -2582,7 +2727,7 @@ setTimeout(() => {
                     placeholder="Особые пожелания, комментарии к заказу и т.д."
                   />
                 </div>
-                
+
                 <div style={{
                   display: 'flex',
                   justifyContent: 'center',
@@ -2590,7 +2735,7 @@ setTimeout(() => {
                 }}>
                   <button
                     onClick={confirmBooking}
-                    style={{ 
+                    style={{
                       padding: '10px 20px',
                       backgroundColor: '#2ecc71',
                       color: 'white',
@@ -2603,10 +2748,10 @@ setTimeout(() => {
                   >
                     Подтвердить бронирование
                   </button>
-                  
+
                   <button
                     onClick={cancelBooking}
-                    style={{ 
+                    style={{
                       padding: '10px 20px',
                       backgroundColor: '#7f8c8d',
                       color: 'white',
