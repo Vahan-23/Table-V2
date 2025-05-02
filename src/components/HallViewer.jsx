@@ -5,7 +5,7 @@ import { HTML5Backend } from 'react-dnd-html5-backend';
 import './hallview.css';
 import CollapsiblePanel from './CollapsiblePanel';
 import SidebarLayout from './SidebarLayout';
-
+import BookingCalendar from './BookingCalendar';
 // Define item type for drag and drop
 const ItemTypes = {
   GROUP: 'group'
@@ -44,7 +44,7 @@ const HallViewer = ({ hallData: initialHallData, onDataChange }) => {
   const [bookingTime, setBookingTime] = useState('');
   const [bookingEndTime, setBookingEndTime] = useState('');
   const [bookingNote, setBookingNote] = useState('');
-
+  const [bookingDate, setBookingDate] = useState('');
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
   const [sidePanelTab, setSidePanelTab] = useState('groups');
   const sidePanelRef = useRef(null);
@@ -53,10 +53,61 @@ const HallViewer = ({ hallData: initialHallData, onDataChange }) => {
   const [dragStartPosition, setDragStartPosition] = useState({ x: 0, y: 0 });
   const [initialScrollPosition, setInitialScrollPosition] = useState({ x: 0, y: 0 });
 
+  const [activeView, setActiveView] = useState('hall'); // 'hall' or 'calendar'
+
+
   let isDraggingActive = false;
   let currentDraggedItem = null;
   let dragImage = null;
   let dragOffset = { x: 0, y: 0 };
+
+
+  useEffect(() => {
+    if (showBookingModal) {
+      // Установка значений по умолчанию
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = String(today.getMonth() + 1).padStart(2, '0');
+      const day = String(today.getDate()).padStart(2, '0');
+      setBookingDate(`${year}-${month}-${day}`);
+      
+      // Для времени используем 24-часовой формат
+      const now = new Date();
+      const currentHour = now.getHours().toString().padStart(2, '0');
+      const currentMinute = Math.floor(now.getMinutes() / 15) * 15;
+      const currentMinuteStr = currentMinute.toString().padStart(2, '0');
+      
+      setBookingTime(`${currentHour}:${currentMinuteStr}`);
+      
+      // Время окончания по умолчанию - 2 часа после начала
+      let endHour = now.getHours() + 2;
+      // Проверяем, не выходит ли за пределы суток
+      if (endHour >= 24) {
+        endHour = 23;
+        setBookingEndTime(`${endHour.toString().padStart(2, '0')}:${currentMinuteStr}`);
+      } else {
+        setBookingEndTime(`${endHour.toString().padStart(2, '0')}:${currentMinuteStr}`);
+      }
+    }
+  }, [showBookingModal]);
+
+ const formatTime24h = (timeString) => {
+  if (!timeString) return '';
+  
+  // Проверка на соответствие 24-часовому формату
+  const timeRegex = /^([01]?[0-9]|2[0-3]):([0-5][0-9])$/;
+  if (timeRegex.test(timeString)) {
+    return timeString;
+  }
+  
+  // Проблема: если формат неправильный, попытка преобразования может привести к ошибке
+  try {
+    const [hours, minutes] = timeString.split(':').map(Number);
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+  } catch (e) {
+    return timeString; // Возвращает исходную строку в случае ошибки
+  }
+};
 
   const ClientListItem = ({ group, onDragStart, onViewDetails }) => {
     const [isDragging, setIsDragging] = useState(false);
@@ -1218,50 +1269,64 @@ const TableDetailsPanel = () => {
 
   useEffect(() => {
     if (showBookingModal) {
-      console.log('Booking modal should be visible:', { pendingBooking, showBookingModal });
+      // Устанавливаем текущую дату как значение по умолчанию
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = String(today.getMonth() + 1).padStart(2, '0');
+      const day = String(today.getDate()).padStart(2, '0');
+      setBookingDate(`${year}-${month}-${day}`);
+      
+      // Остальной код для установки времени начала и окончания...
+      const now = new Date();
+      setBookingTime(`${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`);
+      
+      // Установите время окончания по умолчанию на 2 часа позже
+      const endTime = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+      setBookingEndTime(`${endTime.getHours().toString().padStart(2, '0')}:${endTime.getMinutes().toString().padStart(2, '0')}`);
     }
-  }, [showBookingModal, pendingBooking]);
+  }, [showBookingModal]);
 
   // Confirm booking and assign seats - Fixed to prevent panel closing and with proper state reset
   const confirmBooking = useCallback(() => {
     console.log('confirmBooking called with:', pendingBooking);
-
+  
     if (!pendingBooking) {
       // Ensure dragging state is reset
       setDraggingGroup(null);
       return;
     }
-
+  
     const { tableId, group } = pendingBooking;
-
-    // Add booking time and note to the group
+  
+    // Добавляем дату к деталям бронирования
     const bookingDetails = {
-      time: bookingTime,
-      endTime: bookingEndTime,
+      date: bookingDate,
+      time: formatTime24h(bookingTime),
+      endTime: formatTime24h(bookingEndTime),
       note: bookingNote,
       timestamp: new Date().toISOString()
     };
-
+  
     console.log('Setting up booking with details:', bookingDetails);
-
-    // Add people from the group to empty chairs
+  
+    // Добавляем людей из группы на свободные места
     setHallData(prevData => {
       const updatedTables = prevData.tables.map(t => {
         if (t.id === tableId) {
-          // Make a copy of the people array or initialize it
+          // Создаем копию массива людей или инициализируем его
           const tablePeople = [...(t.people || [])];
-
-          // Find empty seats
+  
+          // Находим свободные места
           const emptySeats = [];
           for (let i = 0; i < t.chairCount; i++) {
             if (!tablePeople[i]) {
               emptySeats.push(i);
             }
           }
-
+  
           console.log(`Found ${emptySeats.length} empty seats for table ${tableId}`);
-
-          // Place client in first empty seat
+  
+          // Размещаем клиента на первом свободном месте
           if (emptySeats.length > 0) {
             tablePeople[emptySeats[0]] = {
               name: group.name,
@@ -1270,9 +1335,9 @@ const TableDetailsPanel = () => {
               email: group.email,
               booking: bookingDetails
             };
-
-            // If there are additional guests, create placeholder entries
-            // for the remaining seats (up to guestCount)
+  
+            // Если есть дополнительные гости, создаем для них записи-заполнители
+            // на оставшихся местах (до количества гостей)
             for (let i = 1; i < Math.min(group.guestCount, emptySeats.length); i++) {
               tablePeople[emptySeats[i]] = {
                 name: `Гость ${group.name} ${i}`,
@@ -1281,7 +1346,7 @@ const TableDetailsPanel = () => {
               };
             }
           }
-
+  
           return {
             ...t,
             people: tablePeople
@@ -1289,19 +1354,20 @@ const TableDetailsPanel = () => {
         }
         return t;
       });
-
+  
       return {
         ...prevData,
         tables: updatedTables
       };
     });
-
-    // Show notification
+  
+    // Показываем уведомление
     const notification = document.createElement('div');
     notification.className = 'transfer-notification';
-    notification.textContent = `Клиент "${group.name}" размещен за столом ${tableId}`;
+    // Например, при отображении уведомления
+notification.textContent = `Клиент "${group.name}" размещен за столом ${tableId} на ${formatDateForDisplay(bookingDate)} в ${formatTime24h(bookingTime)} - ${formatTime24h(bookingEndTime)}`; // Добавляем отображение даты
     document.body.appendChild(notification);
-
+  
     setTimeout(() => {
       notification.classList.add('show');
       setTimeout(() => {
@@ -1311,17 +1377,29 @@ const TableDetailsPanel = () => {
         }, 300);
       }, 2000);
     }, 100);
-
-    // Reset booking state
+  
+    // Сбрасываем состояние бронирования
     setShowBookingModal(false);
     setPendingBooking(null);
+    setBookingDate('');
     setBookingTime('');
     setBookingEndTime('');
     setBookingNote('');
-
-    // Ensure dragging state is reset
+  
+    // Сбрасываем состояние перетаскивания
     setDraggingGroup(null);
-  }, [pendingBooking, bookingTime, bookingEndTime, bookingNote]);
+    
+    // Переключаемся на представление календаря
+    setActiveView('calendar');
+    
+  }, [pendingBooking, bookingDate, bookingTime, bookingEndTime, bookingNote]);
+  
+  const formatDateForDisplay = (dateString) => {
+    if (!dateString) return '';
+    
+    const [year, month, day] = dateString.split('-');
+    return `${day}.${month}.${year}`;
+  };
 
   // Cancel booking - Fixed to prevent panel closing with proper state reset
   const cancelBooking = useCallback(() => {
@@ -1818,298 +1896,339 @@ const TableDetailsPanel = () => {
       }}>
         {/* Compact header */}
         <header className="app-header" style={{
-          padding: '10px 15px',
-          backgroundColor: '#0a0a1d',
+  padding: '10px 15px',
+  backgroundColor: '#0a0a1d',
+  color: 'white',
+  boxShadow: '0 2px 10px rgba(0, 0, 0, 0.2)',
+  zIndex: 100,
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center'
+}}>
+  <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+    <div style={{
+      fontSize: '20px',
+      fontWeight: 'bold',
+      whiteSpace: 'nowrap'
+    }}>
+      {hallData?.name || 'Зал без названия'}
+    </div>
+
+    <div style={{ display: 'flex', gap: '10px' }}>
+      {/* View switching buttons */}
+      <button
+        onClick={() => setActiveView('hall')}
+        style={{
+          backgroundColor: activeView === 'hall' ? '#3498db' : '#333',
           color: 'white',
-          boxShadow: '0 2px 10px rgba(0, 0, 0, 0.2)',
-          zIndex: 100,
+          border: 'none',
+          borderRadius: '4px',
+          padding: '6px 12px',
+          cursor: 'pointer',
+          fontSize: '14px'
+        }}
+      >
+        План зала
+      </button>
+      <button
+        onClick={() => setActiveView('calendar')}
+        style={{
+          backgroundColor: activeView === 'calendar' ? '#3498db' : '#333',
+          color: 'white',
+          border: 'none',
+          borderRadius: '4px',
+          padding: '6px 12px',
+          cursor: 'pointer',
+          fontSize: '14px'
+        }}
+      >
+        Календарь
+      </button>
+
+      {/* Existing buttons */}
+      <button
+        onClick={() => {
+          setIsSidePanelOpen(true);
+          setSidePanelTab('groups');
+        }}
+        style={{
+          backgroundColor: sidePanelTab === 'groups' && isSidePanelOpen ? '#3498db' : '#333',
+          color: 'white',
+          border: 'none',
+          borderRadius: '4px',
+          padding: '6px 12px',
+          cursor: 'pointer',
+          fontSize: '14px',
           display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
+          alignItems: 'center',
+          gap: '5px'
+        }}
+      >
+        <span>Клиенты</span>
+        <span style={{
+          backgroundColor: '#555',
+          borderRadius: '50%',
+          width: '20px',
+          height: '20px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '12px'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-            <div style={{
-              fontSize: '20px',
-              fontWeight: 'bold',
-              whiteSpace: 'nowrap'
-            }}>
-              {hallData?.name || 'Зал без названия'}
-            </div>
+          {groups.length}
+        </span>
+      </button>
 
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button
-                onClick={() => {
-                  setIsSidePanelOpen(true);
-                  setSidePanelTab('groups');
-                }}
-                style={{
-                  backgroundColor: sidePanelTab === 'groups' && isSidePanelOpen ? '#3498db' : '#333',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  padding: '6px 12px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '5px'
-                }}
-              >
-                <span>Клиенты</span>
-                <span style={{
-                  backgroundColor: '#555',
-                  borderRadius: '50%',
-                  width: '20px',
-                  height: '20px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '12px'
-                }}>
-                  {groups.length}
-                </span>
-              </button>
+      {detailsTableId && (
+        <button
+          onClick={() => {
+            setIsSidePanelOpen(true);
+            setSidePanelTab('tableDetails');
+          }}
+          style={{
+            backgroundColor: sidePanelTab === 'tableDetails' && isSidePanelOpen ? '#3498db' : '#333',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            padding: '6px 12px',
+            cursor: 'pointer',
+            fontSize: '14px'
+          }}
+        >
+          Стол {detailsTableId}
+        </button>
+      )}
+    </div>
+  </div>
 
-              {detailsTableId && (
-                <button
-                  onClick={() => {
-                    setIsSidePanelOpen(true);
-                    setSidePanelTab('tableDetails');
-                  }}
-                  style={{
-                    backgroundColor: sidePanelTab === 'tableDetails' && isSidePanelOpen ? '#3498db' : '#333',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    padding: '6px 12px',
-                    cursor: 'pointer',
-                    fontSize: '14px'
-                  }}
-                >
-                  Стол {detailsTableId}
-                </button>
-              )}
-            </div>
-          </div>
+  <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+    {activeView === 'hall' && (
+      <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+        <button
+          className="zoom-btn zoom-out-btn"
+          onClick={handleButtonZoomOut}
+          style={{
+            backgroundColor: '#333',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            width: '30px',
+            height: '30px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '18px',
+            cursor: 'pointer'
+          }}
+        >−</button>
+        <span style={{
+          color: 'white',
+          fontSize: '14px',
+          width: '40px',
+          textAlign: 'center'
+        }}>
+          {Math.round(zoom * 100)}%
+        </span>
+        <button
+          className="zoom-btn zoom-in-btn"
+          onClick={handleButtonZoomIn}
+          style={{
+            backgroundColor: '#333',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            width: '30px',
+            height: '30px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '18px',
+            cursor: 'pointer'
+          }}
+        >+</button>
+      </div>
+    )}
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-              <button
-                className="zoom-btn zoom-out-btn"
-                onClick={handleButtonZoomOut}
-                style={{
-                  backgroundColor: '#333',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  width: '30px',
-                  height: '30px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '18px',
-                  cursor: 'pointer'
-                }}
-              >−</button>
-              <span style={{
-                color: 'white',
-                fontSize: '14px',
-                width: '40px',
-                textAlign: 'center'
-              }}>
-                {Math.round(zoom * 100)}%
-              </span>
-              <button
-                className="zoom-btn zoom-in-btn"
-                onClick={handleButtonZoomIn}
-                style={{
-                  backgroundColor: '#333',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  width: '30px',
-                  height: '30px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '18px',
-                  cursor: 'pointer'
-                }}
-              >+</button>
-            </div>
-
-            <div className="import-container">
-              <input
-                type="file"
-                accept=".json"
-                onChange={handleFileUpload}
-                id="import-file"
-                className="file-input"
-                style={{ display: 'none' }}
-              />
-              <label
-                htmlFor="import-file"
-                className="import-button"
-                style={{
-                  backgroundColor: '#2ecc71',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  padding: '6px 12px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  display: 'inline-block'
-                }}
-              >
-                Импорт зала
-              </label>
-              {isLoading && <div className="loading-indicator">Загрузка...</div>}
-              {error && <div className="error-message">{error}</div>}
-            </div>
-          </div>
-        </header>
+    <div className="import-container">
+      <input
+        type="file"
+        accept=".json"
+        onChange={handleFileUpload}
+        id="import-file"
+        className="file-input"
+        style={{ display: 'none' }}
+      />
+      <label
+        htmlFor="import-file"
+        className="import-button"
+        style={{
+          backgroundColor: '#2ecc71',
+          color: 'white',
+          border: 'none',
+          borderRadius: '4px',
+          padding: '6px 12px',
+          cursor: 'pointer',
+          fontSize: '14px',
+          display: 'inline-block'
+        }}
+      >
+        Импорт зала
+      </label>
+      {isLoading && <div className="loading-indicator">Загрузка...</div>}
+      {error && <div className="error-message">{error}</div>}
+    </div>
+  </div>
+</header>
 
         {/* Main content with hall view and side panel */}
         <div style={{
-          flex: 1,
-          display: 'flex',
-          position: 'relative',
-          overflow: 'hidden',
-          backgroundColor: '#f7f7f7'
-        }}>
-          {/* Collapsible side panel */}
-          <div
-            ref={sidePanelRef}
-            style={{
-              width: isSidePanelOpen ? '300px' : '0',
-              height: '100%',
-              backgroundColor: '#252525',
-              transition: 'width 0.3s ease',
-              overflowX: 'hidden',
-              overflowY: 'auto',
-              color: 'white',
-              position: 'relative',
-              zIndex: 50,
-              boxShadow: isSidePanelOpen ? '0 0 10px rgba(0, 0, 0, 0.2)' : 'none'
-            }}
-          >
-            {isSidePanelOpen && (
-              <>
-                <div style={{
-                  position: 'absolute',
-                  top: '10px',
-                  right: '10px',
-                  zIndex: 10,
-                  cursor: 'pointer',
-                  fontSize: '20px',
-                  color: '#999'
-                }}
-                  onClick={() => setIsSidePanelOpen(false)}
-                >
-                  ×
-                </div>
-
-                {sidePanelTab === 'groups' && <GroupsPanel />}
-                {sidePanelTab === 'tableDetails' && <TableDetailsPanel />}
-              </>
-            )}
-          </div>
-
-          {/* Hall view */}
-          {hallData ? (
-            <div
-              style={{
-                flex: 1,
-                overflow: 'hidden',
-                position: 'relative',
-                backgroundColor: '#f7f7f7'
-              }}
-            >
-              <div
-                className="tables-area"
-                ref={tablesAreaRef}
-                onClick={handleTablesAreaClick}
-                style={{
-                  transform: `scale(${zoom})`,
-                  transformOrigin: 'top left',
-                  display: 'flex',
-                  overflow: 'auto',
-                  width: `${100 / zoom}%`,
-                  height: `${100 / zoom}%`,
-                  minHeight: `${100 / zoom}%`,
-                  padding: '20px',
-                  position: 'relative',
-                  '--zoom-level': zoom,
-                  transition: isDraggingView ? 'none' : 'transform 0.1s ease-out',
-                  background: 'linear-gradient(rgba(255, 255, 255, 0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.2) 1px, transparent 1px)',
-                  backgroundSize: '20px 20px',
-                  backgroundColor: '#e6eef5',
-                  border: '2px dashed #3a3a3a',
-                  cursor: isDraggingView ? 'grabbing' : 'default'
-                }}
-              >
-                {/* Render tables */}
-                {hallData.tables && hallData.tables.map((table) => (
-                  <DroppableTable key={table.id} table={table} />
-                ))}
-
-                {/* Render hall elements */}
-                {renderHallElements()}
-              </div>
-
-              {/* Floating action button for clients */}
-              {!isSidePanelOpen && (
-                <button
-                  onClick={() => {
-                    setIsSidePanelOpen(true);
-                    setSidePanelTab('groups');
-                    // Clear any dragging state
-                    setDraggingGroup(null);
-                  }}
-                  style={{
-                    position: 'absolute',
-                    bottom: '20px',
-                    right: '20px',
-                    width: '60px',
-                    height: '60px',
-                    borderRadius: '50%',
-                    backgroundColor: '#3498db',
-                    color: 'white',
-                    border: 'none',
-                    fontSize: '24px',
-                    cursor: 'pointer',
-                    boxShadow: '0 2px 10px rgba(0, 0, 0, 0.2)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    zIndex: 10
-                  }}
-                >
-                  +
-                </button>
-              )}
-            </div>
-          ) : (
-            <div style={{
-              flex: 1,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <div style={{
-                backgroundColor: 'white',
-                padding: '30px',
-                borderRadius: '8px',
-                boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1)',
-                textAlign: 'center',
-                maxWidth: '500px'
-              }}>
-                <h2 style={{ marginTop: 0 }}>Нет данных для отображения</h2>
-                <p>Пожалуйста, импортируйте JSON файл с данными зала, используя кнопку выше.</p>
-              </div>
-            </div>
-          )}
+  flex: 1,
+  display: 'flex',
+  position: 'relative',
+  overflow: 'hidden',
+  backgroundColor: '#f7f7f7'
+}}>
+  {/* Collapsible side panel - keep this exactly as it was */}
+  <div
+    ref={sidePanelRef}
+    style={{
+      width: isSidePanelOpen ? '300px' : '0',
+      height: '100%',
+      backgroundColor: '#252525',
+      transition: 'width 0.3s ease',
+      overflowX: 'hidden',
+      overflowY: 'auto',
+      color: 'white',
+      position: 'relative',
+      zIndex: 50,
+      boxShadow: isSidePanelOpen ? '0 0 10px rgba(0, 0, 0, 0.2)' : 'none'
+    }}
+  >
+    {/* Keep the existing side panel content as it was */}
+    {isSidePanelOpen && (
+      <>
+        <div style={{
+          position: 'absolute',
+          top: '10px',
+          right: '10px',
+          zIndex: 10,
+          cursor: 'pointer',
+          fontSize: '20px',
+          color: '#999'
+        }}
+          onClick={() => setIsSidePanelOpen(false)}
+        >
+          ×
         </div>
+
+        {sidePanelTab === 'groups' && <GroupsPanel />}
+        {sidePanelTab === 'tableDetails' && <TableDetailsPanel />}
+      </>
+    )}
+  </div>
+
+  {/* Main content area - either hall or calendar */}
+  {hallData ? (
+    <div
+      style={{
+        flex: 1,
+        overflow: 'hidden',
+        position: 'relative',
+        backgroundColor: '#f7f7f7'
+      }}
+    >
+      {activeView === 'hall' ? (
+        /* Hall layout view - existing code */
+        <div
+          className="tables-area"
+          ref={tablesAreaRef}
+          onClick={handleTablesAreaClick}
+          style={{
+            transform: `scale(${zoom})`,
+            transformOrigin: 'top left',
+            display: 'flex',
+            overflow: 'auto',
+            width: `${100 / zoom}%`,
+            height: `${100 / zoom}%`,
+            minHeight: `${100 / zoom}%`,
+            padding: '20px',
+            position: 'relative',
+            '--zoom-level': zoom,
+            transition: isDraggingView ? 'none' : 'transform 0.1s ease-out',
+            background: 'linear-gradient(rgba(255, 255, 255, 0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.2) 1px, transparent 1px)',
+            backgroundSize: '20px 20px',
+            backgroundColor: '#e6eef5',
+            border: '2px dashed #3a3a3a',
+            cursor: isDraggingView ? 'grabbing' : 'default'
+          }}
+        >
+          {/* Render tables */}
+          {hallData.tables && hallData.tables.map((table) => (
+            <DroppableTable key={table.id} table={table} />
+          ))}
+
+          {/* Render hall elements */}
+          {renderHallElements()}
+        </div>
+      ) : (
+        /* Calendar view - new component */
+        <BookingCalendar hallData={hallData} groups={groups} />
+      )}
+
+      {/* Floating action button for clients - only visible in hall view */}
+      {!isSidePanelOpen && activeView === 'hall' && (
+        <button
+          onClick={() => {
+            setIsSidePanelOpen(true);
+            setSidePanelTab('groups');
+            // Clear any dragging state
+            setDraggingGroup(null);
+          }}
+          style={{
+            position: 'absolute',
+            bottom: '20px',
+            right: '20px',
+            width: '60px',
+            height: '60px',
+            borderRadius: '50%',
+            backgroundColor: '#3498db',
+            color: 'white',
+            border: 'none',
+            fontSize: '24px',
+            cursor: 'pointer',
+            boxShadow: '0 2px 10px rgba(0, 0, 0, 0.2)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10
+          }}
+        >
+          +
+        </button>
+      )}
+    </div>
+  ) : (
+    /* No data message - keep this exactly as it was */
+    <div style={{
+      flex: 1,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center'
+    }}>
+      <div style={{
+        backgroundColor: 'white',
+        padding: '30px',
+        borderRadius: '8px',
+        boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1)',
+        textAlign: 'center',
+        maxWidth: '500px'
+      }}>
+        <h2 style={{ marginTop: 0 }}>Нет данных для отображения</h2>
+        <p>Пожалуйста, импортируйте JSON файл с данными зала, используя кнопку выше.</p>
+      </div>
+    </div>
+  )}
+</div>
 
         {/* Fullscreen popup for chair selection/removal */}
         {isPopupVisible && (
@@ -2627,147 +2746,276 @@ const TableDetailsPanel = () => {
 
         {/* Booking confirmation modal - Fixed to prevent panel closing issue */}
         {showBookingModal && pendingBooking && (
-          <div
-            className="fullscreen-popup"
-            onClick={(e) => e.stopPropagation()} // Prevent click propagation
+  <div
+    className="fullscreen-popup"
+    onClick={(e) => e.stopPropagation()} // Предотвращаем распространение клика
+    style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      width: '100%',
+      height: '100%',
+      backgroundColor: 'rgba(0, 0, 0, 0.7)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 1000
+    }}
+  >
+    <div
+      className="fullscreen-popup-content"
+      onClick={(e) => e.stopPropagation()} // Предотвращаем распространение клика
+      style={{
+        backgroundColor: 'white',
+        borderRadius: '8px',
+        padding: '20px',
+        maxWidth: '500px',
+        width: '90%'
+      }}
+    >
+      <h3 style={{
+        textAlign: 'center',
+        marginTop: 0,
+        marginBottom: '20px'
+      }}>
+        Подтверждение бронирования
+      </h3>
+
+      <div>
+        <div style={{ marginBottom: '20px' }}>
+          <h4 style={{ margin: '0 0 10px 0' }}>Информация о бронировании</h4>
+          <div style={{
+            backgroundColor: '#f5f5f5',
+            padding: '15px',
+            borderRadius: '8px',
+            marginBottom: '15px'
+          }}>
+            <p style={{ margin: '0 0 8px 0' }}><strong>Клиент:</strong> {pendingBooking.group.name}</p>
+            <p style={{ margin: '0 0 8px 0' }}><strong>Количество гостей:</strong> {pendingBooking.group.guestCount}</p>
+            <p style={{ margin: '0 0 8px 0' }}><strong>Стол:</strong> {pendingBooking.tableId}</p>
+            <p style={{ margin: '0 0 0 0' }}><strong>Доступно мест:</strong> {pendingBooking.availableSeats}</p>
+          </div>
+        </div>
+
+        {/* Добавляем выбор даты */}
+        <div style={{ marginBottom: '20px' }}>
+          <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+            Дата бронирования:
+          </label>
+          <input
+            type="date"
+            value={bookingDate}
+            onChange={(e) => setBookingDate(e.target.value)}
             style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
               width: '100%',
-              height: '100%',
-              backgroundColor: 'rgba(0, 0, 0, 0.7)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 1000
+              padding: '10px',
+              borderRadius: '4px',
+              border: '1px solid #ddd'
+            }}
+          />
+        </div>
+
+        <div style={{ marginBottom: '20px' }}>
+  <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+    Время бронирования:
+  </label>
+  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+    {/* Время начала */}
+    <div style={{ 
+      display: 'flex', 
+      flex: 1,
+      gap: '5px'
+    }}>
+      {/* Часы начала */}
+      <select
+        value={bookingTime.split(':')[0] || '12'}
+        onChange={(e) => {
+          const hours = e.target.value;
+          const minutes = bookingTime.split(':')[1] || '00';
+          setBookingTime(`${hours}:${minutes}`);
+        }}
+        style={{
+          flex: '1',
+          padding: '10px',
+          backgroundColor: '#fff',
+          border: '1px solid #ddd',
+          borderRadius: '4px'
+        }}
+      >
+        {Array.from({ length: 24 }, (_, i) => i).map(hour => (
+          <option key={hour} value={hour.toString().padStart(2, '0')}>
+            {hour.toString().padStart(2, '0')}
+          </option>
+        ))}
+      </select>
+      
+      <span style={{ 
+        fontSize: '18px', 
+        fontWeight: 'bold' 
+      }}>:</span>
+      
+      {/* Минуты начала */}
+      <select
+        value={bookingTime.split(':')[1] || '00'}
+        onChange={(e) => {
+          const hours = bookingTime.split(':')[0] || '12';
+          const minutes = e.target.value;
+          setBookingTime(`${hours}:${minutes}`);
+        }}
+        style={{
+          flex: '1',
+          padding: '10px',
+          backgroundColor: '#fff',
+          border: '1px solid #ddd',
+          borderRadius: '4px'
+        }}
+      >
+        <option value="00">00</option>
+        <option value="15">15</option>
+        <option value="30">30</option>
+        <option value="45">45</option>
+      </select>
+    </div>
+    
+    <span>до</span>
+    
+    {/* Время окончания */}
+    <div style={{ 
+      display: 'flex', 
+      flex: 1,
+      gap: '5px'
+    }}>
+      {/* Часы окончания */}
+      <select
+        value={bookingEndTime.split(':')[0] || '14'}
+        onChange={(e) => {
+          const hours = e.target.value;
+          const minutes = bookingEndTime.split(':')[1] || '00';
+          setBookingEndTime(`${hours}:${minutes}`);
+        }}
+        style={{
+          flex: '1',
+          padding: '10px',
+          backgroundColor: '#fff',
+          border: '1px solid #ddd',
+          borderRadius: '4px'
+        }}
+      >
+        {Array.from({ length: 24 }, (_, i) => i).map(hour => (
+          <option key={hour} value={hour.toString().padStart(2, '0')}>
+            {hour.toString().padStart(2, '0')}
+          </option>
+        ))}
+      </select>
+      
+      <span style={{ 
+        fontSize: '18px', 
+        fontWeight: 'bold' 
+      }}>:</span>
+      
+      {/* Минуты окончания */}
+      <select
+        value={bookingEndTime.split(':')[1] || '00'}
+        onChange={(e) => {
+          const hours = bookingEndTime.split(':')[0] || '14';
+          const minutes = e.target.value;
+          setBookingEndTime(`${hours}:${minutes}`);
+        }}
+        style={{
+          flex: '1',
+          padding: '10px',
+          backgroundColor: '#fff',
+          border: '1px solid #ddd',
+          borderRadius: '4px'
+        }}
+      >
+        <option value="00">00</option>
+        <option value="15">15</option>
+        <option value="30">30</option>
+        <option value="45">45</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+
+        <div style={{ marginBottom: '20px' }}>
+          <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+            Примечание (необязательно):
+          </label>
+          <textarea
+            value={bookingNote}
+            onChange={(e) => setBookingNote(e.target.value)}
+            style={{
+              width: '100%',
+              minHeight: '80px',
+              resize: 'vertical',
+              padding: '10px',
+              borderRadius: '4px',
+              border: '1px solid #ddd'
+            }}
+            placeholder="Особые пожелания, комментарии к заказу и т.д."
+          />
+        </div>
+
+        {/* Информация о календаре */}
+        <div style={{ 
+          backgroundColor: '#e8f4fd', 
+          padding: '10px', 
+          borderRadius: '4px', 
+          marginBottom: '15px', 
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          fontSize: '13px',
+          color: '#2980b9'
+        }}>
+          <span style={{ fontSize: '18px' }}>📆</span>
+          <div>
+            После подтверждения бронирования вы будете перенаправлены в календарь, где сможете увидеть все бронирования.
+          </div>
+        </div>
+
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          gap: '15px'
+        }}>
+          <button
+            onClick={confirmBooking}
+            style={{
+              padding: '10px 20px',
+              backgroundColor: '#2ecc71',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontWeight: 'bold',
+              flex: '1'
             }}
           >
-            <div
-              className="fullscreen-popup-content"
-              onClick={(e) => e.stopPropagation()} // Prevent click propagation
-              style={{
-                backgroundColor: 'white',
-                borderRadius: '8px',
-                padding: '20px',
-                maxWidth: '500px',
-                width: '90%'
-              }}
-            >
-              <h3 style={{
-                textAlign: 'center',
-                marginTop: 0,
-                marginBottom: '20px'
-              }}>
-                Подтверждение бронирования
-              </h3>
+            Подтвердить и открыть календарь
+          </button>
 
-              <div>
-                <div style={{ marginBottom: '20px' }}>
-                  <h4 style={{ margin: '0 0 10px 0' }}>Информация о бронировании</h4>
-                  <div style={{
-                    backgroundColor: '#f5f5f5',
-                    padding: '15px',
-                    borderRadius: '8px',
-                    marginBottom: '15px'
-                  }}>
-                    <p style={{ margin: '0 0 8px 0' }}><strong>Клиент:</strong> {pendingBooking.group.name}</p>
-                    <p style={{ margin: '0 0 8px 0' }}><strong>Количество гостей:</strong> {pendingBooking.group.guestCount}</p>
-                    <p style={{ margin: '0 0 8px 0' }}><strong>Стол:</strong> {pendingBooking.tableId}</p>
-                    <p style={{ margin: '0 0 0 0' }}><strong>Доступно мест:</strong> {pendingBooking.availableSeats}</p>
-                  </div>
-                </div>
-
-                <div style={{ marginBottom: '20px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-                    Время бронирования:
-                  </label>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <input
-                      type="time"
-                      value={bookingTime}
-                      onChange={(e) => setBookingTime(e.target.value)}
-                      style={{
-                        flex: '1',
-                        padding: '10px',
-                        borderRadius: '4px',
-                        border: '1px solid #ddd'
-                      }}
-                    />
-                    <span>до</span>
-                    <input
-                      type="time"
-                      value={bookingEndTime}
-                      onChange={(e) => setBookingEndTime(e.target.value)}
-                      style={{
-                        flex: '1',
-                        padding: '10px',
-                        borderRadius: '4px',
-                        border: '1px solid #ddd'
-                      }}
-                    />
-                  </div>
-                </div>
-
-                <div style={{ marginBottom: '20px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-                    Примечание (необязательно):
-                  </label>
-                  <textarea
-                    value={bookingNote}
-                    onChange={(e) => setBookingNote(e.target.value)}
-                    style={{
-                      width: '100%',
-                      minHeight: '80px',
-                      resize: 'vertical',
-                      padding: '10px',
-                      borderRadius: '4px',
-                      border: '1px solid #ddd'
-                    }}
-                    placeholder="Особые пожелания, комментарии к заказу и т.д."
-                  />
-                </div>
-
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'center',
-                  gap: '15px'
-                }}>
-                  <button
-                    onClick={confirmBooking}
-                    style={{
-                      padding: '10px 20px',
-                      backgroundColor: '#2ecc71',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      fontWeight: 'bold',
-                      flex: '1'
-                    }}
-                  >
-                    Подтвердить бронирование
-                  </button>
-
-                  <button
-                    onClick={cancelBooking}
-                    style={{
-                      padding: '10px 20px',
-                      backgroundColor: '#7f8c8d',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      flex: '1'
-                    }}
-                  >
-                    Отмена
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+          <button
+            onClick={cancelBooking}
+            style={{
+              padding: '10px 20px',
+              backgroundColor: '#7f8c8d',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              flex: '1'
+            }}
+          >
+            Отмена
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
       </div>
     </DndProvider>
   );
