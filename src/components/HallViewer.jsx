@@ -11,6 +11,97 @@ const ItemTypes = {
   GROUP: 'group'
 };
 
+
+const parseTimeToMinutes = (timeString) => {
+  if (!timeString) return 0;
+  const [hours, minutes] = timeString.split(':').map(Number);
+  return hours * 60 + minutes;
+};
+
+// This function will get all occupied time slots for a table on a specific date
+const getOccupiedTimeSlots = (hallData, tableId, date) => {
+  if (!hallData || !hallData.tables) return [];
+
+  const table = hallData.tables.find(t => t.id === tableId);
+  if (!table || !table.people) return [];
+
+  const occupiedSlots = [];
+  const timeSlotSet = new Set(); // For unique slots
+
+  // For each person at the table with a booking
+  table.people.forEach(person => {
+    if (!person || !person.booking) return;
+
+    // Check if the date matches
+    if (person.booking.date !== date) return;
+
+    const startTime = parseTimeToMinutes(person.booking.time);
+    const endTime = parseTimeToMinutes(person.booking.endTime);
+
+    if (endTime < startTime) {
+      // Booking spans midnight
+      // Add slots from start time to midnight
+      for (let time = startTime; time < 24 * 60; time += 15) {
+        const hour = Math.floor(time / 60).toString().padStart(2, '0');
+        const minute = (time % 60).toString().padStart(2, '0');
+        const timeSlot = `${hour}:${minute}`;
+
+        if (!timeSlotSet.has(timeSlot)) {
+          timeSlotSet.add(timeSlot);
+          occupiedSlots.push(timeSlot);
+        }
+      }
+
+      // Add slots from midnight to end time
+      for (let time = 0; time < endTime; time += 15) {
+        const hour = Math.floor(time / 60).toString().padStart(2, '0');
+        const minute = (time % 60).toString().padStart(2, '0');
+        const timeSlot = `${hour}:${minute}`;
+
+        if (!timeSlotSet.has(timeSlot)) {
+          timeSlotSet.add(timeSlot);
+          occupiedSlots.push(timeSlot);
+        }
+      }
+    } else {
+      // Regular booking within same day
+      for (let time = startTime; time < endTime; time += 15) {
+        const hour = Math.floor(time / 60).toString().padStart(2, '0');
+        const minute = (time % 60).toString().padStart(2, '0');
+        const timeSlot = `${hour}:${minute}`;
+
+        if (!timeSlotSet.has(timeSlot)) {
+          timeSlotSet.add(timeSlot);
+          occupiedSlots.push(timeSlot);
+        }
+      }
+    }
+  });
+
+  return occupiedSlots;
+};
+
+const isHourOccupied = (occupiedSlots, hour) => {
+  const hourStr = hour.toString().padStart(2, '0');
+  // Check if any slot within this hour is occupied
+  return occupiedSlots.some(slot => slot.startsWith(hourStr + ':'));
+};
+
+const isTimeSlotOccupied = (occupiedSlots, hour, minute) => {
+  const hourStr = hour.toString().padStart(2, '0');
+  const minuteStr = minute.toString().padStart(2, '0');
+  const timeSlot = `${hourStr}:${minuteStr}`;
+  return occupiedSlots.includes(timeSlot);
+};
+
+const isTimeSlotOccupiedByMinutes = (occupiedSlots, timeInMinutes) => {
+  const hour = Math.floor(timeInMinutes / 60).toString().padStart(2, '0');
+  const minute = (timeInMinutes % 60).toString().padStart(2, '0');
+  const timeSlot = `${hour}:${minute}`;
+  return occupiedSlots.includes(timeSlot);
+};
+
+
 // Исправленный компонент ClientListItem для мгновенного перетаскивания
 
 
@@ -70,15 +161,15 @@ const HallViewer = ({ hallData: initialHallData, onDataChange }) => {
       const month = String(today.getMonth() + 1).padStart(2, '0');
       const day = String(today.getDate()).padStart(2, '0');
       setBookingDate(`${year}-${month}-${day}`);
-      
+
       // Для времени используем 24-часовой формат
       const now = new Date();
       const currentHour = now.getHours().toString().padStart(2, '0');
       const currentMinute = Math.floor(now.getMinutes() / 15) * 15;
       const currentMinuteStr = currentMinute.toString().padStart(2, '0');
-      
+
       setBookingTime(`${currentHour}:${currentMinuteStr}`);
-      
+
       // Время окончания по умолчанию - 2 часа после начала
       let endHour = now.getHours() + 2;
       // Проверяем, не выходит ли за пределы суток
@@ -91,23 +182,23 @@ const HallViewer = ({ hallData: initialHallData, onDataChange }) => {
     }
   }, [showBookingModal]);
 
- const formatTime24h = (timeString) => {
-  if (!timeString) return '';
-  
-  // Проверка на соответствие 24-часовому формату
-  const timeRegex = /^([01]?[0-9]|2[0-3]):([0-5][0-9])$/;
-  if (timeRegex.test(timeString)) {
-    return timeString;
-  }
-  
-  // Проблема: если формат неправильный, попытка преобразования может привести к ошибке
-  try {
-    const [hours, minutes] = timeString.split(':').map(Number);
-    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-  } catch (e) {
-    return timeString; // Возвращает исходную строку в случае ошибки
-  }
-};
+  const formatTime24h = (timeString) => {
+    if (!timeString) return '';
+
+    // Проверка на соответствие 24-часовому формату
+    const timeRegex = /^([01]?[0-9]|2[0-3]):([0-5][0-9])$/;
+    if (timeRegex.test(timeString)) {
+      return timeString;
+    }
+
+    // Проблема: если формат неправильный, попытка преобразования может привести к ошибке
+    try {
+      const [hours, minutes] = timeString.split(':').map(Number);
+      return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+    } catch (e) {
+      return timeString; // Возвращает исходную строку в случае ошибки
+    }
+  };
 
   const ClientListItem = ({ group, onDragStart, onViewDetails }) => {
     const [isDragging, setIsDragging] = useState(false);
@@ -395,20 +486,20 @@ const HallViewer = ({ hallData: initialHallData, onDataChange }) => {
   // Add click outside listener to close side panel
   useEffect(() => {
     if (!isSidePanelOpen) return;
-  
+
     const handleClickOutside = (event) => {
       // Don't close panel if actively dragging
       if (draggingGroup) return;
-  
+
       // Check if the mouse event target is related to dragging
       const isDragHandle = event.target.closest('.drag-handle');
       if (isDragHandle) return;
-  
+
       // Check if the click is inside any of the fullscreen popups
-      const isPopupClick = event.target.closest('.fullscreen-popup-content') || 
-                          event.target.classList.contains('fullscreen-popup');
+      const isPopupClick = event.target.closest('.fullscreen-popup-content') ||
+        event.target.classList.contains('fullscreen-popup');
       if (isPopupClick) return;
-  
+
       if (sidePanelRef.current && !sidePanelRef.current.contains(event.target)) {
         // Don't close panel if this is a table click 
         // (tables have their own click handler for switching details)
@@ -418,9 +509,9 @@ const HallViewer = ({ hallData: initialHallData, onDataChange }) => {
         }
       }
     };
-  
+
     document.addEventListener('mousedown', handleClickOutside);
-  
+
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
@@ -774,349 +865,349 @@ const HallViewer = ({ hallData: initialHallData, onDataChange }) => {
   };
 
   // Table details panel component
- // Table details panel component with added client seating functionality
-const TableDetailsPanel = () => {
-  const details = getTableDetails();
-  const [showClientSelection, setShowClientSelection] = useState(false);
-  
-  if (!details) return null;
+  // Table details panel component with added client seating functionality
+  const TableDetailsPanel = () => {
+    const details = getTableDetails();
+    const [showClientSelection, setShowClientSelection] = useState(false);
 
-  const occupiedPercentage = Math.round((details.occupiedSeats / details.table.chairCount) * 100);
-  
-  // New function to handle client selection for seating
-  const handleSelectClientForSeating = (group) => {
-    if (details.availableSeats < group.guestCount) {
-      alert(`На столе недостаточно свободных мест для клиента "${group.name}". Нужно: ${group.guestCount}, доступно: ${details.availableSeats}`);
-      return;
-    }
-    
-    // Set up pending booking with the selected client
-    setPendingBooking({
-      tableId: details.table.id,
-      group,
-      availableSeats: details.availableSeats
-    });
-    
-    // Set default booking times
-    const now = new Date();
-    setBookingTime(`${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`);
-    
-    // Set default end time 2 hours later
-    const endTime = new Date(now.getTime() + 2 * 60 * 60 * 1000);
-    setBookingEndTime(`${endTime.getHours().toString().padStart(2, '0')}:${endTime.getMinutes().toString().padStart(2, '0')}`);
-    
-    // Show the booking modal
-    setShowBookingModal(true);
-    setShowClientSelection(false);
-  };
+    if (!details) return null;
 
-  return (
-    <div style={{ width: '100%', height: '100%' }}>
-      <div style={{
-        padding: '15px',
-        borderBottom: '1px solid #3a3a3a',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center'
-      }}>
-        <h3 style={{ margin: 0 }}>Детали стола {details.table.id}</h3>
-      </div>
+    const occupiedPercentage = Math.round((details.occupiedSeats / details.table.chairCount) * 100);
 
-      <CollapsiblePanel
-        title="Заполненность"
-        defaultExpanded={true}
-      >
-        <div style={{ padding: '15px' }}>
-          <div style={{ marginBottom: '10px' }}>
-            <span style={{ fontSize: '13px', color: '#999' }}>Занято мест:</span>
-            <span style={{
-              float: 'right',
-              fontWeight: 'bold',
-              color: details.occupiedSeats === details.table.chairCount ? '#ff5555' : '#55aa55'
-            }}>
-              {details.occupiedSeats} из {details.table.chairCount} ({occupiedPercentage}%)
-            </span>
-          </div>
+    // New function to handle client selection for seating
+    const handleSelectClientForSeating = (group) => {
+      if (details.availableSeats < group.guestCount) {
+        alert(`На столе недостаточно свободных мест для клиента "${group.name}". Нужно: ${group.guestCount}, доступно: ${details.availableSeats}`);
+        return;
+      }
 
-          <div style={{
-            height: '8px',
-            backgroundColor: '#444',
-            borderRadius: '4px',
-            overflow: 'hidden',
-            marginBottom: '15px'
-          }}>
-            <div style={{
-              height: '100%',
-              width: `${occupiedPercentage}%`,
-              backgroundColor: occupiedPercentage === 100 ? '#ff5555' : '#55aa55',
-              borderRadius: '4px'
-            }}></div>
-          </div>
+      // Set up pending booking with the selected client
+      setPendingBooking({
+        tableId: details.table.id,
+        group,
+        availableSeats: details.availableSeats
+      });
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-            <div style={{
-              backgroundColor: '#333',
-              padding: '10px',
-              borderRadius: '4px',
-              textAlign: 'center',
-              flex: '1',
-              marginRight: '5px'
-            }}>
-              <div style={{ fontSize: '18px', fontWeight: 'bold' }}>{details.occupiedSeats}</div>
-              <div style={{ fontSize: '12px', color: '#999' }}>Занято</div>
-            </div>
+      // Set default booking times
+      const now = new Date();
+      setBookingTime(`${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`);
 
-            <div style={{
-              backgroundColor: '#333',
-              padding: '10px',
-              borderRadius: '4px',
-              textAlign: 'center',
-              flex: '1',
-              marginLeft: '5px'
-            }}>
-              <div style={{ fontSize: '18px', fontWeight: 'bold' }}>{details.availableSeats}</div>
-              <div style={{ fontSize: '12px', color: '#999' }}>Свободно</div>
-            </div>
-          </div>
-          
-          {/* Add button to seat a client if there are free seats */}
-          {details.availableSeats > 0 && (
-            <button
-              onClick={() => setShowClientSelection(true)}
-              style={{
-                width: '100%',
-                backgroundColor: '#3498db',
-                padding: '8px 12px',
-                border: 'none',
-                borderRadius: '4px',
-                color: 'white',
-                cursor: 'pointer',
+      // Set default end time 2 hours later
+      const endTime = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+      setBookingEndTime(`${endTime.getHours().toString().padStart(2, '0')}:${endTime.getMinutes().toString().padStart(2, '0')}`);
+
+      // Show the booking modal
+      setShowBookingModal(true);
+      setShowClientSelection(false);
+    };
+
+    return (
+      <div style={{ width: '100%', height: '100%' }}>
+        <div style={{
+          padding: '15px',
+          borderBottom: '1px solid #3a3a3a',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <h3 style={{ margin: 0 }}>Детали стола {details.table.id}</h3>
+        </div>
+
+        <CollapsiblePanel
+          title="Заполненность"
+          defaultExpanded={true}
+        >
+          <div style={{ padding: '15px' }}>
+            <div style={{ marginBottom: '10px' }}>
+              <span style={{ fontSize: '13px', color: '#999' }}>Занято мест:</span>
+              <span style={{
+                float: 'right',
                 fontWeight: 'bold',
-                marginTop: '10px'
-              }}
-            >
-              Посадить клиента
-            </button>
-          )}
-          
-          {/* Client selection dropdown panel */}
-          {showClientSelection && (
+                color: details.occupiedSeats === details.table.chairCount ? '#ff5555' : '#55aa55'
+              }}>
+                {details.occupiedSeats} из {details.table.chairCount} ({occupiedPercentage}%)
+              </span>
+            </div>
+
             <div style={{
-              marginTop: '10px',
-              backgroundColor: '#2c3e50',
+              height: '8px',
+              backgroundColor: '#444',
               borderRadius: '4px',
-              padding: '10px',
-              position: 'relative'
+              overflow: 'hidden',
+              marginBottom: '15px'
             }}>
               <div style={{
-                position: 'absolute',
-                top: '8px',
-                right: '8px',
-                cursor: 'pointer',
-                fontSize: '16px',
-                width: '24px',
-                height: '24px',
-                borderRadius: '50%',
-                backgroundColor: '#34495e',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#eee'
-              }} onClick={() => setShowClientSelection(false)}>
-                ×
-              </div>
-              
-              <h4 style={{ margin: '0 0 10px 0', color: '#eee', fontSize: '14px' }}>
-                Выберите клиента для размещения:
-              </h4>
-              
+                height: '100%',
+                width: `${occupiedPercentage}%`,
+                backgroundColor: occupiedPercentage === 100 ? '#ff5555' : '#55aa55',
+                borderRadius: '4px'
+              }}></div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
               <div style={{
-                maxHeight: '200px',
-                overflowY: 'auto',
-                padding: '5px'
+                backgroundColor: '#333',
+                padding: '10px',
+                borderRadius: '4px',
+                textAlign: 'center',
+                flex: '1',
+                marginRight: '5px'
               }}>
-                {groups.length > 0 ? (
-                  groups.map((group, index) => (
-                    <div
-                      key={index}
-                      onClick={() => handleSelectClientForSeating(group)}
-                      style={{
-                        backgroundColor: '#34495e',
-                        padding: '10px',
-                        borderRadius: '4px',
-                        marginBottom: '5px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        transition: 'background-color 0.2s'
-                      }}
-                      onMouseOver={(e) => {
-                        e.currentTarget.style.backgroundColor = '#2980b9';
-                      }}
-                      onMouseOut={(e) => {
-                        e.currentTarget.style.backgroundColor = '#34495e';
-                      }}
-                    >
-                      <div>
-                        <div style={{ fontWeight: 'bold', color: '#eee' }}>{group.name}</div>
-                        <div style={{ fontSize: '12px', color: '#bbb' }}>
-                          {group.guestCount} {group.guestCount === 1 ? 'гость' : group.guestCount < 5 ? 'гостя' : 'гостей'}
+                <div style={{ fontSize: '18px', fontWeight: 'bold' }}>{details.occupiedSeats}</div>
+                <div style={{ fontSize: '12px', color: '#999' }}>Занято</div>
+              </div>
+
+              <div style={{
+                backgroundColor: '#333',
+                padding: '10px',
+                borderRadius: '4px',
+                textAlign: 'center',
+                flex: '1',
+                marginLeft: '5px'
+              }}>
+                <div style={{ fontSize: '18px', fontWeight: 'bold' }}>{details.availableSeats}</div>
+                <div style={{ fontSize: '12px', color: '#999' }}>Свободно</div>
+              </div>
+            </div>
+
+            {/* Add button to seat a client if there are free seats */}
+            {details.availableSeats > 0 && (
+              <button
+                onClick={() => setShowClientSelection(true)}
+                style={{
+                  width: '100%',
+                  backgroundColor: '#3498db',
+                  padding: '8px 12px',
+                  border: 'none',
+                  borderRadius: '4px',
+                  color: 'white',
+                  cursor: 'pointer',
+                  fontWeight: 'bold',
+                  marginTop: '10px'
+                }}
+              >
+                Посадить клиента
+              </button>
+            )}
+
+            {/* Client selection dropdown panel */}
+            {showClientSelection && (
+              <div style={{
+                marginTop: '10px',
+                backgroundColor: '#2c3e50',
+                borderRadius: '4px',
+                padding: '10px',
+                position: 'relative'
+              }}>
+                <div style={{
+                  position: 'absolute',
+                  top: '8px',
+                  right: '8px',
+                  cursor: 'pointer',
+                  fontSize: '16px',
+                  width: '24px',
+                  height: '24px',
+                  borderRadius: '50%',
+                  backgroundColor: '#34495e',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#eee'
+                }} onClick={() => setShowClientSelection(false)}>
+                  ×
+                </div>
+
+                <h4 style={{ margin: '0 0 10px 0', color: '#eee', fontSize: '14px' }}>
+                  Выберите клиента для размещения:
+                </h4>
+
+                <div style={{
+                  maxHeight: '200px',
+                  overflowY: 'auto',
+                  padding: '5px'
+                }}>
+                  {groups.length > 0 ? (
+                    groups.map((group, index) => (
+                      <div
+                        key={index}
+                        onClick={() => handleSelectClientForSeating(group)}
+                        style={{
+                          backgroundColor: '#34495e',
+                          padding: '10px',
+                          borderRadius: '4px',
+                          marginBottom: '5px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          transition: 'background-color 0.2s'
+                        }}
+                        onMouseOver={(e) => {
+                          e.currentTarget.style.backgroundColor = '#2980b9';
+                        }}
+                        onMouseOut={(e) => {
+                          e.currentTarget.style.backgroundColor = '#34495e';
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontWeight: 'bold', color: '#eee' }}>{group.name}</div>
+                          <div style={{ fontSize: '12px', color: '#bbb' }}>
+                            {group.guestCount} {group.guestCount === 1 ? 'гость' : group.guestCount < 5 ? 'гостя' : 'гостей'}
+                          </div>
+                        </div>
+
+                        <div style={{
+                          backgroundColor: group.guestCount <= details.availableSeats ? '#27ae60' : '#e74c3c',
+                          padding: '3px 6px',
+                          borderRadius: '3px',
+                          fontSize: '12px',
+                          color: 'white'
+                        }}>
+                          {group.guestCount <= details.availableSeats ? 'Поместится' : 'Не поместится'}
                         </div>
                       </div>
-                      
-                      <div style={{
-                        backgroundColor: group.guestCount <= details.availableSeats ? '#27ae60' : '#e74c3c',
-                        padding: '3px 6px',
-                        borderRadius: '3px',
-                        fontSize: '12px',
-                        color: 'white'
-                      }}>
-                        {group.guestCount <= details.availableSeats ? 'Поместится' : 'Не поместится'}
-                      </div>
+                    ))
+                  ) : (
+                    <div style={{
+                      padding: '15px',
+                      color: '#bbb',
+                      textAlign: 'center',
+                      fontStyle: 'italic'
+                    }}>
+                      Нет доступных клиентов
                     </div>
-                  ))
-                ) : (
-                  <div style={{
-                    padding: '15px',
-                    color: '#bbb',
-                    textAlign: 'center',
-                    fontStyle: 'italic'
-                  }}>
-                    Нет доступных клиентов
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </CollapsiblePanel>
+
+        {/* Reservation Time Section */}
+        {details.bookingInfo && (
+          <div style={{
+            padding: '15px',
+            borderBottom: '1px solid #333',
+            marginBottom: '10px'
+          }}>
+            <h4 style={{
+              margin: '0 0 10px 0',
+              fontSize: '14px',
+              color: '#ccc'
+            }}>Время бронирования</h4>
+
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              backgroundColor: '#333',
+              padding: '12px',
+              borderRadius: '6px',
+              alignItems: 'center'
+            }}>
+              <div>
+                <div style={{ fontSize: '16px', fontWeight: 'bold' }}>
+                  {details.bookingInfo.time} - {details.bookingInfo.endTime}
+                </div>
+                {details.bookingInfo.note && (
+                  <div style={{ fontSize: '12px', color: '#aaa', marginTop: '5px' }}>
+                    Примечание: {details.bookingInfo.note}
                   </div>
                 )}
               </div>
-            </div>
-          )}
-        </div>
-      </CollapsiblePanel>
 
-      {/* Reservation Time Section */}
-      {details.bookingInfo && (
-        <div style={{
-          padding: '15px',
-          borderBottom: '1px solid #333',
-          marginBottom: '10px'
-        }}>
-          <h4 style={{
-            margin: '0 0 10px 0',
-            fontSize: '14px',
-            color: '#ccc'
-          }}>Время бронирования</h4>
-
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            backgroundColor: '#333',
-            padding: '12px',
-            borderRadius: '6px',
-            alignItems: 'center'
-          }}>
-            <div>
-              <div style={{ fontSize: '16px', fontWeight: 'bold' }}>
-                {details.bookingInfo.time} - {details.bookingInfo.endTime}
+              <div style={{
+                backgroundColor: '#2c3e50',
+                padding: '6px 10px',
+                borderRadius: '4px',
+                fontSize: '12px',
+                color: '#3498db'
+              }}>
+                Бронь
               </div>
-              {details.bookingInfo.note && (
-                <div style={{ fontSize: '12px', color: '#aaa', marginTop: '5px' }}>
-                  Примечание: {details.bookingInfo.note}
-                </div>
-              )}
-            </div>
-
-            <div style={{
-              backgroundColor: '#2c3e50',
-              padding: '6px 10px',
-              borderRadius: '4px',
-              fontSize: '12px',
-              color: '#3498db'
-            }}>
-              Бронь
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      <CollapsiblePanel
-        title={`Клиенты за столом (${details.seatedPeople.length})`}
-        defaultExpanded={true}
-      >
-        <div style={{ padding: '10px' }}>
-          {details.seatedPeople.length > 0 ? (
-            <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
-              {details.seatedPeople.map((person, index) => (
-                <div
-                  key={index}
-                  style={{
-                    padding: '8px',
-                    backgroundColor: '#333',
-                    borderRadius: '4px',
-                    marginBottom: '5px',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
-                  }}
-                >
-                  <div>
-                    <div style={{ fontWeight: 'bold' }}>{person.name}</div>
-                    {person.phone && (
-                      <div style={{ fontSize: '11px', color: '#999' }}>
-                        Телефон: {person.phone}
-                      </div>
-                    )}
-                    {person.email && (
-                      <div style={{ fontSize: '11px', color: '#999' }}>
-                        Email: {person.email}
-                      </div>
-                    )}
-                    {person.booking && (
-                      <div style={{ fontSize: '10px', color: '#aaa', marginTop: '3px' }}>
-                        Время: {person.booking.time} - {person.booking.endTime}
-                      </div>
-                    )}
-                  </div>
-
-                  <button
-                    onClick={() => {
-                      // Set up state for removal popup
-                      setSelectedTableId(details.table.id);
-                      // Find the index of this person in the table
-                      const personIndex = details.table.people.findIndex(p => p && p.name === person.name);
-                      if (personIndex !== -1) {
-                        setSelectedChairIndex(personIndex);
-                        setPersonToRemove(person);
-                        setIsRemoveMode(true);
-                        setIsPopupVisible(true);
-                      }
-                    }}
+        <CollapsiblePanel
+          title={`Клиенты за столом (${details.seatedPeople.length})`}
+          defaultExpanded={true}
+        >
+          <div style={{ padding: '10px' }}>
+            {details.seatedPeople.length > 0 ? (
+              <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                {details.seatedPeople.map((person, index) => (
+                  <div
+                    key={index}
                     style={{
-                      background: 'none',
-                      border: 'none',
-                      color: '#ff5555',
-                      cursor: 'pointer',
-                      fontSize: '16px'
+                      padding: '8px',
+                      backgroundColor: '#333',
+                      borderRadius: '4px',
+                      marginBottom: '5px',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
                     }}
                   >
-                    ×
-                  </button>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div style={{
-              padding: '20px',
-              textAlign: 'center',
-              color: '#999',
-              fontStyle: 'italic'
-            }}>
-              За этим столом никто не сидит
-            </div>
-          )}
-        </div>
-      </CollapsiblePanel>
-    </div>
-  );
-};
+                    <div>
+                      <div style={{ fontWeight: 'bold' }}>{person.name}</div>
+                      {person.phone && (
+                        <div style={{ fontSize: '11px', color: '#999' }}>
+                          Телефон: {person.phone}
+                        </div>
+                      )}
+                      {person.email && (
+                        <div style={{ fontSize: '11px', color: '#999' }}>
+                          Email: {person.email}
+                        </div>
+                      )}
+                      {person.booking && (
+                        <div style={{ fontSize: '10px', color: '#aaa', marginTop: '3px' }}>
+                          Время: {person.booking.time} - {person.booking.endTime}
+                        </div>
+                      )}
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        // Set up state for removal popup
+                        setSelectedTableId(details.table.id);
+                        // Find the index of this person in the table
+                        const personIndex = details.table.people.findIndex(p => p && p.name === person.name);
+                        if (personIndex !== -1) {
+                          setSelectedChairIndex(personIndex);
+                          setPersonToRemove(person);
+                          setIsRemoveMode(true);
+                          setIsPopupVisible(true);
+                        }
+                      }}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#ff5555',
+                        cursor: 'pointer',
+                        fontSize: '16px'
+                      }}
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{
+                padding: '20px',
+                textAlign: 'center',
+                color: '#999',
+                fontStyle: 'italic'
+              }}>
+                За этим столом никто не сидит
+              </div>
+            )}
+          </div>
+        </CollapsiblePanel>
+      </div>
+    );
+  };
 
   // Client management panel component - Redesigned to be more compact
   const GroupsPanel = () => {
@@ -1275,11 +1366,11 @@ const TableDetailsPanel = () => {
       const month = String(today.getMonth() + 1).padStart(2, '0');
       const day = String(today.getDate()).padStart(2, '0');
       setBookingDate(`${year}-${month}-${day}`);
-      
+
       // Остальной код для установки времени начала и окончания...
       const now = new Date();
       setBookingTime(`${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`);
-      
+
       // Установите время окончания по умолчанию на 2 часа позже
       const endTime = new Date(now.getTime() + 2 * 60 * 60 * 1000);
       setBookingEndTime(`${endTime.getHours().toString().padStart(2, '0')}:${endTime.getMinutes().toString().padStart(2, '0')}`);
@@ -1289,16 +1380,77 @@ const TableDetailsPanel = () => {
   // Confirm booking and assign seats - Fixed to prevent panel closing and with proper state reset
   const confirmBooking = useCallback(() => {
     console.log('confirmBooking called with:', pendingBooking);
-  
+
     if (!pendingBooking) {
       // Ensure dragging state is reset
       setDraggingGroup(null);
       return;
     }
-  
+
     const { tableId, group } = pendingBooking;
-  
-    // Добавляем дату к деталям бронирования
+
+    // Get occupied slots
+    const occupiedSlots = getOccupiedTimeSlots(hallData, tableId, bookingDate);
+
+    // Check if selected time slot is occupied
+    const startHour = bookingTime.split(':')[0];
+    const startMinute = bookingTime.split(':')[1];
+    const isStartTimeOccupied = isTimeSlotOccupied(
+      occupiedSlots,
+      parseInt(startHour),
+      parseInt(startMinute)
+    );
+
+    if (isStartTimeOccupied) {
+      alert('Выбранное время начала уже занято. Пожалуйста, выберите другое время.');
+      return;
+    }
+
+    // Verify if any time slots between start and end are occupied
+    const startTimeMinutes = parseTimeToMinutes(bookingTime);
+    const endTimeMinutes = parseTimeToMinutes(bookingEndTime);
+
+    // Check for overlaps - either regular booking or spanning midnight
+    let isOverlapping = false;
+
+    if (endTimeMinutes < startTimeMinutes) {
+      // Booking spans midnight - check both parts
+
+      // Check from start time to midnight
+      for (let time = startTimeMinutes; time < 24 * 60; time += 15) {
+        if (isTimeSlotOccupiedByMinutes(occupiedSlots, time)) {
+          isOverlapping = true;
+          break;
+        }
+      }
+
+      // Check from midnight to end time if no overlap found yet
+      if (!isOverlapping) {
+        for (let time = 0; time < endTimeMinutes; time += 15) {
+          if (isTimeSlotOccupiedByMinutes(occupiedSlots, time)) {
+            isOverlapping = true;
+            break;
+          }
+        }
+      }
+    } else {
+      // Regular booking within same day
+      for (let time = startTimeMinutes; time < endTimeMinutes; time += 15) {
+        if (isTimeSlotOccupiedByMinutes(occupiedSlots, time)) {
+          isOverlapping = true;
+          break;
+        }
+      }
+    }
+
+    if (isOverlapping) {
+      alert('Выбранный диапазон времени пересекается с существующим бронированием. Пожалуйста, выберите другое время.');
+      return;
+    }
+
+    // If we reach here, the time slots are available, proceed with booking
+
+    // Add date to booking details
     const bookingDetails = {
       date: bookingDate,
       time: formatTime24h(bookingTime),
@@ -1306,16 +1458,16 @@ const TableDetailsPanel = () => {
       note: bookingNote,
       timestamp: new Date().toISOString()
     };
-  
+
     console.log('Setting up booking with details:', bookingDetails);
-  
-    // Добавляем людей из группы на свободные места
+
+    // ИСПРАВЛЕНО: Размещаем всех гостей на свободных местах
     setHallData(prevData => {
       const updatedTables = prevData.tables.map(t => {
         if (t.id === tableId) {
           // Создаем копию массива людей или инициализируем его
           const tablePeople = [...(t.people || [])];
-  
+
           // Находим свободные места
           const emptySeats = [];
           for (let i = 0; i < t.chairCount; i++) {
@@ -1323,30 +1475,36 @@ const TableDetailsPanel = () => {
               emptySeats.push(i);
             }
           }
-  
+
           console.log(`Found ${emptySeats.length} empty seats for table ${tableId}`);
-  
-          // Размещаем клиента на первом свободном месте
-          if (emptySeats.length > 0) {
+
+          // Проверяем, достаточно ли мест для всех гостей
+          const seatsToFill = Math.min(group.guestCount, emptySeats.length);
+
+          if (seatsToFill > 0) {
+            // Размещаем основного клиента на первом свободном месте
             tablePeople[emptySeats[0]] = {
               name: group.name,
               group: group.name,
               phone: group.phone,
               email: group.email,
+              isMainGuest: true, // Отмечаем как основного гостя
+              guestCount: group.guestCount,
               booking: bookingDetails
             };
-  
-            // Если есть дополнительные гости, создаем для них записи-заполнители
-            // на оставшихся местах (до количества гостей)
-            for (let i = 1; i < Math.min(group.guestCount, emptySeats.length); i++) {
+
+            // Размещаем дополнительных гостей на оставшихся местах
+            for (let i = 1; i < seatsToFill; i++) {
               tablePeople[emptySeats[i]] = {
-                name: `Гость ${group.name} ${i}`,
+                name: `Гость группы ${group.name}`,
                 group: group.name,
+                isAdditionalGuest: true,
+                hiddenInCalendar: true,
                 booking: bookingDetails
               };
             }
           }
-  
+
           return {
             ...t,
             people: tablePeople
@@ -1354,20 +1512,19 @@ const TableDetailsPanel = () => {
         }
         return t;
       });
-  
+
       return {
         ...prevData,
         tables: updatedTables
       };
     });
-  
+
     // Показываем уведомление
     const notification = document.createElement('div');
     notification.className = 'transfer-notification';
-    // Например, при отображении уведомления
-notification.textContent = `Клиент "${group.name}" размещен за столом ${tableId} на ${formatDateForDisplay(bookingDate)} в ${formatTime24h(bookingTime)} - ${formatTime24h(bookingEndTime)}`; // Добавляем отображение даты
+    notification.textContent = `Клиент "${group.name}" размещен за столом ${tableId} на ${formatDateForDisplay(bookingDate)} в ${formatTime24h(bookingTime)} - ${formatTime24h(bookingEndTime)}`;
     document.body.appendChild(notification);
-  
+
     setTimeout(() => {
       notification.classList.add('show');
       setTimeout(() => {
@@ -1377,7 +1534,7 @@ notification.textContent = `Клиент "${group.name}" размещен за �
         }, 300);
       }, 2000);
     }, 100);
-  
+
     // Сбрасываем состояние бронирования
     setShowBookingModal(false);
     setPendingBooking(null);
@@ -1385,18 +1542,14 @@ notification.textContent = `Клиент "${group.name}" размещен за �
     setBookingTime('');
     setBookingEndTime('');
     setBookingNote('');
-  
+
     // Сбрасываем состояние перетаскивания
     setDraggingGroup(null);
-    
-    // Переключаемся на представление календаря
-    setActiveView('calendar');
-    
-  }, [pendingBooking, bookingDate, bookingTime, bookingEndTime, bookingNote]);
-  
+  }, [pendingBooking, bookingDate, bookingTime, bookingEndTime, bookingNote, hallData]);
+
   const formatDateForDisplay = (dateString) => {
     if (!dateString) return '';
-    
+
     const [year, month, day] = dateString.split('-');
     return `${day}.${month}.${year}`;
   };
@@ -1835,7 +1988,8 @@ notification.textContent = `Клиент "${group.name}" размещен за �
       );
     });
   };
-
+  const occupiedSlots = bookingDate && pendingBooking ?
+    getOccupiedTimeSlots(hallData, pendingBooking.tableId, bookingDate) : [];
   // DroppableTable component
   const DroppableTable = ({ table }) => {
     return (
@@ -1896,339 +2050,339 @@ notification.textContent = `Клиент "${group.name}" размещен за �
       }}>
         {/* Compact header */}
         <header className="app-header" style={{
-  padding: '10px 15px',
-  backgroundColor: '#0a0a1d',
-  color: 'white',
-  boxShadow: '0 2px 10px rgba(0, 0, 0, 0.2)',
-  zIndex: 100,
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center'
-}}>
-  <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-    <div style={{
-      fontSize: '20px',
-      fontWeight: 'bold',
-      whiteSpace: 'nowrap'
-    }}>
-      {hallData?.name || 'Зал без названия'}
-    </div>
-
-    <div style={{ display: 'flex', gap: '10px' }}>
-      {/* View switching buttons */}
-      <button
-        onClick={() => setActiveView('hall')}
-        style={{
-          backgroundColor: activeView === 'hall' ? '#3498db' : '#333',
+          padding: '10px 15px',
+          backgroundColor: '#0a0a1d',
           color: 'white',
-          border: 'none',
-          borderRadius: '4px',
-          padding: '6px 12px',
-          cursor: 'pointer',
-          fontSize: '14px'
-        }}
-      >
-        План зала
-      </button>
-      <button
-        onClick={() => setActiveView('calendar')}
-        style={{
-          backgroundColor: activeView === 'calendar' ? '#3498db' : '#333',
-          color: 'white',
-          border: 'none',
-          borderRadius: '4px',
-          padding: '6px 12px',
-          cursor: 'pointer',
-          fontSize: '14px'
-        }}
-      >
-        Календарь
-      </button>
-
-      {/* Existing buttons */}
-      <button
-        onClick={() => {
-          setIsSidePanelOpen(true);
-          setSidePanelTab('groups');
-        }}
-        style={{
-          backgroundColor: sidePanelTab === 'groups' && isSidePanelOpen ? '#3498db' : '#333',
-          color: 'white',
-          border: 'none',
-          borderRadius: '4px',
-          padding: '6px 12px',
-          cursor: 'pointer',
-          fontSize: '14px',
+          boxShadow: '0 2px 10px rgba(0, 0, 0, 0.2)',
+          zIndex: 100,
           display: 'flex',
-          alignItems: 'center',
-          gap: '5px'
-        }}
-      >
-        <span>Клиенты</span>
-        <span style={{
-          backgroundColor: '#555',
-          borderRadius: '50%',
-          width: '20px',
-          height: '20px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '12px'
+          justifyContent: 'space-between',
+          alignItems: 'center'
         }}>
-          {groups.length}
-        </span>
-      </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+            <div style={{
+              fontSize: '20px',
+              fontWeight: 'bold',
+              whiteSpace: 'nowrap'
+            }}>
+              {hallData?.name || 'Зал без названия'}
+            </div>
 
-      {detailsTableId && (
-        <button
-          onClick={() => {
-            setIsSidePanelOpen(true);
-            setSidePanelTab('tableDetails');
-          }}
-          style={{
-            backgroundColor: sidePanelTab === 'tableDetails' && isSidePanelOpen ? '#3498db' : '#333',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            padding: '6px 12px',
-            cursor: 'pointer',
-            fontSize: '14px'
-          }}
-        >
-          Стол {detailsTableId}
-        </button>
-      )}
-    </div>
-  </div>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              {/* View switching buttons */}
+              <button
+                onClick={() => setActiveView('hall')}
+                style={{
+                  backgroundColor: activeView === 'hall' ? '#3498db' : '#333',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  padding: '6px 12px',
+                  cursor: 'pointer',
+                  fontSize: '14px'
+                }}
+              >
+                План зала
+              </button>
+              <button
+                onClick={() => setActiveView('calendar')}
+                style={{
+                  backgroundColor: activeView === 'calendar' ? '#3498db' : '#333',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  padding: '6px 12px',
+                  cursor: 'pointer',
+                  fontSize: '14px'
+                }}
+              >
+                Календарь
+              </button>
 
-  <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-    {activeView === 'hall' && (
-      <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-        <button
-          className="zoom-btn zoom-out-btn"
-          onClick={handleButtonZoomOut}
-          style={{
-            backgroundColor: '#333',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            width: '30px',
-            height: '30px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '18px',
-            cursor: 'pointer'
-          }}
-        >−</button>
-        <span style={{
-          color: 'white',
-          fontSize: '14px',
-          width: '40px',
-          textAlign: 'center'
-        }}>
-          {Math.round(zoom * 100)}%
-        </span>
-        <button
-          className="zoom-btn zoom-in-btn"
-          onClick={handleButtonZoomIn}
-          style={{
-            backgroundColor: '#333',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            width: '30px',
-            height: '30px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '18px',
-            cursor: 'pointer'
-          }}
-        >+</button>
-      </div>
-    )}
+              {/* Existing buttons */}
+              <button
+                onClick={() => {
+                  setIsSidePanelOpen(true);
+                  setSidePanelTab('groups');
+                }}
+                style={{
+                  backgroundColor: sidePanelTab === 'groups' && isSidePanelOpen ? '#3498db' : '#333',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  padding: '6px 12px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px'
+                }}
+              >
+                <span>Клиенты</span>
+                <span style={{
+                  backgroundColor: '#555',
+                  borderRadius: '50%',
+                  width: '20px',
+                  height: '20px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '12px'
+                }}>
+                  {groups.length}
+                </span>
+              </button>
 
-    <div className="import-container">
-      <input
-        type="file"
-        accept=".json"
-        onChange={handleFileUpload}
-        id="import-file"
-        className="file-input"
-        style={{ display: 'none' }}
-      />
-      <label
-        htmlFor="import-file"
-        className="import-button"
-        style={{
-          backgroundColor: '#2ecc71',
-          color: 'white',
-          border: 'none',
-          borderRadius: '4px',
-          padding: '6px 12px',
-          cursor: 'pointer',
-          fontSize: '14px',
-          display: 'inline-block'
-        }}
-      >
-        Импорт зала
-      </label>
-      {isLoading && <div className="loading-indicator">Загрузка...</div>}
-      {error && <div className="error-message">{error}</div>}
-    </div>
-  </div>
-</header>
+              {detailsTableId && (
+                <button
+                  onClick={() => {
+                    setIsSidePanelOpen(true);
+                    setSidePanelTab('tableDetails');
+                  }}
+                  style={{
+                    backgroundColor: sidePanelTab === 'tableDetails' && isSidePanelOpen ? '#3498db' : '#333',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    padding: '6px 12px',
+                    cursor: 'pointer',
+                    fontSize: '14px'
+                  }}
+                >
+                  Стол {detailsTableId}
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+            {activeView === 'hall' && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <button
+                  className="zoom-btn zoom-out-btn"
+                  onClick={handleButtonZoomOut}
+                  style={{
+                    backgroundColor: '#333',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    width: '30px',
+                    height: '30px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '18px',
+                    cursor: 'pointer'
+                  }}
+                >−</button>
+                <span style={{
+                  color: 'white',
+                  fontSize: '14px',
+                  width: '40px',
+                  textAlign: 'center'
+                }}>
+                  {Math.round(zoom * 100)}%
+                </span>
+                <button
+                  className="zoom-btn zoom-in-btn"
+                  onClick={handleButtonZoomIn}
+                  style={{
+                    backgroundColor: '#333',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    width: '30px',
+                    height: '30px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '18px',
+                    cursor: 'pointer'
+                  }}
+                >+</button>
+              </div>
+            )}
+
+            <div className="import-container">
+              <input
+                type="file"
+                accept=".json"
+                onChange={handleFileUpload}
+                id="import-file"
+                className="file-input"
+                style={{ display: 'none' }}
+              />
+              <label
+                htmlFor="import-file"
+                className="import-button"
+                style={{
+                  backgroundColor: '#2ecc71',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  padding: '6px 12px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  display: 'inline-block'
+                }}
+              >
+                Импорт зала
+              </label>
+              {isLoading && <div className="loading-indicator">Загрузка...</div>}
+              {error && <div className="error-message">{error}</div>}
+            </div>
+          </div>
+        </header>
 
         {/* Main content with hall view and side panel */}
         <div style={{
-  flex: 1,
-  display: 'flex',
-  position: 'relative',
-  overflow: 'hidden',
-  backgroundColor: '#f7f7f7'
-}}>
-  {/* Collapsible side panel - keep this exactly as it was */}
-  <div
-    ref={sidePanelRef}
-    style={{
-      width: isSidePanelOpen ? '300px' : '0',
-      height: '100%',
-      backgroundColor: '#252525',
-      transition: 'width 0.3s ease',
-      overflowX: 'hidden',
-      overflowY: 'auto',
-      color: 'white',
-      position: 'relative',
-      zIndex: 50,
-      boxShadow: isSidePanelOpen ? '0 0 10px rgba(0, 0, 0, 0.2)' : 'none'
-    }}
-  >
-    {/* Keep the existing side panel content as it was */}
-    {isSidePanelOpen && (
-      <>
-        <div style={{
-          position: 'absolute',
-          top: '10px',
-          right: '10px',
-          zIndex: 10,
-          cursor: 'pointer',
-          fontSize: '20px',
-          color: '#999'
-        }}
-          onClick={() => setIsSidePanelOpen(false)}
-        >
-          ×
+          flex: 1,
+          display: 'flex',
+          position: 'relative',
+          overflow: 'hidden',
+          backgroundColor: '#f7f7f7'
+        }}>
+          {/* Collapsible side panel - keep this exactly as it was */}
+          <div
+            ref={sidePanelRef}
+            style={{
+              width: isSidePanelOpen ? '300px' : '0',
+              height: '100%',
+              backgroundColor: '#252525',
+              transition: 'width 0.3s ease',
+              overflowX: 'hidden',
+              overflowY: 'auto',
+              color: 'white',
+              position: 'relative',
+              zIndex: 50,
+              boxShadow: isSidePanelOpen ? '0 0 10px rgba(0, 0, 0, 0.2)' : 'none'
+            }}
+          >
+            {/* Keep the existing side panel content as it was */}
+            {isSidePanelOpen && (
+              <>
+                <div style={{
+                  position: 'absolute',
+                  top: '10px',
+                  right: '10px',
+                  zIndex: 10,
+                  cursor: 'pointer',
+                  fontSize: '20px',
+                  color: '#999'
+                }}
+                  onClick={() => setIsSidePanelOpen(false)}
+                >
+                  ×
+                </div>
+
+                {sidePanelTab === 'groups' && <GroupsPanel />}
+                {sidePanelTab === 'tableDetails' && <TableDetailsPanel />}
+              </>
+            )}
+          </div>
+
+          {/* Main content area - either hall or calendar */}
+          {hallData ? (
+            <div
+              style={{
+                flex: 1,
+                overflow: 'hidden',
+                position: 'relative',
+                backgroundColor: '#f7f7f7'
+              }}
+            >
+              {activeView === 'hall' ? (
+                /* Hall layout view - existing code */
+                <div
+                  className="tables-area"
+                  ref={tablesAreaRef}
+                  onClick={handleTablesAreaClick}
+                  style={{
+                    transform: `scale(${zoom})`,
+                    transformOrigin: 'top left',
+                    display: 'flex',
+                    overflow: 'auto',
+                    width: `${100 / zoom}%`,
+                    height: `${100 / zoom}%`,
+                    minHeight: `${100 / zoom}%`,
+                    padding: '20px',
+                    position: 'relative',
+                    '--zoom-level': zoom,
+                    transition: isDraggingView ? 'none' : 'transform 0.1s ease-out',
+                    background: 'linear-gradient(rgba(255, 255, 255, 0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.2) 1px, transparent 1px)',
+                    backgroundSize: '20px 20px',
+                    backgroundColor: '#e6eef5',
+                    border: '2px dashed #3a3a3a',
+                    cursor: isDraggingView ? 'grabbing' : 'default'
+                  }}
+                >
+                  {/* Render tables */}
+                  {hallData.tables && hallData.tables.map((table) => (
+                    <DroppableTable key={table.id} table={table} />
+                  ))}
+
+                  {/* Render hall elements */}
+                  {renderHallElements()}
+                </div>
+              ) : (
+                /* Calendar view - new component */
+                <BookingCalendar hallData={hallData} groups={groups} />
+              )}
+
+              {/* Floating action button for clients - only visible in hall view */}
+              {!isSidePanelOpen && activeView === 'hall' && (
+                <button
+                  onClick={() => {
+                    setIsSidePanelOpen(true);
+                    setSidePanelTab('groups');
+                    // Clear any dragging state
+                    setDraggingGroup(null);
+                  }}
+                  style={{
+                    position: 'absolute',
+                    bottom: '20px',
+                    right: '20px',
+                    width: '60px',
+                    height: '60px',
+                    borderRadius: '50%',
+                    backgroundColor: '#3498db',
+                    color: 'white',
+                    border: 'none',
+                    fontSize: '24px',
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 10px rgba(0, 0, 0, 0.2)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 10
+                  }}
+                >
+                  +
+                </button>
+              )}
+            </div>
+          ) : (
+            /* No data message - keep this exactly as it was */
+            <div style={{
+              flex: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <div style={{
+                backgroundColor: 'white',
+                padding: '30px',
+                borderRadius: '8px',
+                boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1)',
+                textAlign: 'center',
+                maxWidth: '500px'
+              }}>
+                <h2 style={{ marginTop: 0 }}>Нет данных для отображения</h2>
+                <p>Пожалуйста, импортируйте JSON файл с данными зала, используя кнопку выше.</p>
+              </div>
+            </div>
+          )}
         </div>
-
-        {sidePanelTab === 'groups' && <GroupsPanel />}
-        {sidePanelTab === 'tableDetails' && <TableDetailsPanel />}
-      </>
-    )}
-  </div>
-
-  {/* Main content area - either hall or calendar */}
-  {hallData ? (
-    <div
-      style={{
-        flex: 1,
-        overflow: 'hidden',
-        position: 'relative',
-        backgroundColor: '#f7f7f7'
-      }}
-    >
-      {activeView === 'hall' ? (
-        /* Hall layout view - existing code */
-        <div
-          className="tables-area"
-          ref={tablesAreaRef}
-          onClick={handleTablesAreaClick}
-          style={{
-            transform: `scale(${zoom})`,
-            transformOrigin: 'top left',
-            display: 'flex',
-            overflow: 'auto',
-            width: `${100 / zoom}%`,
-            height: `${100 / zoom}%`,
-            minHeight: `${100 / zoom}%`,
-            padding: '20px',
-            position: 'relative',
-            '--zoom-level': zoom,
-            transition: isDraggingView ? 'none' : 'transform 0.1s ease-out',
-            background: 'linear-gradient(rgba(255, 255, 255, 0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.2) 1px, transparent 1px)',
-            backgroundSize: '20px 20px',
-            backgroundColor: '#e6eef5',
-            border: '2px dashed #3a3a3a',
-            cursor: isDraggingView ? 'grabbing' : 'default'
-          }}
-        >
-          {/* Render tables */}
-          {hallData.tables && hallData.tables.map((table) => (
-            <DroppableTable key={table.id} table={table} />
-          ))}
-
-          {/* Render hall elements */}
-          {renderHallElements()}
-        </div>
-      ) : (
-        /* Calendar view - new component */
-        <BookingCalendar hallData={hallData} groups={groups} />
-      )}
-
-      {/* Floating action button for clients - only visible in hall view */}
-      {!isSidePanelOpen && activeView === 'hall' && (
-        <button
-          onClick={() => {
-            setIsSidePanelOpen(true);
-            setSidePanelTab('groups');
-            // Clear any dragging state
-            setDraggingGroup(null);
-          }}
-          style={{
-            position: 'absolute',
-            bottom: '20px',
-            right: '20px',
-            width: '60px',
-            height: '60px',
-            borderRadius: '50%',
-            backgroundColor: '#3498db',
-            color: 'white',
-            border: 'none',
-            fontSize: '24px',
-            cursor: 'pointer',
-            boxShadow: '0 2px 10px rgba(0, 0, 0, 0.2)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 10
-          }}
-        >
-          +
-        </button>
-      )}
-    </div>
-  ) : (
-    /* No data message - keep this exactly as it was */
-    <div style={{
-      flex: 1,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center'
-    }}>
-      <div style={{
-        backgroundColor: 'white',
-        padding: '30px',
-        borderRadius: '8px',
-        boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1)',
-        textAlign: 'center',
-        maxWidth: '500px'
-      }}>
-        <h2 style={{ marginTop: 0 }}>Нет данных для отображения</h2>
-        <p>Пожалуйста, импортируйте JSON файл с данными зала, используя кнопку выше.</p>
-      </div>
-    </div>
-  )}
-</div>
 
         {/* Fullscreen popup for chair selection/removal */}
         {isPopupVisible && (
@@ -2746,276 +2900,419 @@ notification.textContent = `Клиент "${group.name}" размещен за �
 
         {/* Booking confirmation modal - Fixed to prevent panel closing issue */}
         {showBookingModal && pendingBooking && (
-  <div
-    className="fullscreen-popup"
-    onClick={(e) => e.stopPropagation()} // Предотвращаем распространение клика
-    style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      width: '100%',
-      height: '100%',
-      backgroundColor: 'rgba(0, 0, 0, 0.7)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 1000
-    }}
-  >
-    <div
-      className="fullscreen-popup-content"
-      onClick={(e) => e.stopPropagation()} // Предотвращаем распространение клика
-      style={{
-        backgroundColor: 'white',
-        borderRadius: '8px',
-        padding: '20px',
-        maxWidth: '500px',
-        width: '90%'
-      }}
-    >
-      <h3 style={{
-        textAlign: 'center',
-        marginTop: 0,
-        marginBottom: '20px'
-      }}>
-        Подтверждение бронирования
-      </h3>
-
-      <div>
-        <div style={{ marginBottom: '20px' }}>
-          <h4 style={{ margin: '0 0 10px 0' }}>Информация о бронировании</h4>
-          <div style={{
-            backgroundColor: '#f5f5f5',
-            padding: '15px',
-            borderRadius: '8px',
-            marginBottom: '15px'
-          }}>
-            <p style={{ margin: '0 0 8px 0' }}><strong>Клиент:</strong> {pendingBooking.group.name}</p>
-            <p style={{ margin: '0 0 8px 0' }}><strong>Количество гостей:</strong> {pendingBooking.group.guestCount}</p>
-            <p style={{ margin: '0 0 8px 0' }}><strong>Стол:</strong> {pendingBooking.tableId}</p>
-            <p style={{ margin: '0 0 0 0' }}><strong>Доступно мест:</strong> {pendingBooking.availableSeats}</p>
-          </div>
-        </div>
-
-        {/* Добавляем выбор даты */}
-        <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-            Дата бронирования:
-          </label>
-          <input
-            type="date"
-            value={bookingDate}
-            onChange={(e) => setBookingDate(e.target.value)}
+          <div
+            className="fullscreen-popup"
+            onClick={(e) => e.stopPropagation()} // Предотвращаем распространение клика
             style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
               width: '100%',
-              padding: '10px',
-              borderRadius: '4px',
-              border: '1px solid #ddd'
-            }}
-          />
-        </div>
-
-        <div style={{ marginBottom: '20px' }}>
-  <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-    Время бронирования:
-  </label>
-  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-    {/* Время начала */}
-    <div style={{ 
-      display: 'flex', 
-      flex: 1,
-      gap: '5px'
-    }}>
-      {/* Часы начала */}
-      <select
-        value={bookingTime.split(':')[0] || '12'}
-        onChange={(e) => {
-          const hours = e.target.value;
-          const minutes = bookingTime.split(':')[1] || '00';
-          setBookingTime(`${hours}:${minutes}`);
-        }}
-        style={{
-          flex: '1',
-          padding: '10px',
-          backgroundColor: '#fff',
-          border: '1px solid #ddd',
-          borderRadius: '4px'
-        }}
-      >
-        {Array.from({ length: 24 }, (_, i) => i).map(hour => (
-          <option key={hour} value={hour.toString().padStart(2, '0')}>
-            {hour.toString().padStart(2, '0')}
-          </option>
-        ))}
-      </select>
-      
-      <span style={{ 
-        fontSize: '18px', 
-        fontWeight: 'bold' 
-      }}>:</span>
-      
-      {/* Минуты начала */}
-      <select
-        value={bookingTime.split(':')[1] || '00'}
-        onChange={(e) => {
-          const hours = bookingTime.split(':')[0] || '12';
-          const minutes = e.target.value;
-          setBookingTime(`${hours}:${minutes}`);
-        }}
-        style={{
-          flex: '1',
-          padding: '10px',
-          backgroundColor: '#fff',
-          border: '1px solid #ddd',
-          borderRadius: '4px'
-        }}
-      >
-        <option value="00">00</option>
-        <option value="15">15</option>
-        <option value="30">30</option>
-        <option value="45">45</option>
-      </select>
-    </div>
-    
-    <span>до</span>
-    
-    {/* Время окончания */}
-    <div style={{ 
-      display: 'flex', 
-      flex: 1,
-      gap: '5px'
-    }}>
-      {/* Часы окончания */}
-      <select
-        value={bookingEndTime.split(':')[0] || '14'}
-        onChange={(e) => {
-          const hours = e.target.value;
-          const minutes = bookingEndTime.split(':')[1] || '00';
-          setBookingEndTime(`${hours}:${minutes}`);
-        }}
-        style={{
-          flex: '1',
-          padding: '10px',
-          backgroundColor: '#fff',
-          border: '1px solid #ddd',
-          borderRadius: '4px'
-        }}
-      >
-        {Array.from({ length: 24 }, (_, i) => i).map(hour => (
-          <option key={hour} value={hour.toString().padStart(2, '0')}>
-            {hour.toString().padStart(2, '0')}
-          </option>
-        ))}
-      </select>
-      
-      <span style={{ 
-        fontSize: '18px', 
-        fontWeight: 'bold' 
-      }}>:</span>
-      
-      {/* Минуты окончания */}
-      <select
-        value={bookingEndTime.split(':')[1] || '00'}
-        onChange={(e) => {
-          const hours = bookingEndTime.split(':')[0] || '14';
-          const minutes = e.target.value;
-          setBookingEndTime(`${hours}:${minutes}`);
-        }}
-        style={{
-          flex: '1',
-          padding: '10px',
-          backgroundColor: '#fff',
-          border: '1px solid #ddd',
-          borderRadius: '4px'
-        }}
-      >
-        <option value="00">00</option>
-        <option value="15">15</option>
-        <option value="30">30</option>
-        <option value="45">45</option>
-      </select>
-    </div>
-  </div>
-</div>
-
-
-        <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-            Примечание (необязательно):
-          </label>
-          <textarea
-            value={bookingNote}
-            onChange={(e) => setBookingNote(e.target.value)}
-            style={{
-              width: '100%',
-              minHeight: '80px',
-              resize: 'vertical',
-              padding: '10px',
-              borderRadius: '4px',
-              border: '1px solid #ddd'
-            }}
-            placeholder="Особые пожелания, комментарии к заказу и т.д."
-          />
-        </div>
-
-        {/* Информация о календаре */}
-        <div style={{ 
-          backgroundColor: '#e8f4fd', 
-          padding: '10px', 
-          borderRadius: '4px', 
-          marginBottom: '15px', 
-          display: 'flex',
-          alignItems: 'center',
-          gap: '10px',
-          fontSize: '13px',
-          color: '#2980b9'
-        }}>
-          <span style={{ fontSize: '18px' }}>📆</span>
-          <div>
-            После подтверждения бронирования вы будете перенаправлены в календарь, где сможете увидеть все бронирования.
-          </div>
-        </div>
-
-        <div style={{
-          display: 'flex',
-          justifyContent: 'center',
-          gap: '15px'
-        }}>
-          <button
-            onClick={confirmBooking}
-            style={{
-              padding: '10px 20px',
-              backgroundColor: '#2ecc71',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontWeight: 'bold',
-              flex: '1'
+              height: '100%',
+              backgroundColor: 'rgba(0, 0, 0, 0.7)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000
             }}
           >
-            Подтвердить и открыть календарь
-          </button>
+            <div
+              className="fullscreen-popup-content"
+              onClick={(e) => e.stopPropagation()} // Предотвращаем распространение клика
+              style={{
+                backgroundColor: 'white',
+                borderRadius: '8px',
+                padding: '20px',
+                maxWidth: '500px',
+                width: '90%'
+              }}
+            >
+              <h3 style={{
+                textAlign: 'center',
+                marginTop: 0,
+                marginBottom: '20px'
+              }}>
+                Подтверждение бронирования
+              </h3>
 
-          <button
-            onClick={cancelBooking}
-            style={{
-              padding: '10px 20px',
-              backgroundColor: '#7f8c8d',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              flex: '1'
-            }}
-          >
-            Отмена
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-)}
+              <div>
+                <div style={{ marginBottom: '20px' }}>
+                  <h4 style={{ margin: '0 0 10px 0' }}>Информация о бронировании</h4>
+                  <div style={{
+                    backgroundColor: '#f5f5f5',
+                    padding: '15px',
+                    borderRadius: '8px',
+                    marginBottom: '15px'
+                  }}>
+                    <p style={{ margin: '0 0 8px 0' }}><strong>Клиент:</strong> {pendingBooking.group.name}</p>
+                    <p style={{ margin: '0 0 8px 0' }}><strong>Количество гостей:</strong> {pendingBooking.group.guestCount}</p>
+                    <p style={{ margin: '0 0 8px 0' }}><strong>Стол:</strong> {pendingBooking.tableId}</p>
+                    <p style={{ margin: '0 0 0 0' }}><strong>Доступно мест:</strong> {pendingBooking.availableSeats}</p>
+                  </div>
+                </div>
+
+                {/* Добавляем выбор даты */}
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                    Дата бронирования:
+                  </label>
+                  <input
+                    type="date"
+                    value={bookingDate}
+                    onChange={(e) => setBookingDate(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      borderRadius: '4px',
+                      border: '1px solid #ddd'
+                    }}
+                  />
+                </div>
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                    Время бронирования:
+                  </label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    {/* Start time */}
+                    <div style={{
+                      display: 'flex',
+                      flex: 1,
+                      gap: '5px'
+                    }}>
+                      {/* Start hour */}
+                      <select
+                        value={bookingTime.split(':')[0] || '12'}
+                        onChange={(e) => {
+                          const hours = e.target.value;
+                          const minutes = bookingTime.split(':')[1] || '00';
+                          setBookingTime(`${hours}:${minutes}`);
+                        }}
+                        style={{
+                          flex: '1',
+                          padding: '10px',
+                          backgroundColor: '#fff',
+                          border: '1px solid #ddd',
+                          borderRadius: '4px'
+                        }}
+                      >
+                        {Array.from({ length: 24 }, (_, i) => i).map(hour => {
+                          const hourStr = hour.toString().padStart(2, '0');
+                          const isHourFullyOccupied = isHourOccupied(occupiedSlots, hour);
+
+                          return (
+                            <option
+                              key={hour}
+                              value={hourStr}
+                              disabled={isHourFullyOccupied}
+                              style={{
+                                backgroundColor: isHourFullyOccupied ? '#ffeeee' : '#fff',
+                                color: isHourFullyOccupied ? '#999' : '#000',
+                                pointerEvents: isHourFullyOccupied ? 'none' : 'auto'
+                              }}
+                            >
+                              {hourStr}
+                            </option>
+                          );
+                        })}
+                      </select>
+
+                      <span style={{
+                        fontSize: '18px',
+                        fontWeight: 'bold'
+                      }}>:</span>
+
+                      {/* Start minute */}
+                      <select
+                        value={bookingTime.split(':')[1] || '00'}
+                        onChange={(e) => {
+                          const hours = bookingTime.split(':')[0] || '12';
+                          const minutes = e.target.value;
+                          setBookingTime(`${hours}:${minutes}`);
+                        }}
+                        style={{
+                          flex: '1',
+                          padding: '10px',
+                          backgroundColor: '#fff',
+                          border: '1px solid #ddd',
+                          borderRadius: '4px'
+                        }}
+                      >
+                        {['00', '15', '30', '45'].map(minute => {
+                          const currentHour = bookingTime.split(':')[0] || '12';
+                          const isOccupied = isTimeSlotOccupied(occupiedSlots, parseInt(currentHour), parseInt(minute));
+
+                          return (
+                            <option
+                              key={minute}
+                              value={minute}
+                              disabled={isOccupied}
+                              style={{
+                                backgroundColor: isOccupied ? '#ffeeee' : '#fff',
+                                color: isOccupied ? '#999' : '#000',
+                                pointerEvents: isOccupied ? 'none' : 'auto'
+                              }}
+                            >
+                              {minute}
+                            </option>
+                          );
+                        })}
+                      </select>
+                    </div>
+
+                    <span>до</span>
+
+                    {/* End time */}
+                    <div style={{
+                      display: 'flex',
+                      flex: 1,
+                      gap: '5px'
+                    }}>
+                      {/* End hour */}
+                      <select
+                        value={bookingEndTime.split(':')[0] || '14'}
+                        onChange={(e) => {
+                          const hours = e.target.value;
+                          const minutes = bookingEndTime.split(':')[1] || '00';
+                          setBookingEndTime(`${hours}:${minutes}`);
+                        }}
+                        style={{
+                          flex: '1',
+                          padding: '10px',
+                          backgroundColor: '#fff',
+                          border: '1px solid #ddd',
+                          borderRadius: '4px'
+                        }}
+                      >
+                        {(() => {
+                          const occupiedSlots = bookingDate && pendingBooking ?
+                            getOccupiedTimeSlots(hallData, pendingBooking.tableId, bookingDate) :
+                            [];
+
+                          return Array.from({ length: 24 }, (_, i) => i).map(hour => {
+                            const hourStr = hour.toString().padStart(2, '0');
+                            const isHourFullyOccupied = isHourOccupied(occupiedSlots, hour);
+
+                            // Allow selecting end time even if occupied, but if selected start time < current hour
+                            const startHour = parseInt(bookingTime.split(':')[0] || '12', 10);
+                            const allowSelection = hour > startHour;
+
+                            return (
+                              <option
+                                key={hour}
+                                value={hourStr}
+                                disabled={isHourFullyOccupied && !allowSelection}
+                                style={{
+                                  backgroundColor: isHourFullyOccupied ? '#ffeeee' : '#fff',
+                                  color: isHourFullyOccupied && !allowSelection ? '#999' : '#000'
+                                }}
+                              >
+                                {hourStr}
+                              </option>
+                            );
+                          });
+                        })()}
+                      </select>
+
+                      <span style={{
+                        fontSize: '18px',
+                        fontWeight: 'bold'
+                      }}>:</span>
+
+                      {/* End minute */}
+                      <select
+                        value={bookingEndTime.split(':')[1] || '00'}
+                        onChange={(e) => {
+                          const hours = bookingEndTime.split(':')[0] || '14';
+                          const minutes = e.target.value;
+                          setBookingEndTime(`${hours}:${minutes}`);
+                        }}
+                        style={{
+                          flex: '1',
+                          padding: '10px',
+                          backgroundColor: '#fff',
+                          border: '1px solid #ddd',
+                          borderRadius: '4px'
+                        }}
+                      >
+                        {(() => {
+                          const occupiedSlots = bookingDate && pendingBooking ?
+                            getOccupiedTimeSlots(hallData, pendingBooking.tableId, bookingDate) :
+                            [];
+                          const currentHour = bookingEndTime.split(':')[0] || '14';
+
+                          // Compare with start time to determine if we should allow selection
+                          const startHour = parseInt(bookingTime.split(':')[0] || '12', 10);
+                          const startMinute = parseInt(bookingTime.split(':')[1] || '00', 10);
+                          const endHour = parseInt(currentHour, 10);
+                          const allowAnyMinute = endHour > startHour;
+
+                          return ['00', '15', '30', '45'].map(minute => {
+                            const timeSlot = `${currentHour}:${minute}`;
+                            const isOccupied = occupiedSlots.includes(timeSlot);
+
+                            // Allow selecting end minute if it's greater than start minute (when hours are the same)
+                            const minuteValue = parseInt(minute, 10);
+                            const allowSelection = allowAnyMinute || (endHour === startHour && minuteValue > startMinute);
+
+                            return (
+                              <option
+                                key={minute}
+                                value={minute}
+                                disabled={isOccupied && !allowSelection}
+                                style={{
+                                  backgroundColor: isOccupied ? '#ffeeee' : '#fff',
+                                  color: isOccupied && !allowSelection ? '#999' : '#000'
+                                }}
+                              >
+                                {minute}
+                              </option>
+                            );
+                          });
+                        })()}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Add an informational message about the occupied time slots */}
+                  {(() => {
+                    const occupiedSlots = bookingDate && pendingBooking ?
+                      getOccupiedTimeSlots(hallData, pendingBooking.tableId, bookingDate) :
+                      [];
+
+                    if (occupiedSlots.length > 0) {
+                      // Group consecutive slots for better display
+                      const groupedSlots = [];
+                      let currentGroup = [occupiedSlots[0]];
+
+                      for (let i = 1; i < occupiedSlots.length; i++) {
+                        const prevMinutes = parseTimeToMinutes(occupiedSlots[i - 1]);
+                        const currMinutes = parseTimeToMinutes(occupiedSlots[i]);
+
+                        if (currMinutes - prevMinutes === 15) {
+                          // Consecutive slot
+                          currentGroup.push(occupiedSlots[i]);
+                        } else {
+                          // Start a new group
+                          groupedSlots.push([...currentGroup]);
+                          currentGroup = [occupiedSlots[i]];
+                        }
+                      }
+
+                      if (currentGroup.length > 0) {
+                        groupedSlots.push(currentGroup);
+                      }
+
+                      // Format groups as time ranges
+                      const timeRanges = groupedSlots.map(group => {
+                        if (group.length === 1) {
+                          return group[0];
+                        }
+                        return `${group[0]} - ${group[group.length - 1]}`;
+                      });
+
+                      return (
+                        <div style={{
+                          backgroundColor: '#fff8e1',
+                          border: '1px solid #ffd54f',
+                          borderRadius: '4px',
+                          padding: '8px 12px',
+                          marginTop: '10px',
+                          fontSize: '12px',
+                          color: '#ff8f00',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px'
+                        }}>
+                          <span style={{ fontSize: '16px' }}>⚠️</span>
+                          <div>
+                            <strong>Занятое время:</strong> {timeRanges.join(', ')}
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    return null;
+                  })()}
+                </div>
+
+
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                    Примечание (необязательно):
+                  </label>
+                  <textarea
+                    value={bookingNote}
+                    onChange={(e) => setBookingNote(e.target.value)}
+                    style={{
+                      width: '100%',
+                      minHeight: '80px',
+                      resize: 'vertical',
+                      padding: '10px',
+                      borderRadius: '4px',
+                      border: '1px solid #ddd'
+                    }}
+                    placeholder="Особые пожелания, комментарии к заказу и т.д."
+                  />
+                </div>
+
+                {/* Информация о календаре */}
+                <div style={{
+                  backgroundColor: '#e8f4fd',
+                  padding: '10px',
+                  borderRadius: '4px',
+                  marginBottom: '15px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  fontSize: '13px',
+                  color: '#2980b9'
+                }}>
+                  <span style={{ fontSize: '18px' }}>📆</span>
+                  <div>
+                    После подтверждения бронирования вы будете перенаправлены в календарь, где сможете увидеть все бронирования.
+                  </div>
+                </div>
+
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  gap: '15px'
+                }}>
+                  <button
+                    onClick={confirmBooking}
+                    style={{
+                      padding: '10px 20px',
+                      backgroundColor: '#2ecc71',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontWeight: 'bold',
+                      flex: '1'
+                    }}
+                  >
+                    Подтвердить и открыть календарь
+                  </button>
+
+                  <button
+                    onClick={cancelBooking}
+                    style={{
+                      padding: '10px 20px',
+                      backgroundColor: '#7f8c8d',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      flex: '1'
+                    }}
+                  >
+                    Отмена
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </DndProvider>
   );
