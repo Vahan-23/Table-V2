@@ -152,6 +152,141 @@ const HallViewer = ({ hallData: initialHallData, onDataChange }) => {
   let dragImage = null;
   let dragOffset = { x: 0, y: 0 };
 
+  const isTableAvailableAtTime = (hallData, tableId, date, startTime, endTime) => {
+    // Получаем все бронирования для стола на указанную дату
+    const bookings = getTableBookings(hallData, tableId, date);
+    
+    // Если нет бронирований, то стол свободен
+    if (bookings.length === 0) return true;
+    
+    // Проверяем, пересекается ли запрашиваемое время с существующими бронированиями
+    const startMinutes = parseTimeToMinutes(startTime);
+    const endMinutes = parseTimeToMinutes(endTime);
+    
+    // Проверяем каждое бронирование
+    for (const booking of bookings) {
+      const bookingStartMinutes = parseTimeToMinutes(booking.startTime);
+      const bookingEndMinutes = parseTimeToMinutes(booking.endTime);
+      
+      // Проверяем, пересекаются ли временные диапазоны
+      
+      // Если бронирование проходит через полночь
+      if (bookingEndMinutes < bookingStartMinutes) {
+        // Проверяем, пересекается ли наше время с любой частью бронирования
+        // Случай 1: Наше время приходится на период от начала бронирования до полуночи
+        // Случай 2: Наше время приходится на период от полуночи до конца бронирования
+        if (startMinutes <= bookingEndMinutes || endMinutes > bookingStartMinutes) {
+          return false; // Пересечение найдено, стол недоступен
+        }
+      }
+      // Если наше время проходит через полночь
+      else if (endMinutes < startMinutes) {
+        // Проверяем, пересекается ли бронирование с любой частью нашего времени
+        // Случай 1: Бронирование приходится на период от начала нашего времени до полуночи
+        // Случай 2: Бронирование приходится на период от полуночи до конца нашего времени
+        if (bookingStartMinutes < endMinutes || bookingEndMinutes > startMinutes) {
+          return false; // Пересечение найдено, стол недоступен
+        }
+      }
+      // Обычный случай - оба временных диапазона в пределах одного дня
+      else {
+        // Проверяем классическое пересечение временных интервалов
+        if (startMinutes < bookingEndMinutes && bookingStartMinutes < endMinutes) {
+          return false; // Пересечение найдено, стол недоступен
+        }
+      }
+    }
+    
+    // Если нет пересечений с существующими бронированиями, стол доступен
+    return true;
+  };
+
+  const getAvailableSeatsForTable = (hallData, tableId, date, startTime, endTime) => {
+    // Проверяем, свободен ли стол в указанное время
+    const isAvailable = isTableAvailableAtTime(hallData, tableId, date, startTime, endTime);
+    
+    // Если стол не свободен, возвращаем 0 доступных мест
+    if (!isAvailable) return 0;
+    
+    // Если стол свободен, возвращаем общее количество стульев за столом
+    const table = hallData.tables.find(t => t.id === tableId);
+    return table ? table.chairCount : 0;
+  };
+
+  // Форматирует дату в строку YYYY-MM-DD
+  const formatDateToYMD = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  // Функция для получения всех бронирований для определенного стола на указанную дату
+  const getTableBookings = (hallData, tableId, date) => {
+    if (!hallData || !hallData.tables) return [];
+    
+    const table = hallData.tables.find(t => t.id === tableId);
+    if (!table || !table.people) return [];
+    
+    const bookings = [];
+    
+    table.people.forEach(person => {
+      if (!person || !person.booking) return;
+      
+      // Проверяем, соответствует ли бронирование указанной дате
+      if (person.booking.date === date) {
+        bookings.push({
+          startTime: person.booking.time,
+          endTime: person.booking.endTime,
+          name: person.name
+        });
+      }
+    });
+    
+    return bookings;
+  };
+
+  // Функция для объединения последовательных бронирований
+  const getMergedTimeRanges = (bookings) => {
+    if (!bookings || bookings.length === 0) return [];
+    
+    // Сортируем бронирования по времени начала
+    const sortedBookings = [...bookings].sort((a, b) => {
+      const aMinutes = parseTimeToMinutes(a.startTime);
+      const bMinutes = parseTimeToMinutes(b.startTime);
+      return aMinutes - bMinutes;
+    });
+    
+    const mergedRanges = [];
+    let currentRange = { ...sortedBookings[0] };
+    
+    for (let i = 1; i < sortedBookings.length; i++) {
+      const booking = sortedBookings[i];
+      const currentEndMinutes = parseTimeToMinutes(currentRange.endTime);
+      const nextStartMinutes = parseTimeToMinutes(booking.startTime);
+      
+      // Если бронирования последовательные (или пересекаются)
+      if (nextStartMinutes <= currentEndMinutes) {
+        // Обновляем конечное время, если новое бронирование заканчивается позже
+        const nextEndMinutes = parseTimeToMinutes(booking.endTime);
+        if (nextEndMinutes > currentEndMinutes) {
+          currentRange.endTime = booking.endTime;
+        }
+      } else {
+        // Если бронирования не последовательные, добавляем текущий диапазон
+        // и начинаем новый
+        mergedRanges.push(currentRange);
+        currentRange = { ...booking };
+      }
+    }
+    
+    // Добавляем последний диапазон
+    mergedRanges.push(currentRange);
+    
+    return mergedRanges;
+  };
+
+
 
   useEffect(() => {
     if (showBookingModal) {
@@ -874,6 +1009,49 @@ const HallViewer = ({ hallData: initialHallData, onDataChange }) => {
 
     const occupiedPercentage = Math.round((details.occupiedSeats / details.table.chairCount) * 100);
 
+    // Получаем текущую дату для запроса бронирований
+    const today = new Date();
+    const formattedDate = formatDateToYMD(today);
+
+    // Получаем все бронирования для стола на текущую дату
+    const tableBookings = getTableBookings(hallData, details.table.id, formattedDate);
+
+    // Объединяем последовательные бронирования
+    const mergedTimeRanges = getMergedTimeRanges(tableBookings);
+
+    // Проверяем, зарезервирован ли стол сейчас
+    const now = new Date();
+    const currentHour = now.getHours().toString().padStart(2, '0');
+    const currentMinute = now.getMinutes().toString().padStart(2, '0');
+    const currentTimeString = `${currentHour}:${currentMinute}`;
+    const currentTimeMinutes = parseTimeToMinutes(currentTimeString);
+
+    const isCurrentlyReserved = mergedTimeRanges.some(range => {
+      const startMinutes = parseTimeToMinutes(range.startTime);
+      const endMinutes = parseTimeToMinutes(range.endTime);
+
+      // Учитываем бронирования, которые переходят через полночь
+      if (endMinutes < startMinutes) {
+        return currentTimeMinutes >= startMinutes || currentTimeMinutes < endMinutes;
+      } else {
+        return currentTimeMinutes >= startMinutes && currentTimeMinutes < endMinutes;
+      }
+    });
+
+    // Находим активное бронирование (текущее время находится в его диапазоне)
+    const activeReservation = isCurrentlyReserved
+      ? mergedTimeRanges.find(range => {
+        const startMinutes = parseTimeToMinutes(range.startTime);
+        const endMinutes = parseTimeToMinutes(range.endTime);
+
+        if (endMinutes < startMinutes) {
+          return currentTimeMinutes >= startMinutes || currentTimeMinutes < endMinutes;
+        } else {
+          return currentTimeMinutes >= startMinutes && currentTimeMinutes < endMinutes;
+        }
+      })
+      : null;
+
     // New function to handle client selection for seating
     const handleSelectClientForSeating = (group) => {
       if (details.availableSeats < group.guestCount) {
@@ -1083,50 +1261,66 @@ const HallViewer = ({ hallData: initialHallData, onDataChange }) => {
           </div>
         </CollapsiblePanel>
 
-        {/* Reservation Time Section */}
-        {details.bookingInfo && (
-          <div style={{
-            padding: '15px',
-            borderBottom: '1px solid #333',
-            marginBottom: '10px'
-          }}>
-            <h4 style={{
-              margin: '0 0 10px 0',
-              fontSize: '14px',
-              color: '#ccc'
-            }}>Время бронирования</h4>
-
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              backgroundColor: '#333',
-              padding: '12px',
-              borderRadius: '6px',
-              alignItems: 'center'
-            }}>
-              <div>
-                <div style={{ fontSize: '16px', fontWeight: 'bold' }}>
-                  {details.bookingInfo.time} - {details.bookingInfo.endTime}
+        {/* Обновленная секция статуса бронирования */}
+        <CollapsiblePanel
+          title="Статус бронирования"
+          defaultExpanded={true}
+        >
+          <div style={{ padding: '15px' }}>
+            {isCurrentlyReserved ? (
+              <div style={{
+                backgroundColor: '#e74c3c',
+                color: 'white',
+                padding: '15px',
+                borderRadius: '6px',
+                textAlign: 'center'
+              }}>
+                <div style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '5px' }}>
+                  RESERVED
                 </div>
-                {details.bookingInfo.note && (
-                  <div style={{ fontSize: '12px', color: '#aaa', marginTop: '5px' }}>
-                    Примечание: {details.bookingInfo.note}
+                {activeReservation && (
+                  <div style={{ fontSize: '18px' }}>
+                    {activeReservation.startTime} - {activeReservation.endTime}
                   </div>
                 )}
               </div>
-
+            ) : mergedTimeRanges.length > 0 ? (
               <div style={{
-                backgroundColor: '#2c3e50',
-                padding: '6px 10px',
-                borderRadius: '4px',
-                fontSize: '12px',
-                color: '#3498db'
+                backgroundColor: 'rgba(242, 120, 75, 0.8)',
+                color: 'white',
+                padding: '15px',
+                borderRadius: '6px',
+                textAlign: 'center'
               }}>
-                Бронь
+                <div style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '5px' }}>
+                  RESERVED TODAY
+                </div>
+                <div style={{ fontSize: '16px' }}>
+                  {mergedTimeRanges.map((range, index) => (
+                    <div key={index}>
+                      {range.startTime} - {range.endTime}
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
+            ) : (
+              <div style={{
+                backgroundColor: '#27ae60',
+                color: 'white',
+                padding: '15px',
+                borderRadius: '6px',
+                textAlign: 'center'
+              }}>
+                <div style={{ fontSize: '20px', fontWeight: 'bold' }}>
+                  AVAILABLE
+                </div>
+                <div style={{ fontSize: '14px', marginTop: '5px' }}>
+                  Стол свободен для бронирования
+                </div>
+              </div>
+            )}
           </div>
-        )}
+        </CollapsiblePanel>
 
         <CollapsiblePanel
           title={`Клиенты за столом (${details.seatedPeople.length})`}
@@ -1999,12 +2193,328 @@ const HallViewer = ({ hallData: initialHallData, onDataChange }) => {
   };
   const occupiedSlots = bookingDate && pendingBooking ?
     getOccupiedTimeSlots(hallData, pendingBooking.tableId, bookingDate) : [];
+
   // DroppableTable component
   const DroppableTable = ({ table }) => {
+    // Получаем текущую дату для запроса бронирований
+    const today = new Date();
+    const formattedDate = formatDateToYMD(today);
+
+    // Получаем все бронирования для стола на текущую дату
+    const tableBookings = getTableBookings(hallData, table.id, formattedDate);
+
+    // Объединяем последовательные бронирования
+    const mergedTimeRanges = getMergedTimeRanges(tableBookings);
+
+    // Проверяем, зарезервирован ли стол сейчас
+    const now = new Date();
+    const currentHour = now.getHours().toString().padStart(2, '0');
+    const currentMinute = now.getMinutes().toString().padStart(2, '0');
+    const currentTimeString = `${currentHour}:${currentMinute}`;
+    const currentTimeMinutes = parseTimeToMinutes(currentTimeString);
+
+    const isCurrentlyReserved = mergedTimeRanges.some(range => {
+      const startMinutes = parseTimeToMinutes(range.startTime);
+      const endMinutes = parseTimeToMinutes(range.endTime);
+
+      // Учитываем бронирования, которые переходят через полночь
+      if (endMinutes < startMinutes) {
+        return currentTimeMinutes >= startMinutes || currentTimeMinutes < endMinutes;
+      } else {
+        return currentTimeMinutes >= startMinutes && currentTimeMinutes < endMinutes;
+      }
+    });
+
+    // Находим активное бронирование (текущее время находится в его диапазоне)
+    const activeReservation = isCurrentlyReserved
+      ? mergedTimeRanges.find(range => {
+        const startMinutes = parseTimeToMinutes(range.startTime);
+        const endMinutes = parseTimeToMinutes(range.endTime);
+
+        if (endMinutes < startMinutes) {
+          return currentTimeMinutes >= startMinutes || currentTimeMinutes < endMinutes;
+        } else {
+          return currentTimeMinutes >= startMinutes && currentTimeMinutes < endMinutes;
+        }
+      })
+      : null;
+
+    // Строим строку для отображения всех бронирований
+    const reservationText = mergedTimeRanges.length > 0
+      ? mergedTimeRanges.map(range => `${range.startTime}-${range.endTime}`).join(', ')
+      : '';
+
+    // Функция для отрисовки стульев для круглого стола
+    const renderRoundChairs = () => {
+      const chairs = [];
+      const angleStep = 360 / table.chairCount;
+      const radius = 140;
+      const peopleOnTable = table.people || [];
+
+      for (let i = 0; i < table.chairCount; i++) {
+        const angle = angleStep * i;
+        const xPosition = radius * Math.cos((angle * Math.PI) / 180);
+        const yPosition = radius * Math.sin((angle * Math.PI) / 180);
+
+        const chairStyle = {
+          position: 'absolute',
+          transformOrigin: 'center',
+          width: '60px',
+          height: '60px',
+          // Всегда показываем зеленый стул
+          backgroundImage: "url('/green2.png')",
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          borderRadius: '50%',
+          fontSize: '12px',
+          textAlign: 'center',
+          left: `calc(50% + ${xPosition}px)`,
+          top: `calc(50% + ${yPosition}px)`,
+          transform: `rotate(${angle + 90}deg)`,
+          cursor: 'pointer',
+          zIndex: 1 // Ниже, чем оверлей
+        };
+
+        chairs.push(
+          <div
+            key={i}
+            className="chair"
+            style={chairStyle}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleChairClick(table.id, i);
+            }}
+            title={peopleOnTable[i] ? `Нажмите, чтобы убрать ${peopleOnTable[i].name}` : "Нажмите, чтобы добавить клиента"}
+          />
+        );
+      }
+
+      return chairs;
+    };
+
+    // Функция для отрисовки стульев для прямоугольного стола
+    const renderRectangleChairs = () => {
+      const chairs = [];
+      const tableWidth = 400;
+      const tableHeight = 150;
+      const border = 50;
+      const peopleOnTable = table.people || [];
+
+      const totalChairs = table.chairCount;
+
+      // Распределение стульев вокруг стола
+      let chairsLeft = 0;
+      let chairsRight = 0;
+      let chairsTop = 0;
+      let chairsBottom = 0;
+
+      // Сначала распределяем стулья по левой и правой сторонам (если более 4 стульев)
+      if (totalChairs > 4) {
+        chairsLeft = 1;
+        chairsRight = 1;
+        // Оставшиеся стулья по верхней и нижней сторонам
+        const remainingChairs = totalChairs - 2;
+        const maxTopBottom = Math.floor(remainingChairs / 2);
+        chairsTop = maxTopBottom;
+        chairsBottom = remainingChairs - chairsTop;
+      } else {
+        // Если 4 или меньше стульев, распределяем только по верху и низу
+        chairsTop = Math.ceil(totalChairs / 2);
+        chairsBottom = totalChairs - chairsTop;
+      }
+
+      let chairIndex = 0;
+
+      // Стулья слева
+      if (chairsLeft > 0) {
+        const leftChairIndex = chairIndex;
+        const person = peopleOnTable[leftChairIndex];
+
+        chairs.push(
+          <div
+            key={`left-${leftChairIndex}`}
+            className="chair"
+            style={{
+              position: 'absolute',
+              width: '60px',
+              height: '60px',
+              // Всегда зеленый стул
+              backgroundImage: "url('/green2.png')",
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              borderRadius: '50%',
+              fontSize: '12px',
+              textAlign: 'center',
+              left: `calc(50% - ${250}px)`,
+              top: `calc(50% - ${15}px)`,
+              cursor: 'pointer',
+              transform: 'rotate(270deg)',
+              zIndex: 1
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleChairClick(table.id, leftChairIndex);
+            }}
+            title={person ? `Нажмите, чтобы убрать ${person.name}` : "Нажмите, чтобы добавить клиента"}
+          />
+        );
+
+        chairIndex++;
+      }
+
+      // Стулья справа
+      if (chairsRight > 0) {
+        const rightChairIndex = chairIndex;
+        const person = peopleOnTable[rightChairIndex];
+
+        chairs.push(
+          <div
+            key={`right-${rightChairIndex}`}
+            className="chair"
+            style={{
+              position: 'absolute',
+              width: '60px',
+              height: '60px',
+              // Всегда зеленый стул
+              backgroundImage: "url('/green2.png')",
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              borderRadius: '50%',
+              fontSize: '12px',
+              textAlign: 'center',
+              left: `calc(50% + ${190}px)`,
+              top: `calc(50% - ${15}px)`,
+              cursor: 'pointer',
+              transform: 'rotate(90deg)',
+              zIndex: 1
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleChairClick(table.id, rightChairIndex);
+            }}
+            title={person ? `Нажмите, чтобы убрать ${person.name}` : "Нажмите, чтобы добавить клиента"}
+          />
+        );
+
+        chairIndex++;
+      }
+
+      // Верхние стулья
+      for (let i = 0; i < chairsTop; i++) {
+        const topChairIndex = chairIndex;
+        const person = peopleOnTable[topChairIndex];
+        const ratio = chairsTop === 1 ? 0.5 : i / (chairsTop - 1);
+        const xPosition = ((tableWidth - 50) * ratio) - tableWidth / 2;
+        const yPosition = -tableHeight / 2 - border + 10;
+
+        chairs.push(
+          <div
+            key={`top-${topChairIndex}`}
+            className="chair"
+            style={{
+              position: 'absolute',
+              width: '60px',
+              height: '60px',
+              // Всегда зеленый стул
+              backgroundImage: "url('/green2.png')",
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              borderRadius: '50%',
+              fontSize: '12px',
+              textAlign: 'center',
+              left: `calc(50% + ${xPosition}px)`,
+              top: `calc(50% + ${yPosition}px)`,
+              cursor: 'pointer',
+              transform: 'rotate(0deg)',
+              zIndex: 1
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleChairClick(table.id, topChairIndex);
+            }}
+            title={person ? `Нажмите, чтобы убрать ${person.name}` : "Нажмите, чтобы добавить клиента"}
+          />
+        );
+
+        chairIndex++;
+      }
+
+      // Нижние стулья
+      for (let i = 0; i < chairsBottom; i++) {
+        const bottomChairIndex = chairIndex;
+        const person = peopleOnTable[bottomChairIndex];
+        const ratio = chairsBottom === 1 ? 0.5 : i / (chairsBottom - 1);
+        const xPosition = ((tableWidth - 50) * ratio) - tableWidth / 2;
+        const yPosition = tableHeight / 2;
+
+        chairs.push(
+          <div
+            key={`bottom-${bottomChairIndex}`}
+            className="chair"
+            style={{
+              position: 'absolute',
+              width: '60px',
+              height: '60px',
+              // Всегда зеленый стул
+              backgroundImage: "url('/green2.png')",
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              borderRadius: '50%',
+              fontSize: '12px',
+              textAlign: 'center',
+              left: `calc(50% + ${xPosition}px)`,
+              top: `calc(50% + ${yPosition}px)`,
+              cursor: 'pointer',
+              transform: 'rotate(180deg)',
+              zIndex: 1
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleChairClick(table.id, bottomChairIndex);
+            }}
+            title={person ? `Нажмите, чтобы убрать ${person.name}` : "Нажмите, чтобы добавить клиента"}
+          />
+        );
+
+        chairIndex++;
+      }
+
+      return chairs;
+    };
+
+    // Выбираем, какую функцию рендеринга стульев использовать
+    const renderChairs = () => {
+      if (table.shape === 'rectangle') {
+        return renderRectangleChairs();
+      } else {
+        return renderRoundChairs();
+      }
+    };
+
     return (
       <div
         className="table-container"
-        data-id={table.id} // Важно! Явно устанавливаем ID стола как data-атрибут
+        data-id={table.id}
         style={{
           position: 'absolute',
           left: `${table.x || 0}px`,
@@ -2033,13 +2543,125 @@ const HallViewer = ({ hallData: initialHallData, onDataChange }) => {
             backgroundImage: "url('/table2.png')",
             backgroundSize: "100% 100%",
             backgroundRepeat: "no-repeat",
+            position: "relative"
           }}>
-            {renderChairs(table)}
+            {/* Отображение статуса RESERVED, если стол забронирован */}
+            {isCurrentlyReserved && (
+              <div style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                alignItems: 'center',
+                backgroundColor: 'rgba(231, 76, 60, 0.8)',
+                color: 'white',
+                fontWeight: 'bold',
+                fontSize: '24px',
+                zIndex: 2
+              }}>
+                <div>RESERVED</div>
+                {activeReservation && (
+                  <div style={{ fontSize: '18px', marginTop: '5px', textAlign: 'center' }}>
+                    {activeReservation.startTime} - {activeReservation.endTime}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Отображение всех бронирований для стола на сегодня */}
+            {mergedTimeRanges.length > 0 && !isCurrentlyReserved && (
+              <div style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                alignItems: 'center',
+                backgroundColor: 'rgba(242, 120, 75, 0.5)',
+                color: 'white',
+                fontWeight: 'bold',
+                fontSize: '20px',
+                padding: '10px',
+                textAlign: 'center',
+                zIndex: 2
+              }}>
+                <div>RESERVED TODAY</div>
+                <div style={{ fontSize: '16px', marginTop: '5px' }}>
+                  {reservationText}
+                </div>
+              </div>
+            )}
+
+            {/* Рендерим стулья */}
+            {renderChairs()}
           </div>
         ) : (
-          <div className="table">
+          <div className="table" style={{ position: "relative" }}>
+            {/* Отображение статуса RESERVED для круглого стола */}
+            {isCurrentlyReserved && (
+              <div style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                alignItems: 'center',
+                backgroundColor: 'rgba(231, 76, 60, 0.8)',
+                color: 'white',
+                fontWeight: 'bold',
+                fontSize: '24px',
+                borderRadius: '50%',
+                zIndex: 2
+              }}>
+                <div>RESERVED</div>
+                {activeReservation && (
+                  <div style={{ fontSize: '18px', marginTop: '5px', textAlign: 'center' }}>
+                    {activeReservation.startTime} - {activeReservation.endTime}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Отображение всех бронирований для круглого стола на сегодня */}
+            {mergedTimeRanges.length > 0 && !isCurrentlyReserved && (
+              <div style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                alignItems: 'center',
+                backgroundColor: 'rgba(242, 120, 75, 0.5)',
+                color: 'white',
+                fontWeight: 'bold',
+                fontSize: '20px',
+                borderRadius: '50%',
+                padding: '10px',
+                textAlign: 'center',
+                zIndex: 2
+              }}>
+                <div>RESERVED TODAY</div>
+                <div style={{ fontSize: '16px', marginTop: '5px' }}>
+                  {reservationText}
+                </div>
+              </div>
+            )}
+
             <div className="table-top">
-              {renderChairs(table)}
+              {renderChairs()}
             </div>
           </div>
         )}
