@@ -975,21 +975,31 @@ const HallViewer = ({ hallData: initialHallData, onDataChange }) => {
   // Get table details for the details panel
   const getTableDetails = () => {
     if (!detailsTableId || !hallData || !hallData.tables) return null;
-
+  
     const table = hallData.tables.find(t => t.id === detailsTableId);
     if (!table) return null;
-
-    const occupiedSeats = (table.people || []).filter(Boolean).length;
+  
+    // Count actual occupied seats using the seatsOccupied property
+    const occupiedSeats = (table.people || []).reduce((total, person) => {
+      if (person && person.seatsOccupied) {
+        return total + person.seatsOccupied;
+      } else if (person) {
+        // Legacy data without seatsOccupied property
+        return total + 1;
+      }
+      return total;
+    }, 0);
+    
     const availableSeats = table.chairCount - occupiedSeats;
-
+  
     // Get booking information if available
     let bookingInfo = null;
     const seatedPeople = (table.people || []).filter(Boolean);
-
+  
     if (seatedPeople.length > 0 && seatedPeople[0].booking) {
       bookingInfo = seatedPeople[0].booking;
     }
-
+  
     return {
       table,
       occupiedSeats,
@@ -1054,26 +1064,38 @@ const HallViewer = ({ hallData: initialHallData, onDataChange }) => {
 
     // New function to handle client selection for seating
     const handleSelectClientForSeating = (group) => {
-      if (details.availableSeats < group.guestCount) {
-        alert(`На столе недостаточно свободных мест для клиента "${group.name}". Нужно: ${group.guestCount}, доступно: ${details.availableSeats}`);
-        return;
-      }
-
+      // We don't need to check seat availability here yet
+      // That will be done in confirmBooking based on the selected time
+      
       // Set up pending booking with the selected client
       setPendingBooking({
         tableId: details.table.id,
-        group,
-        availableSeats: details.availableSeats
+        group
       });
-
+    
       // Set default booking times
       const now = new Date();
-      setBookingTime(`${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`);
-
+      const currentHour = now.getHours().toString().padStart(2, '0');
+      const currentMinute = Math.floor(now.getMinutes() / 15) * 15;
+      const currentMinuteStr = currentMinute === 0 ? "00" : currentMinute.toString();
+      
+      setBookingTime(`${currentHour}:${currentMinuteStr}`);
+    
       // Set default end time 2 hours later
       const endTime = new Date(now.getTime() + 2 * 60 * 60 * 1000);
-      setBookingEndTime(`${endTime.getHours().toString().padStart(2, '0')}:${endTime.getMinutes().toString().padStart(2, '0')}`);
-
+      const endHour = endTime.getHours().toString().padStart(2, '0');
+      const endMinute = Math.floor(endTime.getMinutes() / 15) * 15;
+      const endMinuteStr = endMinute === 0 ? "00" : endMinute.toString();
+      
+      setBookingEndTime(`${endHour}:${endMinuteStr}`);
+    
+      // Set default date to today
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = String(today.getMonth() + 1).padStart(2, '0');
+      const day = String(today.getDate()).padStart(2, '0');
+      setBookingDate(`${year}-${month}-${day}`);
+    
       // Show the booking modal
       setShowBookingModal(true);
       setShowClientSelection(false);
@@ -1513,41 +1535,41 @@ const HallViewer = ({ hallData: initialHallData, onDataChange }) => {
   // Handle table drop handler for groups - updated with useCallback and proper state reset
   const handleTableDrop = useCallback((tableId, group) => {
     console.log('handleTableDrop вызван с:', { tableId, group });
-
-    // Преобразуем tableId в число, если он передается как строка
+  
+    // Convert tableId to number if it's passed as a string
     const numericTableId = parseInt(tableId, 10) || tableId;
-
     const table = hallData.tables.find(t => t.id === numericTableId);
-
+  
     if (!table) {
       console.error(`Стол с ID ${numericTableId} не найден`);
       return;
     }
-
-    // Проверка доступных мест
-    const occupiedSeats = table.people ? table.people.filter(Boolean).length : 0;
-    const availableSeats = table.chairCount - occupiedSeats;
-
-    if (group.guestCount > availableSeats) {
-      alert(`На столе недостаточно свободных мест для клиента "${group.name}". Нужно: ${group.guestCount}, доступно: ${availableSeats}`);
-      return;
-    }
-
-    // Устанавливаем ожидающее бронирование
+  
+    // We don't need to check seat availability here,
+    // as that will be done in confirmBooking based on the selected time
+    
+    // Set up pending booking
     setPendingBooking({
       tableId: numericTableId,
       group,
-      availableSeats
+      // No need to pass availableSeats here as it will be calculated based on the selected time
     });
-
-    // Set default booking times if they're empty
+  
+    // Set default booking times
     const now = new Date();
-    setBookingTime(`${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`);
-
+    setBookingTime(`${now.getHours().toString().padStart(2, '0')}:${Math.floor(now.getMinutes() / 15) * 15 === 0 ? "00" : Math.floor(now.getMinutes() / 15) * 15}`);
+  
     // Set default end time 2 hours later
     const endTime = new Date(now.getTime() + 2 * 60 * 60 * 1000);
-    setBookingEndTime(`${endTime.getHours().toString().padStart(2, '0')}:${endTime.getMinutes().toString().padStart(2, '0')}`);
-
+    setBookingEndTime(`${endTime.getHours().toString().padStart(2, '0')}:${Math.floor(endTime.getMinutes() / 15) * 15 === 0 ? "00" : Math.floor(endTime.getMinutes() / 15) * 15}`);
+  
+    // Set default date to today
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    setBookingDate(`${year}-${month}-${day}`);
+  
     // Show the booking modal
     setShowBookingModal(true);
   }, [hallData]);
@@ -1583,18 +1605,18 @@ const HallViewer = ({ hallData: initialHallData, onDataChange }) => {
   // Confirm booking and assign seats - Fixed to prevent panel closing and with proper state reset
   const confirmBooking = useCallback(() => {
     console.log('confirmBooking called with:', pendingBooking);
-
+  
     if (!pendingBooking) {
       // Ensure dragging state is reset
       setDraggingGroup(null);
       return;
     }
-
+  
     const { tableId, group } = pendingBooking;
-
-    // Get occupied slots
+  
+    // Get occupied slots for the specific requested date
     const occupiedSlots = getOccupiedTimeSlots(hallData, tableId, bookingDate);
-
+  
     // Check if selected time slot is occupied
     const startHour = bookingTime.split(':')[0];
     const startMinute = bookingTime.split(':')[1];
@@ -1603,22 +1625,21 @@ const HallViewer = ({ hallData: initialHallData, onDataChange }) => {
       parseInt(startHour),
       parseInt(startMinute)
     );
-
+  
     if (isStartTimeOccupied) {
       alert('Выбранное время начала уже занято. Пожалуйста, выберите другое время.');
       return;
     }
-
+  
     // Verify if any time slots between start and end are occupied
     const startTimeMinutes = parseTimeToMinutes(bookingTime);
     const endTimeMinutes = parseTimeToMinutes(bookingEndTime);
-
+  
     // Check for overlaps - either regular booking or spanning midnight
     let isOverlapping = false;
-
+  
     if (endTimeMinutes < startTimeMinutes) {
       // Booking spans midnight - check both parts
-
       // Check from start time to midnight
       for (let time = startTimeMinutes; time < 24 * 60; time += 15) {
         if (isTimeSlotOccupiedByMinutes(occupiedSlots, time)) {
@@ -1626,7 +1647,7 @@ const HallViewer = ({ hallData: initialHallData, onDataChange }) => {
           break;
         }
       }
-
+  
       // Check from midnight to end time if no overlap found yet
       if (!isOverlapping) {
         for (let time = 0; time < endTimeMinutes; time += 15) {
@@ -1645,14 +1666,39 @@ const HallViewer = ({ hallData: initialHallData, onDataChange }) => {
         }
       }
     }
-
+  
     if (isOverlapping) {
       alert('Выбранный диапазон времени пересекается с существующим бронированием. Пожалуйста, выберите другое время.');
       return;
     }
-
-    // If we reach here, the time slots are available, proceed with booking
-
+  
+    // If we reach here, the time slots are available for the chosen date/time
+    // Now check if the table has enough seats for this booking time
+    
+    // Get all bookings for this date and time range
+    const overlappingBookings = getOverlappingBookings(hallData, tableId, bookingDate, bookingTime, bookingEndTime);
+    
+    // Calculate seats already occupied during this time slot
+    const seatsOccupiedDuringTimeSlot = overlappingBookings.reduce((total, booking) => {
+      return total + (booking.seatsOccupied || booking.guestCount || 1);
+    }, 0);
+    
+    // Find the table
+    const table = hallData.tables.find(t => t.id === tableId);
+    if (!table) {
+      alert('Ошибка: стол не найден');
+      return;
+    }
+    
+    // Calculate available seats for this time slot
+    const availableSeatsForTimeSlot = table.chairCount - seatsOccupiedDuringTimeSlot;
+    
+    // Check if enough seats are available
+    if (availableSeatsForTimeSlot < group.guestCount) {
+      alert(`Недостаточно мест на выбранное время. Доступно: ${availableSeatsForTimeSlot}, требуется: ${group.guestCount}`);
+      return;
+    }
+  
     // Add date to booking details
     const bookingDetails = {
       date: bookingDate,
@@ -1661,53 +1707,42 @@ const HallViewer = ({ hallData: initialHallData, onDataChange }) => {
       note: bookingNote,
       timestamp: new Date().toISOString()
     };
-
+  
     console.log('Setting up booking with details:', bookingDetails);
-
-    // ИСПРАВЛЕНО: Размещаем всех гостей на свободных местах
+  
+    // Find first empty chair or create a new entry
     setHallData(prevData => {
       const updatedTables = prevData.tables.map(t => {
         if (t.id === tableId) {
-          // Создаем копию массива людей или инициализируем его
+          // Create a copy of the people array or initialize it
           const tablePeople = [...(t.people || [])];
-
-          // Находим свободные места
-          const emptySeats = [];
-          for (let i = 0; i < t.chairCount; i++) {
+          
+          // Find the first empty chair
+          let firstEmptySeat = -1;
+          for (let i = 0; i < tablePeople.length; i++) {
             if (!tablePeople[i]) {
-              emptySeats.push(i);
+              firstEmptySeat = i;
+              break;
             }
           }
-
-          console.log(`Found ${emptySeats.length} empty seats for table ${tableId}`);
-
-          // Проверяем, достаточно ли мест для всех гостей
-          const seatsToFill = Math.min(group.guestCount, emptySeats.length);
-
-          if (seatsToFill > 0) {
-            // Размещаем основного клиента на первом свободном месте
-            tablePeople[emptySeats[0]] = {
-              name: group.name,
-              group: group.name,
-              phone: group.phone,
-              email: group.email,
-              isMainGuest: true, // Отмечаем как основного гостя
-              guestCount: group.guestCount,
-              booking: bookingDetails
-            };
-
-            // Размещаем дополнительных гостей на оставшихся местах
-            for (let i = 1; i < seatsToFill; i++) {
-              tablePeople[emptySeats[i]] = {
-                name: `Гость группы ${group.name}`,
-                group: group.name,
-                isAdditionalGuest: true,
-                hiddenInCalendar: true,
-                booking: bookingDetails
-              };
-            }
+          
+          // If no empty chair found in the existing array, use the next index
+          if (firstEmptySeat === -1) {
+            firstEmptySeat = tablePeople.length;
           }
-
+          
+          // Place the main guest with information about how many seats they occupy
+          tablePeople[firstEmptySeat] = {
+            name: group.name,
+            group: group.name,
+            phone: group.phone,
+            email: group.email,
+            isMainGuest: true,
+            guestCount: group.guestCount,
+            seatsOccupied: group.guestCount, // Track how many seats this booking occupies
+            booking: bookingDetails
+          };
+          
           return {
             ...t,
             people: tablePeople
@@ -1715,19 +1750,19 @@ const HallViewer = ({ hallData: initialHallData, onDataChange }) => {
         }
         return t;
       });
-
+  
       return {
         ...prevData,
         tables: updatedTables
       };
     });
-
-    // Показываем уведомление
+  
+    // Show notification
     const notification = document.createElement('div');
     notification.className = 'transfer-notification';
     notification.textContent = `Клиент "${group.name}" размещен за столом ${tableId} на ${formatDateForDisplay(bookingDate)} в ${formatTime24h(bookingTime)} - ${formatTime24h(bookingEndTime)}`;
     document.body.appendChild(notification);
-
+  
     setTimeout(() => {
       notification.classList.add('show');
       setTimeout(() => {
@@ -1737,18 +1772,54 @@ const HallViewer = ({ hallData: initialHallData, onDataChange }) => {
         }, 300);
       }, 2000);
     }, 100);
-
-    // Сбрасываем состояние бронирования
+  
+    // Reset booking state
     setShowBookingModal(false);
     setPendingBooking(null);
     setBookingDate('');
     setBookingTime('');
     setBookingEndTime('');
     setBookingNote('');
-
-    // Сбрасываем состояние перетаскивания
+  
+    // Reset dragging state
     setDraggingGroup(null);
+    
+    // Switch to calendar view after successful booking
+    // setActiveView('calendar');
   }, [pendingBooking, bookingDate, bookingTime, bookingEndTime, bookingNote, hallData]);
+
+  const getOverlappingBookings = (hallData, tableId, date, startTime, endTime) => {
+    if (!hallData || !hallData.tables) return [];
+    
+    const table = hallData.tables.find(t => t.id === tableId);
+    if (!table || !table.people) return [];
+    
+    const startMinutes = parseTimeToMinutes(startTime);
+    const endMinutes = parseTimeToMinutes(endTime);
+    
+    // Filter people with bookings that overlap with the requested time
+    return table.people.filter(person => {
+      if (!person || !person.booking) return false;
+      
+      // Only consider bookings on the same date
+      if (person.booking.date !== date) return false;
+      
+      const bookingStartMinutes = parseTimeToMinutes(person.booking.time);
+      const bookingEndMinutes = parseTimeToMinutes(person.booking.endTime);
+      
+      // Check for overlap
+      if (bookingEndMinutes < bookingStartMinutes) {
+        // Booking spans midnight
+        return (startMinutes < bookingEndMinutes) || (endMinutes > bookingStartMinutes);
+      } else if (endMinutes < startMinutes) {
+        // Request spans midnight
+        return (bookingStartMinutes < endMinutes) || (bookingEndMinutes > startMinutes);
+      } else {
+        // Regular time range check
+        return (startMinutes < bookingEndMinutes) && (bookingStartMinutes < endMinutes);
+      }
+    });
+  };
 
   const formatDateForDisplay = (dateString) => {
     if (!dateString) return '';
