@@ -1014,93 +1014,70 @@ const HallViewer = ({ hallData: initialHallData, onDataChange }) => {
   const TableDetailsPanel = () => {
     const details = getTableDetails();
     const [showClientSelection, setShowClientSelection] = useState(false);
-
+  
     if (!details) return null;
-
-    const occupiedPercentage = Math.round((details.occupiedSeats / details.table.chairCount) * 100);
-
-    // Получаем текущую дату для запроса бронирований
+  
     const today = new Date();
     const formattedDate = formatDateToYMD(today);
-
-    // Получаем все бронирования для стола на текущую дату
     const tableBookings = getTableBookings(hallData, details.table.id, formattedDate);
-
-    // Объединяем последовательные бронирования
     const mergedTimeRanges = getMergedTimeRanges(tableBookings);
-
-    // Проверяем, зарезервирован ли стол сейчас
+  
     const now = new Date();
     const currentHour = now.getHours().toString().padStart(2, '0');
     const currentMinute = now.getMinutes().toString().padStart(2, '0');
     const currentTimeString = `${currentHour}:${currentMinute}`;
     const currentTimeMinutes = parseTimeToMinutes(currentTimeString);
-
+  
     const isCurrentlyReserved = mergedTimeRanges.some(range => {
       const startMinutes = parseTimeToMinutes(range.startTime);
       const endMinutes = parseTimeToMinutes(range.endTime);
-
-      // Учитываем бронирования, которые переходят через полночь
       if (endMinutes < startMinutes) {
         return currentTimeMinutes >= startMinutes || currentTimeMinutes < endMinutes;
       } else {
         return currentTimeMinutes >= startMinutes && currentTimeMinutes < endMinutes;
       }
     });
-
-    // Находим активное бронирование (текущее время находится в его диапазоне)
+  
     const activeReservation = isCurrentlyReserved
       ? mergedTimeRanges.find(range => {
-        const startMinutes = parseTimeToMinutes(range.startTime);
-        const endMinutes = parseTimeToMinutes(range.endTime);
-
-        if (endMinutes < startMinutes) {
-          return currentTimeMinutes >= startMinutes || currentTimeMinutes < endMinutes;
-        } else {
-          return currentTimeMinutes >= startMinutes && currentTimeMinutes < endMinutes;
-        }
-      })
+          const startMinutes = parseTimeToMinutes(range.startTime);
+          const endMinutes = parseTimeToMinutes(range.endTime);
+          if (endMinutes < startMinutes) {
+            return currentTimeMinutes >= startMinutes || currentTimeMinutes < endMinutes;
+          } else {
+            return currentTimeMinutes >= startMinutes && currentTimeMinutes < endMinutes;
+          }
+        })
       : null;
-
-    // New function to handle client selection for seating
+  
     const handleSelectClientForSeating = (group) => {
-      // We don't need to check seat availability here yet
-      // That will be done in confirmBooking based on the selected time
-      
-      // Set up pending booking with the selected client
       setPendingBooking({
         tableId: details.table.id,
         group
       });
-    
-      // Set default booking times
+  
       const now = new Date();
       const currentHour = now.getHours().toString().padStart(2, '0');
       const currentMinute = Math.floor(now.getMinutes() / 15) * 15;
       const currentMinuteStr = currentMinute === 0 ? "00" : currentMinute.toString();
-      
       setBookingTime(`${currentHour}:${currentMinuteStr}`);
-    
-      // Set default end time 2 hours later
+  
       const endTime = new Date(now.getTime() + 2 * 60 * 60 * 1000);
       const endHour = endTime.getHours().toString().padStart(2, '0');
       const endMinute = Math.floor(endTime.getMinutes() / 15) * 15;
       const endMinuteStr = endMinute === 0 ? "00" : endMinute.toString();
-      
       setBookingEndTime(`${endHour}:${endMinuteStr}`);
-    
-      // Set default date to today
+  
       const today = new Date();
       const year = today.getFullYear();
       const month = String(today.getMonth() + 1).padStart(2, '0');
       const day = String(today.getDate()).padStart(2, '0');
       setBookingDate(`${year}-${month}-${day}`);
-    
-      // Show the booking modal
+  
       setShowBookingModal(true);
       setShowClientSelection(false);
     };
-
+  
     return (
       <div style={{ width: '100%', height: '100%' }}>
         <div style={{
@@ -1112,85 +1089,26 @@ const HallViewer = ({ hallData: initialHallData, onDataChange }) => {
         }}>
           <h3 style={{ margin: 0 }}>Детали стола {details.table.id}</h3>
         </div>
-
-        <CollapsiblePanel
-          title="Заполненность"
-          defaultExpanded={true}
-        >
+  
+        {details.availableSeats > 0 && (
           <div style={{ padding: '15px' }}>
-            <div style={{ marginBottom: '10px' }}>
-              <span style={{ fontSize: '13px', color: '#999' }}>Занято мест:</span>
-              <span style={{
-                float: 'right',
+            <button
+              onClick={() => setShowClientSelection(true)}
+              style={{
+                width: '100%',
+                backgroundColor: '#3498db',
+                padding: '8px 12px',
+                border: 'none',
+                borderRadius: '4px',
+                color: 'white',
+                cursor: 'pointer',
                 fontWeight: 'bold',
-                color: details.occupiedSeats === details.table.chairCount ? '#ff5555' : '#55aa55'
-              }}>
-                {details.occupiedSeats} из {details.table.chairCount} ({occupiedPercentage}%)
-              </span>
-            </div>
-
-            <div style={{
-              height: '8px',
-              backgroundColor: '#444',
-              borderRadius: '4px',
-              overflow: 'hidden',
-              marginBottom: '15px'
-            }}>
-              <div style={{
-                height: '100%',
-                width: `${occupiedPercentage}%`,
-                backgroundColor: occupiedPercentage === 100 ? '#ff5555' : '#55aa55',
-                borderRadius: '4px'
-              }}></div>
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-              <div style={{
-                backgroundColor: '#333',
-                padding: '10px',
-                borderRadius: '4px',
-                textAlign: 'center',
-                flex: '1',
-                marginRight: '5px'
-              }}>
-                <div style={{ fontSize: '18px', fontWeight: 'bold' }}>{details.occupiedSeats}</div>
-                <div style={{ fontSize: '12px', color: '#999' }}>Занято</div>
-              </div>
-
-              <div style={{
-                backgroundColor: '#333',
-                padding: '10px',
-                borderRadius: '4px',
-                textAlign: 'center',
-                flex: '1',
-                marginLeft: '5px'
-              }}>
-                <div style={{ fontSize: '18px', fontWeight: 'bold' }}>{details.availableSeats}</div>
-                <div style={{ fontSize: '12px', color: '#999' }}>Свободно</div>
-              </div>
-            </div>
-
-            {/* Add button to seat a client if there are free seats */}
-            {details.availableSeats > 0 && (
-              <button
-                onClick={() => setShowClientSelection(true)}
-                style={{
-                  width: '100%',
-                  backgroundColor: '#3498db',
-                  padding: '8px 12px',
-                  border: 'none',
-                  borderRadius: '4px',
-                  color: 'white',
-                  cursor: 'pointer',
-                  fontWeight: 'bold',
-                  marginTop: '10px'
-                }}
-              >
-                Посадить клиента
-              </button>
-            )}
-
-            {/* Client selection dropdown panel */}
+                marginBottom: '10px'
+              }}
+            >
+              Посадить клиента
+            </button>
+  
             {showClientSelection && (
               <div style={{
                 marginTop: '10px',
@@ -1216,11 +1134,11 @@ const HallViewer = ({ hallData: initialHallData, onDataChange }) => {
                 }} onClick={() => setShowClientSelection(false)}>
                   ×
                 </div>
-
+  
                 <h4 style={{ margin: '0 0 10px 0', color: '#eee', fontSize: '14px' }}>
                   Выберите клиента для размещения:
                 </h4>
-
+  
                 <div style={{
                   maxHeight: '200px',
                   overflowY: 'auto',
@@ -1255,7 +1173,7 @@ const HallViewer = ({ hallData: initialHallData, onDataChange }) => {
                             {group.guestCount} {group.guestCount === 1 ? 'гость' : group.guestCount < 5 ? 'гостя' : 'гостей'}
                           </div>
                         </div>
-
+  
                         <div style={{
                           backgroundColor: group.guestCount <= details.availableSeats ? '#27ae60' : '#e74c3c',
                           padding: '3px 6px',
@@ -1281,13 +1199,9 @@ const HallViewer = ({ hallData: initialHallData, onDataChange }) => {
               </div>
             )}
           </div>
-        </CollapsiblePanel>
-
-        {/* Обновленная секция статуса бронирования */}
-        <CollapsiblePanel
-          title="Статус бронирования"
-          defaultExpanded={true}
-        >
+        )}
+  
+        <CollapsiblePanel title="Статус бронирования" defaultExpanded={true}>
           <div style={{ padding: '15px' }}>
             {isCurrentlyReserved ? (
               <div style={{
@@ -1343,11 +1257,8 @@ const HallViewer = ({ hallData: initialHallData, onDataChange }) => {
             )}
           </div>
         </CollapsiblePanel>
-
-        <CollapsiblePanel
-          title={`Клиенты за столом (${details.seatedPeople.length})`}
-          defaultExpanded={true}
-        >
+  
+        <CollapsiblePanel title={`Клиенты за столом (${details.seatedPeople.length})`} defaultExpanded={true}>
           <div style={{ padding: '10px' }}>
             {details.seatedPeople.length > 0 ? (
               <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
@@ -1382,12 +1293,10 @@ const HallViewer = ({ hallData: initialHallData, onDataChange }) => {
                         </div>
                       )}
                     </div>
-
+  
                     <button
                       onClick={() => {
-                        // Set up state for removal popup
                         setSelectedTableId(details.table.id);
-                        // Find the index of this person in the table
                         const personIndex = details.table.people.findIndex(p => p && p.name === person.name);
                         if (personIndex !== -1) {
                           setSelectedChairIndex(personIndex);
