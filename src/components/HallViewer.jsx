@@ -3006,19 +3006,22 @@ const HallViewer = ({ hallData: initialHallData, onDataChange }) => {
                       >
                         {Array.from({ length: 24 }, (_, i) => i).map(hour => {
                           const hourStr = hour.toString().padStart(2, '0');
-                          const minuteToCheck = bookingTime.split(':')[1] || '00';
-                          const slotToCheck = `${hourStr}:${minuteToCheck}`;
-                          const isSlotOccupied = occupiedSlots.includes(slotToCheck);
+
+                          // Изменение: проверяем, ПОЛНОСТЬЮ ли занят час (все четыре 15-минутных слота)
+                          const isHourFullyOccupied = ['00', '15', '30', '45'].every(min => {
+                            return occupiedSlots.includes(`${hourStr}:${min}`);
+                          });
 
                           return (
                             <option
                               key={hour}
                               value={hourStr}
-                              disabled={isSlotOccupied}
+                              // Блокируем час только если ВСЕ слоты заняты
+                              disabled={isHourFullyOccupied}
                               style={{
-                                backgroundColor: isSlotOccupied ? '#ffeeee' : '#fff',
-                                color: isSlotOccupied ? '#999' : '#000',
-                                pointerEvents: isSlotOccupied ? 'none' : 'auto'
+                                backgroundColor: isHourFullyOccupied ? '#ffeeee' : '#fff',
+                                color: isHourFullyOccupied ? '#999' : '#000',
+                                pointerEvents: isHourFullyOccupied ? 'none' : 'auto'
                               }}
                             >
                               {hourStr}
@@ -3096,33 +3099,36 @@ const HallViewer = ({ hallData: initialHallData, onDataChange }) => {
                       >
                         {Array.from({ length: 24 }, (_, i) => i).map(hour => {
                           const hourStr = hour.toString().padStart(2, '0');
-                          const minuteToCheck = bookingEndTime.split(':')[1] || '00';
-                          const slotToCheck = `${hourStr}:${minuteToCheck}`;
 
-                          // Проверяем, совпадает ли этот слот с каким-либо занятым слотом
-                          // ВАЖНО: не блокируем весь час, проверяем только конкретный слот
-                          const isSlotOccupied = occupiedSlots.includes(slotToCheck);
-
-                          // Разрешаем выбирать время окончания позже времени начала
+                          // Получаем время начала
                           const startHour = parseInt(bookingTime.split(':')[0] || '12', 10);
                           const startMinute = parseInt(bookingTime.split(':')[1] || '00', 10);
-                          const endHour = hour;
-                          const endMinute = parseInt(minuteToCheck, 10);
+                          const startTimeMinutes = startHour * 60 + startMinute;
 
-                          // Время окончания должно быть позже времени начала
-                          const allowSelection =
-                            endHour > startHour ||
-                            (endHour === startHour && endMinute > startMinute);
+                          // Проверяем, есть ли в этом часу свободные слоты после времени начала
+                          const hasAvailableSlots = ['00', '15', '30', '45'].some(min => {
+                            const endTimeMinutes = hour * 60 + parseInt(min, 10);
+
+                            // Время окончания должно быть после времени начала
+                            if (endTimeMinutes <= startTimeMinutes) return false;
+
+                            // И слот не должен быть занят
+                            return !occupiedSlots.includes(`${hourStr}:${min}`);
+                          });
+
+                          // Для часов, которые точно после часа начала, не требуются проверки,
+                          // т.к. даже если все слоты заняты, мы разрешаем выбрать
+                          const isAfterStartHour = hour > startHour;
 
                           return (
                             <option
                               key={hour}
                               value={hourStr}
-                              // Разрешаем выбор, даже если слот занят, если это время после начала
-                              disabled={isSlotOccupied && !allowSelection}
+                              // Блокируем час только если он не позже часа начала И в нем нет доступных слотов
+                              disabled={!isAfterStartHour && !hasAvailableSlots}
                               style={{
-                                backgroundColor: isSlotOccupied ? '#ffeeee' : '#fff',
-                                color: isSlotOccupied && !allowSelection ? '#999' : '#000'
+                                backgroundColor: (!isAfterStartHour && !hasAvailableSlots) ? '#ffeeee' : '#fff',
+                                color: (!isAfterStartHour && !hasAvailableSlots) ? '#999' : '#000'
                               }}
                             >
                               {hourStr}

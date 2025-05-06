@@ -163,15 +163,15 @@ const DateTimeUtils = {
    */
   calculateBookingSpan: (startTime, endTime, intervalMinutes = 15) => {
     if (!startTime || !endTime) return 1;
-    
+
     const startMinutes = DateTimeUtils.parseTimeToMinutes(startTime);
     let endMinutes = DateTimeUtils.parseTimeToMinutes(endTime);
-    
+
     // Особая обработка для случая, когда конечное время - полночь
     if (endMinutes === 0) {
       endMinutes = 24 * 60; // Рассматриваем как 24:00 текущего дня
     }
-    
+
     // Handle bookings that span midnight
     if (endMinutes < startMinutes) {
       // Add 24 hours (in minutes) to end time
@@ -192,16 +192,16 @@ const DateTimeUtils = {
    */
   isTimeSlotInBooking: (timeSlot, startTime, endTime) => {
     if (!timeSlot || !startTime || !endTime) return false;
-    
+
     const slotMinutes = DateTimeUtils.parseTimeToMinutes(timeSlot);
     const startMinutes = DateTimeUtils.parseTimeToMinutes(startTime);
     let endMinutes = DateTimeUtils.parseTimeToMinutes(endTime);
-    
+
     // Особая обработка для 00:00 как конец дня
     if (endMinutes === 0) {
       endMinutes = 24 * 60; // Считаем как 24:00
     }
-    
+
     // Handle bookings that span midnight
     if (endMinutes < startMinutes) {
       // Бронирование через полночь
@@ -845,369 +845,293 @@ const BookingCalendar = ({ hallData, groups, onBookingAdded, onBookingUpdated, o
   /**
    * Renders the day view calendar
    */
-/**
- * Renders the day view calendar
- */
-const renderDayView = () => {
-  // Format date for queries
-  const formattedDate = DateTimeUtils.formatDateToYMD(currentDate);
-  
-  // Create time slots for the entire day (00:00 to 23:45)
-  const workingHourSlots = timeSlots;
-  
-  // Group time slots by hour for headers
-  const hourGroups = {};
-  workingHourSlots.forEach(slot => {
-    const hour = slot.split(':')[0];
-    if (!hourGroups[hour]) {
-      hourGroups[hour] = [];
-    }
-    hourGroups[hour].push(slot);
-  });
-  
-  // Get current time for highlighting
-  const now = new Date();
-  const currentHour = now.getHours().toString().padStart(2, '0');
-  const currentMinute = Math.floor(now.getMinutes() / 15) * 15;
-  const currentTimeString = `${currentHour}:${currentMinute.toString().padStart(2, '0')}`;
-  
-  // Pre-process booking data for all tables and time slots
-  const bookingsData = {};
-  
-  if (hallData && hallData.tables) {
-    hallData.tables.forEach(table => {
-      bookingsData[table.id] = {};
-      
-      workingHourSlots.forEach(timeSlot => {
-        const isOccupied = isSlotOccupied(table.id, timeSlot, formattedDate);
-        const isStart = isBookingStart(table.id, timeSlot, formattedDate);
-        
-        if (isOccupied) {
-          let bookingSpan = 1;
-          let bookingDetails = null;
-          
-          if (isStart) {
-            const endTime = getBookingEndTime(table.id, timeSlot, formattedDate);
-            bookingSpan = getBookingSpan(timeSlot, endTime);
-            bookingDetails = getBookingDetails(table.id, timeSlot, formattedDate);
-          } else {
-            // Get details for non-starting cells too
-            bookingDetails = getBookingDetails(table.id, timeSlot, formattedDate);
-          }
-          
-          bookingsData[table.id][timeSlot] = {
-            isOccupied,
-            isStart,
-            bookingSpan,
-            bookingDetails
-          };
-        } else {
-          bookingsData[table.id][timeSlot] = {
-            isOccupied: false,
-            isStart: false,
-            bookingSpan: 1,
-            bookingDetails: null
-          };
-        }
-      });
+  /**
+   * Renders the day view calendar
+   */
+  const renderDayView = () => {
+    // Format date for queries
+    const formattedDate = DateTimeUtils.formatDateToYMD(currentDate);
+    
+    // Create time slots for the entire day (00:00 to 23:45)
+    const workingHourSlots = timeSlots;
+    
+    // Убеждаемся, что слоты отсортированы в правильном порядке
+    workingHourSlots.sort((a, b) => {
+      const aMinutes = DateTimeUtils.parseTimeToMinutes(a);
+      const bMinutes = DateTimeUtils.parseTimeToMinutes(b);
+      return aMinutes - bMinutes;
     });
-  }
-  
-  // Track which slots have been processed to skip cells
-  const processedSlots = {};
-  
-  // Check if tables exist
-  const hasTables = hallData && hallData.tables && hallData.tables.length > 0;
-  
-  return (
-    <div className="day-view" style={{ 
-      height: '100%', 
-      display: 'flex',
-      flexDirection: 'column',
-      backgroundColor: '#f5f5f5',
-      color: '#333'
-    }}>
-      <h3 style={{ 
-        margin: '0', 
-        textAlign: 'center',
-        padding: '15px',
-        backgroundColor: '#fff',
-        color: '#333',
-        borderBottom: '1px solid #ddd'
+    
+    // Group time slots by hour for headers
+    const hourGroups = {};
+    workingHourSlots.forEach(slot => {
+      const hour = slot.split(':')[0];
+      if (!hourGroups[hour]) {
+        hourGroups[hour] = [];
+      }
+      hourGroups[hour].push(slot);
+    });
+    
+    // Сортируем часы в числовом порядке от 00 до 23
+    const sortedHours = Object.keys(hourGroups).sort((a, b) => parseInt(a) - parseInt(b));
+    
+    // Get current time for highlighting
+    const now = new Date();
+    const currentHour = now.getHours().toString().padStart(2, '0');
+    const currentMinute = Math.floor(now.getMinutes() / 15) * 15;
+    const currentTimeString = `${currentHour}:${currentMinute.toString().padStart(2, '0')}`;
+    
+    // Pre-process booking data for all tables and time slots
+    const bookingsData = {};
+    
+    if (hallData && hallData.tables) {
+      hallData.tables.forEach(table => {
+        bookingsData[table.id] = {};
+        
+        workingHourSlots.forEach(timeSlot => {
+          const isOccupied = isSlotOccupied(table.id, timeSlot, formattedDate);
+          const isStart = isBookingStart(table.id, timeSlot, formattedDate);
+          
+          if (isOccupied) {
+            let bookingSpan = 1;
+            let bookingDetails = null;
+            
+            if (isStart) {
+              const endTime = getBookingEndTime(table.id, timeSlot, formattedDate);
+              bookingSpan = getBookingSpan(timeSlot, endTime);
+              bookingDetails = getBookingDetails(table.id, timeSlot, formattedDate);
+            } else {
+              // Get details for non-starting cells too
+              bookingDetails = getBookingDetails(table.id, timeSlot, formattedDate);
+            }
+            
+            bookingsData[table.id][timeSlot] = {
+              isOccupied,
+              isStart,
+              bookingSpan,
+              bookingDetails
+            };
+          } else {
+            bookingsData[table.id][timeSlot] = {
+              isOccupied: false,
+              isStart: false,
+              bookingSpan: 1,
+              bookingDetails: null
+            };
+          }
+        });
+      });
+    }
+    
+    // Track which slots have been processed to skip cells
+    const processedSlots = {};
+    
+    // Check if tables exist
+    const hasTables = hallData && hallData.tables && hallData.tables.length > 0;
+    
+    return (
+      <div className="day-view" style={{ 
+        height: '100%', 
+        display: 'flex',
+        flexDirection: 'column',
+        backgroundColor: '#f5f5f5',
+        color: '#333'
       }}>
-        Расписание на {currentDate.getDate()} {DateTimeUtils.getMonthName(currentDate.getMonth())} {currentDate.getFullYear()} - {DateTimeUtils.getDayName(currentDate.getDay())}
-      </h3>
-      
-      <div 
-        ref={timelineRef}
-        style={{ 
-          flex: 1, 
-          overflow: 'auto',
-          position: 'relative'
-        }}
-      >
-        <table style={{
-          borderCollapse: 'collapse',
-          width: 'max-content',
-          minWidth: '100%'
+        <h3 style={{ 
+          margin: '0', 
+          textAlign: 'center',
+          padding: '15px',
+          backgroundColor: '#fff',
+          color: '#333',
+          borderBottom: '1px solid #ddd'
         }}>
-          <thead style={{ position: 'sticky', top: 0, zIndex: 10 }}>
-            <tr>
-              {/* Time column header */}
-              <th style={{
-                backgroundColor: '#0a0a1d',
-                color: 'white',
-                padding: '10px',
-                width: '150px',
-                textAlign: 'center',
-                borderRight: '2px solid #444',
-                position: 'sticky',
-                left: 0,
-                zIndex: 11,
-                boxShadow: '2px 0 5px rgba(0,0,0,0.1)'
-              }}>
-                Время
-              </th>
-              
-              {/* Table headers */}
-              {hasTables && hallData.tables.map(table => (
-                <th key={table.id} style={{
+          Расписание на {currentDate.getDate()} {DateTimeUtils.getMonthName(currentDate.getMonth())} {currentDate.getFullYear()} - {DateTimeUtils.getDayName(currentDate.getDay())}
+        </h3>
+        
+        <div 
+          ref={timelineRef}
+          style={{ 
+            flex: 1, 
+            overflow: 'auto',
+            position: 'relative'
+          }}
+        >
+          <table style={{
+            borderCollapse: 'collapse',
+            width: 'max-content',
+            minWidth: '100%'
+          }}>
+            <thead style={{ position: 'sticky', top: 0, zIndex: 10 }}>
+              <tr>
+                {/* Time column header */}
+                <th style={{
                   backgroundColor: '#0a0a1d',
                   color: 'white',
                   padding: '10px',
+                  width: '150px',
                   textAlign: 'center',
-                  borderBottom: '1px solid #444',
-                  borderRight: '1px solid #444',
-                  width: '120px'
+                  borderRight: '2px solid #444',
+                  position: 'sticky',
+                  left: 0,
+                  zIndex: 11,
+                  boxShadow: '2px 0 5px rgba(0,0,0,0.1)'
                 }}>
-                  Стол {table.id}
+                  Время
                 </th>
-              ))}
-            </tr>
-          </thead>
-          
-          <tbody>
-            {/* Group cells by hour */}
-            {Object.keys(hourGroups).map(hour => (
-              <React.Fragment key={hour}>
-                {/* Hour header */}
-                <tr>
-                  <td style={{
-                    backgroundColor: '#2c3e50',
+                
+                {/* Table headers */}
+                {hasTables && hallData.tables.map(table => (
+                  <th key={table.id} style={{
+                    backgroundColor: '#0a0a1d',
                     color: 'white',
-                    padding: '8px 15px',
-                    fontSize: '15px',
-                    fontWeight: 'bold',
+                    padding: '10px',
                     textAlign: 'center',
                     borderBottom: '1px solid #444',
-                    borderRight: '2px solid #444',
-                    position: 'sticky',
-                    left: 0,
-                    zIndex: 9,
-                    boxShadow: '2px 0 5px rgba(0,0,0,0.1)'
+                    borderRight: '1px solid #444',
+                    width: '120px'
                   }}>
-                    {hour}:00
-                  </td>
-                  
-                  {/* Add horizontal hour divider for each table */}
-                  {hasTables && hallData.tables.map(table => (
-                    <td key={table.id} style={{
+                    Стол {table.id}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            
+            <tbody>
+              {/* Group cells by hour */}
+              {sortedHours.map(hour => (
+                <React.Fragment key={hour}>
+                  {/* Hour header */}
+                  <tr>
+                    <td style={{
                       backgroundColor: '#2c3e50',
+                      color: 'white',
+                      padding: '8px 15px',
+                      fontSize: '15px',
+                      fontWeight: 'bold',
+                      textAlign: 'center',
                       borderBottom: '1px solid #444',
-                      borderRight: '1px solid #444',
-                      padding: '2px'
-                    }}></td>
-                  ))}
-                </tr>
-                
-                {/* Rows for time slots within this hour */}
-                {hourGroups[hour].map((timeSlot) => {
-                  const isCurrentTime = timeSlot === currentTimeString;
-                  
-                  // Reset processed slots tracking for each new time slot
-                  Object.keys(processedSlots).forEach(tableId => {
-                    processedSlots[tableId] = processedSlots[tableId] || {};
-                  });
-                  
-                  return (
-                    <tr key={timeSlot} style={{
-                      backgroundColor: isCurrentTime ? 'rgba(52, 152, 219, 0.1)' : 'transparent'
+                      borderRight: '2px solid #444',
+                      position: 'sticky',
+                      left: 0,
+                      zIndex: 9,
+                      boxShadow: '2px 0 5px rgba(0,0,0,0.1)'
                     }}>
-                      {/* Time cell */}
-                      <td style={{
-                        backgroundColor: isCurrentTime ? 'rgba(52, 152, 219, 0.3)' : '#f0f0f0',
-                        color: '#333',
-                        padding: '6px 10px',
-                        fontSize: '13px',
-                        textAlign: 'center',
-                        borderBottom: '1px solid #ddd',
-                        borderRight: '2px solid #444',
-                        position: 'sticky',
-                        left: 0,
-                        zIndex: 9,
-                        boxShadow: '2px 0 5px rgba(0,0,0,0.1)',
-                        fontWeight: isCurrentTime ? 'bold' : 'normal'
-                      }}
-                      ref={isCurrentTime ? currentTimeRef : null}
-                      >
-                        {timeSlot.split(':')[1] === '00' ? timeSlot : timeSlot.split(':')[1]}
-                      </td>
-                      
-                      {/* Cells for each table at this time slot */}
-                      {hasTables && hallData.tables.map(table => {
-                        const tableId = table.id;
+                      {hour}:00
+                    </td>
+                    
+                    {/* Add horizontal hour divider for each table */}
+                    {hasTables && hallData.tables.map(table => (
+                      <td key={table.id} style={{
+                        backgroundColor: '#2c3e50',
+                        borderBottom: '1px solid #444',
+                        borderRight: '1px solid #444',
+                        padding: '2px'
+                      }}></td>
+                    ))}
+                  </tr>
+                  
+                  {/* Rows for time slots within this hour */}
+                  {hourGroups[hour].map((timeSlot) => {
+                    const isCurrentTime = timeSlot === currentTimeString;
+                    
+                    // Reset processed slots tracking for each new time slot
+                    Object.keys(processedSlots).forEach(tableId => {
+                      processedSlots[tableId] = processedSlots[tableId] || {};
+                    });
+                    
+                    return (
+                      <tr key={timeSlot} style={{
+                        backgroundColor: isCurrentTime ? 'rgba(52, 152, 219, 0.1)' : 'transparent'
+                      }}>
+                        {/* Time cell */}
+                        <td style={{
+                          backgroundColor: isCurrentTime ? 'rgba(52, 152, 219, 0.3)' : '#f0f0f0',
+                          color: '#333',
+                          padding: '6px 10px',
+                          fontSize: '13px',
+                          textAlign: 'center',
+                          borderBottom: '1px solid #ddd',
+                          borderRight: '2px solid #444',
+                          position: 'sticky',
+                          left: 0,
+                          zIndex: 9,
+                          boxShadow: '2px 0 5px rgba(0,0,0,0.1)',
+                          fontWeight: isCurrentTime ? 'bold' : 'normal'
+                        }}
+                        ref={isCurrentTime ? currentTimeRef : null}
+                        >
+                          {timeSlot.split(':')[1] === '00' ? timeSlot : timeSlot.split(':')[1]}
+                        </td>
                         
-                        // Skip if this slot is already processed (part of a previous booking)
-                        if (processedSlots[tableId] && processedSlots[tableId][timeSlot]) {
-                          return null;
-                        }
-                        
-                        const bookingData = bookingsData[tableId][timeSlot];
-                        const { isOccupied, isStart, bookingSpan, bookingDetails } = bookingData;
-                        
-                        // ИСПРАВЛЕНО: Более точная обработка ячеек и rowSpan с учетом разделителей часов
-                        if (isStart && bookingSpan > 1) {
-                          processedSlots[tableId] = processedSlots[tableId] || {};
+                        {/* Cells for each table at this time slot */}
+                        {hasTables && hallData.tables.map(table => {
+                          const tableId = table.id;
                           
-                          // Находим все временные слоты, которые охватывает это бронирование
-                          const slotIndex = workingHourSlots.indexOf(timeSlot);
-                          
-                          // Рассчитываем, сколько часовых разделителей пересекает бронирование
-                          const hourDividers = new Set();
-                          
-                          for (let i = 1; i < bookingSpan; i++) {
-                            if (slotIndex + i < workingHourSlots.length) {
-                              const nextSlot = workingHourSlots[slotIndex + i];
-                              processedSlots[tableId][nextSlot] = true;
-                              
-                              // Если следующий слот начинает новый час, добавляем его в множество
-                              const nextHour = nextSlot.split(':')[0];
-                              if (nextSlot.split(':')[1] === '00') {
-                                hourDividers.add(nextHour);
-                              }
-                            }
+                          // Skip if this slot is already processed (part of a previous booking)
+                          if (processedSlots[tableId] && processedSlots[tableId][timeSlot]) {
+                            return null;
                           }
                           
-                          // Корректируем rowSpan, учитывая часовые разделители
-                          // Общий rowSpan = кол-во временных слотов + кол-во часовых разделителей
-                          const totalRowSpan = bookingSpan + hourDividers.size;
+                          const bookingData = bookingsData[tableId][timeSlot];
+                          const { isOccupied, isStart, bookingSpan, bookingDetails } = bookingData;
                           
-                          // Find the full booking if this cell is part of a booking
-                          const fullBooking = isOccupied && bookingDetails ? 
-                            allBookings.find(b => 
-                              b.tableId === tableId && 
-                              b.personName === bookingDetails.name &&
-                              b.dateString === formattedDate
-                            ) : null;
-                          
-                          return (
-                            <td 
-                              key={`${tableId}-${timeSlot}`}
-                              rowSpan={totalRowSpan}
-                              style={{
-                                backgroundColor: '#e74c3c', // Всегда красный для занятых ячеек
-                                border: '1px solid rgba(255, 255, 255, 0.4)',
-                                padding: 0,
-                                minHeight: '30px',
-                                height: `${totalRowSpan * 30}px`,
-                                position: 'relative',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s'
-                              }}
-                              onClick={() => fullBooking && handleSelectBooking(fullBooking)}
-                              onMouseOver={(e) => {
-                                e.currentTarget.style.backgroundColor = '#c0392b';
-                              }}
-                              onMouseOut={(e) => {
-                                e.currentTarget.style.backgroundColor = '#e74c3c';
-                              }}
-                            >
-                              {/* Display information in booking start cell */}
-                              <div style={{
-                                position: 'absolute',
-                                top: 0,
-                                left: 0,
-                                right: 0,
-                                bottom: 0,
-                                padding: '5px',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                justifyContent: 'center',
-                                alignItems: 'center',
-                                textAlign: 'center',
-                                color: 'white',
-                                fontSize: '12px',
-                                fontWeight: 'bold',
-                                whiteSpace: 'nowrap',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis'
-                              }}>
-                                <div style={{ fontSize: '13px', fontWeight: 'bold' }}>{bookingDetails.name}</div>
-                                <div style={{ fontSize: '10px' }}>
-                                  {bookingDetails.startTime} - {bookingDetails.endTime}
-                                </div>
-                                {bookingDetails.note && (
-                                  <div style={{ 
-                                    fontSize: '9px', 
-                                    marginTop: '2px',
-                                    maxWidth: '100%',
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    whiteSpace: 'nowrap'
-                                  }}>
-                                    {bookingDetails.note}
-                                  </div>
-                                )}
-                              </div>
-                            </td>
-                          );
-                        } else if (isOccupied && !isStart) {
-                          // Это ячейка продолжения бронирования, но она уже обработана выше
-                          // В правильной реализации эта ветка не должна выполняться вообще
-                          return null;
-                        } else {
-                          // Свободная ячейка или начало нового однослотового бронирования
-                          // Find the full booking if this cell is part of a booking
-                          const fullBooking = isOccupied && bookingDetails ? 
-                            allBookings.find(b => 
-                              b.tableId === tableId && 
-                              b.personName === bookingDetails.name &&
-                              b.dateString === formattedDate
-                            ) : null;
-                          
-                          return (
-                            <td 
-                              key={`${tableId}-${timeSlot}`}
-                              style={{
-                                backgroundColor: isOccupied
-                                  ? '#e74c3c' // Red for occupied cells
-                                  : (isCurrentTime ? 'rgba(46, 204, 113, 0.3)' : '#2ecc71'), // Green for free
-                                border: '1px solid rgba(255, 255, 255, 0.4)',
-                                padding: 0,
-                                minHeight: '30px',
-                                height: '30px',
-                                position: 'relative',
-                                cursor: isOccupied ? 'pointer' : 'default',
-                                transition: 'all 0.2s'
-                              }}
-                              onClick={() => isOccupied && fullBooking && handleSelectBooking(fullBooking)}
-                              onMouseOver={(e) => {
-                                if (isOccupied) {
+                          if (isStart && bookingSpan > 1) {
+                            processedSlots[tableId] = processedSlots[tableId] || {};
+                            
+                            // Находим все временные слоты, которые охватывает это бронирование
+                            const slotIndex = workingHourSlots.indexOf(timeSlot);
+                            
+                            // Рассчитываем, сколько часовых разделителей пересекает бронирование
+                            const hourDividers = new Set();
+                            
+                            for (let i = 1; i < bookingSpan; i++) {
+                              if (slotIndex + i < workingHourSlots.length) {
+                                const nextSlot = workingHourSlots[slotIndex + i];
+                                processedSlots[tableId][nextSlot] = true;
+                                
+                                // Если следующий слот начинает новый час, добавляем его в множество
+                                const nextHour = nextSlot.split(':')[0];
+                                if (nextSlot.split(':')[1] === '00') {
+                                  hourDividers.add(nextHour);
+                                }
+                              }
+                            }
+                            
+                            // Корректируем rowSpan, учитывая часовые разделители
+                            // Общий rowSpan = кол-во временных слотов + кол-во часовых разделителей
+                            const totalRowSpan = bookingSpan + hourDividers.size;
+                            
+                            // Find the full booking if this cell is part of a booking
+                            const fullBooking = isOccupied && bookingDetails ? 
+                              allBookings.find(b => 
+                                b.tableId === tableId && 
+                                b.personName === bookingDetails.name &&
+                                b.dateString === formattedDate
+                              ) : null;
+                            
+                            return (
+                              <td 
+                                key={`${tableId}-${timeSlot}`}
+                                rowSpan={totalRowSpan}
+                                style={{
+                                  backgroundColor: '#e74c3c', // Всегда красный для занятых ячеек
+                                  border: '1px solid rgba(255, 255, 255, 0.4)',
+                                  padding: 0,
+                                  minHeight: '30px',
+                                  height: `${totalRowSpan * 30}px`,
+                                  position: 'relative',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.2s'
+                                }}
+                                onClick={() => fullBooking && handleSelectBooking(fullBooking)}
+                                onMouseOver={(e) => {
                                   e.currentTarget.style.backgroundColor = '#c0392b';
-                                } else {
-                                  e.currentTarget.style.opacity = '0.8';
-                                }
-                              }}
-                              onMouseOut={(e) => {
-                                if (isOccupied) {
+                                }}
+                                onMouseOut={(e) => {
                                   e.currentTarget.style.backgroundColor = '#e74c3c';
-                                } else {
-                                  e.currentTarget.style.opacity = '1';
-                                }
-                              }}
-                            >
-                              {/* Also show client name in non-start booking cells */}
-                              {isOccupied && bookingDetails && (
+                                }}
+                              >
+                                {/* Измененный формат отображения в занятых ячейках */}
                                 <div style={{
                                   position: 'absolute',
                                   top: 0,
@@ -1221,54 +1145,138 @@ const renderDayView = () => {
                                   alignItems: 'center',
                                   textAlign: 'center',
                                   color: 'white',
-                                  fontSize: '11px',
+                                  fontSize: '12px',
                                   fontWeight: 'bold',
                                   whiteSpace: 'nowrap',
                                   overflow: 'hidden',
                                   textOverflow: 'ellipsis'
                                 }}>
-                                  {bookingDetails.name}
+                                  <div style={{ fontSize: '13px', fontWeight: 'bold' }}>
+                                    {bookingDetails.startTime}-{bookingDetails.endTime} ({bookingDetails.name})
+                                  </div>
+                                  {bookingDetails.note && (
+                                    <div style={{ 
+                                      fontSize: '9px', 
+                                      marginTop: '2px',
+                                      maxWidth: '100%',
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis',
+                                      whiteSpace: 'nowrap'
+                                    }}>
+                                      {bookingDetails.note}
+                                    </div>
+                                  )}
                                 </div>
-                              )}
-                            </td>
-                          );
-                        }
-                      })}
-                    </tr>
-                  );
-                })}
-              </React.Fragment>
-            ))}
-          </tbody>
-        </table>
+                              </td>
+                            );
+                          } else if (isOccupied && !isStart) {
+                            // Это ячейка продолжения бронирования, но она уже обработана выше
+                            // В правильной реализации эта ветка не должна выполняться вообще
+                            return null;
+                          } else {
+                            // Свободная ячейка или начало нового однослотового бронирования
+                            // Find the full booking if this cell is part of a booking
+                            const fullBooking = isOccupied && bookingDetails ? 
+                              allBookings.find(b => 
+                                b.tableId === tableId && 
+                                b.personName === bookingDetails.name &&
+                                b.dateString === formattedDate
+                              ) : null;
+                            
+                            return (
+                              <td 
+                                key={`${tableId}-${timeSlot}`}
+                                style={{
+                                  backgroundColor: isOccupied
+                                    ? '#e74c3c' // Red for occupied cells
+                                    : (isCurrentTime ? 'rgba(46, 204, 113, 0.3)' : '#2ecc71'), // Green for free
+                                  border: '1px solid rgba(255, 255, 255, 0.4)',
+                                  padding: 0,
+                                  minHeight: '30px',
+                                  height: '30px',
+                                  position: 'relative',
+                                  cursor: isOccupied ? 'pointer' : 'default',
+                                  transition: 'all 0.2s'
+                                }}
+                                onClick={() => isOccupied && fullBooking && handleSelectBooking(fullBooking)}
+                                onMouseOver={(e) => {
+                                  if (isOccupied) {
+                                    e.currentTarget.style.backgroundColor = '#c0392b';
+                                  } else {
+                                    e.currentTarget.style.opacity = '0.8';
+                                  }
+                                }}
+                                onMouseOut={(e) => {
+                                  if (isOccupied) {
+                                    e.currentTarget.style.backgroundColor = '#e74c3c';
+                                  } else {
+                                    e.currentTarget.style.opacity = '1';
+                                  }
+                                }}
+                              >
+                                {/* Также измененный формат для однослотового бронирования */}
+                                {isOccupied && bookingDetails && (
+                                  <div style={{
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    right: 0,
+                                    bottom: 0,
+                                    padding: '5px',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    textAlign: 'center',
+                                    color: 'white',
+                                    fontSize: '11px',
+                                    fontWeight: 'bold',
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis'
+                                  }}>
+                                    {bookingDetails.startTime}-{bookingDetails.endTime} ({bookingDetails.name})
+                                  </div>
+                                )}
+                              </td>
+                            );
+                          }
+                        })}
+                      </tr>
+                    );
+                  })}
+                </React.Fragment>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        
+        {/* Scroll to current time button */}
+        <button
+          onClick={() => setScrollToCurrentTime(true)}
+          style={{
+            position: 'fixed',
+            bottom: '20px',
+            right: '20px',
+            backgroundColor: '#3498db',
+            color: 'white',
+            border: 'none',
+            borderRadius: '50%',
+            width: '50px',
+            height: '50px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 2px 10px rgba(0, 0, 0, 0.2)',
+            cursor: 'pointer',
+            zIndex: 10
+          }}
+        >
+          <span style={{ fontSize: '20px' }}>⌚</span>
+        </button>
       </div>
-      
-      {/* Scroll to current time button */}
-      <button
-        onClick={() => setScrollToCurrentTime(true)}
-        style={{
-          position: 'fixed',
-          bottom: '20px',
-          right: '20px',
-          backgroundColor: '#3498db',
-          color: 'white',
-          border: 'none',
-          borderRadius: '50%',
-          width: '50px',
-          height: '50px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          boxShadow: '0 2px 10px rgba(0, 0, 0, 0.2)',
-          cursor: 'pointer',
-          zIndex: 10
-        }}
-      >
-        <span style={{ fontSize: '20px' }}>⌚</span>
-      </button>
-    </div>
-  );
-};
+    );
+  };
 
   /**
    * Renders the week view calendar
