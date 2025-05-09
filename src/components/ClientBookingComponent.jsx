@@ -78,6 +78,9 @@ const ClientBookingComponent = () => {
   
   // Enhanced touch state for mobile pinch zoom
   const [touchDistance, setTouchDistance] = useState(null);
+ useEffect(() => {
+  setZoom(0.2)
+  }, []);
 
   useEffect(() => {
     // Try loading saved hall data from localStorage on initial load
@@ -1718,7 +1721,7 @@ const ClientBookingComponent = () => {
                 Количество гостей:
               </label>
               <input
-                type="number"
+                type="text"
                 min="1"
                 value={guestCount}
                 onChange={(e) => setGuestCount(Math.max(1, parseInt(e.target.value) || 1))}
