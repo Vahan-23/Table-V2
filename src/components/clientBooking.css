@@ -55,7 +55,7 @@
   background-size: 20px 20px;
   background-color: #e6eef5;
   cursor: grab;
-  touch-action: auto;
+  /* touch-action: auto; */
 
 }
 

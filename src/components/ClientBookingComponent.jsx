@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './clientBooking.css';
-
-// Helper functions
+import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
+// Helper functions remain the same
 const parseTimeToMinutes = (timeString) => {
   if (!timeString) return 0;
   const [hours, minutes] = timeString.split(':').map(Number);
@@ -47,13 +47,14 @@ const findNextAvailableTime = (occupiedSlots, startHour = 12) => {
       }
     }
   }
-  
+
   return "12:00"; // Default fallback
 };
 
 const ClientBookingComponent = () => {
   const [hallData, setHallData] = useState(null);
-  const [zoom, setZoom] = useState(0.21);
+  const [scale, setScale] = useState(1);
+  const [zoom, setZoom] = useState(0.2);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [selectedTableId, setSelectedTableId] = useState(null);
@@ -68,17 +69,21 @@ const ClientBookingComponent = () => {
   const [bookingSuccess, setBookingSuccess] = useState(false);
   const [bookingSummary, setBookingSummary] = useState(null);
   const [occupiedSlots, setOccupiedSlots] = useState([]);
-  
+
   const tablesAreaRef = useRef(null);
-  
+  const zoomRef = useRef(0.2); // Use ref for intermediate zoom values to prevent re-renders
+
   // View dragging state
   const [isDraggingView, setIsDraggingView] = useState(false);
   const [dragStartPosition, setDragStartPosition] = useState({ x: 0, y: 0 });
   const [initialScrollPosition, setInitialScrollPosition] = useState({ x: 0, y: 0 });
-  
+
   // Enhanced touch state for mobile pinch zoom
-  const [touchDistance, setTouchDistance] = useState(null);
- useEffect(() => {
+  const touchDistanceRef = useRef(null);
+  const zoomOperationInProgress = useRef(false);
+  const lastZoomUpdateTime = useRef(0);
+
+  useEffect(() => {
     setTimeout(() => {
       var zoomOutBtn = window.document.getElementById('zoomOutBtn');
       zoomOutBtn.click();
@@ -130,7 +135,7 @@ const ClientBookingComponent = () => {
       const now = new Date();
       const currentHour = now.getHours();
       let currentMinute = Math.ceil(now.getMinutes() / 15) * 15;
-      
+
       // Adjust if we rolled over to next hour
       if (currentMinute === 60) {
         currentMinute = 0;
@@ -178,11 +183,11 @@ const ClientBookingComponent = () => {
     };
 
     reader.readAsText(file);
-    
+
     // Reset input value to allow selecting the same file again
     event.target.value = "";
   };
-  
+
   // Get all occupied time slots for a table
   const getOccupiedTimeSlots = (tableId, date) => {
     if (!hallData || !hallData.tables) return [];
@@ -245,15 +250,15 @@ const ClientBookingComponent = () => {
 
     return occupiedSlots;
   };
-  
+
   // Check if a time range is available for booking
   const isTableAvailableAtTime = (tableId, date, startTime, endTime) => {
     const occupiedSlots = getOccupiedTimeSlots(tableId, date);
-    
+
     // Convert times to minutes
     const startMinutes = parseTimeToMinutes(startTime);
     const endMinutes = parseTimeToMinutes(endTime);
-    
+
     // Check for overlaps
     if (endMinutes < startMinutes) {
       // Booking spans midnight
@@ -262,18 +267,18 @@ const ClientBookingComponent = () => {
         const hour = Math.floor(time / 60).toString().padStart(2, '0');
         const minute = (time % 60).toString().padStart(2, '0');
         const timeSlot = `${hour}:${minute}`;
-        
+
         if (occupiedSlots.includes(timeSlot)) {
           return false;
         }
       }
-      
+
       // Check from midnight to end time
       for (let time = 0; time < endMinutes; time += 15) {
         const hour = Math.floor(time / 60).toString().padStart(2, '0');
         const minute = (time % 60).toString().padStart(2, '0');
         const timeSlot = `${hour}:${minute}`;
-        
+
         if (occupiedSlots.includes(timeSlot)) {
           return false;
         }
@@ -284,28 +289,28 @@ const ClientBookingComponent = () => {
         const hour = Math.floor(time / 60).toString().padStart(2, '0');
         const minute = (time % 60).toString().padStart(2, '0');
         const timeSlot = `${hour}:${minute}`;
-        
+
         if (occupiedSlots.includes(timeSlot)) {
           return false;
         }
       }
     }
-    
+
     return true;
   };
-  
+
   // Get table booking info for display
   const getTableBookings = (tableId, date) => {
     if (!hallData || !hallData.tables) return [];
-    
+
     const table = hallData.tables.find(t => t.id === tableId);
     if (!table || !table.people) return [];
-    
+
     const bookings = [];
-    
+
     table.people.forEach(person => {
       if (!person || !person.booking) return;
-      
+
       // Check if booking is for the requested date
       if (person.booking.date === date) {
         bookings.push({
@@ -316,32 +321,32 @@ const ClientBookingComponent = () => {
         });
       }
     });
-    
+
     // Sort bookings by start time
     return bookings.sort((a, b) => {
       return parseTimeToMinutes(a.startTime) - parseTimeToMinutes(b.startTime);
     });
   };
-  
+
   // Merge consecutive bookings for display
   const getMergedTimeRanges = (bookings) => {
     if (!bookings || bookings.length === 0) return [];
-    
+
     // Sort bookings by start time
     const sortedBookings = [...bookings].sort((a, b) => {
       const aMinutes = parseTimeToMinutes(a.startTime);
       const bMinutes = parseTimeToMinutes(b.startTime);
       return aMinutes - bMinutes;
     });
-    
+
     const mergedRanges = [];
     let currentRange = { ...sortedBookings[0] };
-    
+
     for (let i = 1; i < sortedBookings.length; i++) {
       const booking = sortedBookings[i];
       const currentEndMinutes = parseTimeToMinutes(currentRange.endTime);
       const nextStartMinutes = parseTimeToMinutes(booking.startTime);
-      
+
       // Check if bookings are consecutive or overlapping
       if (nextStartMinutes <= currentEndMinutes) {
         // Update end time if the new booking ends later
@@ -355,10 +360,10 @@ const ClientBookingComponent = () => {
         currentRange = { ...booking };
       }
     }
-    
+
     // Add the last range
     mergedRanges.push(currentRange);
-    
+
     return mergedRanges;
   };
 
@@ -368,7 +373,7 @@ const ClientBookingComponent = () => {
     // After selecting table, show booking form
     setShowBookingModal(true);
   };
-  
+
   // Handle booking confirmation
   const confirmBooking = () => {
     // Validate inputs
@@ -376,30 +381,30 @@ const ClientBookingComponent = () => {
       alert('Пожалуйста, введите ваше имя');
       return;
     }
-    
+
     if (!clientPhone.trim()) {
       alert('Пожалуйста, введите ваш номер телефона');
       return;
     }
-    
+
     if (guestCount < 1) {
       alert('Количество гостей должно быть не менее 1');
       return;
     }
-    
+
     // Check if table is available at selected time
     if (!isTableAvailableAtTime(selectedTableId, bookingDate, bookingTime, bookingEndTime)) {
       alert('Выбранное время недоступно. Пожалуйста, выберите другое время.');
       return;
     }
-    
+
     // Create client info
     const client = {
       name: clientName.trim(),
       phone: clientPhone.trim(),
       guestCount: guestCount
     };
-    
+
     // Create booking details
     const bookingDetails = {
       date: bookingDate,
@@ -408,14 +413,14 @@ const ClientBookingComponent = () => {
       note: bookingNote.trim(),
       timestamp: new Date().toISOString()
     };
-    
+
     // Update hall data with new booking
     setHallData(prevData => {
       const updatedTables = prevData.tables.map(t => {
         if (t.id === selectedTableId) {
           // Create a copy of the people array or initialize it
           const tablePeople = [...(t.people || [])];
-          
+
           // Find the first empty chair or add to the end
           let chairIndex = -1;
           for (let i = 0; i < tablePeople.length; i++) {
@@ -424,12 +429,12 @@ const ClientBookingComponent = () => {
               break;
             }
           }
-          
+
           // If no empty chair found, add to the end
           if (chairIndex === -1) {
             chairIndex = tablePeople.length;
           }
-          
+
           // Place the client with booking info
           tablePeople[chairIndex] = {
             name: client.name,
@@ -439,7 +444,7 @@ const ClientBookingComponent = () => {
             seatsOccupied: client.guestCount,
             booking: bookingDetails
           };
-          
+
           return {
             ...t,
             people: tablePeople
@@ -447,18 +452,18 @@ const ClientBookingComponent = () => {
         }
         return t;
       });
-      
+
       const updatedHallData = {
         ...prevData,
         tables: updatedTables
       };
-      
+
       // Save to localStorage
       localStorage.setItem('hallData', JSON.stringify(updatedHallData));
-      
+
       return updatedHallData;
     });
-    
+
     // Show success message
     setBookingSummary({
       tableName: `Стол ${selectedTableId}`,
@@ -468,10 +473,10 @@ const ClientBookingComponent = () => {
       name: clientName,
       phone: clientPhone
     });
-    
+
     setBookingSuccess(true);
   };
-  
+
   // Reset booking form
   const resetBooking = () => {
     setBookingSuccess(false);
@@ -485,17 +490,92 @@ const ClientBookingComponent = () => {
     setBookingEndTime('');
     setBookingSummary(null);
   };
-  
-  // Zoom handlers
+
+  // Apply zoom with smooth animation and centered on point
+  const applyZoom = (newZoom, centerX, centerY) => {
+    if (!tablesAreaRef.current) return;
+
+    // Use the current zoom value from the ref, not state
+    const currentZoom = zoomRef.current;
+
+    // Get scroll position
+    const containerRect = tablesAreaRef.current.getBoundingClientRect();
+    const scrollLeft = tablesAreaRef.current.scrollLeft;
+    const scrollTop = tablesAreaRef.current.scrollTop;
+
+    // Calculate relative position of center point within viewport
+    const relX = (centerX - containerRect.left) / containerRect.width;
+    const relY = (centerY - containerRect.top) / containerRect.height;
+
+    // Calculate the position in the document at current zoom
+    const docX = scrollLeft + relX * containerRect.width;
+    const docY = scrollTop + relY * containerRect.height;
+
+    // Calculate the position in the unzoomed document
+    const unzoomedX = docX / currentZoom;
+    const unzoomedY = docY / currentZoom;
+
+    // Calculate new scroll position to keep the point fixed
+    const newScrollLeft = unzoomedX * newZoom - relX * containerRect.width;
+    const newScrollTop = unzoomedY * newZoom - relY * containerRect.height;
+
+    // Update the zoom ref
+    zoomRef.current = newZoom;
+
+    // Only update state if significantly different (reduces re-renders)
+    if (Math.abs(newZoom - zoom) > 0.01) {
+      setZoom(newZoom);
+    }
+
+    // Set new scroll position to keep the center point fixed
+    tablesAreaRef.current.scrollLeft = newScrollLeft;
+    tablesAreaRef.current.scrollTop = newScrollTop;
+  };
+
+  // Throttle zoom updates
+  const throttledZoom = (newZoom, centerX, centerY) => {
+    const now = Date.now();
+    if (now - lastZoomUpdateTime.current > 50) { // 50ms throttle
+      lastZoomUpdateTime.current = now;
+      applyZoom(newZoom, centerX, centerY);
+    } else {
+      // Schedule for later if we're throttling
+      if (!zoomOperationInProgress.current) {
+        zoomOperationInProgress.current = true;
+        window.requestAnimationFrame(() => {
+          applyZoom(newZoom, centerX, centerY);
+          zoomOperationInProgress.current = false;
+        });
+      }
+    }
+  };
+
+  // Zoom buttons
   const handleZoomIn = () => {
-    setZoom(Math.min(zoom * 1.2, 1.0));
+    const newZoom = Math.min(zoomRef.current * 1.2, 1.0);
+    if (!tablesAreaRef.current) return;
+
+    // Center zoom on the middle of the viewport
+    const rect = tablesAreaRef.current.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+
+    applyZoom(newZoom, centerX, centerY);
   };
 
   const handleZoomOut = () => {
-    setZoom(Math.max(zoom / 1.2, 0.2));
+    const newZoom = Math.max(zoomRef.current / 1.2, 0.2);
+    if (!tablesAreaRef.current) return;
+
+    // Center zoom on the middle of the viewport
+    const rect = tablesAreaRef.current.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+
+    applyZoom(newZoom, centerX, centerY);
   };
-  
-  // Mouse wheel zoom
+
+  // Enhanced mouse wheel zoom - centered on cursor position
   const handleWheel = (e) => {
     // Only zoom if Ctrl key is pressed
     if (e.ctrlKey) {
@@ -505,50 +585,52 @@ const ClientBookingComponent = () => {
       let newZoom;
       if (e.deltaY < 0) {
         // Zoom in
-        newZoom = Math.min(zoom * 1.1, 1.0);
+        newZoom = Math.min(zoomRef.current * 1.1, 1.0);
       } else {
         // Zoom out
-        newZoom = Math.max(zoom / 1.1, 0.2);
+        newZoom = Math.max(zoomRef.current / 1.1, 0.2);
       }
 
-      // Update zoom
-      setZoom(newZoom);
+      // Apply zoom centered on cursor position
+      throttledZoom(newZoom, e.clientX, e.clientY);
     }
   };
-  
-  // Handle touch events for mobile devices
+
+  // Enhanced touch events for mobile devices with optimized pinch zoom
   const handleTouchStart = (e) => {
     if (e.touches.length === 2) {
       // Pinch zoom detected - two fingers
       e.preventDefault();
-      
+
       const touch1 = e.touches[0];
       const touch2 = e.touches[1];
+
+      // Calculate distance between fingers
       const distance = Math.hypot(
         touch2.clientX - touch1.clientX,
         touch2.clientY - touch1.clientY
       );
-      
+
       // Store center point between the two fingers
       const centerX = (touch1.clientX + touch2.clientX) / 2;
       const centerY = (touch1.clientY + touch2.clientY) / 2;
-      
-      setTouchDistance({
+
+      // Store initial zoom info in ref
+      touchDistanceRef.current = {
         distance,
         centerX,
         centerY,
-        scrollLeft: tablesAreaRef.current.scrollLeft,
-        scrollTop: tablesAreaRef.current.scrollTop
-      });
+        initialZoom: zoomRef.current
+      };
     } else if (e.touches.length === 1) {
       // Single finger drag/scroll
       // Only prevent default if not touching a table or interactive element
       if (!e.target.closest('.table-container, button, .hall-element, input, select, textarea')) {
         e.preventDefault();
         setIsDraggingView(true);
-        setDragStartPosition({ 
-          x: e.touches[0].clientX, 
-          y: e.touches[0].clientY 
+        setDragStartPosition({
+          x: e.touches[0].clientX,
+          y: e.touches[0].clientY
         });
         setInitialScrollPosition({
           x: tablesAreaRef.current.scrollLeft,
@@ -557,61 +639,43 @@ const ClientBookingComponent = () => {
       }
     }
   };
-  
+
   const handleTouchMove = (e) => {
-    if (e.touches.length === 2 && touchDistance) {
-      // Handle pinch zoom
+    if (e.touches.length === 2 && touchDistanceRef.current) {
+      // Optimized pinch zoom
       e.preventDefault();
-      
+
       const touch1 = e.touches[0];
       const touch2 = e.touches[1];
+
+      // Calculate new distance between fingers
       const newDistance = Math.hypot(
         touch2.clientX - touch1.clientX,
         touch2.clientY - touch1.clientY
       );
-      
-      // Calculate zoom change based on pinch distance
-      const scaleFactor = newDistance / touchDistance.distance;
-      
-      // Calculate new zoom level with limits and smoother transition
-      const newZoom = Math.min(Math.max(zoom * scaleFactor, 0.2), 1.0);
-      
-      // Calculate the new center point
+
+      // Calculate scale change
+      const scale = newDistance / touchDistanceRef.current.distance;
+      const newZoom = Math.min(Math.max(touchDistanceRef.current.initialZoom * scale, 0.2), 1.0);
+
+      // Get new center point
       const newCenterX = (touch1.clientX + touch2.clientX) / 2;
       const newCenterY = (touch1.clientY + touch2.clientY) / 2;
-      
-      // Update zoom
-      setZoom(newZoom);
-      
-      // Update touch distance with new values
-      setTouchDistance({
-        ...touchDistance,
-        distance: newDistance,
-        centerX: newCenterX,
-        centerY: newCenterY
-      });
-      
-      // Adjust scroll position to keep the pinch center point fixed
-      if (tablesAreaRef.current) {
-        // This part helps keep the zoom centered on the pinch point
-        const dx = newCenterX - touchDistance.centerX;
-        const dy = newCenterY - touchDistance.centerY;
-        
-        tablesAreaRef.current.scrollLeft = touchDistance.scrollLeft - dx + (touchDistance.scrollLeft * (scaleFactor - 1));
-        tablesAreaRef.current.scrollTop = touchDistance.scrollTop - dy + (touchDistance.scrollTop * (scaleFactor - 1));
-      }
+
+      // Apply zoom centered on pinch center
+      throttledZoom(newZoom, newCenterX, newCenterY);
     } else if (e.touches.length === 1 && isDraggingView) {
       // Handle dragging/scrolling with one finger
       e.preventDefault();
-      
+
       // Get current touch position
       const currentX = e.touches[0].clientX;
       const currentY = e.touches[0].clientY;
-      
+
       // Calculate how much we moved
       const dx = currentX - dragStartPosition.x;
       const dy = currentY - dragStartPosition.y;
-      
+
       // Update scroll position - move in opposite direction of finger
       if (tablesAreaRef.current) {
         tablesAreaRef.current.scrollLeft = initialScrollPosition.x - dx;
@@ -619,30 +683,32 @@ const ClientBookingComponent = () => {
       }
     }
   };
-  
+
   const handleTouchEnd = (e) => {
-    // If we still have any touches active, adjust our state for remaining fingers
-    if (e.touches.length === 1) {
-      // Switching from pinch zoom to single finger scroll
-      setTouchDistance(null);
-      
+    // Reset pinch zoom state if all fingers are lifted
+    if (e.touches.length === 0) {
+      touchDistanceRef.current = null;
+      setIsDraggingView(false);
+    } else if (e.touches.length === 1 && touchDistanceRef.current) {
+      // Switching from pinch zoom to single finger drag
+      touchDistanceRef.current = null;
+
       // Set up new drag from current position
       setIsDraggingView(true);
-      setDragStartPosition({ 
-        x: e.touches[0].clientX, 
-        y: e.touches[0].clientY 
+      setDragStartPosition({
+        x: e.touches[0].clientX,
+        y: e.touches[0].clientY
       });
-      setInitialScrollPosition({
-        x: tablesAreaRef.current.scrollLeft,
-        y: tablesAreaRef.current.scrollTop
-      });
-    } else if (e.touches.length === 0) {
-      // All fingers removed
-      setIsDraggingView(false);
-      setTouchDistance(null);
+
+      if (tablesAreaRef.current) {
+        setInitialScrollPosition({
+          x: tablesAreaRef.current.scrollLeft,
+          y: tablesAreaRef.current.scrollTop
+        });
+      }
     }
   };
-  
+
   // Handle dragging view
   const handleStartDragView = (e) => {
     // Only start drag if it's directly on the tables area
@@ -672,20 +738,20 @@ const ClientBookingComponent = () => {
   const handleEndDragView = () => {
     setIsDraggingView(false);
   };
-  
+
   useEffect(() => {
     // Update occupied slots when table or date changes
     if (selectedTableId && bookingDate) {
       const slots = getOccupiedTimeSlots(selectedTableId, bookingDate);
       setOccupiedSlots(slots);
-      
+
       // If current selected time is occupied, find a new available time
       if (bookingTime && slots.includes(bookingTime)) {
         const now = new Date();
         const currentHour = now.getHours();
         const availableTime = findNextAvailableTime(slots, currentHour);
         setBookingTime(availableTime);
-        
+
         // Also update end time (2 hours after start by default)
         const [startHour, startMinute] = availableTime.split(':').map(Number);
         let endHour = startHour + 2;
@@ -698,11 +764,15 @@ const ClientBookingComponent = () => {
 
   // Add and remove event listeners
   useEffect(() => {
+    // Update the zoom ref when the state changes
+    zoomRef.current = zoom;
+
     const tablesArea = tablesAreaRef.current;
     if (tablesArea) {
+      // Use passive: false to be able to prevent default
       tablesArea.addEventListener('wheel', handleWheel, { passive: false });
       tablesArea.addEventListener('mousedown', handleStartDragView);
-      
+
       // Add touch event listeners for mobile
       tablesArea.addEventListener('touchstart', handleTouchStart, { passive: false });
       tablesArea.addEventListener('touchmove', handleTouchMove, { passive: false });
@@ -718,7 +788,7 @@ const ClientBookingComponent = () => {
         tablesArea.removeEventListener('touchcancel', handleTouchEnd);
       };
     }
-  }, [zoom, isDraggingView, touchDistance]); // Include all dependencies
+  }, [zoom]); // Only depend on zoom changes
 
   // Add document-level event listeners for drag handling
   useEffect(() => {
@@ -732,28 +802,28 @@ const ClientBookingComponent = () => {
       };
     }
   }, [isDraggingView]);
-  
+
   // Render table component
   const TableComponent = ({ table }) => {
     // Get current date for bookings display
     const today = new Date();
     const formattedDate = formatDateToYMD(today);
-    
+
     // Get all bookings for this table today
     const tableBookings = getTableBookings(table.id, formattedDate);
     const mergedTimeRanges = getMergedTimeRanges(tableBookings);
-    
+
     // Check if table is currently reserved
     const now = new Date();
     const currentHour = now.getHours().toString().padStart(2, '0');
     const currentMinute = now.getMinutes().toString().padStart(2, '0');
     const currentTimeString = `${currentHour}:${currentMinute}`;
     const currentTimeMinutes = parseTimeToMinutes(currentTimeString);
-    
+
     const isCurrentlyReserved = mergedTimeRanges.some(range => {
       const startMinutes = parseTimeToMinutes(range.startTime);
       const endMinutes = parseTimeToMinutes(range.endTime);
-      
+
       if (endMinutes < startMinutes) {
         // Booking spans midnight
         return currentTimeMinutes >= startMinutes || currentTimeMinutes < endMinutes;
@@ -761,32 +831,32 @@ const ClientBookingComponent = () => {
         return currentTimeMinutes >= startMinutes && currentTimeMinutes < endMinutes;
       }
     });
-    
+
     // Get the active reservation if currently reserved
     const activeReservation = isCurrentlyReserved
       ? mergedTimeRanges.find(range => {
-          const startMinutes = parseTimeToMinutes(range.startTime);
-          const endMinutes = parseTimeToMinutes(range.endTime);
-          
-          if (endMinutes < startMinutes) {
-            return currentTimeMinutes >= startMinutes || currentTimeMinutes < endMinutes;
-          } else {
-            return currentTimeMinutes >= startMinutes && currentTimeMinutes < endMinutes;
-          }
-        })
+        const startMinutes = parseTimeToMinutes(range.startTime);
+        const endMinutes = parseTimeToMinutes(range.endTime);
+
+        if (endMinutes < startMinutes) {
+          return currentTimeMinutes >= startMinutes || currentTimeMinutes < endMinutes;
+        } else {
+          return currentTimeMinutes >= startMinutes && currentTimeMinutes < endMinutes;
+        }
+      })
       : null;
-    
+
     // Format all reservation times for display
     const reservationText = mergedTimeRanges.length > 0
       ? mergedTimeRanges.map(range => `${range.startTime}-${range.endTime}`).join(', ')
       : '';
-    
+
     // Get chair count and available seats
     const chairCount = table.chairCount || 0;
-    
+
     // Check if table is selected
     const isSelected = selectedTableId === table.id;
-    
+
     // Render chairs based on table shape
     const renderChairs = () => {
       if (table.shape === 'rectangle') {
@@ -795,18 +865,18 @@ const ClientBookingComponent = () => {
         return renderRoundChairs();
       }
     };
-    
+
     // Render chairs for round table
     const renderRoundChairs = () => {
       const chairs = [];
       const angleStep = 360 / table.chairCount;
       const radius = 140;
-      
+
       for (let i = 0; i < table.chairCount; i++) {
         const angle = angleStep * i;
         const xPosition = radius * Math.cos((angle * Math.PI) / 180);
         const yPosition = radius * Math.sin((angle * Math.PI) / 180);
-        
+
         chairs.push(
           <div
             key={i}
@@ -834,25 +904,25 @@ const ClientBookingComponent = () => {
           />
         );
       }
-      
+
       return chairs;
     };
-    
+
     // Render chairs for rectangle table
     const renderRectangleChairs = () => {
       const chairs = [];
       const tableWidth = 400;
       const tableHeight = 150;
       const border = 50;
-      
+
       const totalChairs = table.chairCount;
-      
+
       // Distribute chairs around the table
       let chairsLeft = 0;
       let chairsRight = 0;
       let chairsTop = 0;
       let chairsBottom = 0;
-      
+
       // Initially allocate chairs on left and right sides (if more than 4 chairs)
       if (totalChairs > 4) {
         chairsLeft = 1;
@@ -867,9 +937,9 @@ const ClientBookingComponent = () => {
         chairsTop = Math.ceil(totalChairs / 2);
         chairsBottom = totalChairs - chairsTop;
       }
-      
+
       let chairIndex = 0;
-      
+
       // Left side chair
       if (chairsLeft > 0) {
         chairs.push(
@@ -899,7 +969,7 @@ const ClientBookingComponent = () => {
         );
         chairIndex++;
       }
-      
+
       // Right side chair
       if (chairsRight > 0) {
         chairs.push(
@@ -929,13 +999,13 @@ const ClientBookingComponent = () => {
         );
         chairIndex++;
       }
-      
+
       // Top chairs
       for (let i = 0; i < chairsTop; i++) {
         const ratio = chairsTop === 1 ? 0.5 : i / (chairsTop - 1);
         const xPosition = ((tableWidth - 50) * ratio) - tableWidth / 2;
         const yPosition = -tableHeight / 2 - border + 10;
-        
+
         chairs.push(
           <div
             key={`top-${chairIndex}`}
@@ -963,13 +1033,13 @@ const ClientBookingComponent = () => {
         );
         chairIndex++;
       }
-      
+
       // Bottom chairs
       for (let i = 0; i < chairsBottom; i++) {
         const ratio = chairsBottom === 1 ? 0.5 : i / (chairsBottom - 1);
         const xPosition = ((tableWidth - 50) * ratio) - tableWidth / 2;
         const yPosition = tableHeight / 2;
-        
+
         chairs.push(
           <div
             key={`bottom-${chairIndex}`}
@@ -997,10 +1067,10 @@ const ClientBookingComponent = () => {
         );
         chairIndex++;
       }
-      
+
       return chairs;
     };
-    
+
     return (
       <div
         className={`table-container ${isSelected ? 'selected' : ''}`}
@@ -1157,14 +1227,14 @@ const ClientBookingComponent = () => {
             </div>
           </div>
         )}
-        
+
         {/* Book now button for client-friendly UX */}
         <div className="book-button-container" style={{
           display: 'flex',
           justifyContent: 'center',
           marginTop: '10px'
         }}>
-          <button 
+          <button
             className="book-button"
             onClick={(e) => {
               e.stopPropagation(); // Prevent event bubbling
@@ -1208,7 +1278,7 @@ const ClientBookingComponent = () => {
         justifyContent: 'space-between',
         alignItems: 'center'
       }}>
-        <div style={{ 
+        <div style={{
           fontSize: '20px',
           fontWeight: 'bold',
           whiteSpace: 'nowrap'
@@ -1243,7 +1313,7 @@ const ClientBookingComponent = () => {
             }}>
               {Math.round(zoom * 100)}%
             </span>
-            <button 
+            <button
               onClick={handleZoomIn}
               style={{
                 backgroundColor: '#333',
@@ -1292,127 +1362,174 @@ const ClientBookingComponent = () => {
           </div>
         </div>
       </header>
+  <div className="main-content" style={{
+                flex: 1,
+                width: '100%',
+                height: 'calc(100vh - 60px)',
+                overflow: 'hidden',
+                position: 'relative'
+              }}>
+      <div className="zoom-container">
+        <TransformWrapper
+          initialScale={1}
+          minScale={0.5}
+          maxScale={4}
+          limitToBounds={false}
+          doubleClick={{ disabled: true }} // Prevents accidental double-click zooms
+          pinch={{ step: 5 }} // More responsive pinch zooming
+          wheel={{ step: 0.05 }}
+          onZoomChange={({ state }) => setScale(state.scale)}
+        >
+          {({ zoomIn, zoomOut, resetTransform }) => (
+            <>
+              {/* Mobile-friendly controls */}
+              <div className="controls fixed bottom-4 right-4 z-10 flex gap-2">
+                <button
+                  onClick={() => zoomIn(0.2)}
+                  className="p-2 bg-white rounded-full shadow-md"
+                  aria-label="Zoom in"
+                >
+                  +
+                </button>
+                <button
+                  onClick={() => zoomOut(0.2)}
+                  className="p-2 bg-white rounded-full shadow-md"
+                  aria-label="Zoom out"
+                >
+                  -
+                </button>
+                <button
+                  onClick={() => resetTransform()}
+                  className="p-2 bg-white rounded-full shadow-md"
+                  aria-label="Reset zoom"
+                >
+                  Reset
+                </button>
+              </div>
+
+              {/* Scale indicator */}
+              <div className="scale-display fixed top-4 left-4 z-10 bg-white p-2 rounded shadow-md">
+                {Math.round(scale * 100)}%
+              </div>
+            
+             
+              <TransformComponent
+                wrapperStyle={{ width: "100%", height: "100vh" }}
+                contentStyle={{ width: "100%", height: "100%" }}
+                className="tables-area"
+                 ref={tablesAreaRef}
+                 
+              >
+
+                {hallData ? (
+                 
+                    <div
+                      className="tables-content"
+                      style={{
+                        position: 'relative',
+                        minWidth: '5000px',  // Большое значение, чтобы весь зал помещался
+                        minHeight: '5000px', // Большое значение, чтобы весь зал помещался
+                        transformOrigin: 'top left',
+                        transform: `scale(${zoom})`,
+                        willChange: 'transform', // Optimize for performance
+                      }}
+                    >
+                      {/* Render tables */}
+                      {hallData.tables && hallData.tables.map((table) => (
+                        <TableComponent key={table.id} table={table} />
+                      ))}
+
+                      {/* Render hall elements (entrances, bathrooms, etc.) */}
+                      {hallData.hallElements && hallData.hallElements.map(element => (
+                        <div
+                          key={element.id}
+                          className="hall-element"
+                          style={{
+                            position: 'absolute',
+                            left: `${element.x}px`,
+                            top: `${element.y}px`,
+                            transform: `rotate(${element.rotation || 0}deg)`,
+                            opacity: element.opacity || 1,
+                            zIndex: element.zIndex || 1
+                          }}
+                        >
+                          <img
+                            src={element.icon}
+                            alt={element.name}
+                            style={{
+                              width: `${element.fontSize || 100}px`,
+                              height: 'auto',
+                            }}
+                          />
+                          <div className="element-label" style={{ textAlign: 'center', marginTop: '5px' }}>
+                            {element.customName || element.name}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                ) : (
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    height: '100%',
+                    width: '100%',
+                    flexDirection: 'column',
+                    padding: '20px'
+                  }}>
+                    <div style={{
+                      backgroundColor: 'white',
+                      padding: '30px',
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1)',
+                      textAlign: 'center',
+                      maxWidth: '500px',
+                      width: '90%'
+                    }}>
+                      <h2 style={{ marginTop: 0 }}>Добро пожаловать в систему бронирования</h2>
+                      <p>Чтобы начать, загрузите план зала с помощью кнопки "Импорт плана зала".</p>
+                      <input
+                        type="file"
+                        accept=".json"
+                        onChange={handleFileUpload}
+                        id="import-file-center"
+                        className="file-input"
+                        style={{ display: 'none' }}
+                      />
+                      <label
+                        htmlFor="import-file-center"
+                        className="import-button-large"
+                        style={{
+                          backgroundColor: '#2ecc71',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          padding: '12px 24px',
+                          cursor: 'pointer',
+                          fontSize: '16px',
+                          display: 'inline-block',
+                          marginTop: '15px',
+                          fontWeight: 'bold'
+                        }}
+                      >
+                        Импортировать план зала
+                      </label>
+                    </div>
+                  </div>
+                )}
+
+              </TransformComponent>
+            </>
+          )}
+          
+        </TransformWrapper>
+       
+      </div>
+        </div>
 
       {/* Main content area */}
-      <div className="main-content" style={{
-        flex: 1,
-        width: '100%',
-        height: 'calc(100vh - 60px)',
-        overflow: 'hidden',
-        position: 'relative'
-      }}>
-        {hallData ? (
-          <div
-            className="tables-area"
-            ref={tablesAreaRef}
-            style={{
-              width: '100%',
-              height: '100%',
-              overflow: 'auto',
-              padding: '20px',
-              background: 'linear-gradient(rgba(255, 255, 255, 0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.2) 1px, transparent 1px)',
-              backgroundSize: '20px 20px',
-              backgroundColor: '#e6eef5',
-              cursor: isDraggingView ? 'grabbing' : 'grab',
-              // touchAction: 'none' // Prevent browser handling of all panning and zooming gestures
-            }}
-          >
-            <div 
-              className="tables-content"
-              style={{
-                position: 'relative',
-                minWidth: '5000px',  // Большое значение, чтобы весь зал помещался
-                minHeight: '5000px', // Большое значение, чтобы весь зал помещался
-                transformOrigin: 'top left',
-                transform: `scale(${zoom})`,
-              }}
-            >
-              {/* Render tables */}
-              {hallData.tables && hallData.tables.map((table) => (
-                <TableComponent key={table.id} table={table} />
-              ))}
-              
-              {/* Render hall elements (entrances, bathrooms, etc.) */}
-              {hallData.hallElements && hallData.hallElements.map(element => (
-                <div
-                  key={element.id}
-                  className="hall-element"
-                  style={{
-                    position: 'absolute',
-                    left: `${element.x}px`,
-                    top: `${element.y}px`,
-                    transform: `rotate(${element.rotation || 0}deg)`,
-                    opacity: element.opacity || 1,
-                    zIndex: element.zIndex || 1
-                  }}
-                >
-                  <img
-                    src={element.icon}
-                    alt={element.name}
-                    style={{
-                      width: `${element.fontSize || 100}px`,
-                      height: 'auto',
-                    }}
-                  />
-                  <div className="element-label" style={{ textAlign: 'center', marginTop: '5px' }}>
-                    {element.customName || element.name}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <div style={{
-            display: 'flex',
-            alignItems: 'center', 
-            justifyContent: 'center',
-            height: '100%',
-            width: '100%',
-            flexDirection: 'column',
-            padding: '20px'
-          }}>
-            <div style={{
-              backgroundColor: 'white',
-              padding: '30px',
-              borderRadius: '8px',
-              boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1)',
-              textAlign: 'center',
-              maxWidth: '500px',
-              width: '90%'
-            }}>
-              <h2 style={{ marginTop: 0 }}>Добро пожаловать в систему бронирования</h2>
-              <p>Чтобы начать, загрузите план зала с помощью кнопки "Импорт плана зала".</p>
-              <input
-                type="file"
-                accept=".json"
-                onChange={handleFileUpload}
-                id="import-file-center"
-                className="file-input"
-                style={{ display: 'none' }}
-              />
-              <label
-                htmlFor="import-file-center"
-                className="import-button-large"
-                style={{
-                  backgroundColor: '#2ecc71',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  padding: '12px 24px',
-                  cursor: 'pointer',
-                  fontSize: '16px',
-                  display: 'inline-block',
-                  marginTop: '15px',
-                  fontWeight: 'bold'
-                }}
-              >
-                Импортировать план зала
-              </label>
-            </div>
-          </div>
-        )}
-      </div>
-      
+
+
       {/* Mobile instructions overlay */}
       {hallData && (
         <div className="mobile-instructions" style={{
@@ -1459,7 +1576,7 @@ const ClientBookingComponent = () => {
             overflowY: 'auto'
           }} onClick={(e) => e.stopPropagation()}>
             <h2 style={{ textAlign: 'center' }}>Бронирование стола {selectedTableId}</h2>
-            
+
             {/* Date selector */}
             <div className="form-group" style={{ marginBottom: '20px' }}>
               <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
@@ -1477,7 +1594,7 @@ const ClientBookingComponent = () => {
                 }}
               />
             </div>
-            
+
             {/* Time selector */}
             <div className="form-group" style={{ marginBottom: '20px' }}>
               <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
@@ -1502,38 +1619,38 @@ const ClientBookingComponent = () => {
                   >
                     {Array.from({ length: 24 }, (_, i) => i).map(hour => {
                       const hourStr = hour.toString().padStart(2, '0');
-                      
+
                       // Check if all slots in this hour are occupied
-                      const isHourFullyOccupied = ['00', '15', '30', '45'].every(min => 
+                      const isHourFullyOccupied = ['00', '15', '30', '45'].every(min =>
                         occupiedSlots.includes(`${hourStr}:${min}`)
                       );
-                      
+
                       // Check if some slots in this hour are occupied
-                      const isHourPartiallyOccupied = ['00', '15', '30', '45'].some(min => 
+                      const isHourPartiallyOccupied = ['00', '15', '30', '45'].some(min =>
                         occupiedSlots.includes(`${hourStr}:${min}`)
                       );
-                      
+
                       return (
-                        <option 
-                          key={hour} 
+                        <option
+                          key={hour}
                           value={hourStr}
                           disabled={isHourFullyOccupied}
                           style={{
-                            backgroundColor: isHourFullyOccupied ? '#ffdddd' : 
-                                           isHourPartiallyOccupied ? '#fff8e1' : 
-                                           '#ffffff',
+                            backgroundColor: isHourFullyOccupied ? '#ffdddd' :
+                              isHourPartiallyOccupied ? '#fff8e1' :
+                                '#ffffff',
                             color: isHourFullyOccupied ? '#999999' : '#000000'
                           }}
                         >
-                          {hourStr}{isHourFullyOccupied ? ' (занято)' : 
-                                  isHourPartiallyOccupied ? ' (частично)' : ''}
+                          {hourStr}{isHourFullyOccupied ? ' (занято)' :
+                            isHourPartiallyOccupied ? ' (частично)' : ''}
                         </option>
                       );
                     })}
                   </select>
-                  <span style={{ 
-                    padding: '10px 5px', 
-                    backgroundColor: '#f5f5f5', 
+                  <span style={{
+                    padding: '10px 5px',
+                    backgroundColor: '#f5f5f5',
                     borderTop: '1px solid #ddd',
                     borderBottom: '1px solid #ddd'
                   }}>:</span>
@@ -1556,10 +1673,10 @@ const ClientBookingComponent = () => {
                       const hourStr = bookingTime.split(':')[0] || '12';
                       const timeSlot = `${hourStr}:${minute}`;
                       const isSlotOccupied = occupiedSlots.includes(timeSlot);
-                      
+
                       return (
-                        <option 
-                          key={minute} 
+                        <option
+                          key={minute}
                           value={minute}
                           disabled={isSlotOccupied}
                           style={{
@@ -1594,45 +1711,45 @@ const ClientBookingComponent = () => {
                   >
                     {Array.from({ length: 24 }, (_, i) => i).map(hour => {
                       const hourStr = hour.toString().padStart(2, '0');
-                      
+
                       // For end time, we don't need to disable hours that come after the start time
                       const startHour = parseInt(bookingTime.split(':')[0] || '12');
-                      
+
                       // Check if all slots in this hour are occupied
-                      const isHourFullyOccupied = ['00', '15', '30', '45'].every(min => 
+                      const isHourFullyOccupied = ['00', '15', '30', '45'].every(min =>
                         occupiedSlots.includes(`${hourStr}:${min}`)
                       );
-                      
+
                       // If this hour is before or equal to start hour, check if it's fully occupied
                       // Otherwise, it's selectable even if occupied (since end time can be after occupied slots)
                       const shouldDisable = hour <= startHour && isHourFullyOccupied;
-                      
+
                       // Check if some slots in this hour are occupied (for color indication)
-                      const isHourPartiallyOccupied = ['00', '15', '30', '45'].some(min => 
+                      const isHourPartiallyOccupied = ['00', '15', '30', '45'].some(min =>
                         occupiedSlots.includes(`${hourStr}:${min}`)
                       );
-                      
+
                       return (
-                        <option 
-                          key={hour} 
+                        <option
+                          key={hour}
                           value={hourStr}
                           disabled={shouldDisable}
                           style={{
-                            backgroundColor: shouldDisable ? '#ffdddd' : 
-                                           isHourPartiallyOccupied ? '#fff8e1' : 
-                                           '#ffffff',
+                            backgroundColor: shouldDisable ? '#ffdddd' :
+                              isHourPartiallyOccupied ? '#fff8e1' :
+                                '#ffffff',
                             color: shouldDisable ? '#999999' : '#000000'
                           }}
                         >
-                          {hourStr}{shouldDisable ? ' (занято)' : 
-                                  isHourPartiallyOccupied && hour > startHour ? ' (частично)' : ''}
+                          {hourStr}{shouldDisable ? ' (занято)' :
+                            isHourPartiallyOccupied && hour > startHour ? ' (частично)' : ''}
                         </option>
                       );
                     })}
                   </select>
-                  <span style={{ 
-                    padding: '10px 5px', 
-                    backgroundColor: '#f5f5f5', 
+                  <span style={{
+                    padding: '10px 5px',
+                    backgroundColor: '#f5f5f5',
                     borderTop: '1px solid #ddd',
                     borderBottom: '1px solid #ddd'
                   }}>:</span>
@@ -1655,21 +1772,21 @@ const ClientBookingComponent = () => {
                       const hourStr = bookingEndTime.split(':')[0] || '14';
                       const timeSlot = `${hourStr}:${minute}`;
                       const isSlotOccupied = occupiedSlots.includes(timeSlot);
-                      
+
                       // End time minute can be occupied if the hour is after start time
                       const startHour = parseInt(bookingTime.split(':')[0] || '12');
                       const endHour = parseInt(hourStr);
                       const shouldDisable = endHour <= startHour && isSlotOccupied;
-                      
+
                       return (
-                        <option 
-                          key={minute} 
+                        <option
+                          key={minute}
                           value={minute}
                           disabled={shouldDisable}
                           style={{
-                            backgroundColor: shouldDisable ? '#ffdddd' : 
-                                           isSlotOccupied ? '#fff8e1' : 
-                                           '#ffffff',
+                            backgroundColor: shouldDisable ? '#ffdddd' :
+                              isSlotOccupied ? '#fff8e1' :
+                                '#ffffff',
                             color: shouldDisable ? '#999999' : '#000000'
                           }}
                         >
@@ -1681,7 +1798,7 @@ const ClientBookingComponent = () => {
                 </div>
               </div>
             </div>
-            
+
             {/* Client information */}
             <div className="form-group" style={{ marginBottom: '20px' }}>
               <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
@@ -1700,7 +1817,7 @@ const ClientBookingComponent = () => {
                 }}
               />
             </div>
-            
+
             <div className="form-group" style={{ marginBottom: '20px' }}>
               <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
                 Номер телефона:
@@ -1718,7 +1835,7 @@ const ClientBookingComponent = () => {
                 }}
               />
             </div>
-            
+
             <div className="form-group" style={{ marginBottom: '20px' }}>
               <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
                 Количество гостей:
@@ -1735,7 +1852,7 @@ const ClientBookingComponent = () => {
                 }}
               />
             </div>
-            
+
             <div className="form-group" style={{ marginBottom: '20px' }}>
               <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
                 Примечание (необязательно):
@@ -1754,7 +1871,7 @@ const ClientBookingComponent = () => {
                 }}
               />
             </div>
-            
+
             {/* Available times info */}
             <div className="available-times-info" style={{
               backgroundColor: '#f8f9fa',
@@ -1764,14 +1881,14 @@ const ClientBookingComponent = () => {
             }}>
               <h4 style={{ margin: '0 0 10px 0' }}>Информация о доступности:</h4>
               {(() => {
-                const occupiedSlots = selectedTableId && bookingDate ? 
+                const occupiedSlots = selectedTableId && bookingDate ?
                   getOccupiedTimeSlots(selectedTableId, bookingDate) : [];
-                
+
                 if (occupiedSlots.length > 0) {
                   // Group consecutive times for better display
                   let currentHour = -1;
                   const occupiedHours = [];
-                  
+
                   occupiedSlots.forEach(slot => {
                     const hour = parseInt(slot.split(':')[0], 10);
                     if (hour !== currentHour) {
@@ -1779,11 +1896,11 @@ const ClientBookingComponent = () => {
                       currentHour = hour;
                     }
                   });
-                  
+
                   return (
                     <div>
                       <p style={{ color: '#dc3545' }}>
-                        <strong>Занятое время:</strong> {occupiedHours.map(h => `${h}:00-${(h+1).toString().padStart(2, '0')}:00`).join(', ')}
+                        <strong>Занятое время:</strong> {occupiedHours.map(h => `${h}:00-${(h + 1).toString().padStart(2, '0')}:00`).join(', ')}
                       </p>
                       <p>Выберите другое время для бронирования.</p>
                     </div>
@@ -1797,7 +1914,7 @@ const ClientBookingComponent = () => {
                 }
               })()}
             </div>
-            
+
             {/* Action buttons */}
             <div className="actions" style={{
               display: 'flex',
@@ -1821,7 +1938,7 @@ const ClientBookingComponent = () => {
               >
                 Отмена
               </button>
-              
+
               <button
                 onClick={confirmBooking}
                 style={{
@@ -1841,7 +1958,7 @@ const ClientBookingComponent = () => {
           </div>
         </div>
       )}
-      
+
       {/* Booking Success Modal */}
       {bookingSuccess && bookingSummary && (
         <div className="success-modal" style={{
@@ -1876,9 +1993,9 @@ const ClientBookingComponent = () => {
             }}>
               <span style={{ color: 'white', fontSize: '40px' }}>✓</span>
             </div>
-            
+
             <h2 style={{ marginBottom: '20px', color: '#2ecc71' }}>Бронирование успешно!</h2>
-            
+
             <div className="booking-details" style={{
               backgroundColor: '#f8f9fa',
               padding: '20px',
@@ -1887,36 +2004,36 @@ const ClientBookingComponent = () => {
               marginBottom: '20px'
             }}>
               <h3 style={{ marginTop: 0, marginBottom: '15px', textAlign: 'center' }}>Детали бронирования</h3>
-              
+
               <div style={{ marginBottom: '10px' }}>
                 <strong>Стол:</strong> {bookingSummary.tableName}
               </div>
-              
+
               <div style={{ marginBottom: '10px' }}>
                 <strong>Дата:</strong> {bookingSummary.date}
               </div>
-              
+
               <div style={{ marginBottom: '10px' }}>
                 <strong>Время:</strong> {bookingSummary.time}
               </div>
-              
+
               <div style={{ marginBottom: '10px' }}>
                 <strong>Имя:</strong> {bookingSummary.name}
               </div>
-              
+
               <div style={{ marginBottom: '10px' }}>
                 <strong>Телефон:</strong> {bookingSummary.phone}
               </div>
-              
+
               <div>
                 <strong>Количество гостей:</strong> {bookingSummary.guestCount}
               </div>
             </div>
-            
+
             <p style={{ marginBottom: '20px' }}>
               В случае изменения планов, пожалуйста, свяжитесь с нами по телефону для отмены бронирования.
             </p>
-            
+
             <button
               onClick={resetBooking}
               style={{
