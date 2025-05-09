@@ -53,7 +53,7 @@ const findNextAvailableTime = (occupiedSlots, startHour = 12) => {
 
 const ClientBookingComponent = () => {
   const [hallData, setHallData] = useState(null);
-  const [zoom, setZoom] = useState(0.4);
+  const [zoom, setZoom] = useState(0.2);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [selectedTableId, setSelectedTableId] = useState(null);
