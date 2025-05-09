@@ -53,7 +53,7 @@ const findNextAvailableTime = (occupiedSlots, startHour = 12) => {
 
 const ClientBookingComponent = () => {
   const [hallData, setHallData] = useState(null);
-  const [zoom, setZoom] = useState(0.2);
+  const [zoom, setZoom] = useState(0.21);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [selectedTableId, setSelectedTableId] = useState(null);
@@ -79,7 +79,10 @@ const ClientBookingComponent = () => {
   // Enhanced touch state for mobile pinch zoom
   const [touchDistance, setTouchDistance] = useState(null);
  useEffect(() => {
-  setZoom(0.2)
+    setTimeout(() => {
+      var zoomOutBtn = window.document.getElementById('zoomOutBtn');
+      zoomOutBtn.click();
+    }, 200)
   }, []);
 
   useEffect(() => {
@@ -1215,7 +1218,7 @@ const ClientBookingComponent = () => {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-            <button
+            <button id='zoomOutBtn'
               onClick={handleZoomOut}
               style={{
                 backgroundColor: '#333',
@@ -1240,7 +1243,7 @@ const ClientBookingComponent = () => {
             }}>
               {Math.round(zoom * 100)}%
             </span>
-            <button
+            <button 
               onClick={handleZoomIn}
               style={{
                 backgroundColor: '#333',
@@ -1722,9 +1725,8 @@ const ClientBookingComponent = () => {
               </label>
               <input
                 type="text"
-                min="1"
-                value={guestCount}
-                onChange={(e) => setGuestCount(Math.max(1, parseInt(e.target.value) || 1))}
+                value={guestCount === 0 ? '' : guestCount.toString()}
+                onChange={(e) => setGuestCount(parseInt(e.target.value) | 0)}
                 style={{
                   width: '100px',
                   padding: '10px',
