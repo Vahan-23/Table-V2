@@ -1,17 +1,23 @@
 import './App.css';
-import FigmaStyleCanvas from './components/hall';
-import DraggableTables from './components/hall';
-import TablesAreaComponent from './components/newhall';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import HallViewer from './components/HallViewer';
 import ResponsiveSeatingArrangement from './components/ResponsiveSeatingArrangement';
-import SeatingArrangement from './components/SeatingArrangement';
+import ClientBookingComponent from './components/ClientBookingComponent';
+
 function App() {
   return (
-    <div className="App">
-       <ResponsiveSeatingArrangement />
-      {/* <SeatingArrangement /> */}
-      {/* <FigmaStyleCanvas /> */}
-      {/* <TablesAreaComponent /> */}
-    </div>
+    <Router>
+      <div className="App">
+        <Routes>
+          {/* Главная страница будет показывать рассадку */}
+          <Route path="/" element={<ResponsiveSeatingArrangement />} />
+
+          {/* Страница /hallview будет показывать HallViewer */}
+          <Route path="/hallview" element={<HallViewer />} />
+          <Route path="/client" element={<ClientBookingComponent />} />
+        </Routes>
+      </div>
+    </Router>
   );
 }
 
