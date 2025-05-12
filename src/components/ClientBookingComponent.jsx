@@ -51,6 +51,32 @@ const findNextAvailableTime = (occupiedSlots, startHour = 12) => {
   return "12:00"; // Default fallback
 };
 
+// Helper function to get event emoji
+const getEventTypeEmoji = (type) => {
+  const types = {
+    'birthday': '🎂',
+    'business': '💼',
+    'party': '🎉',
+    'romantic': '❤️',
+    'family': '👨‍👩‍👧‍👦',
+    'other': '✨'
+  };
+  return types[type] || '';
+};
+
+// Helper function to get event type name
+const getEventTypeName = (type) => {
+  const types = {
+    'birthday': 'День Рождения',
+    'business': 'Деловая Встреча',
+    'party': 'Вечеринка',
+    'romantic': 'Романтический Ужин',
+    'family': 'Семейный Ужин',
+    'other': 'Другое'
+  };
+  return types[type] || '';
+};
+
 const ClientBookingComponent = () => {
   const [hallData, setHallData] = useState(null);
   const [scale, setScale] = useState(1);
@@ -69,6 +95,8 @@ const ClientBookingComponent = () => {
   const [bookingSuccess, setBookingSuccess] = useState(false);
   const [bookingSummary, setBookingSummary] = useState(null);
   const [occupiedSlots, setOccupiedSlots] = useState([]);
+  const [bookingType, setBookingType] = useState('');
+  const [showEventTypeSelector, setShowEventTypeSelector] = useState(false);
 
   const tablesAreaRef = useRef(null);
   const zoomRef = useRef(0.2); // Use ref for intermediate zoom values to prevent re-renders
@@ -317,7 +345,8 @@ const ClientBookingComponent = () => {
           startTime: person.booking.time,
           endTime: person.booking.endTime,
           name: person.name,
-          guestCount: person.guestCount || person.seatsOccupied || 1
+          guestCount: person.guestCount || person.seatsOccupied || 1,
+          type: person.booking.type // Add type to include event emoji
         });
       }
     });
@@ -372,6 +401,9 @@ const ClientBookingComponent = () => {
     setSelectedTableId(tableId);
     // After selecting table, show booking form
     setShowBookingModal(true);
+    // Reset booking type selection
+    setBookingType('');
+    setShowEventTypeSelector(false);
   };
 
   // Handle booking confirmation
@@ -389,6 +421,11 @@ const ClientBookingComponent = () => {
 
     if (guestCount < 1) {
       alert('Количество гостей должно быть не менее 1');
+      return;
+    }
+    
+    if (!bookingType) {
+      alert('Пожалуйста, выберите тип мероприятия');
       return;
     }
 
@@ -411,6 +448,7 @@ const ClientBookingComponent = () => {
       time: bookingTime,
       endTime: bookingEndTime,
       note: bookingNote.trim(),
+      type: bookingType, // Include booking type
       timestamp: new Date().toISOString()
     };
 
@@ -471,7 +509,8 @@ const ClientBookingComponent = () => {
       time: `${formatTimeDisplay(bookingTime)} - ${formatTimeDisplay(bookingEndTime)}`,
       guestCount: guestCount,
       name: clientName,
-      phone: clientPhone
+      phone: clientPhone,
+      type: bookingType // Include type for emoji display
     });
 
     setBookingSuccess(true);
@@ -489,6 +528,8 @@ const ClientBookingComponent = () => {
     setBookingTime('');
     setBookingEndTime('');
     setBookingSummary(null);
+    setBookingType('');
+    setShowEventTypeSelector(false);
   };
 
   // Apply zoom with smooth animation and centered on point
@@ -1125,7 +1166,8 @@ const ClientBookingComponent = () => {
                 fontSize: '24px',
                 zIndex: 2
               }}>
-                <div>ЗАНЯТО</div>
+                <div>{activeReservation && activeReservation.type ? 
+                  getEventTypeEmoji(activeReservation.type) + " " : ""}ЗАНЯТО</div>
                 {activeReservation && (
                   <div style={{ fontSize: '18px', marginTop: '5px', textAlign: 'center' }}>
                     {activeReservation.startTime} - {activeReservation.endTime}
@@ -1154,7 +1196,11 @@ const ClientBookingComponent = () => {
                 textAlign: 'center',
                 zIndex: 2
               }}>
-                <div>ЗАБРОНИРОВАНО СЕГОДНЯ</div>
+                <div>
+                  {mergedTimeRanges[0] && mergedTimeRanges[0].type ? 
+                  getEventTypeEmoji(mergedTimeRanges[0].type) + " " : ""}
+                  ЗАБРОНИРОВАНО СЕГОДНЯ
+                </div>
                 <div style={{ fontSize: '16px', marginTop: '5px' }}>
                   {reservationText}
                 </div>
@@ -1185,7 +1231,8 @@ const ClientBookingComponent = () => {
                 borderRadius: '50%',
                 zIndex: 2
               }}>
-                <div>ЗАНЯТО</div>
+                <div>{activeReservation && activeReservation.type ? 
+                  getEventTypeEmoji(activeReservation.type) + " " : ""}ЗАНЯТО</div>
                 {activeReservation && (
                   <div style={{ fontSize: '18px', marginTop: '5px', textAlign: 'center' }}>
                     {activeReservation.startTime} - {activeReservation.endTime}
@@ -1215,7 +1262,11 @@ const ClientBookingComponent = () => {
                 textAlign: 'center',
                 zIndex: 2
               }}>
-                <div>ЗАБРОНИРОВАНО СЕГОДНЯ</div>
+                <div>
+                  {mergedTimeRanges[0] && mergedTimeRanges[0].type ? 
+                  getEventTypeEmoji(mergedTimeRanges[0].type) + " " : ""}
+                  ЗАБРОНИРОВАНО СЕГОДНЯ
+                </div>
                 <div style={{ fontSize: '16px', marginTop: '5px' }}>
                   {reservationText}
                 </div>
@@ -1568,392 +1619,610 @@ const ClientBookingComponent = () => {
         }}>
           <div className="booking-modal-content" style={{
             backgroundColor: 'white',
-            borderRadius: '8px',
+            borderRadius: '12px',
             padding: '20px',
-            maxWidth: '500px',
             width: '90%',
+            maxWidth: '600px',
             maxHeight: '90vh',
-            overflowY: 'auto'
+            overflowY: 'auto',
+            position: 'relative',
+            boxShadow: '0 5px 25px rgba(0, 0, 0, 0.3)'
           }} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ textAlign: 'center' }}>Бронирование стола {selectedTableId}</h2>
+            {/* Close button */}
+            <button
+              onClick={() => {
+                setShowBookingModal(false);
+                setSelectedTableId(null);
+              }}
+              style={{
+                position: 'absolute',
+                top: '15px',
+                right: '15px',
+                background: 'none',
+                border: 'none',
+                fontSize: '24px',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                color: '#777',
+                width: '30px',
+                height: '30px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 2
+              }}
+            >
+              ×
+            </button>
 
-            {/* Date selector */}
-            <div className="form-group" style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-                Дата:
-              </label>
-              <input
-                type="date"
-                value={bookingDate}
-                onChange={(e) => setBookingDate(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  borderRadius: '4px',
-                  border: '1px solid #ddd'
-                }}
-              />
-            </div>
+            {/* Title */}
+            <h2 style={{ 
+              textAlign: 'center', 
+              margin: '0 0 25px 0',
+              fontSize: '24px',
+              color: '#333',
+              borderBottom: '2px solid #f0f0f0',
+              paddingBottom: '15px',
+            }}>
+              Бронирование стола {selectedTableId}
+            </h2>
 
-            {/* Time selector */}
-            <div className="form-group" style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-                Время:
-              </label>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ display: 'flex', flex: 1 }}>
-                  <select
-                    value={bookingTime.split(':')[0] || '12'}
-                    onChange={(e) => {
-                      const hours = e.target.value;
-                      const minutes = bookingTime.split(':')[1] || '00';
-                      setBookingTime(`${hours}:${minutes}`);
-                    }}
-                    style={{
+            {/* Main form content with 80% width for form elements */}
+            <div style={{
+              margin: '0 auto',
+              width: '80%'
+            }}>
+              {/* Date selector */}
+              <div className="form-group" style={{ marginBottom: '20px' }}>
+                <label style={{ 
+                  display: 'block', 
+                  marginBottom: '8px', 
+                  fontWeight: 'bold',
+                  fontSize: '15px'
+                }}>
+                  Дата:
+                </label>
+                <input
+                  type="date"
+                  value={bookingDate}
+                  onChange={(e) => setBookingDate(e.target.value)}
+                  style={{
+                    width: '80%',
+                    padding: '12px',
+                    borderRadius: '8px',
+                    border: '1px solid #ddd',
+                    fontSize: '16px',
+                    boxShadow: '0 2px 5px rgba(0,0,0,0.05)',
+                    backgroundColor: '#f9f9f9'
+                  }}
+                />
+              </div>
+
+              {/* Time selectors */}
+              <div className="form-group" style={{ marginBottom: '20px' }}>
+                <label style={{ 
+                  display: 'block', 
+                  marginBottom: '8px', 
+                  fontWeight: 'bold',
+                  fontSize: '15px'
+                }}>
+                  Время:
+                </label>
+                
+                <div style={{ 
+                  display: 'flex', 
+                  flexDirection: 'column',
+                  gap: '12px'
+                }}>
+                  {/* Start time */}
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <span style={{ 
+                      fontSize: '14px', 
+                      fontWeight: 'bold', 
+                      color: '#555',
+                      marginRight: '10px',
+                      width: '60px'
+                    }}>
+                      Начало:
+                    </span>
+                    <div style={{ 
+                      display: 'flex', 
                       flex: 1,
-                      padding: '10px',
-                      borderRadius: '4px 0 0 4px',
                       border: '1px solid #ddd',
-                      borderRight: 'none'
-                    }}
-                  >
-                    {Array.from({ length: 24 }, (_, i) => i).map(hour => {
-                      const hourStr = hour.toString().padStart(2, '0');
+                      borderRadius: '8px',
+                      overflow: 'hidden',
+                      boxShadow: '0 2px 5px rgba(0,0,0,0.05)'
+                    }}>
+                      <select
+                        value={bookingTime.split(':')[0] || '12'}
+                        onChange={(e) => {
+                          const hours = e.target.value;
+                          const minutes = bookingTime.split(':')[1] || '00';
+                          setBookingTime(`${hours}:${minutes}`);
+                        }}
+                        style={{
+                          flex: 1,
+                          padding: '12px',
+                          border: 'none',
+                          borderRight: '1px solid #ddd',
+                          fontSize: '16px',
+                          backgroundColor: '#f9f9f9'
+                        }}
+                      >
+                        {Array.from({ length: 24 }, (_, i) => i).map(hour => {
+                          const hourStr = hour.toString().padStart(2, '0');
+                          const isHourFullyOccupied = ['00', '15', '30', '45'].every(min =>
+                            occupiedSlots.includes(`${hourStr}:${min}`)
+                          );
+                          const isHourPartiallyOccupied = ['00', '15', '30', '45'].some(min =>
+                            occupiedSlots.includes(`${hourStr}:${min}`)
+                          );
 
-                      // Check if all slots in this hour are occupied
-                      const isHourFullyOccupied = ['00', '15', '30', '45'].every(min =>
-                        occupiedSlots.includes(`${hourStr}:${min}`)
-                      );
+                          return (
+                            <option
+                              key={hour}
+                              value={hourStr}
+                              disabled={isHourFullyOccupied}
+                              style={{
+                                backgroundColor: isHourFullyOccupied ? '#ffdddd' :
+                                  isHourPartiallyOccupied ? '#fff8e1' : '#ffffff',
+                                color: isHourFullyOccupied ? '#999999' : '#000000'
+                              }}
+                            >
+                              {hourStr}
+                            </option>
+                          );
+                        })}
+                      </select>
+                      <span style={{
+                        padding: '12px 8px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        backgroundColor: '#f0f0f0',
+                        fontWeight: 'bold'
+                      }}>:</span>
+                      <select
+                        value={bookingTime.split(':')[1] || '00'}
+                        onChange={(e) => {
+                          const hours = bookingTime.split(':')[0] || '12';
+                          const minutes = e.target.value;
+                          setBookingTime(`${hours}:${minutes}`);
+                        }}
+                        style={{
+                          flex: 1,
+                          padding: '12px',
+                          border: 'none',
+                          fontSize: '16px',
+                          backgroundColor: '#f9f9f9'
+                        }}
+                      >
+                        {['00', '15', '30', '45'].map(minute => {
+                          const hourStr = bookingTime.split(':')[0] || '12';
+                          const timeSlot = `${hourStr}:${minute}`;
+                          const isSlotOccupied = occupiedSlots.includes(timeSlot);
 
-                      // Check if some slots in this hour are occupied
-                      const isHourPartiallyOccupied = ['00', '15', '30', '45'].some(min =>
-                        occupiedSlots.includes(`${hourStr}:${min}`)
-                      );
+                          return (
+                            <option
+                              key={minute}
+                              value={minute}
+                              disabled={isSlotOccupied}
+                              style={{
+                                backgroundColor: isSlotOccupied ? '#ffdddd' : '#ffffff',
+                                color: isSlotOccupied ? '#999999' : '#000000'
+                              }}
+                            >
+                              {minute}
+                            </option>
+                          );
+                        })}
+                      </select>
+                    </div>
+                  </div>
 
-                      return (
-                        <option
-                          key={hour}
-                          value={hourStr}
-                          disabled={isHourFullyOccupied}
-                          style={{
-                            backgroundColor: isHourFullyOccupied ? '#ffdddd' :
-                              isHourPartiallyOccupied ? '#fff8e1' :
-                                '#ffffff',
-                            color: isHourFullyOccupied ? '#999999' : '#000000'
-                          }}
-                        >
-                          {hourStr}{isHourFullyOccupied ? ' (занято)' :
-                            isHourPartiallyOccupied ? ' (частично)' : ''}
-                        </option>
-                      );
-                    })}
-                  </select>
-                  <span style={{
-                    padding: '10px 5px',
-                    backgroundColor: '#f5f5f5',
-                    borderTop: '1px solid #ddd',
-                    borderBottom: '1px solid #ddd'
-                  }}>:</span>
-                  <select
-                    value={bookingTime.split(':')[1] || '00'}
-                    onChange={(e) => {
-                      const hours = bookingTime.split(':')[0] || '12';
-                      const minutes = e.target.value;
-                      setBookingTime(`${hours}:${minutes}`);
-                    }}
-                    style={{
+                  {/* End time */}
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <span style={{ 
+                      fontSize: '14px', 
+                      fontWeight: 'bold', 
+                      color: '#555',
+                      marginRight: '10px',
+                      width: '60px'
+                    }}>
+                      Конец:
+                    </span>
+                    <div style={{ 
+                      display: 'flex', 
                       flex: 1,
-                      padding: '10px',
-                      borderRadius: '0 4px 4px 0',
                       border: '1px solid #ddd',
-                      borderLeft: 'none'
-                    }}
-                  >
-                    {['00', '15', '30', '45'].map(minute => {
-                      const hourStr = bookingTime.split(':')[0] || '12';
-                      const timeSlot = `${hourStr}:${minute}`;
-                      const isSlotOccupied = occupiedSlots.includes(timeSlot);
+                      borderRadius: '8px',
+                      overflow: 'hidden',
+                      boxShadow: '0 2px 5px rgba(0,0,0,0.05)'
+                    }}>
+                      <select
+                        value={bookingEndTime.split(':')[0] || '14'}
+                        onChange={(e) => {
+                          const hours = e.target.value;
+                          const minutes = bookingEndTime.split(':')[1] || '00';
+                          setBookingEndTime(`${hours}:${minutes}`);
+                        }}
+                        style={{
+                          flex: 1,
+                          padding: '12px',
+                          border: 'none',
+                          borderRight: '1px solid #ddd',
+                          fontSize: '16px',
+                          backgroundColor: '#f9f9f9'
+                        }}
+                      >
+                        {Array.from({ length: 24 }, (_, i) => i).map(hour => {
+                          const hourStr = hour.toString().padStart(2, '0');
+                          const startHour = parseInt(bookingTime.split(':')[0] || '12');
+                          const isHourFullyOccupied = ['00', '15', '30', '45'].every(min =>
+                            occupiedSlots.includes(`${hourStr}:${min}`)
+                          );
+                          const shouldDisable = hour <= startHour && isHourFullyOccupied;
+                          const isHourPartiallyOccupied = ['00', '15', '30', '45'].some(min =>
+                            occupiedSlots.includes(`${hourStr}:${min}`)
+                          );
 
-                      return (
-                        <option
-                          key={minute}
-                          value={minute}
-                          disabled={isSlotOccupied}
-                          style={{
-                            backgroundColor: isSlotOccupied ? '#ffdddd' : '#ffffff',
-                            color: isSlotOccupied ? '#999999' : '#000000'
-                          }}
-                        >
-                          {minute}{isSlotOccupied ? ' (занято)' : ''}
-                        </option>
-                      );
-                    })}
-                  </select>
-                </div>
+                          return (
+                            <option
+                              key={hour}
+                              value={hourStr}
+                              disabled={shouldDisable}
+                              style={{
+                                backgroundColor: shouldDisable ? '#ffdddd' :
+                                  isHourPartiallyOccupied ? '#fff8e1' : '#ffffff',
+                                color: shouldDisable ? '#999999' : '#000000'
+                              }}
+                            >
+                              {hourStr}
+                            </option>
+                          );
+                        })}
+                      </select>
+                      <span style={{
+                        padding: '12px 8px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        backgroundColor: '#f0f0f0',
+                        fontWeight: 'bold'
+                      }}>:</span>
+                      <select
+                        value={bookingEndTime.split(':')[1] || '00'}
+                        onChange={(e) => {
+                          const hours = bookingEndTime.split(':')[0] || '14';
+                          const minutes = e.target.value;
+                          setBookingEndTime(`${hours}:${minutes}`);
+                        }}
+                        style={{
+                          flex: 1,
+                          padding: '12px',
+                          border: 'none',
+                          fontSize: '16px',
+                          backgroundColor: '#f9f9f9'
+                        }}
+                      >
+                        {['00', '15', '30', '45'].map(minute => {
+                          const hourStr = bookingEndTime.split(':')[0] || '14';
+                          const timeSlot = `${hourStr}:${minute}`;
+                          const isSlotOccupied = occupiedSlots.includes(timeSlot);
+                          const startHour = parseInt(bookingTime.split(':')[0] || '12');
+                          const endHour = parseInt(hourStr);
+                          const shouldDisable = endHour <= startHour && isSlotOccupied;
 
-                <span style={{ padding: '0 5px' }}>до</span>
-
-                <div style={{ display: 'flex', flex: 1 }}>
-                  <select
-                    value={bookingEndTime.split(':')[0] || '14'}
-                    onChange={(e) => {
-                      const hours = e.target.value;
-                      const minutes = bookingEndTime.split(':')[1] || '00';
-                      setBookingEndTime(`${hours}:${minutes}`);
-                    }}
-                    style={{
-                      flex: 1,
-                      padding: '10px',
-                      borderRadius: '4px 0 0 4px',
-                      border: '1px solid #ddd',
-                      borderRight: 'none'
-                    }}
-                  >
-                    {Array.from({ length: 24 }, (_, i) => i).map(hour => {
-                      const hourStr = hour.toString().padStart(2, '0');
-
-                      // For end time, we don't need to disable hours that come after the start time
-                      const startHour = parseInt(bookingTime.split(':')[0] || '12');
-
-                      // Check if all slots in this hour are occupied
-                      const isHourFullyOccupied = ['00', '15', '30', '45'].every(min =>
-                        occupiedSlots.includes(`${hourStr}:${min}`)
-                      );
-
-                      // If this hour is before or equal to start hour, check if it's fully occupied
-                      // Otherwise, it's selectable even if occupied (since end time can be after occupied slots)
-                      const shouldDisable = hour <= startHour && isHourFullyOccupied;
-
-                      // Check if some slots in this hour are occupied (for color indication)
-                      const isHourPartiallyOccupied = ['00', '15', '30', '45'].some(min =>
-                        occupiedSlots.includes(`${hourStr}:${min}`)
-                      );
-
-                      return (
-                        <option
-                          key={hour}
-                          value={hourStr}
-                          disabled={shouldDisable}
-                          style={{
-                            backgroundColor: shouldDisable ? '#ffdddd' :
-                              isHourPartiallyOccupied ? '#fff8e1' :
-                                '#ffffff',
-                            color: shouldDisable ? '#999999' : '#000000'
-                          }}
-                        >
-                          {hourStr}{shouldDisable ? ' (занято)' :
-                            isHourPartiallyOccupied && hour > startHour ? ' (частично)' : ''}
-                        </option>
-                      );
-                    })}
-                  </select>
-                  <span style={{
-                    padding: '10px 5px',
-                    backgroundColor: '#f5f5f5',
-                    borderTop: '1px solid #ddd',
-                    borderBottom: '1px solid #ddd'
-                  }}>:</span>
-                  <select
-                    value={bookingEndTime.split(':')[1] || '00'}
-                    onChange={(e) => {
-                      const hours = bookingEndTime.split(':')[0] || '14';
-                      const minutes = e.target.value;
-                      setBookingEndTime(`${hours}:${minutes}`);
-                    }}
-                    style={{
-                      flex: 1,
-                      padding: '10px',
-                      borderRadius: '0 4px 4px 0',
-                      border: '1px solid #ddd',
-                      borderLeft: 'none'
-                    }}
-                  >
-                    {['00', '15', '30', '45'].map(minute => {
-                      const hourStr = bookingEndTime.split(':')[0] || '14';
-                      const timeSlot = `${hourStr}:${minute}`;
-                      const isSlotOccupied = occupiedSlots.includes(timeSlot);
-
-                      // End time minute can be occupied if the hour is after start time
-                      const startHour = parseInt(bookingTime.split(':')[0] || '12');
-                      const endHour = parseInt(hourStr);
-                      const shouldDisable = endHour <= startHour && isSlotOccupied;
-
-                      return (
-                        <option
-                          key={minute}
-                          value={minute}
-                          disabled={shouldDisable}
-                          style={{
-                            backgroundColor: shouldDisable ? '#ffdddd' :
-                              isSlotOccupied ? '#fff8e1' :
-                                '#ffffff',
-                            color: shouldDisable ? '#999999' : '#000000'
-                          }}
-                        >
-                          {minute}{shouldDisable ? ' (занято)' : ''}
-                        </option>
-                      );
-                    })}
-                  </select>
+                          return (
+                            <option
+                              key={minute}
+                              value={minute}
+                              disabled={shouldDisable}
+                              style={{
+                                backgroundColor: shouldDisable ? '#ffdddd' :
+                                  isSlotOccupied ? '#fff8e1' : '#ffffff',
+                                color: shouldDisable ? '#999999' : '#000000'
+                              }}
+                            >
+                              {minute}
+                            </option>
+                          );
+                        })}
+                      </select>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Client information */}
-            <div className="form-group" style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-                Ваше имя:
-              </label>
-              <input
-                type="text"
-                value={clientName}
-                onChange={(e) => setClientName(e.target.value)}
-                placeholder="Иван Иванов"
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  borderRadius: '4px',
-                  border: '1px solid #ddd'
-                }}
-              />
-            </div>
-
-            <div className="form-group" style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-                Номер телефона:
-              </label>
-              <input
-                type="tel"
-                value={clientPhone}
-                onChange={(e) => setClientPhone(e.target.value)}
-                placeholder="+7 (___) ___-__-__"
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  borderRadius: '4px',
-                  border: '1px solid #ddd'
-                }}
-              />
-            </div>
-
-            <div className="form-group" style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-                Количество гостей:
-              </label>
-              <input
-                type="text"
-                value={guestCount === 0 ? '' : guestCount.toString()}
-                onChange={(e) => setGuestCount(parseInt(e.target.value) | 0)}
-                style={{
-                  width: '100px',
-                  padding: '10px',
-                  borderRadius: '4px',
-                  border: '1px solid #ddd'
-                }}
-              />
-            </div>
-
-            <div className="form-group" style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-                Примечание (необязательно):
-              </label>
-              <textarea
-                value={bookingNote}
-                onChange={(e) => setBookingNote(e.target.value)}
-                placeholder="Особые пожелания, комментарии..."
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  borderRadius: '4px',
-                  border: '1px solid #ddd',
-                  minHeight: '80px',
-                  resize: 'vertical'
-                }}
-              />
-            </div>
-
-            {/* Available times info */}
-            <div className="available-times-info" style={{
-              backgroundColor: '#f8f9fa',
-              borderRadius: '4px',
-              padding: '15px',
-              marginBottom: '20px'
-            }}>
-              <h4 style={{ margin: '0 0 10px 0' }}>Информация о доступности:</h4>
-              {(() => {
-                const occupiedSlots = selectedTableId && bookingDate ?
-                  getOccupiedTimeSlots(selectedTableId, bookingDate) : [];
-
-                if (occupiedSlots.length > 0) {
-                  // Group consecutive times for better display
-                  let currentHour = -1;
-                  const occupiedHours = [];
-
-                  occupiedSlots.forEach(slot => {
-                    const hour = parseInt(slot.split(':')[0], 10);
-                    if (hour !== currentHour) {
-                      occupiedHours.push(hour);
-                      currentHour = hour;
-                    }
-                  });
-
-                  return (
-                    <div>
-                      <p style={{ color: '#dc3545' }}>
-                        <strong>Занятое время:</strong> {occupiedHours.map(h => `${h}:00-${(h + 1).toString().padStart(2, '0')}:00`).join(', ')}
-                      </p>
-                      <p>Выберите другое время для бронирования.</p>
-                    </div>
-                  );
-                } else {
-                  return (
-                    <p style={{ color: '#28a745' }}>
-                      <strong>Стол свободен</strong> в выбранную дату и время.
-                    </p>
-                  );
-                }
-              })()}
-            </div>
-
-            {/* Action buttons */}
-            <div className="actions" style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              gap: '10px'
-            }}>
-              <button
-                onClick={() => {
-                  setShowBookingModal(false);
-                  setSelectedTableId(null);
-                }}
-                style={{
-                  padding: '10px 20px',
-                  backgroundColor: '#6c757d',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  flex: 1
-                }}
-              >
-                Отмена
-              </button>
-
-              <button
-                onClick={confirmBooking}
-                style={{
-                  padding: '10px 20px',
-                  backgroundColor: '#2ecc71',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
+              {/* Booking type selection - NEW FEATURE */}
+              <div className="form-group" style={{ marginBottom: '20px' }}>
+                <label style={{ 
+                  display: 'block', 
+                  marginBottom: '8px', 
                   fontWeight: 'bold',
-                  flex: 1
-                }}
-              >
-                Подтвердить бронирование
-              </button>
+                  fontSize: '15px'
+                }}>
+                  Тип мероприятия:
+                </label>
+                
+                {/* Event type selector button */}
+                <div
+                  onClick={() => setShowEventTypeSelector(!showEventTypeSelector)}
+                  style={{
+                    padding: '12px 15px',
+                    borderRadius: '8px',
+                    border: '1px solid #ddd',
+                    backgroundColor: '#f9f9f9',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    boxShadow: '0 2px 5px rgba(0,0,0,0.05)'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ fontSize: '24px' }}>
+                      {bookingType ? getEventTypeEmoji(bookingType) : '📅'}
+                    </span>
+                    <span>
+                      {bookingType ? getEventTypeName(bookingType) : 'Выберите тип мероприятия'}
+                    </span>
+                  </div>
+                  <span style={{ fontSize: '18px' }}>
+                    {showEventTypeSelector ? '▲' : '▼'}
+                  </span>
+                </div>
+
+                {/* Event type options dropdown */}
+                {showEventTypeSelector && (
+                  <div style={{
+                    marginTop: '10px',
+                    border: '1px solid #ddd',
+                    borderRadius: '8px',
+                    overflow: 'hidden',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                  }}>
+                    {[
+                      { type: 'birthday', label: 'День Рождения', emoji: '🎂' },
+                      { type: 'business', label: 'Деловая Встреча', emoji: '💼' },
+                      { type: 'party', label: 'Вечеринка', emoji: '🎉' },
+                      { type: 'romantic', label: 'Романтический Ужин', emoji: '❤️' },
+                      { type: 'family', label: 'Семейный Ужин', emoji: '👨‍👩‍👧‍👦' },
+                      { type: 'other', label: 'Другое', emoji: '✨' }
+                    ].map(item => (
+                      <div
+                        key={item.type}
+                        onClick={() => {
+                          setBookingType(item.type);
+                          setShowEventTypeSelector(false);
+                        }}
+                        style={{
+                          padding: '12px 15px',
+                          borderBottom: '1px solid #eee',
+                          backgroundColor: bookingType === item.type ? '#e8f8f0' : 'white',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '10px',
+                          transition: 'all 0.2s ease'
+                        }}
+                      >
+                        <span style={{ fontSize: '24px' }}>{item.emoji}</span>
+                        <span style={{ 
+                          fontWeight: bookingType === item.type ? 'bold' : 'normal'
+                        }}>
+                          {item.label}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Available times info */}
+              <div className="available-times-info" style={{
+                backgroundColor: '#f8f9fa',
+                borderRadius: '8px',
+                padding: '15px',
+                marginBottom: '20px',
+                fontSize: '14px',
+                boxShadow: '0 2px 5px rgba(0,0,0,0.05)'
+              }}>
+                {(() => {
+                  const occupiedSlots = selectedTableId && bookingDate ?
+                    getOccupiedTimeSlots(selectedTableId, bookingDate) : [];
+
+                  if (occupiedSlots.length > 0) {
+                    // Group consecutive times for better display
+                    let currentHour = -1;
+                    const occupiedHours = [];
+
+                    occupiedSlots.forEach(slot => {
+                      const hour = parseInt(slot.split(':')[0], 10);
+                      if (hour !== currentHour) {
+                        occupiedHours.push(hour);
+                        currentHour = hour;
+                      }
+                    });
+
+                    return (
+                      <div>
+                        <p style={{ 
+                          color: '#dc3545', 
+                          margin: '0 0 8px 0', 
+                          fontWeight: 'bold'
+                        }}>
+                          Занятое время:
+                        </p>
+                        <p style={{ margin: '0' }}>
+                          {occupiedHours.map(h => `${h}:00-${(h + 1).toString().padStart(2, '0')}:00`).join(', ')}
+                        </p>
+                      </div>
+                    );
+                  } else {
+                    return (
+                      <p style={{ 
+                        color: '#28a745',
+                        margin: '0',
+                        fontWeight: 'bold'
+                      }}>
+                        Стол свободен в выбранную дату и время
+                      </p>
+                    );
+                  }
+                })()}
+              </div>
+
+              {/* Client information */}
+              <div className="form-group" style={{ marginBottom: '20px' }}>
+                <label style={{ 
+                  display: 'block', 
+                  marginBottom: '8px', 
+                  fontWeight: 'bold',
+                  fontSize: '15px'
+                }}>
+                  Ваше имя:
+                </label>
+                <input
+                  type="text"
+                  value={clientName}
+                  onChange={(e) => setClientName(e.target.value)}
+                  placeholder="Иван Иванов"
+                  style={{
+                    width: '80%',
+                    padding: '12px',
+                    borderRadius: '8px',
+                    border: '1px solid #ddd',
+                    fontSize: '16px',
+                    boxShadow: '0 2px 5px rgba(0,0,0,0.05)',
+                    backgroundColor: '#f9f9f9'
+                  }}
+                />
+              </div>
+
+              <div className="form-group" style={{ marginBottom: '20px' }}>
+                <label style={{ 
+                  display: 'block', 
+                  marginBottom: '8px', 
+                  fontWeight: 'bold',
+                  fontSize: '15px'
+                }}>
+                  Номер телефона:
+                </label>
+                <input
+                  type="tel"
+                  value={clientPhone}
+                  onChange={(e) => setClientPhone(e.target.value)}
+                  placeholder="+374 (77) 77-77-77"
+                  style={{
+                    width: '80%',
+                    padding: '12px',
+                    borderRadius: '8px',
+                    border: '1px solid #ddd',
+                    fontSize: '16px',
+                    boxShadow: '0 2px 5px rgba(0,0,0,0.05)',
+                    backgroundColor: '#f9f9f9'
+                  }}
+                />
+              </div>
+
+              <div className="form-group" style={{ marginBottom: '20px' }}>
+                <label style={{ 
+                  display: 'block', 
+                  marginBottom: '8px', 
+                  fontWeight: 'bold',
+                  fontSize: '15px'
+                }}>
+                  Количество гостей:
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={guestCount === 0 ? '' : guestCount.toString()}
+                  onChange={(e) => setGuestCount(parseInt(e.target.value) || 1)}
+                  style={{
+                    width: '80%',
+                    padding: '12px',
+                    borderRadius: '8px',
+                    border: '1px solid #ddd',
+                    fontSize: '16px',
+                    boxShadow: '0 2px 5px rgba(0,0,0,0.05)',
+                    backgroundColor: '#f9f9f9'
+                  }}
+                />
+              </div>
+
+              <div className="form-group" style={{ marginBottom: '25px' }}>
+                <label style={{ 
+                  display: 'block', 
+                  marginBottom: '8px', 
+                  fontWeight: 'bold',
+                  fontSize: '15px'
+                }}>
+                  Примечание (необязательно):
+                </label>
+                <textarea
+                  value={bookingNote}
+                  onChange={(e) => setBookingNote(e.target.value)}
+                  placeholder="Особые пожелания, комментарии..."
+                  style={{
+                    width: '80%',
+                    padding: '12px',
+                    borderRadius: '8px',
+                    border: '1px solid #ddd',
+                    fontSize: '16px',
+                    minHeight: '100px',
+                    resize: 'vertical',
+                    boxShadow: '0 2px 5px rgba(0,0,0,0.05)',
+                    backgroundColor: '#f9f9f9'
+                  }}
+                />
+              </div>
+
+              {/* Action buttons */}
+              <div className="actions" style={{
+                display: 'flex',
+                gap: '15px',
+                marginTop: '10px',
+                justifyContent: 'center'
+              }}>
+                <button
+                  onClick={confirmBooking}
+                  style={{
+                    padding: '14px 24px',
+                    backgroundColor: '#2ecc71',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontWeight: 'bold',
+                    fontSize: '16px',
+                    boxShadow: '0 4px 6px rgba(46, 204, 113, 0.2)',
+                    transition: 'all 0.2s ease',
+                    // width: '60%'
+                  }}
+                >
+                  Подтвердить бронирование
+                </button>
+                
+                <button
+                  onClick={() => {
+                    setShowBookingModal(false);
+                    setSelectedTableId(null);
+                  }}
+                  style={{
+                    padding: '14px 24px',
+                    backgroundColor: '#f1f1f1',
+                    color: '#333',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '16px',
+                    transition: 'all 0.2s ease',
+                    // width: '30%'
+                  }}
+                >
+                  Отмена
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1975,75 +2244,125 @@ const ClientBookingComponent = () => {
         }}>
           <div className="success-modal-content" style={{
             backgroundColor: 'white',
-            borderRadius: '8px',
-            padding: '20px',
-            maxWidth: '500px',
+            borderRadius: '12px',
+            padding: '30px',
+            maxWidth: '600px',
             width: '90%',
-            textAlign: 'center'
+            textAlign: 'center',
+            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)'
           }} onClick={(e) => e.stopPropagation()}>
             <div style={{
-              width: '70px',
-              height: '70px',
+              width: '80px',
+              height: '80px',
               borderRadius: '50%',
               backgroundColor: '#2ecc71',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              margin: '0 auto 20px auto'
+              margin: '0 auto 25px auto'
             }}>
-              <span style={{ color: 'white', fontSize: '40px' }}>✓</span>
+              <span style={{ color: 'white', fontSize: '45px' }}>✓</span>
             </div>
 
-            <h2 style={{ marginBottom: '20px', color: '#2ecc71' }}>Бронирование успешно!</h2>
+            <h2 style={{ 
+              marginBottom: '25px', 
+              color: '#2ecc71',
+              fontSize: '28px' 
+            }}>
+              {getEventTypeEmoji(bookingSummary.type)} Бронирование успешно!
+            </h2>
 
             <div className="booking-details" style={{
               backgroundColor: '#f8f9fa',
-              padding: '20px',
-              borderRadius: '8px',
+              padding: '25px',
+              borderRadius: '10px',
               textAlign: 'left',
-              marginBottom: '20px'
+              marginBottom: '25px',
+              boxShadow: '0 4px 10px rgba(0, 0, 0, 0.05)'
             }}>
-              <h3 style={{ marginTop: 0, marginBottom: '15px', textAlign: 'center' }}>Детали бронирования</h3>
+              <h3 style={{ 
+                marginTop: 0, 
+                marginBottom: '20px', 
+                textAlign: 'center',
+                color: '#333',
+                fontSize: '20px'
+              }}>
+                Детали бронирования
+              </h3>
 
-              <div style={{ marginBottom: '10px' }}>
-                <strong>Стол:</strong> {bookingSummary.tableName}
+              <div style={{ 
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+                gap: '15px'
+              }}>
+                <div>
+                  <div style={{ marginBottom: '12px' }}>
+                    <strong>Стол:</strong> {bookingSummary.tableName}
+                  </div>
+
+                  <div style={{ marginBottom: '12px' }}>
+                    <strong>Дата:</strong> {bookingSummary.date}
+                  </div>
+
+                  <div style={{ marginBottom: '12px' }}>
+                    <strong>Время:</strong> {bookingSummary.time}
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ marginBottom: '12px' }}>
+                    <strong>Имя:</strong> {bookingSummary.name}
+                  </div>
+
+                  <div style={{ marginBottom: '12px' }}>
+                    <strong>Телефон:</strong> {bookingSummary.phone}
+                  </div>
+
+                  <div style={{ marginBottom: '12px' }}>
+                    <strong>Количество гостей:</strong> {bookingSummary.guestCount}
+                  </div>
+                </div>
               </div>
-
-              <div style={{ marginBottom: '10px' }}>
-                <strong>Дата:</strong> {bookingSummary.date}
-              </div>
-
-              <div style={{ marginBottom: '10px' }}>
-                <strong>Время:</strong> {bookingSummary.time}
-              </div>
-
-              <div style={{ marginBottom: '10px' }}>
-                <strong>Имя:</strong> {bookingSummary.name}
-              </div>
-
-              <div style={{ marginBottom: '10px' }}>
-                <strong>Телефон:</strong> {bookingSummary.phone}
-              </div>
-
-              <div>
-                <strong>Количество гостей:</strong> {bookingSummary.guestCount}
+              
+              {/* Display booking type with emoji */}
+              <div style={{ 
+                marginTop: '15px', 
+                textAlign: 'center',
+                padding: '15px',
+                backgroundColor: '#e8f8f0',
+                borderRadius: '8px'
+              }}>
+                <div style={{
+                  fontSize: '24px',
+                  marginBottom: '5px'
+                }}>
+                  {getEventTypeEmoji(bookingSummary.type)}
+                </div>
+                <strong>Тип мероприятия:</strong> {getEventTypeName(bookingSummary.type)}
               </div>
             </div>
 
-            <p style={{ marginBottom: '20px' }}>
+            <p style={{ 
+              marginBottom: '25px',
+              fontSize: '15px',
+              color: '#666' 
+            }}>
               В случае изменения планов, пожалуйста, свяжитесь с нами по телефону для отмены бронирования.
             </p>
 
             <button
               onClick={resetBooking}
               style={{
-                padding: '10px 20px',
+                padding: '14px 24px',
                 backgroundColor: '#3498db',
                 color: 'white',
                 border: 'none',
-                borderRadius: '4px',
+                borderRadius: '8px',
                 cursor: 'pointer',
-                fontWeight: 'bold'
+                fontWeight: 'bold',
+                fontSize: '16px',
+                boxShadow: '0 4px 6px rgba(52, 152, 219, 0.2)',
+                transition: 'all 0.2s ease'
               }}
             >
               Вернуться к плану зала
