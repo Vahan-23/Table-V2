@@ -1789,7 +1789,7 @@ const SeatingArrangement = () => {
 
                     {showHallModal && <HallModal />}
                 </header>
-                <div className="main-content">
+                <div className="main-content2">
 
                     <TableDetailsPopup
                         table={getDetailsTable()}

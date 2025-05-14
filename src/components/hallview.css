@@ -179,7 +179,7 @@
 
 /* Стили для элементов зала */
 .hall-element {
-  pointer-events: none;
+  /* pointer-events: none; */
   display: flex;
   flex-direction: column;
   align-items: center;
