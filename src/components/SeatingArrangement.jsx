@@ -2,7 +2,9 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useDrag, useDrop } from 'react-dnd';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
-
+import { Stage, Layer, Rect, Circle, Line } from 'react-konva';
+import KonvaDrawingBoard from './KonvaDrawingBoard';
+import './KonvaDrawingBoard.css'; // Или скопируйте стили в ваш основной CSS файл
 import './HallElement.css';
 import './ElementProperties.css';
 import './App.css';
@@ -66,20 +68,216 @@ const SeatingArrangement = () => {
     const [hallElements, setHallElements] = useState([]);
     const [selectedElementId, setSelectedElementId] = useState(null);
 
-
+const [drawingMode, setDrawingMode] = useState(false);
+    // Add these states to track drawing
+    const [isDrawing, setIsDrawing] = useState(false);
+    const [currentShape, setCurrentShape] = useState(null);
+    const [startPoint, setStartPoint] = useState({ x: 0, y: 0 });
+    const [shapes, setShapes] = useState([]);
+    const [color, setColor] = useState('#000000');
+    const [strokeWidth, setStrokeWidth] = useState(3);
+    const [activeTool, setActiveTool] = useState(null);
     // Добавляем новые состояния для отслеживания позиции перетаскивания
     const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
 
+    // Добавить эти строки после других объявлений состояний
+    const stageRef = useRef(null);
 
-    const handleCanvasClick = (e) => {
-        // Проверяем, что клик был именно по фону холста,
-        // а не по столу или элементу зала (они должны останавливать всплытие события)
-        if (e.target === tablesAreaRef.current) {
-            setSelectedElementId(null);
-            // Опционально: можно вернуть режим к столам, если хотите
-            // setActiveMode('tables');
+    // Функция для экспорта изображения
+    const exportCanvasAsImage = () => {
+        if (stageRef.current) {
+            const uri = stageRef.current.toDataURL();
+            const link = document.createElement('a');
+            link.download = 'hall-layout.png';
+            link.href = uri;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
     };
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape' && activeTool) {
+                setActiveTool(null);
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [activeTool]);
+
+
+    const handleDrawingMouseDown = (e) => {
+        if (!activeTool || !stageRef.current) return;
+
+        // With Konva events, no need to call preventDefault
+        // e.preventDefault(); - Remove this line
+
+        // Get stage and cursor position directly from the event
+        const stage = e.target.getStage();
+        if (!stage) return;
+
+        const pointerPos = stage.getPointerPosition();
+        if (!pointerPos) return;
+
+        // Start drawing
+        setIsDrawing(true);
+        setStartPoint({ x: pointerPos.x, y: pointerPos.y });
+
+        // Create initial shape
+        const newShape = {
+            id: Date.now(),
+            type: activeTool,
+            x: pointerPos.x,
+            y: pointerPos.y,
+            width: 0,
+            height: 0,
+            radius: 0,
+            points: [pointerPos.x, pointerPos.y, pointerPos.x, pointerPos.y],
+            color: color,
+            strokeWidth: strokeWidth,
+            fill: 'transparent'
+        };
+
+        setCurrentShape(newShape);
+    };
+
+    const handleDrawingMouseMove = (e) => {
+        if (!isDrawing || !activeTool) return;
+
+        // Get stage and cursor position directly from the event
+        const stage = e.target.getStage();
+        if (!stage) return;
+
+        const pointerPos = stage.getPointerPosition();
+        if (!pointerPos || !currentShape) return;
+
+        // Update shape based on tool type
+        let updatedShape = { ...currentShape };
+
+        switch (activeTool) {
+            case 'rect':
+                // Calculate width and height
+                const width = pointerPos.x - startPoint.x;
+                const height = pointerPos.y - startPoint.y;
+
+                // Update rectangle properties
+                updatedShape.width = Math.abs(width);
+                updatedShape.height = Math.abs(height);
+
+                // Set the x,y to the top-left corner
+                updatedShape.x = width < 0 ? pointerPos.x : startPoint.x;
+                updatedShape.y = height < 0 ? pointerPos.y : startPoint.y;
+                break;
+
+            case 'circle':
+                // Calculate radius from center to cursor
+                const dx = pointerPos.x - startPoint.x;
+                const dy = pointerPos.y - startPoint.y;
+                const radius = Math.sqrt(dx * dx + dy * dy);
+
+                // Update circle properties
+                updatedShape.radius = radius;
+                break;
+
+            case 'line':
+                // Update line points
+                updatedShape.points = [startPoint.x, startPoint.y, pointerPos.x, pointerPos.y];
+                break;
+
+            default:
+                break;
+        }
+
+        setCurrentShape(updatedShape);
+    };
+
+    const handleDrawingMouseUp = (e) => {
+        if (!isDrawing || !currentShape) return;
+
+        // Add the completed shape to shapes array
+        setShapes([...shapes, currentShape]);
+
+        // Reset drawing state
+        setIsDrawing(false);
+        setCurrentShape(null);
+    };
+
+    // const handleDrawingClick = (e) => {
+    //     // Don't proceed if no active tool
+    //     if (!activeTool) {
+    //         return;
+    //     }
+
+    //     // Check if we have a reference to the stage
+    //     if (!stageRef.current) {
+    //         return;
+    //     }
+
+    //     // Get the stage
+    //     const stage = stageRef.current;
+
+    //     // Convert DOM event coordinates to stage coordinates
+    //     const stageContainer = stage.container();
+    //     const stageRect = stageContainer.getBoundingClientRect();
+    //     const pos = {
+    //         x: e.clientX - stageRect.left,
+    //         y: e.clientY - stageRect.top
+    //     };
+
+    //     let newShape;
+
+    //     switch (activeTool) {
+    //         case 'rect':
+    //             // Create rectangle with fixed size
+    //             newShape = {
+    //                 id: Date.now(),
+    //                 type: 'rect',
+    //                 x: pos.x - 25, // center shape on cursor
+    //                 y: pos.y - 25,
+    //                 width: 50,     // fixed width
+    //                 height: 50,    // fixed height
+    //                 color: color,
+    //                 strokeWidth: strokeWidth,
+    //                 fill: 'transparent'
+    //             };
+    //             break;
+
+    //         case 'circle':
+    //             // Create circle with fixed size
+    //             newShape = {
+    //                 id: Date.now(),
+    //                 type: 'circle',
+    //                 x: pos.x,
+    //                 y: pos.y,
+    //                 radius: 25,    // fixed radius
+    //                 color: color,
+    //                 strokeWidth: strokeWidth,
+    //                 fill: 'transparent'
+    //             };
+    //             break;
+
+    //         case 'line':
+    //             // For a line we need two points, so create a horizontal line
+    //             newShape = {
+    //                 id: Date.now(),
+    //                 type: 'line',
+    //                 points: [pos.x - 25, pos.y, pos.x + 25, pos.y], // horizontal line 50px
+    //                 color: color,
+    //                 strokeWidth: strokeWidth
+    //             };
+    //             break;
+
+    //         default:
+    //             return;
+    //     }
+
+    //     // Add the new shape
+    //     setShapes([...shapes, newShape]);
+    // };
 
     const handleCanvasDrop = (e) => {
         e.preventDefault();
@@ -1790,7 +1988,74 @@ const SeatingArrangement = () => {
                     {showHallModal && <HallModal />}
                 </header>
                 <div className="main-content2">
+                    <div className="drawing-tools">
+                        <div className="tool-section">
+                            <h4>Инструменты рисования</h4>
+                            <div className="tool-buttons">
+                                <button
+                                    onClick={() => setActiveTool(activeTool === 'rect' ? null : 'rect')}
+                                    className={`tool-btn ${activeTool === 'rect' ? 'active' : ''}`}
+                                >
+                                    Прямоугольник
+                                </button>
+                                <button
+                                    onClick={() => setActiveTool(activeTool === 'circle' ? null : 'circle')}
+                                    className={`tool-btn ${activeTool === 'circle' ? 'active' : ''}`}
+                                >
+                                    Круг
+                                </button>
+                                <button
+                                    onClick={() => setActiveTool(activeTool === 'line' ? null : 'line')}
+                                    className={`tool-btn ${activeTool === 'line' ? 'active' : ''}`}
+                                >
+                                    Линия
+                                </button>
+                                {activeTool && (
+                                    <button onClick={() => setActiveTool(null)}>
+                                        Отменить выбор инструмента
+                                    </button>
+                                )}
+                            </div>
+                        </div>
 
+                        <div className="tool-section">
+                            <button
+                                onClick={() => setShapes([])}
+                                className="clear-btn"
+                            >
+                                Очистить холст
+                            </button>
+
+                            <button
+                                onClick={exportCanvasAsImage}
+                                className="export-btn"
+                            >
+                                Сохранить как изображение
+                            </button>
+                        </div>
+                    </div>
+                    <div className="style-controls">
+                        <div className="control-group">
+                            <label>Цвет:</label>
+                            <input
+                                type="color"
+                                value={color}
+                                onChange={(e) => setColor(e.target.value)}
+                            />
+                        </div>
+
+                        <div className="control-group">
+                            <label>Толщина:</label>
+                            <input
+                                type="range"
+                                min="1"
+                                max="20"
+                                value={strokeWidth}
+                                onChange={(e) => setStrokeWidth(parseInt(e.target.value))}
+                            />
+                            <span>{strokeWidth}px</span>
+                        </div>
+                    </div>
                     <TableDetailsPopup
                         table={getDetailsTable()}
                         tables={tables}
@@ -1798,11 +2063,11 @@ const SeatingArrangement = () => {
                         isOpen={isDetailsOpen}
                         onClose={handleCloseTableDetails}
                         setPeople={setPeople}
-                        
+
                     />
                     <div className="figmaContainer">
-                       <SidebarLayout position='right' >
-                        
+                        <SidebarLayout position='right' >
+
                             <GroupsPanel
                                 defaultExpanded={false}
                                 groups={people}
@@ -1811,12 +2076,12 @@ const SeatingArrangement = () => {
                                 updateGroups={setPeople}
                             />
                             <ElementsPanel
-                            defaultExpanded={false}
-                            onAddElement={(elementType) => {
-                            }} />
+                                defaultExpanded={false}
+                                onAddElement={(elementType) => {
+                                }} />
 
                         </SidebarLayout>
-                       <div className="zoom-controls">
+                        <div className="zoom-controls">
                             <div className="zoom-buttons">
                                 <button
                                     className="zoom-btn zoom-out-btn"
@@ -1837,7 +2102,7 @@ const SeatingArrangement = () => {
                             ref={tablesAreaRef}
                             onMouseDown={handleCanvasMouseDown}
                             onMouseMove={handleMouseMoveOnCanvas}
-                            onClick={handleCanvasClick} // <-- Добавляем этот обработчик
+                            // onClick={handleDrawingClick}
                             onDragOver={handleCanvasDragOver}
                             onDragLeave={(e) => {
                                 e.currentTarget.style.backgroundColor = '';
@@ -1920,17 +2185,121 @@ const SeatingArrangement = () => {
                                 elements={hallElements}
                                 setElements={setHallElements}
                                 selectedElementId={selectedElementId}
-                                // setSelectedElementId={setSelectedElementId}
                                 setSelectedElementId={(elementId) => {
                                     setSelectedElementId(elementId); // Выбираем элемент
                                     setActiveMode('elements');      // Переключаем режим
                                 }}
+
                             />
+
+                            {/* Добавляем слой для рисования Konva ПОВЕРХ всего содержимого */}
+                            <div className="konva-drawing-layer" style={{
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                width: '100%',
+                                height: '100%',
+                                pointerEvents: activeTool ? 'auto' : 'none', // принимать события только когда инструмент активен
+                                zIndex: 50
+                            }}>
+                                <Stage
+                                    ref={stageRef}
+                                    width={tablesAreaRef.current?.clientWidth || window.innerWidth}
+                                    height={tablesAreaRef.current?.clientHeight || window.innerHeight}
+                                    onMouseDown={handleDrawingMouseDown}
+                                    onMouseMove={handleDrawingMouseMove}
+                                    onMouseUp={handleDrawingMouseUp}
+                                    style={{
+                                        cursor: activeTool ? 'crosshair' : 'default'
+                                    }}
+                                >
+                                    <Layer>
+                                        {/* Draw all existing shapes */}
+                                        {shapes.map((shape) => {
+                                            if (shape.type === 'line') {
+                                                return (
+                                                    <Line
+                                                        key={shape.id}
+                                                        points={shape.points}
+                                                        stroke={shape.color}
+                                                        strokeWidth={shape.strokeWidth}
+                                                        lineCap="round"
+                                                    />
+                                                );
+                                            } else if (shape.type === 'rect') {
+                                                return (
+                                                    <Rect
+                                                        key={shape.id}
+                                                        x={shape.x}
+                                                        y={shape.y}
+                                                        width={shape.width}
+                                                        height={shape.height}
+                                                        stroke={shape.color}
+                                                        strokeWidth={shape.strokeWidth}
+                                                        fill={shape.fill || "transparent"}
+                                                    />
+                                                );
+                                            } else if (shape.type === 'circle') {
+                                                return (
+                                                    <Circle
+                                                        key={shape.id}
+                                                        x={shape.x}
+                                                        y={shape.y}
+                                                        radius={shape.radius}
+                                                        stroke={shape.color}
+                                                        strokeWidth={shape.strokeWidth}
+                                                        fill={shape.fill || "transparent"}
+                                                    />
+                                                );
+                                            }
+                                            return null;
+                                        })}
+
+                                        {/* Draw the current shape being created */}
+                                        {isDrawing && currentShape && (() => {
+                                            if (currentShape.type === 'line') {
+                                                return (
+                                                    <Line
+                                                        points={currentShape.points}
+                                                        stroke={currentShape.color}
+                                                        strokeWidth={currentShape.strokeWidth}
+                                                        lineCap="round"
+                                                    />
+                                                );
+                                            } else if (currentShape.type === 'rect') {
+                                                return (
+                                                    <Rect
+                                                        x={currentShape.x}
+                                                        y={currentShape.y}
+                                                        width={currentShape.width}
+                                                        height={currentShape.height}
+                                                        stroke={currentShape.color}
+                                                        strokeWidth={currentShape.strokeWidth}
+                                                        fill={currentShape.fill || "transparent"}
+                                                    />
+                                                );
+                                            } else if (currentShape.type === 'circle') {
+                                                return (
+                                                    <Circle
+                                                        x={startPoint.x}
+                                                        y={startPoint.y}
+                                                        radius={currentShape.radius}
+                                                        stroke={currentShape.color}
+                                                        strokeWidth={currentShape.strokeWidth}
+                                                        fill={currentShape.fill || "transparent"}
+                                                    />
+                                                );
+                                            }
+                                            return null;
+                                        })()}
+                                    </Layer>
+                                </Stage>
+                            </div>
                         </div>
+
                     </div>
                 </div>
             </div>
-
             {/* Fullscreen popup */}
             {isPopupVisible && (
                 <div
@@ -2086,64 +2455,64 @@ const Table = ({
     // Получаем форму стола
     const shape = table.shape || 'round';
     const isRectangleTable = shape === 'rectangle';
-    
+
     // Получаем текущий угол поворота
     const rotation = table.rotation || 0;
 
     // Функция для ручного поворота стола
     const handleRotateStart = (e) => {
         if (!tableRef.current || !isRectangleTable) return;
-        
+
         // Остановка всплытия события
         e.stopPropagation();
         e.preventDefault();
-        
+
         console.log('ROTATION START'); // Отладочный вывод
-        
+
         setIsRotating(true);
-        
+
         // Вычисляем центр стола
         const rect = tableRef.current.getBoundingClientRect();
         const centerX = rect.left + rect.width / 2;
         const centerY = rect.top + rect.height / 2;
-        
+
         // Вычисляем начальный угол
         const startAngle = Math.atan2(
             e.clientY - centerY,
             e.clientX - centerX
         ) * (180 / Math.PI);
-        
+
         console.log('Start angle:', startAngle, 'Current rotation:', table.rotation || 0);
-        
+
         setRotateStartAngle(startAngle - (table.rotation || 0));
-        
+
         // Обрабатываем события на уровне документа
         document.addEventListener('mousemove', handleRotateMove);
         document.addEventListener('mouseup', handleRotateEnd);
     };
-    
+
     const handleRotateMove = (e) => {
         if (!isRotating || !tableRef.current) return;
-        
+
         // Вычисляем центр стола
         const rect = tableRef.current.getBoundingClientRect();
         const centerX = rect.left + rect.width / 2;
         const centerY = rect.top + rect.height / 2;
-        
+
         // Вычисляем новый угол
         const currentAngle = Math.atan2(
             e.clientY - centerY,
             e.clientX - centerX
         ) * (180 / Math.PI);
-        
+
         // Получаем разницу поворота
         let newRotation = currentAngle - rotateStartAngle;
-        
+
         // Нормализуем угол поворота до диапазона 0-360
         newRotation = (newRotation + 360) % 360;
-        
+
         // Обновляем поворот стола
-        setTables(prevTables => 
+        setTables(prevTables =>
             prevTables.map(t => {
                 if (t.id === table.id) {
                     return { ...t, rotation: newRotation };
@@ -2152,10 +2521,10 @@ const Table = ({
             })
         );
     };
-    
+
     const handleRotateEnd = () => {
         setIsRotating(false);
-        
+
         // Удаляем обработчики событий
         document.removeEventListener('mousemove', handleRotateMove);
         document.removeEventListener('mouseup', handleRotateEnd);
@@ -2424,61 +2793,7 @@ const Table = ({
         e.stopPropagation();
     };
 
-    const handleMouseMove = (e) => {
-        if (isDragging) {
-            // Mark this as a drag operation, not a click
-            isDragOperation.current = true;
 
-            const container = tableRef.current.parentElement;
-            const zoom = parseFloat(container.style.getPropertyValue('--zoom-level') || 1);
-
-            // Calculate new position with exact 1:1 movement, accounting for zoom
-            const newX = (e.clientX - dragOffset.x) / zoom;
-            const newY = (e.clientY - dragOffset.y) / zoom;
-
-            // Calculate container boundaries
-            const containerRect = container.getBoundingClientRect();
-            const containerWidth = containerRect.width / zoom;
-            const containerHeight = containerRect.height / zoom;
-
-            // Calculate table dimensions
-            const tableRect = tableRef.current.getBoundingClientRect();
-            const tableWidth = tableRect.width / zoom;
-            const tableHeight = tableRect.height / zoom;
-
-            // Enforce boundaries
-            const boundedX = Math.max(0, Math.min(containerWidth - tableWidth, newX));
-            const boundedY = Math.max(0, Math.min(containerHeight - tableHeight, newY));
-
-            // Update table position with exact coordinates
-            setTables(prev => prev.map(t =>
-                t.id === table.id ? { ...t, x: boundedX, y: boundedY } : t
-            ));
-        } else if (isResizing) {
-            // Existing resizing code...
-        }
-    };
-
-    const handleMouseUp = (e) => {
-        // Detect if this was a click (not a drag)
-        if (isDragging && !isDragOperation.current) {
-            // If it's a click (not a drag) and less than 200ms, show details
-            const elapsedTime = Date.now() - dragStartTime;
-            if (elapsedTime < 200) {
-                onShowDetails(table.id);
-            }
-        }
-
-        setIsDragging(false);
-        setIsResizing(false);
-        isDragOperation.current = false;
-
-        if (tableRef.current) {
-            const rect = tableRef.current.getBoundingClientRect();
-            tableRef.current.x = e.clientX - rect.left;
-            tableRef.current.y = e.clientY - rect.top;
-        }
-    };
 
     // Enhanced drop target to handle both regular group drops and seated group transfers
     const [{ isOver }, drop] = useDrop({
@@ -2943,7 +3258,7 @@ const Table = ({
 
         return chairs;
     };
-    
+
     // Стили для кнопки вращения - показываем только для прямоугольных столов
     const rotateHandleStyles = isRectangleTable ? {
         position: 'absolute',
@@ -3003,7 +3318,7 @@ const Table = ({
             </div>
 
             {/* Кнопка поворота - только для прямоугольных столов */}
-            
+
 
             {shape === 'rectangle' ? (
                 // Прямоугольный стол
@@ -3040,12 +3355,12 @@ const DraggableGroup = ({ group, tableId, onRemoveGroup, onRemovePerson, onDragS
         type: ItemTypes.SEATED_GROUP,
         item: () => {
             console.log("Drag started for group from table details:", group.groupName);
-            
+
             // Вызываем функцию закрытия панели деталей при начале перетаскивания
             if (onDragStart) {
                 onDragStart();
             }
-            
+
             return {
                 sourceTableId: tableId,
                 groupName: group.groupName,
@@ -3112,10 +3427,10 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
     // Локальное состояние для отслеживания изменений количества стульев
     const [chairCount, setChairCount] = useState(table ? table.chairCount : 12);
     const popupRef = useRef(null);
-    
+
     // Определяем, является ли стол прямоугольным
     const isRectangleTable = tableShape === 'rectangle';
-    
+
     useEffect(() => {
         // Функция для проверки клика снаружи
         const handleClickOutside = (event) => {
@@ -3135,13 +3450,13 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
             document.removeEventListener('mousedown', handleClickOutside);
         };
     }, [isOpen, onClose]);
-    
+
     // Функция для закрытия панели деталей
     // Эта функция будет передана в компонент DraggableGroup
     const handleDragStart = () => {
         onClose(); // Закрываем панель деталей при начале перетаскивания
     };
-    
+
     // Обновляем локальное состояние при изменении стола
     useEffect(() => {
         if (table) {
@@ -3151,7 +3466,7 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
             setTableRotation(table.rotation || 0);
         }
     }, [table]);
-    
+
     // Применение изменения имени стола
     const applyTableNameChange = () => {
         if (table) {
@@ -3168,7 +3483,7 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
             );
         }
     };
-    
+
     // Применение изменения формы стола
     const applyTableShapeChange = () => {
         if (table && tableShape !== table.shape) {
@@ -3185,22 +3500,22 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
             );
         }
     };
-    
+
     // Функция для сброса поворота стола
     const resetTableRotation = () => {
         if (table && isRectangleTable) {
             applyTableRotationChange(0);
         }
     };
-    
+
     // Функция для применения изменения поворота
     const applyTableRotationChange = (newRotation) => {
         if (table && isRectangleTable) {
             // Нормализуем угол поворота от 0 до 359 градусов
             const normalizedRotation = ((newRotation % 360) + 360) % 360;
-            
+
             setTableRotation(normalizedRotation);
-            
+
             setTables(prevTables =>
                 prevTables.map(t => {
                     if (t.id === table.id) {
@@ -3214,18 +3529,18 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
             );
         }
     };
-    
+
     // Обработчик изменения слайдера поворота
     const handleRotationSliderChange = (e) => {
         const newRotation = parseInt(e.target.value, 10);
         setTableRotation(newRotation);
     };
-    
+
     // Применяем новое значение после завершения движения слайдера
     const handleRotationSliderComplete = () => {
         applyTableRotationChange(tableRotation);
     };
-    
+
     // Обработчик изменения количества стульев
     const handleChairCountChange = (e) => {
         const newCount = parseInt(e.target.value, 10);
@@ -3321,7 +3636,7 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
             setPeople(prevPeople => [...prevPeople, ...groupPeople]);
         }
     };
-    
+
     // Функция для удаления отдельного человека из стола
     const handleRemovePerson = (personName) => {
         if (window.confirm(`Вы уверены, что хотите удалить ${personName} с этого стола?`)) {
@@ -3360,7 +3675,7 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
                 <h3>Table Details {table ? `${table.id}` : ''}</h3>
                 <button className="close-details-btn" onClick={onClose}>×</button>
             </div>
-            
+
             <div className="table-name-section">
                 <h4>Изменить название стола</h4>
                 <div className="table-name-control">
@@ -3380,7 +3695,7 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
                     </button>
                 </div>
             </div>
-            
+
             <div className="table-details-content">
                 {table ? (
                     <>
@@ -3463,7 +3778,7 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
                                 Применить
                             </button>
                         </div>
-                        
+
                         {/* Элементы управления поворотом - только для прямоугольных столов */}
                         {isRectangleTable && (
                             <div style={{
@@ -3477,7 +3792,7 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
                                     fontSize: '14px',
                                     fontWeight: 'bold'
                                 }}>Поворот стола</h4>
-                                
+
                                 <div style={{
                                     display: 'flex',
                                     flexDirection: 'column',
@@ -3522,7 +3837,7 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
                                                 }}></div>
                                             </div>
                                         </div>
-                                        
+
                                         <div style={{
                                             fontSize: '18px',
                                             fontWeight: 'bold',
@@ -3532,7 +3847,7 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
                                             {Math.round(tableRotation)}°
                                         </div>
                                     </div>
-                                    
+
                                     {/* Слайдер для произвольного поворота */}
                                     <div style={{
                                         width: '100%',
@@ -3543,9 +3858,9 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
                                             justifyContent: 'space-between',
                                             marginBottom: '5px'
                                         }}>
-                                            <span style={{fontSize: '12px'}}>0°</span>
-                                            <span style={{fontSize: '12px'}}>180°</span>
-                                            <span style={{fontSize: '12px'}}>359°</span>
+                                            <span style={{ fontSize: '12px' }}>0°</span>
+                                            <span style={{ fontSize: '12px' }}>180°</span>
+                                            <span style={{ fontSize: '12px' }}>359°</span>
                                         </div>
                                         <input
                                             type="range"
@@ -3562,9 +3877,9 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
                                             }}
                                         />
                                     </div>
-                                    
+
                                     {/* Сбросить кнопку вращения */}
-                                    <button 
+                                    <button
                                         style={{
                                             padding: '8px 15px',
                                             backgroundColor: '#e74c3c',
@@ -3580,7 +3895,7 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
                                     >
                                         Сбросить поворот (0°)
                                     </button>
-                                    
+
                                     <div style={{
                                         marginTop: '10px',
                                         padding: '8px',
@@ -3595,7 +3910,7 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
                                 </div>
                             </div>
                         )}
-                        
+
                         <div className="table-stats">
                             <p>Total Chairs: {table.chairCount}</p>
                             <p>Occupied Chairs: {table.people.filter(Boolean).length}</p>

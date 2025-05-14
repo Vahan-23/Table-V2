@@ -1,0 +1,45 @@
+.konva-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.konva-toolbar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  width: 100%;
+  justify-content: center;
+}
+
+.konva-toolbar button {
+  background-color: #3498db;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.3s;
+}
+
+.konva-toolbar button:hover {
+  background-color: #2980b9;
+}
+
+.konva-toolbar button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+/* Стили для Canvas */
+.konva-stage-container {
+  border: 2px dashed #ccc;
+  border-radius: 5px;
+  background-color: #f7f7f7;
+  max-width: 100%;
+  overflow: auto;
+}
