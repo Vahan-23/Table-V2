@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './clientBooking.css';
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
+import { Stage, Layer, Rect, Circle, Line, Arrow, Ellipse, Star, Path, Text } from 'react-konva';
+
 // Helper functions remain the same
 const parseTimeToMinutes = (timeString) => {
   if (!timeString) return 0;
@@ -97,8 +99,12 @@ const ClientBookingComponent = () => {
   const [occupiedSlots, setOccupiedSlots] = useState([]);
   const [bookingType, setBookingType] = useState('');
   const [showEventTypeSelector, setShowEventTypeSelector] = useState(false);
+  
+  // This state will store the shapes imported from the hall data
+  const [shapes, setShapes] = useState([]);
 
   const tablesAreaRef = useRef(null);
+  const stageRef = useRef(null);
   const zoomRef = useRef(0.2); // Use ref for intermediate zoom values to prevent re-renders
 
   // View dragging state
@@ -114,7 +120,9 @@ const ClientBookingComponent = () => {
   useEffect(() => {
     setTimeout(() => {
       var zoomOutBtn = window.document.getElementById('zoomOutBtn');
-      zoomOutBtn.click();
+      if (zoomOutBtn) {
+        zoomOutBtn.click();
+      }
     }, 200)
   }, []);
 
@@ -123,7 +131,13 @@ const ClientBookingComponent = () => {
     const savedHallData = localStorage.getItem('hallData');
     if (savedHallData) {
       try {
-        setHallData(JSON.parse(savedHallData));
+        const parsedData = JSON.parse(savedHallData);
+        setHallData(parsedData);
+        
+        // Extract and set shapes if they exist in the hall data
+        if (parsedData.shapes && Array.isArray(parsedData.shapes)) {
+          setShapes(parsedData.shapes);
+        }
       } catch (e) {
         console.error("Error loading saved hall data:", e);
       }
@@ -197,6 +211,16 @@ const ClientBookingComponent = () => {
       try {
         const parsedData = JSON.parse(e.target.result);
         setHallData(parsedData);
+        
+        // Extract and set shapes if they exist in the imported data
+        if (parsedData.shapes && Array.isArray(parsedData.shapes)) {
+          setShapes(parsedData.shapes);
+          console.log("Imported shapes:", parsedData.shapes);
+        } else {
+          setShapes([]);
+          console.log("No shapes found in imported data");
+        }
+        
         localStorage.setItem('hallData', JSON.stringify(parsedData));
         setIsLoading(false);
       } catch (error) {
@@ -493,7 +517,8 @@ const ClientBookingComponent = () => {
 
       const updatedHallData = {
         ...prevData,
-        tables: updatedTables
+        tables: updatedTables,
+        shapes: shapes // Make sure to preserve shapes when updating hall data
       };
 
       // Save to localStorage
@@ -844,6 +869,113 @@ const ClientBookingComponent = () => {
     }
   }, [isDraggingView]);
 
+  // Function to render a shape using Konva components
+  const renderShape = (shape) => {
+    switch (shape.type) {
+      case 'rect':
+        return (
+          <Rect
+            key={shape.id}
+            x={shape.x}
+            y={shape.y}
+            width={shape.width}
+            height={shape.height}
+            stroke={shape.color}
+            strokeWidth={shape.strokeWidth}
+            fill={shape.fill || 'transparent'}
+          />
+        );
+      case 'circle':
+        return (
+          <Circle
+            key={shape.id}
+            x={shape.x}
+            y={shape.y}
+            radius={shape.radius}
+            stroke={shape.color}
+            strokeWidth={shape.strokeWidth}
+            fill={shape.fill || 'transparent'}
+          />
+        );
+      case 'line':
+        return (
+          <Line
+            key={shape.id}
+            points={shape.points}
+            stroke={shape.color}
+            strokeWidth={shape.strokeWidth}
+            lineCap="round"
+            lineJoin="round"
+          />
+        );
+      case 'arrow':
+        return (
+          <Arrow
+            key={shape.id}
+            points={shape.points}
+            stroke={shape.color}
+            strokeWidth={shape.strokeWidth}
+            fill={shape.color}
+            pointerLength={10}
+            pointerWidth={10}
+          />
+        );
+      case 'ellipse':
+        return (
+          <Ellipse
+            key={shape.id}
+            x={shape.x}
+            y={shape.y}
+            radiusX={shape.radiusX}
+            radiusY={shape.radiusY}
+            stroke={shape.color}
+            strokeWidth={shape.strokeWidth}
+            fill={shape.fill || 'transparent'}
+          />
+        );
+      case 'star':
+        return (
+          <Star
+            key={shape.id}
+            x={shape.x}
+            y={shape.y}
+            numPoints={shape.numPoints || 5}
+            innerRadius={shape.innerRadius || 20}
+            outerRadius={shape.outerRadius || 40}
+            stroke={shape.color}
+            strokeWidth={shape.strokeWidth}
+            fill={shape.fill || 'transparent'}
+          />
+        );
+      case 'path':
+        return (
+          <Line
+            key={shape.id}
+            points={shape.points}
+            stroke={shape.color}
+            strokeWidth={shape.strokeWidth}
+            tension={0.5}
+            lineCap="round"
+            lineJoin="round"
+          />
+        );
+      case 'text':
+        return (
+          <Text
+            key={shape.id}
+            x={shape.x}
+            y={shape.y}
+            text={shape.text}
+            fill={shape.color}
+            fontSize={shape.fontSize || 16}
+          />
+        );
+      default:
+        console.warn(`Unknown shape type: ${shape.type}`);
+        return null;
+    }
+  };
+
   // Render table component
   const TableComponent = ({ table }) => {
     // Get current date for bookings display
@@ -1125,7 +1257,8 @@ const ClientBookingComponent = () => {
           cursor: 'pointer',
           border: isSelected ? '2px solid #3498db' : 'none',
           transition: 'transform 0.2s',
-          transform: isSelected ? 'scale(1.05)' : 'scale(1)'
+          transform: isSelected ? 'scale(1.05)' : 'scale(1)',
+          zIndex: 2 // Higher zIndex to appear above shapes
         }}
         onClick={() => handleTableClick(table.id)}
       >
@@ -1146,7 +1279,9 @@ const ClientBookingComponent = () => {
             backgroundImage: "url('/table2.png')",
             backgroundSize: "100% 100%",
             backgroundRepeat: "no-repeat",
-            position: "relative"
+            position: "relative",
+            transform: `rotate(${table.rotation || 0}deg)`,
+            transformOrigin: 'center center'
           }}>
             {/* Show RESERVED status if table is currently booked */}
             {isCurrentlyReserved && (
@@ -1413,78 +1548,97 @@ const ClientBookingComponent = () => {
           </div>
         </div>
       </header>
-  <div className="main-content" style={{
-                flex: 1,
-                width: '100%',
-                height: 'calc(100vh - 60px)',
-                overflow: 'hidden',
-                position: 'relative'
-              }}>
-      <div className="zoom-container">
-        <TransformWrapper
-          initialScale={1}
-          minScale={0.5}
-          maxScale={4}
-          limitToBounds={false}
-          doubleClick={{ disabled: true }} // Prevents accidental double-click zooms
-          pinch={{ step: 5 }} // More responsive pinch zooming
-          wheel={{ step: 0.05 }}
-          onZoomChange={({ state }) => setScale(state.scale)}
-        >
-          {({ zoomIn, zoomOut, resetTransform }) => (
-            <>
-              {/* Mobile-friendly controls */}
-              <div className="controls fixed bottom-4 right-4 z-10 flex gap-2">
-                <button
-                  onClick={() => zoomIn(0.2)}
-                  className="p-2 bg-white rounded-full shadow-md"
-                  aria-label="Zoom in"
-                >
-                  +
-                </button>
-                <button
-                  onClick={() => zoomOut(0.2)}
-                  className="p-2 bg-white rounded-full shadow-md"
-                  aria-label="Zoom out"
-                >
-                  -
-                </button>
-                <button
-                  onClick={() => resetTransform()}
-                  className="p-2 bg-white rounded-full shadow-md"
-                  aria-label="Reset zoom"
-                >
-                  Reset
-                </button>
-              </div>
 
-              {/* Scale indicator */}
-              <div className="scale-display fixed top-4 left-4 z-10 bg-white p-2 rounded shadow-md">
-                {Math.round(scale * 100)}%
-              </div>
-            
-             
-              <TransformComponent
-                wrapperStyle={{ width: "100%", height: "100vh" }}
-                contentStyle={{ width: "100%", height: "100%" }}
-                className="tables-area"
-                 ref={tablesAreaRef}
-                 
-              >
+      {/* Main content area */}
+      <div className="main-content" style={{
+        flex: 1,
+        width: '100%',
+        height: 'calc(100vh - 60px)',
+        overflow: 'hidden',
+        position: 'relative'
+      }}>
+        <div className="zoom-container">
+          <TransformWrapper
+            initialScale={1}
+            minScale={0.5}
+            maxScale={4}
+            limitToBounds={false}
+            doubleClick={{ disabled: true }} // Prevents accidental double-click zooms
+            pinch={{ step: 5 }} // More responsive pinch zooming
+            wheel={{ step: 0.05 }}
+            onZoomChange={({ state }) => setScale(state.scale)}
+          >
+            {({ zoomIn, zoomOut, resetTransform }) => (
+              <>
+                {/* Mobile-friendly controls */}
+                <div className="controls fixed bottom-4 right-4 z-10 flex gap-2">
+                  <button
+                    onClick={() => zoomIn(0.2)}
+                    className="p-2 bg-white rounded-full shadow-md"
+                    aria-label="Zoom in"
+                  >
+                    +
+                  </button>
+                  <button
+                    onClick={() => zoomOut(0.2)}
+                    className="p-2 bg-white rounded-full shadow-md"
+                    aria-label="Zoom out"
+                  >
+                    -
+                  </button>
+                  <button
+                    onClick={() => resetTransform()}
+                    className="p-2 bg-white rounded-full shadow-md"
+                    aria-label="Reset zoom"
+                  >
+                    Reset
+                  </button>
+                </div>
 
-                {hallData ? (
-                 
+                {/* Scale indicator */}
+                <div className="scale-display fixed top-4 left-4 z-10 bg-white p-2 rounded shadow-md">
+                  {Math.round(scale * 100)}%
+                </div>
+              
+                <TransformComponent
+                  wrapperStyle={{ width: "100%", height: "100vh" }}
+                  contentStyle={{ width: "100%", height: "100%" }}
+                  className="tables-area"
+                  ref={tablesAreaRef}
+                >
+                  {hallData ? (
                     <div
                       className="tables-content"
                       style={{
                         position: 'relative',
-                        minWidth: '5000px',  // Большое значение, чтобы весь зал помещался
-                        minHeight: '5000px', // Большое значение, чтобы весь зал помещался
+                        minWidth: '5000px',  // Large value to ensure hall fits
+                        minHeight: '5000px', // Large value to ensure hall fits
                         transformOrigin: 'top left',
                         transform: `scale(${zoom})`,
                         willChange: 'transform', // Optimize for performance
                       }}
                     >
+                      {/* Render shapes using Konva Stage */}
+                      <div style={{ 
+                        position: 'absolute', 
+                        top: 0, 
+                        left: 0, 
+                        width: '100%', 
+                        height: '100%', 
+                        pointerEvents: 'none',
+                        zIndex: 1
+                      }}>
+                        <Stage 
+                          ref={stageRef} 
+                          width={5000} 
+                          height={5000}
+                        >
+                          <Layer>
+                            {shapes.map(shape => renderShape(shape))}
+                          </Layer>
+                        </Stage>
+                      </div>
+
                       {/* Render tables */}
                       {hallData.tables && hallData.tables.map((table) => (
                         <TableComponent key={table.id} table={table} />
@@ -1501,7 +1655,7 @@ const ClientBookingComponent = () => {
                             top: `${element.y}px`,
                             transform: `rotate(${element.rotation || 0}deg)`,
                             opacity: element.opacity || 1,
-                            zIndex: element.zIndex || 1
+                            zIndex: 2 // Make hall elements appear above shapes but same level as tables
                           }}
                         >
                           <img
@@ -1518,68 +1672,62 @@ const ClientBookingComponent = () => {
                         </div>
                       ))}
                     </div>
-                ) : (
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    height: '100%',
-                    width: '100%',
-                    flexDirection: 'column',
-                    padding: '20px'
-                  }}>
-                    <div style={{
-                      backgroundColor: 'white',
-                      padding: '30px',
-                      borderRadius: '8px',
-                      boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1)',
-                      textAlign: 'center',
-                      maxWidth: '500px',
-                      width: '90%'
+                  ) : (
+                                <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      height: '100%',
+                      width: '100%',
+                      flexDirection: 'column',
+                      padding: '20px'
                     }}>
-                      <h2 style={{ marginTop: 0 }}>Добро пожаловать в систему бронирования</h2>
-                      <p>Чтобы начать, загрузите план зала с помощью кнопки "Импорт плана зала".</p>
-                      <input
-                        type="file"
-                        accept=".json"
-                        onChange={handleFileUpload}
-                        id="import-file-center"
-                        className="file-input"
-                        style={{ display: 'none' }}
-                      />
-                      <label
-                        htmlFor="import-file-center"
-                        className="import-button-large"
-                        style={{
-                          backgroundColor: '#2ecc71',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '4px',
-                          padding: '12px 24px',
-                          cursor: 'pointer',
-                          fontSize: '16px',
-                          display: 'inline-block',
-                          marginTop: '15px',
-                          fontWeight: 'bold'
-                        }}
-                      >
-                        Импортировать план зала
-                      </label>
+                      <div style={{
+                        backgroundColor: 'white',
+                        padding: '30px',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1)',
+                        textAlign: 'center',
+                        maxWidth: '500px',
+                        width: '90%'
+                      }}>
+                        <h2 style={{ marginTop: 0 }}>Добро пожаловать в систему бронирования</h2>
+                        <p>Чтобы начать, загрузите план зала с помощью кнопки "Импорт плана зала".</p>
+                        <input
+                          type="file"
+                          accept=".json"
+                          onChange={handleFileUpload}
+                          id="import-file-center"
+                          className="file-input"
+                          style={{ display: 'none' }}
+                        />
+                        <label
+                          htmlFor="import-file-center"
+                          className="import-button-large"
+                          style={{
+                            backgroundColor: '#2ecc71',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            padding: '12px 24px',
+                            cursor: 'pointer',
+                            fontSize: '16px',
+                            display: 'inline-block',
+                            marginTop: '15px',
+                            fontWeight: 'bold'
+                          }}
+                        >
+                          Импортировать план зала
+                        </label>
+                      </div>
                     </div>
-                  </div>
-                )}
-
-              </TransformComponent>
-            </>
-          )}
-          
-        </TransformWrapper>
-       
-      </div>
+                  )}
+                </TransformComponent>
+              </>
+            )}
+          </TransformWrapper>
         </div>
-
-      {/* Main content area */}
-
+      </div>
 
       {/* Mobile instructions overlay */}
       {hallData && (
@@ -1932,7 +2080,7 @@ const ClientBookingComponent = () => {
                 </div>
               </div>
 
-              {/* Booking type selection - NEW FEATURE */}
+              {/* Booking type selection */}
               <div className="form-group" style={{ marginBottom: '20px' }}>
                 <label style={{ 
                   display: 'block', 
@@ -2197,7 +2345,6 @@ const ClientBookingComponent = () => {
                     fontSize: '16px',
                     boxShadow: '0 4px 6px rgba(46, 204, 113, 0.2)',
                     transition: 'all 0.2s ease',
-                    // width: '60%'
                   }}
                 >
                   Подтвердить бронирование
@@ -2217,7 +2364,6 @@ const ClientBookingComponent = () => {
                     cursor: 'pointer',
                     fontSize: '16px',
                     transition: 'all 0.2s ease',
-                    // width: '30%'
                   }}
                 >
                   Отмена
