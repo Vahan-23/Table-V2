@@ -1,0 +1,525 @@
+{
+  "id": 1747311343926,
+  "name": "Testy Food",
+  "tables": [
+    {
+      "id": 1747312364031,
+      "people": [],
+      "chairCount": 12,
+      "x": 3260,
+      "y": 530,
+      "width": 300,
+      "height": 300
+    },
+    {
+      "id": 1747311343926,
+      "people": [
+        null,
+        null,
+        null,
+        null
+      ],
+      "chairCount": 4,
+      "shape": "round",
+      "x": 815,
+      "y": 675.909090909091,
+      "width": 300,
+      "height": 300
+    },
+    {
+      "id": 1747311343927,
+      "people": [
+        null,
+        null,
+        null,
+        null
+      ],
+      "chairCount": 4,
+      "shape": "round",
+      "x": 805,
+      "y": 2292.7272727272725,
+      "width": 300,
+      "height": 300
+    },
+    {
+      "id": 1747311343928,
+      "people": [],
+      "chairCount": 12,
+      "shape": "round",
+      "x": 1385,
+      "y": 460,
+      "width": 300,
+      "height": 300
+    },
+    {
+      "id": 1747311343929,
+      "people": [],
+      "chairCount": 12,
+      "shape": "round",
+      "x": 1230,
+      "y": 980,
+      "width": 300,
+      "height": 300
+    },
+    {
+      "id": 1747311343930,
+      "people": [],
+      "chairCount": 12,
+      "shape": "round",
+      "x": 1216.243425995492,
+      "y": 1940,
+      "width": 300,
+      "height": 300
+    },
+    {
+      "id": 1747311343931,
+      "people": [],
+      "chairCount": 12,
+      "shape": "round",
+      "x": 1426.2697220135237,
+      "y": 2435,
+      "width": 300,
+      "height": 300
+    },
+    {
+      "id": 1747311343932,
+      "people": [
+        null,
+        null,
+        null,
+        null
+      ],
+      "chairCount": 4,
+      "shape": "rectangle",
+      "x": 1907.6794617853973,
+      "y": 463.13469025339805,
+      "width": 300,
+      "height": 300
+    },
+    {
+      "id": 1747311343933,
+      "people": [],
+      "chairCount": 12,
+      "shape": "rectangle",
+      "x": 1915,
+      "y": 1250,
+      "width": 300,
+      "height": 300
+    },
+    {
+      "id": 1747311343934,
+      "people": [],
+      "chairCount": 12,
+      "shape": "rectangle",
+      "x": 2669.4214876033056,
+      "y": 1244.1322314049587,
+      "width": 300,
+      "height": 300
+    },
+    {
+      "id": 1747311343935,
+      "people": [
+        null,
+        null,
+        null,
+        null
+      ],
+      "chairCount": 4,
+      "shape": "round",
+      "x": 1970,
+      "y": 2430,
+      "width": 300,
+      "height": 300
+    },
+    {
+      "id": 1747311343936,
+      "people": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "chairCount": 18,
+      "shape": "rectangle",
+      "x": 2610,
+      "y": 2495,
+      "width": 300,
+      "height": 300
+    },
+    {
+      "id": 1747311343937,
+      "people": [
+        null,
+        null,
+        null,
+        null
+      ],
+      "chairCount": 4,
+      "shape": "rectangle",
+      "x": 2492.3205382146025,
+      "y": 458.13469025339805,
+      "width": 300,
+      "height": 300,
+      "rotation": 0
+    }
+  ],
+  "hallElements": [
+    {
+      "id": 1747311380816,
+      "type": "entrance",
+      "name": "Вход",
+      "icon": "elements/open.png",
+      "fontSize": 340,
+      "x": 674,
+      "y": 1388,
+      "rotation": 90,
+      "customName": "Вход",
+      "color": "transparent",
+      "zIndex": 1,
+      "opacity": 1
+    },
+    {
+      "id": 1747311916624,
+      "type": "stairs",
+      "name": "Лестница",
+      "icon": "elements/stairs.png",
+      "fontSize": 340,
+      "x": 460,
+      "y": 1395,
+      "rotation": 90,
+      "customName": "Лестница",
+      "color": "transparent",
+      "zIndex": 2,
+      "opacity": 1
+    },
+    {
+      "id": 1747312110624,
+      "type": "column",
+      "name": "Колонна",
+      "icon": "elements/column.png",
+      "fontSize": 340,
+      "x": 2364,
+      "y": 1246,
+      "rotation": 0,
+      "customName": "Колонна",
+      "color": "transparent",
+      "zIndex": 3,
+      "opacity": 1
+    },
+    {
+      "id": 1747312215697,
+      "type": "toilet",
+      "name": "Туалет",
+      "icon": "elements/wc.png",
+      "fontSize": 596,
+      "x": 3516,
+      "y": 2105,
+      "rotation": 0,
+      "customName": "Туалет",
+      "color": "transparent",
+      "zIndex": 4,
+      "opacity": 1
+    },
+    {
+      "id": 1747312283985,
+      "type": "vip",
+      "name": "VIP зона",
+      "icon": "elements/vip.png",
+      "fontSize": 435,
+      "x": 3866,
+      "y": 475,
+      "rotation": 0,
+      "customName": "VIP зона",
+      "color": "transparent",
+      "zIndex": 5,
+      "opacity": 1
+    },
+    {
+      "id": 1747312406441,
+      "type": "bar",
+      "name": "Бар",
+      "icon": "elements/bar.png",
+      "fontSize": 801,
+      "x": 4201,
+      "y": 933,
+      "rotation": 90,
+      "customName": "Бар",
+      "color": "transparent",
+      "zIndex": 6,
+      "opacity": 1
+    },
+    {
+      "id": 1747312420977,
+      "type": "reception",
+      "name": "Ресепшн",
+      "icon": "elements/reception.png",
+      "fontSize": 578,
+      "x": 4197,
+      "y": 1503,
+      "rotation": 90,
+      "customName": "Ресепшн",
+      "color": "transparent",
+      "zIndex": 7,
+      "opacity": 1
+    },
+    {
+      "id": 1747312475361,
+      "type": "column",
+      "name": "Колонна",
+      "icon": "elements/column.png",
+      "fontSize": 340,
+      "x": 3123,
+      "y": 1240,
+      "rotation": 0,
+      "customName": "Колонна",
+      "color": "transparent",
+      "zIndex": 9,
+      "opacity": 1
+    }
+  ],
+  "shapes": [
+    {
+      "id": 1747311372743,
+      "type": "rect",
+      "x": 639.5387259806007,
+      "y": 1372.052642509216,
+      "width": 129.99999435328914,
+      "height": 495.0000185751021,
+      "radius": 0,
+      "points": [
+        938.0155537385533,
+        1342.0000198415862,
+        938.0155537385533,
+        1342.0000198415862
+      ],
+      "color": "#000000",
+      "strokeWidth": 11,
+      "fill": "transparent",
+      "draggable": true
+    },
+    {
+      "id": 1747311388121,
+      "type": "rect",
+      "x": 2153.015500963524,
+      "y": 1602.0000295982056,
+      "width": 0,
+      "height": 0,
+      "radius": 0,
+      "points": [
+        2153.015500963524,
+        1602.0000295982056,
+        2153.015500963524,
+        1602.0000295982056
+      ],
+      "color": "#000000",
+      "strokeWidth": 11,
+      "fill": "transparent",
+      "draggable": true
+    },
+    {
+      "id": 1747311594359,
+      "type": "line",
+      "x": 1878.01551281162,
+      "y": 456.9999867109985,
+      "width": 0,
+      "height": 0,
+      "radius": 0,
+      "points": [
+        1878.01551281162,
+        456.9999867109985,
+        1873.0155131256709,
+        2842.0000761297742
+      ],
+      "color": "#000000",
+      "strokeWidth": 11,
+      "fill": "transparent",
+      "draggable": true
+    },
+    {
+      "id": 1747311974945,
+      "type": "rect",
+      "x": 1878.0155129572338,
+      "y": 1572.0000284715727,
+      "width": 2484.9998921575598,
+      "height": 35.00000104968149,
+      "radius": 0,
+      "points": [
+        1873.0155130290593,
+        1517.0000266722511,
+        1873.0155130290593,
+        1517.0000266722511
+      ],
+      "color": "#000000",
+      "strokeWidth": 11,
+      "fill": "transparent",
+      "draggable": true
+    },
+    {
+      "id": 1747312078191,
+      "type": "line",
+      "x": 2470.202190462605,
+      "y": 454.9587407833744,
+      "width": 0,
+      "height": 0,
+      "radius": 0,
+      "points": [
+        2470.202190462605,
+        454.9587407833744,
+        2470.202190462605,
+        1090.1612300351435
+      ],
+      "color": "#000000",
+      "strokeWidth": 11,
+      "fill": "transparent",
+      "draggable": true
+    },
+    {
+      "id": 1747312142919,
+      "type": "line",
+      "x": 2473.0155157032527,
+      "y": 2841.9998521595235,
+      "width": 0,
+      "height": 0,
+      "radius": 0,
+      "points": [
+        2473.0155157032527,
+        2841.9998521595235,
+        2473.015487063928,
+        2107.000048548562
+      ],
+      "color": "#000000",
+      "strokeWidth": 11,
+      "fill": "transparent",
+      "draggable": true
+    },
+    {
+      "id": 1747312190920,
+      "type": "rect",
+      "x": 3304.0152903612275,
+      "y": 2034.2647796596827,
+      "width": 1069.9999536930818,
+      "height": 805.0000307011676,
+      "radius": 0,
+      "points": [
+        3293.0154512763565,
+        2837.0000764353204,
+        3293.0154512763565,
+        2837.0000764353204
+      ],
+      "color": "#000000",
+      "strokeWidth": 11,
+      "fill": "transparent",
+      "draggable": true
+    },
+    {
+      "id": 1747312268064,
+      "type": "rect",
+      "x": 3123.015458863901,
+      "y": 456.9999865698435,
+      "width": 1269.9999449968077,
+      "height": 560.0000209356829,
+      "radius": 0,
+      "points": [
+        3118.015458886725,
+        451.999986522502,
+        3118.015458886725,
+        451.999986522502
+      ],
+      "color": "#000000",
+      "strokeWidth": 11,
+      "fill": "transparent",
+      "draggable": true
+    },
+    {
+      "id": 1747312623450,
+      "type": "rect",
+      "x": 772.8465350663156,
+      "y": 454.9152999839452,
+      "width": 4264.999814795923,
+      "height": 2385.0000894196446,
+      "radius": 0,
+      "points": [
+        998.0155510809007,
+        451.999986522502,
+        998.0155510809007,
+        451.999986522502
+      ],
+      "color": "#000000",
+      "strokeWidth": 14,
+      "fill": "transparent",
+      "draggable": true
+    },
+    {
+      "id": 1747313431344,
+      "type": "rect",
+      "x": 5363.015361533201,
+      "y": 2787.0000740658743,
+      "width": 0,
+      "height": 0,
+      "radius": 0,
+      "points": [
+        5363.015361533201,
+        2787.0000740658743,
+        5363.015361533201,
+        2787.0000740658743
+      ],
+      "color": "#000000",
+      "strokeWidth": 15,
+      "fill": "transparent",
+      "draggable": true
+    },
+    {
+      "id": 1747313540434,
+      "type": "rect",
+      "x": 4968.015378690515,
+      "y": 451.9999508230457,
+      "width": 0.00005753324421675643,
+      "height": 2375.0001247438468,
+      "radius": 0,
+      "points": [
+        4968.015436223759,
+        451.9999508230457,
+        4968.015436223759,
+        451.9999508230457
+      ],
+      "color": "#000000",
+      "strokeWidth": 3,
+      "fill": "transparent",
+      "draggable": true
+    },
+    {
+      "id": 1747313552546,
+      "type": "rect",
+      "x": 4963.015378907696,
+      "y": 451.99998644392804,
+      "width": 0,
+      "height": 2380.0000893105916,
+      "radius": 0,
+      "points": [
+        4963.015378907696,
+        451.99998644392804,
+        4963.015378907696,
+        451.99998644392804
+      ],
+      "color": "#000000",
+      "strokeWidth": 15,
+      "fill": "transparent",
+      "draggable": true
+    }
+  ],
+  "chairCount": 12
+}

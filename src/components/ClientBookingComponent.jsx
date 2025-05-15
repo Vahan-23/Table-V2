@@ -198,47 +198,79 @@ const ClientBookingComponent = () => {
     }
   }, [showBookingModal]);
 
-  const handleFileUpload = (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-
+  useEffect(() => {
+  const loadJSON = async () => {
     setIsLoading(true);
     setError(null);
 
-    const reader = new FileReader();
+    try {
+      const response = await fetch('/data.json'); // если в public/
+      if (!response.ok) throw new Error('Ошибка загрузки файла');
 
-    reader.onload = (e) => {
-      try {
-        const parsedData = JSON.parse(e.target.result);
-        setHallData(parsedData);
-        
-        // Extract and set shapes if they exist in the imported data
-        if (parsedData.shapes && Array.isArray(parsedData.shapes)) {
-          setShapes(parsedData.shapes);
-          console.log("Imported shapes:", parsedData.shapes);
-        } else {
-          setShapes([]);
-          console.log("No shapes found in imported data");
-        }
-        
-        localStorage.setItem('hallData', JSON.stringify(parsedData));
-        setIsLoading(false);
-      } catch (error) {
-        setError("Ошибка при чтении JSON файла. Проверьте формат файла.");
-        setIsLoading(false);
+      const parsedData = await response.json();
+      setHallData(parsedData);
+
+      if (parsedData.shapes && Array.isArray(parsedData.shapes)) {
+        setShapes(parsedData.shapes);
+        console.log("Imported shapes:", parsedData.shapes);
+      } else {
+        setShapes([]);
+        console.log("No shapes found in imported data");
       }
-    };
 
-    reader.onerror = () => {
-      setError("Ошибка при чтении файла.");
+      localStorage.setItem('hallData', JSON.stringify(parsedData));
+    } catch (error) {
+      console.error(error);
+      setError("Ошибка при загрузке JSON файла.");
+    } finally {
       setIsLoading(false);
-    };
-
-    reader.readAsText(file);
-
-    // Reset input value to allow selecting the same file again
-    event.target.value = "";
+    }
   };
+
+  loadJSON();
+}, []);
+
+  // const handleFileUpload = (event) => {
+  //   const file = event.target.files[0];
+  //   if (!file) return;
+
+  //   setIsLoading(true);
+  //   setError(null);
+
+  //   const reader = new FileReader();
+
+  //   reader.onload = (e) => {
+  //     try {
+  //       const parsedData = JSON.parse(e.target.result);
+  //       setHallData(parsedData);
+        
+  //       // Extract and set shapes if they exist in the imported data
+  //       if (parsedData.shapes && Array.isArray(parsedData.shapes)) {
+  //         setShapes(parsedData.shapes);
+  //         console.log("Imported shapes:", parsedData.shapes);
+  //       } else {
+  //         setShapes([]);
+  //         console.log("No shapes found in imported data");
+  //       }
+        
+  //       localStorage.setItem('hallData', JSON.stringify(parsedData));
+  //       setIsLoading(false);
+  //     } catch (error) {
+  //       setError("Ошибка при чтении JSON файла. Проверьте формат файла.");
+  //       setIsLoading(false);
+  //     }
+  //   };
+
+  //   reader.onerror = () => {
+  //     setError("Ошибка при чтении файла.");
+  //     setIsLoading(false);
+  //   };
+
+  //   reader.readAsText(file);
+
+  //   // Reset input value to allow selecting the same file again
+  //   event.target.value = "";
+  // };
 
   // Get all occupied time slots for a table
   const getOccupiedTimeSlots = (tableId, date) => {
@@ -1518,7 +1550,7 @@ const ClientBookingComponent = () => {
             >+</button>
           </div>
 
-          <div className="import-container">
+          {/* <div className="import-container">
             <input
               type="file"
               accept=".json"
@@ -1545,7 +1577,7 @@ const ClientBookingComponent = () => {
             </label>
             {isLoading && <div className="loading-indicator">Загрузка...</div>}
             {error && <div className="error-message">{error}</div>}
-          </div>
+          </div> */}
         </div>
       </header>
 
@@ -1696,7 +1728,7 @@ const ClientBookingComponent = () => {
                         <input
                           type="file"
                           accept=".json"
-                          onChange={handleFileUpload}
+                          // onChange={handleFileUpload}
                           id="import-file-center"
                           className="file-input"
                           style={{ display: 'none' }}
