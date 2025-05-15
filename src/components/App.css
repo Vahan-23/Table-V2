@@ -2527,3 +2527,21 @@ button {
 .tool-btn:hover {
   background-color: #e6e6e6;
 }
+
+
+.export-hall-btn, .import-hall-btn {
+    background-color: #27ae60;
+    margin-left: 8px;
+}
+
+.export-hall-btn:hover, .import-hall-btn:hover {
+    background-color: #2ecc71;
+}
+
+.import-hall-btn {
+    background-color: #3498db;
+}
+
+.import-hall-btn:hover {
+    background-color: #2980b9;
+}

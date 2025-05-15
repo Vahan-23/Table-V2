@@ -86,6 +86,100 @@ const SeatingArrangement = () => {
     // Добавить эти строки после других объявлений состояний
     const stageRef = useRef(null);
 
+
+    const exportHallData = () => {
+    if (!currentHall) {
+        alert('Խնդրում ենք նախ ընտրել դահլիճը');
+        return;
+    }
+
+    // Create a complete hall data object with all components
+    const hallData = {
+        id: currentHall.id,
+        name: currentHall.name,
+        tables: tables,
+        hallElements: hallElements,
+        shapes: shapes, // Include all drawn shapes
+        chairCount: currentHall.chairCount || chairCount
+    };
+
+    // Convert to JSON
+    const jsonData = JSON.stringify(hallData, null, 2);
+    
+    // Create a blob and download link
+    const blob = new Blob([jsonData], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    
+    // Create a temporary download link
+    const downloadLink = document.createElement('a');
+    downloadLink.href = url;
+    downloadLink.download = `${currentHall.name.replace(/\s+/g, '_')}_hall_export.json`;
+    
+    // Trigger download
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    
+    // Clean up
+    document.body.removeChild(downloadLink);
+    URL.revokeObjectURL(url);
+
+    alert(`Դահլիճը "${currentHall.name}" հաջողությամբ արտահանվել է`);
+};
+
+
+const importHallData = (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const importedData = JSON.parse(e.target.result);
+            
+            // Validate the imported data has required fields
+            if (!importedData.id || !importedData.name || !importedData.tables) {
+                alert('Անվավեր հատակագծի ֆայլ: պակասում են պարտադիր դաշտերը');
+                return;
+            }
+
+            // Check if a hall with this ID already exists
+            const existingHallIndex = halls.findIndex(h => h.id === importedData.id);
+            
+            let updatedHalls;
+            if (existingHallIndex >= 0) {
+                // Update existing hall
+                updatedHalls = [...halls];
+                updatedHalls[existingHallIndex] = importedData;
+            } else {
+                // Add as a new hall
+                updatedHalls = [...halls, importedData];
+            }
+
+            // Update state
+            setHalls(updatedHalls);
+            localStorage.setItem('halls', JSON.stringify(updatedHalls));
+            
+            // Set the imported hall as current
+            setCurrentHall(importedData);
+            setTables(importedData.tables || []);
+            setHallElements(importedData.hallElements || []);
+            setShapes(importedData.shapes || []);
+            
+            alert(`Դահլիճը "${importedData.name}" հաջողությամբ ներմուծվել է`);
+        } catch (error) {
+            console.error('Error importing hall data:', error);
+            alert('Սխալ ֆայլի ներմուծման ժամանակ: ' + error.message);
+        }
+    };
+    
+    reader.readAsText(file);
+    
+    // Reset the file input
+    event.target.value = '';
+};
+
+const fileInputRef = useRef(null);
+
     const handleCanvasClick = (e) => {
         // Проверяем, что клик был именно по фону холста,
         // а не по столу или элементу зала (они должны останавливать всплытие события)
@@ -916,26 +1010,27 @@ const SeatingArrangement = () => {
     }, []);
 
     // Save hall configuration
-    const saveHall = () => {
-        if (!currentHall) {
-            alert('Խնդրում ենք նախ ընտրել դահլիճը');
-            return;
-        }
+   const saveHall = () => {
+    if (!currentHall) {
+        alert('Խնդրում ենք նախ ընտրել դահլիճը');
+        return;
+    }
 
-        const updatedHalls = halls.map(hall =>
-            hall.id === currentHall.id
-                ? {
-                    ...hall,
-                    tables: tables,
-                    hallElements: hallElements // Добавляем элементы зала
-                }
-                : hall
-        );
+    const updatedHalls = halls.map(hall =>
+        hall.id === currentHall.id
+            ? {
+                ...hall,
+                tables: tables,
+                hallElements: hallElements,
+                shapes: shapes // Add shapes to saved hall data
+              }
+            : hall
+    );
 
-        setHalls(updatedHalls);
-        localStorage.setItem('halls', JSON.stringify(updatedHalls));
-        alert(`Դահլիճը "${currentHall.name}" հաջողությամբ պահպանվել է`);
-    };
+    setHalls(updatedHalls);
+    localStorage.setItem('halls', JSON.stringify(updatedHalls));
+    alert(`Դահլիճը "${currentHall.name}" հաջողությամբ պահպանվել է`);
+};
 
     // Create a new hall
     const createNewHall = (hallName, tableCount, chairCount) => {
@@ -1008,19 +1103,20 @@ const SeatingArrangement = () => {
     };
 
     // Функция загрузки зала
-    const loadHall = (hall) => {
-        setCurrentHall(hall);
-        setTables(hall.tables || []);
+   const loadHall = (hall) => {
+    setCurrentHall(hall);
+    setTables(hall.tables || []);
 
-        // Загружаем элементы зала, если они есть
-        setHallElements(hall.hallElements || []);
+    // Загружаем элементы зала, если они есть
+    setHallElements(hall.hallElements || []);
+    
+    // Load shapes if they exist
+    setShapes(hall.shapes || []);
 
-        // Сбрасываем выбор элемента
-        setSelectedElementId(null);
-
-        // Устанавливаем режим столов по умолчанию
-        // setActiveMode('tables');
-    };
+    // Сбрасываем выбор элемента
+    setSelectedElementId(null);
+    setSelectedShapeId(null);
+};
 
     // Delete a hall
     const deleteHall = (hallId) => {
@@ -1127,66 +1223,94 @@ const SeatingArrangement = () => {
     };
 
     // Hall Management UI component
-    const HallManagement = () => {
-        return (
-            <div className="hall-management">
-                <h3 className="section-main-title">Դահլիճների կառավարում</h3>
+   const HallManagement = () => {
+    return (
+        <div className="hall-management">
+            <h3 className="section-main-title">Դահլիճների կառավարում</h3>
 
-                <div className="hall-controls">
-                    <div className="hall-dropdown-container">
-                        <select
-                            value={currentHall ? currentHall.id : ""}
-                            onChange={(e) => {
-                                const selectedHall = halls.find(h => h.id === parseInt(e.target.value));
-                                if (selectedHall) loadHall(selectedHall);
-                            }}
-                            className="hall-select"
-                        >
-                            <option value="">Ընտրեք դահլիճը</option>
-                            {halls.map(hall => (
-                                <option key={hall.id} value={hall.id}>
-                                    {hall.name} ({hall.tables.length} սեղան)
-                                </option>
-                            ))}
-                        </select>
-                    </div>
+            <div className="hall-controls">
+                <div className="hall-dropdown-container">
+                    <select
+                        value={currentHall ? currentHall.id : ""}
+                        onChange={(e) => {
+                            const selectedHall = halls.find(h => h.id === parseInt(e.target.value));
+                            if (selectedHall) loadHall(selectedHall);
+                        }}
+                        className="hall-select"
+                    >
+                        <option value="">Ընտրեք դահլիճը</option>
+                        {halls.map(hall => (
+                            <option key={hall.id} value={hall.id}>
+                                {hall.name} ({hall.tables.length} սեղան)
+                            </option>
+                        ))}
+                    </select>
+                </div>
 
-                    <div className="hall-buttons">
-                        <button
-                            className="primary-btn create-hall-btn"
-                            onClick={() => setShowHallModal(true)}
-                        >
-                            Ստեղծել նոր դահլիճ
-                        </button>
+                <div className="hall-buttons">
+                    <button
+                        className="primary-btn create-hall-btn"
+                        onClick={() => setShowHallModal(true)}
+                    >
+                        Ստեղծել նոր դահլիճ
+                    </button>
 
-                        <button
-                            className="primary-btn save-hall-btn"
-                            onClick={saveHall}
-                            disabled={!currentHall}
-                        >
-                            Պահպանել դահլիճը
-                        </button>
+                    <button
+                        className="primary-btn save-hall-btn"
+                        onClick={saveHall}
+                        disabled={!currentHall}
+                    >
+                        Պահպանել դահլիճը
+                    </button>
 
-                        {currentHall && (
+                    {currentHall && (
+                        <>
+                            <button
+                                className="primary-btn export-hall-btn"
+                                onClick={exportHallData}
+                            >
+                                Արտահանել դահլիճը
+                            </button>
+                            
+                            <button
+                                className="secondary-btn import-hall-btn"
+                                onClick={() => fileInputRef.current && fileInputRef.current.click()}
+                            >
+                                Ներմուծել դահլիճ
+                            </button>
+                            
                             <button
                                 className="secondary-btn delete-hall-btn"
                                 onClick={() => deleteHall(currentHall.id)}
                             >
                                 Ջնջել դահլիճը
                             </button>
-                        )}
-                    </div>
+                        </>
+                    )}
                 </div>
-
-                {currentHall && (
-                    <div className="current-hall-info">
-                        <h4>Ընթացիկ դահլիճ: {currentHall.name}</h4>
-                        <p>{currentHall.tables.length} սեղաններ</p>
-                    </div>
-                )}
             </div>
-        );
-    };
+
+            {/* Hidden file input for importing hall data */}
+            <input
+                type="file"
+                ref={fileInputRef}
+                style={{ display: 'none' }}
+                accept=".json"
+                onChange={importHallData}
+            />
+
+            {currentHall && (
+                <div className="current-hall-info">
+                    <h4>Ընթացիկ դահլիճ: {currentHall.name}</h4>
+                    <p>{currentHall.tables.length} սեղաններ</p>
+                    {currentHall.shapes && currentHall.shapes.length > 0 && (
+                        <p>{currentHall.shapes.length} նկարներ</p>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+};
 
     { showHallModal && <HallModal /> }
     const handleTableCountChange = (e) => {
