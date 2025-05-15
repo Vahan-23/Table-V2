@@ -68,7 +68,7 @@ const SeatingArrangement = () => {
     const [hallElements, setHallElements] = useState([]);
     const [selectedElementId, setSelectedElementId] = useState(null);
 
-const [drawingMode, setDrawingMode] = useState(false);
+    const [drawingMode, setDrawingMode] = useState(false);
     // Add these states to track drawing
     const [isDrawing, setIsDrawing] = useState(false);
     const [currentShape, setCurrentShape] = useState(null);
@@ -77,24 +77,27 @@ const [drawingMode, setDrawingMode] = useState(false);
     const [color, setColor] = useState('#000000');
     const [strokeWidth, setStrokeWidth] = useState(3);
     const [activeTool, setActiveTool] = useState(null);
+    const [selectedShapeId, setSelectedShapeId] = useState(null);
+    const [isDraggingShape, setIsDraggingShape] = useState(false);
+
     // Добавляем новые состояния для отслеживания позиции перетаскивания
     const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
 
     // Добавить эти строки после других объявлений состояний
     const stageRef = useRef(null);
 
-    // Функция для экспорта изображения
-    const exportCanvasAsImage = () => {
-        if (stageRef.current) {
-            const uri = stageRef.current.toDataURL();
-            const link = document.createElement('a');
-            link.download = 'hall-layout.png';
-            link.href = uri;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+    const handleCanvasClick = (e) => {
+        // Проверяем, что клик был именно по фону холста,
+        // а не по столу или элементу зала (они должны останавливать всплытие события)
+        if (e.target === tablesAreaRef.current) {
+            setSelectedElementId(null);
+            // Опционально: можно вернуть режим к столам, если хотите
+            // setActiveMode('tables');
         }
     };
+
+
+    // Функция для экспорта изображения
     useEffect(() => {
         const handleKeyDown = (e) => {
             if (e.key === 'Escape' && activeTool) {
@@ -113,9 +116,6 @@ const [drawingMode, setDrawingMode] = useState(false);
     const handleDrawingMouseDown = (e) => {
         if (!activeTool || !stageRef.current) return;
 
-        // With Konva events, no need to call preventDefault
-        // e.preventDefault(); - Remove this line
-
         // Get stage and cursor position directly from the event
         const stage = e.target.getStage();
         if (!stage) return;
@@ -123,7 +123,32 @@ const [drawingMode, setDrawingMode] = useState(false);
         const pointerPos = stage.getPointerPosition();
         if (!pointerPos) return;
 
-        // Start drawing
+        // Если выбран инструмент "select", проверяем, клик был по фигуре или нет
+        if (activeTool === 'select') {
+            // Проверяем, кликнул ли пользователь по фигуре
+            const clickedOnShape = e.target !== stage;
+
+            if (clickedOnShape) {
+                // Если кликнули по фигуре, устанавливаем её как выбранную
+                const shapeId = e.target.attrs.id;
+                setSelectedShapeId(shapeId);
+                setIsDraggingShape(true);
+                return;
+            } else {
+                // Если кликнули по пустому месту, снимаем выделение
+                setSelectedShapeId(null);
+                return;
+            }
+        }
+
+        // Если выбран ластик, ничего не рисуем, а просто активируем режим ластика
+        if (activeTool === 'eraser') {
+            // Обработка будет в handleDrawingMouseMove
+            setIsDrawing(true);
+            return;
+        }
+
+        // Start drawing for other tools
         setIsDrawing(true);
         setStartPoint({ x: pointerPos.x, y: pointerPos.y });
 
@@ -139,7 +164,8 @@ const [drawingMode, setDrawingMode] = useState(false);
             points: [pointerPos.x, pointerPos.y, pointerPos.x, pointerPos.y],
             color: color,
             strokeWidth: strokeWidth,
-            fill: 'transparent'
+            fill: 'transparent',
+            draggable: true // Помечаем все фигуры как перемещаемые
         };
 
         setCurrentShape(newShape);
@@ -148,12 +174,34 @@ const [drawingMode, setDrawingMode] = useState(false);
     const handleDrawingMouseMove = (e) => {
         if (!isDrawing || !activeTool) return;
 
-        // Get stage and cursor position directly from the event
+        // Get stage and cursor position
         const stage = e.target.getStage();
         if (!stage) return;
 
         const pointerPos = stage.getPointerPosition();
-        if (!pointerPos || !currentShape) return;
+        if (!pointerPos) return;
+
+        // Обработка ластика
+        if (activeTool === 'eraser') {
+            // Находим фигуры, которые находятся под курсором
+            const elementsToRemove = stage.getIntersection(pointerPos);
+            if (elementsToRemove && elementsToRemove.attrs.id) {
+                // Удаляем фигуру, над которой находится курсор
+                setShapes(prevShapes =>
+                    prevShapes.filter(shape => shape.id !== parseInt(elementsToRemove.attrs.id))
+                );
+            }
+            return;
+        }
+
+        // Обработка перемещения фигуры
+        if (activeTool === 'select' && isDraggingShape) {
+            // Перемещение обрабатывается автоматически Konva, не нужно ничего делать здесь
+            return;
+        }
+
+        // Обработка рисования
+        if (!currentShape) return;
 
         // Update shape based on tool type
         let updatedShape = { ...currentShape };
@@ -196,10 +244,19 @@ const [drawingMode, setDrawingMode] = useState(false);
     };
 
     const handleDrawingMouseUp = (e) => {
-        if (!isDrawing || !currentShape) return;
+        if (!isDrawing) return;
 
-        // Add the completed shape to shapes array
-        setShapes([...shapes, currentShape]);
+        // Если это был ластик или выбор, просто сбрасываем состояние
+        if (activeTool === 'eraser' || (activeTool === 'select' && isDraggingShape)) {
+            setIsDrawing(false);
+            setIsDraggingShape(false);
+            return;
+        }
+
+        // Для остальных инструментов добавляем фигуру
+        if (currentShape) {
+            setShapes([...shapes, currentShape]);
+        }
 
         // Reset drawing state
         setIsDrawing(false);
@@ -1988,74 +2045,97 @@ const [drawingMode, setDrawingMode] = useState(false);
                     {showHallModal && <HallModal />}
                 </header>
                 <div className="main-content2">
-                    <div className="drawing-tools">
-                        <div className="tool-section">
-                            <h4>Инструменты рисования</h4>
-                            <div className="tool-buttons">
-                                <button
-                                    onClick={() => setActiveTool(activeTool === 'rect' ? null : 'rect')}
-                                    className={`tool-btn ${activeTool === 'rect' ? 'active' : ''}`}
-                                >
-                                    Прямоугольник
-                                </button>
-                                <button
-                                    onClick={() => setActiveTool(activeTool === 'circle' ? null : 'circle')}
-                                    className={`tool-btn ${activeTool === 'circle' ? 'active' : ''}`}
-                                >
-                                    Круг
-                                </button>
-                                <button
-                                    onClick={() => setActiveTool(activeTool === 'line' ? null : 'line')}
-                                    className={`tool-btn ${activeTool === 'line' ? 'active' : ''}`}
-                                >
-                                    Линия
-                                </button>
-                                {activeTool && (
-                                    <button onClick={() => setActiveTool(null)}>
-                                        Отменить выбор инструмента
-                                    </button>
-                                )}
-                            </div>
-                        </div>
+                  <div className="drawing-tools">
+  <div className="tool-section">
+    <div className="tool-buttons">
+      <button
+        onClick={() => setActiveTool(activeTool === 'rect' ? null : 'rect')}
+        className={`tool-btn ${activeTool === 'rect' ? 'active' : ''}`}
+      >
+        <svg width="24" height="24" viewBox="0 0 220 120" xmlns="http://www.w3.org/2000/svg">
+          <rect x="10" y="10" width="200" height="100" fill="white" stroke="white" strokeWidth="10" />
+        </svg>
+      </button>
+      <button
+        onClick={() => setActiveTool(activeTool === 'circle' ? null : 'circle')}
+        className={`tool-btn ${activeTool === 'circle' ? 'active' : ''}`}
+      >
+        <svg width="24" height="24" viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="40" stroke="white" strokeWidth="5" fill="white" />
+        </svg>
+      </button>
+      <button
+        onClick={() => setActiveTool(activeTool === 'line' ? null : 'line')}
+        className={`tool-btn ${activeTool === 'line' ? 'active' : ''}`}
+      >
+        <svg width="32" height="24" viewBox="0 0 300 100" xmlns="http://www.w3.org/2000/svg">
+          <line x1="10" y1="50" x2="290" y2="50" stroke="white" strokeWidth="10" />
+        </svg>
+      </button>
+      <button
+        onClick={() => setActiveTool(activeTool === 'select' ? null : 'select')}
+        className={`tool-btn ${activeTool === 'select' ? 'active' : ''}`}
+      >
+        <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="5 9 2 12 5 15" />
+          <polyline points="9 5 12 2 15 5" />
+          <polyline points="15 19 12 22 9 19" />
+          <polyline points="19 9 22 12 19 15" />
+          <line x1="2" y1="12" x2="22" y2="12" />
+          <line x1="12" y1="2" x2="12" y2="22" />
+        </svg>
+      </button>
+      <button
+        onClick={() => setActiveTool(activeTool === 'eraser' ? null : 'eraser')}
+        className={`tool-btn ${activeTool === 'eraser' ? 'active' : ''}`}
+      >
+        <svg width="24" height="24" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <polygon points="20,80 50,20 80,50 50,80" fill="white" stroke="white" strokeWidth="3" />
+          <polygon points="50,20 60,30 30,70 20,60" fill="white" stroke="white" strokeWidth="2" />
+        </svg>
+      </button>
 
-                        <div className="tool-section">
-                            <button
-                                onClick={() => setShapes([])}
-                                className="clear-btn"
-                            >
-                                Очистить холст
-                            </button>
+      {activeTool && (
+        <button onClick={() => setActiveTool(null)}>
+          Exit
+        </button>
+      )}
+    </div>
 
-                            <button
-                                onClick={exportCanvasAsImage}
-                                className="export-btn"
-                            >
-                                Сохранить как изображение
-                            </button>
-                        </div>
-                    </div>
-                    <div className="style-controls">
-                        <div className="control-group">
-                            <label>Цвет:</label>
-                            <input
-                                type="color"
-                                value={color}
-                                onChange={(e) => setColor(e.target.value)}
-                            />
-                        </div>
+    <div className="style-controls">
+      <div className="control-group">
+        <label>Цвет:</label>
+        <input
+          type="color"
+          value={color}
+          onChange={(e) => setColor(e.target.value)}
+        />
+      </div>
 
-                        <div className="control-group">
-                            <label>Толщина:</label>
-                            <input
-                                type="range"
-                                min="1"
-                                max="20"
-                                value={strokeWidth}
-                                onChange={(e) => setStrokeWidth(parseInt(e.target.value))}
-                            />
-                            <span>{strokeWidth}px</span>
-                        </div>
-                    </div>
+      <div className="control-group">
+        <label>Толщина:</label>
+        <input
+          type="range"
+          min="1"
+          max="20"
+          value={strokeWidth}
+          onChange={(e) => setStrokeWidth(parseInt(e.target.value))}
+        />
+        <span>{strokeWidth}px</span>
+      </div>
+    </div>
+
+    <div className="tool-section">
+      <button
+        onClick={() => setShapes([])}
+        className="clear-btn"
+      >
+        Clear
+      </button>
+    </div>
+  </div>
+</div>
+
                     <TableDetailsPopup
                         table={getDetailsTable()}
                         tables={tables}
@@ -2080,6 +2160,7 @@ const [drawingMode, setDrawingMode] = useState(false);
                                 onAddElement={(elementType) => {
                                 }} />
 
+
                         </SidebarLayout>
                         <div className="zoom-controls">
                             <div className="zoom-buttons">
@@ -2096,13 +2177,14 @@ const [drawingMode, setDrawingMode] = useState(false);
                                 >+</button>
                             </div>
 
+
                         </div>
                         <div
                             className={`tables-area ${isDraggingCanvas ? 'dragging' : ''} ${draggingGroup ? 'active-drop-area' : ''}`}
                             ref={tablesAreaRef}
                             onMouseDown={handleCanvasMouseDown}
                             onMouseMove={handleMouseMoveOnCanvas}
-                            // onClick={handleDrawingClick}
+                            onClick={handleCanvasClick}
                             onDragOver={handleCanvasDragOver}
                             onDragLeave={(e) => {
                                 e.currentTarget.style.backgroundColor = '';
@@ -2210,7 +2292,13 @@ const [drawingMode, setDrawingMode] = useState(false);
                                     onMouseMove={handleDrawingMouseMove}
                                     onMouseUp={handleDrawingMouseUp}
                                     style={{
-                                        cursor: activeTool ? 'crosshair' : 'default'
+                                        cursor: activeTool === 'eraser'
+                                            ? 'url("data:image/svg+xml,%3Csvg width=\'24\' height=\'24\' viewBox=\'0 0 24 24\' fill=\'none\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M18 5L5 18M6 5H18V17\' stroke=\'black\'/%3E%3C/svg%3E") 0 24, auto'
+                                            : activeTool === 'select'
+                                                ? 'move'
+                                                : activeTool
+                                                    ? 'crosshair'
+                                                    : 'default'
                                     }}
                                 >
                                     <Layer>
@@ -2220,16 +2308,51 @@ const [drawingMode, setDrawingMode] = useState(false);
                                                 return (
                                                     <Line
                                                         key={shape.id}
+                                                        id={shape.id.toString()}
                                                         points={shape.points}
                                                         stroke={shape.color}
                                                         strokeWidth={shape.strokeWidth}
                                                         lineCap="round"
+                                                        draggable={activeTool === 'select'}
+                                                        onDragStart={() => setSelectedShapeId(shape.id)}
+                                                        onDragEnd={(e) => {
+                                                            // Обновляем позицию линии в массиве shapes
+                                                            const updatedShapes = shapes.map(s => {
+                                                                if (s.id === shape.id) {
+                                                                    // Для линий нужно обновить все точки
+                                                                    const newPoints = [...s.points];
+                                                                    const dx = e.target.x();
+                                                                    const dy = e.target.y();
+
+                                                                    // Смещаем все точки линии
+                                                                    for (let i = 0; i < newPoints.length; i += 2) {
+                                                                        newPoints[i] += dx;
+                                                                        newPoints[i + 1] += dy;
+                                                                    }
+
+                                                                    return {
+                                                                        ...s,
+                                                                        points: newPoints
+                                                                    };
+                                                                }
+                                                                return s;
+                                                            });
+
+                                                            setShapes(updatedShapes);
+                                                            // Сбрасываем позицию, чтобы не было двойного смещения
+                                                            e.target.position({ x: 0, y: 0 });
+                                                        }}
+                                                        shadowEnabled={selectedShapeId === shape.id}
+                                                        shadowColor="blue"
+                                                        shadowBlur={10}
+                                                        shadowOpacity={0.6}
                                                     />
                                                 );
                                             } else if (shape.type === 'rect') {
                                                 return (
                                                     <Rect
                                                         key={shape.id}
+                                                        id={shape.id.toString()}
                                                         x={shape.x}
                                                         y={shape.y}
                                                         width={shape.width}
@@ -2237,18 +2360,61 @@ const [drawingMode, setDrawingMode] = useState(false);
                                                         stroke={shape.color}
                                                         strokeWidth={shape.strokeWidth}
                                                         fill={shape.fill || "transparent"}
+                                                        draggable={activeTool === 'select'}
+                                                        onDragStart={() => setSelectedShapeId(shape.id)}
+                                                        onDragEnd={(e) => {
+                                                            // Обновляем позицию прямоугольника в массиве shapes
+                                                            const updatedShapes = shapes.map(s => {
+                                                                if (s.id === shape.id) {
+                                                                    return {
+                                                                        ...s,
+                                                                        x: e.target.x(),
+                                                                        y: e.target.y()
+                                                                    };
+                                                                }
+                                                                return s;
+                                                            });
+
+                                                            setShapes(updatedShapes);
+                                                        }}
+                                                        shadowEnabled={selectedShapeId === shape.id}
+                                                        shadowColor="blue"
+                                                        shadowBlur={10}
+                                                        shadowOpacity={0.6}
                                                     />
                                                 );
                                             } else if (shape.type === 'circle') {
                                                 return (
                                                     <Circle
                                                         key={shape.id}
+                                                        id={shape.id.toString()}
                                                         x={shape.x}
                                                         y={shape.y}
                                                         radius={shape.radius}
                                                         stroke={shape.color}
                                                         strokeWidth={shape.strokeWidth}
                                                         fill={shape.fill || "transparent"}
+                                                        draggable={activeTool === 'select'}
+                                                        onDragStart={() => setSelectedShapeId(shape.id)}
+                                                        onDragEnd={(e) => {
+                                                            // Обновляем позицию круга в массиве shapes
+                                                            const updatedShapes = shapes.map(s => {
+                                                                if (s.id === shape.id) {
+                                                                    return {
+                                                                        ...s,
+                                                                        x: e.target.x(),
+                                                                        y: e.target.y()
+                                                                    };
+                                                                }
+                                                                return s;
+                                                            });
+
+                                                            setShapes(updatedShapes);
+                                                        }}
+                                                        shadowEnabled={selectedShapeId === shape.id}
+                                                        shadowColor="blue"
+                                                        shadowBlur={10}
+                                                        shadowOpacity={0.6}
                                                     />
                                                 );
                                             }

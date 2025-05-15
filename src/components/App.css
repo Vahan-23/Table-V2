@@ -1,5 +1,6 @@
 /* Modern styles for the Seating Arrangement app */
 @import url('https://fonts.googleapis.com/css2?family=Berkshire+Swash&family=Dancing+Script:wght@400..700&family=Protest+Guerrilla&display=swap');
+
 /* Скрываем стандартный скроллбар */
 ::-webkit-scrollbar {
   width: 10px;
@@ -83,9 +84,10 @@ body {
 
 .control-group {
   display: flex;
-  flex-wrap: wrap;
   gap: 1rem;
   width: 100%;
+  flex-direction: column;
+  align-items: center;
 }
 
 .input-group {
@@ -402,7 +404,7 @@ button {
   display: flex;
   flex: 1;
   padding: 1rem;
-  gap: 20px;
+  /* gap: 20px; */
   /* max-width: 1600px; */
   margin: 0 auto;
   width: 95%;
@@ -1352,6 +1354,7 @@ button {
   max-width: 1200px;
   margin: 0 auto;
 }
+
 /* Navigation */
 .main-nav {
   flex: 1;
@@ -1620,9 +1623,8 @@ button {
 .group-name {
   font-weight: bold;
 }
-.group-name2{
 
-}
+.group-name2 {}
 
 .group-count {
   color: #666;
@@ -2297,6 +2299,7 @@ button {
   background-color: #f9f9f9;
   transition: background-color 0.2s ease;
 }
+
 .member-item:hover {
   background-color: #f0f0f0;
 }
@@ -2513,4 +2516,14 @@ button {
   display: flex;
   flex-direction: column;
   background: #1a1a1a;
+}
+
+.tool-btn.active {
+  background-color: #3498db;
+  color: white;
+}
+
+
+.tool-btn:hover {
+  background-color: #e6e6e6;
 }
