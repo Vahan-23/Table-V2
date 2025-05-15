@@ -198,79 +198,47 @@ const ClientBookingComponent = () => {
     }
   }, [showBookingModal]);
 
-  useEffect(() => {
-  const loadJSON = async () => {
+  const handleFileUpload = (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
     setIsLoading(true);
     setError(null);
 
-    try {
-      const response = await fetch('/data.json'); // если в public/
-      if (!response.ok) throw new Error('Ошибка загрузки файла');
+    const reader = new FileReader();
 
-      const parsedData = await response.json();
-      setHallData(parsedData);
-
-      if (parsedData.shapes && Array.isArray(parsedData.shapes)) {
-        setShapes(parsedData.shapes);
-        console.log("Imported shapes:", parsedData.shapes);
-      } else {
-        setShapes([]);
-        console.log("No shapes found in imported data");
+    reader.onload = (e) => {
+      try {
+        const parsedData = JSON.parse(e.target.result);
+        setHallData(parsedData);
+        
+        // Extract and set shapes if they exist in the imported data
+        if (parsedData.shapes && Array.isArray(parsedData.shapes)) {
+          setShapes(parsedData.shapes);
+          console.log("Imported shapes:", parsedData.shapes);
+        } else {
+          setShapes([]);
+          console.log("No shapes found in imported data");
+        }
+        
+        localStorage.setItem('hallData', JSON.stringify(parsedData));
+        setIsLoading(false);
+      } catch (error) {
+        setError("Ошибка при чтении JSON файла. Проверьте формат файла.");
+        setIsLoading(false);
       }
+    };
 
-      localStorage.setItem('hallData', JSON.stringify(parsedData));
-    } catch (error) {
-      console.error(error);
-      setError("Ошибка при загрузке JSON файла.");
-    } finally {
+    reader.onerror = () => {
+      setError("Ошибка при чтении файла.");
       setIsLoading(false);
-    }
+    };
+
+    reader.readAsText(file);
+
+    // Reset input value to allow selecting the same file again
+    event.target.value = "";
   };
-
-  loadJSON();
-}, []);
-
-  // const handleFileUpload = (event) => {
-  //   const file = event.target.files[0];
-  //   if (!file) return;
-
-  //   setIsLoading(true);
-  //   setError(null);
-
-  //   const reader = new FileReader();
-
-  //   reader.onload = (e) => {
-  //     try {
-  //       const parsedData = JSON.parse(e.target.result);
-  //       setHallData(parsedData);
-        
-  //       // Extract and set shapes if they exist in the imported data
-  //       if (parsedData.shapes && Array.isArray(parsedData.shapes)) {
-  //         setShapes(parsedData.shapes);
-  //         console.log("Imported shapes:", parsedData.shapes);
-  //       } else {
-  //         setShapes([]);
-  //         console.log("No shapes found in imported data");
-  //       }
-        
-  //       localStorage.setItem('hallData', JSON.stringify(parsedData));
-  //       setIsLoading(false);
-  //     } catch (error) {
-  //       setError("Ошибка при чтении JSON файла. Проверьте формат файла.");
-  //       setIsLoading(false);
-  //     }
-  //   };
-
-  //   reader.onerror = () => {
-  //     setError("Ошибка при чтении файла.");
-  //     setIsLoading(false);
-  //   };
-
-  //   reader.readAsText(file);
-
-  //   // Reset input value to allow selecting the same file again
-  //   event.target.value = "";
-  // };
 
   // Get all occupied time slots for a table
   const getOccupiedTimeSlots = (tableId, date) => {
@@ -1550,7 +1518,7 @@ const ClientBookingComponent = () => {
             >+</button>
           </div>
 
-          {/* <div className="import-container">
+          <div className="import-container">
             <input
               type="file"
               accept=".json"
@@ -1577,7 +1545,7 @@ const ClientBookingComponent = () => {
             </label>
             {isLoading && <div className="loading-indicator">Загрузка...</div>}
             {error && <div className="error-message">{error}</div>}
-          </div> */}
+          </div>
         </div>
       </header>
 
@@ -1589,175 +1557,133 @@ const ClientBookingComponent = () => {
         overflow: 'hidden',
         position: 'relative'
       }}>
-        <div className="zoom-container">
-          <TransformWrapper
-            initialScale={1}
-            minScale={0.5}
-            maxScale={4}
-            limitToBounds={false}
-            doubleClick={{ disabled: true }} // Prevents accidental double-click zooms
-            pinch={{ step: 5 }} // More responsive pinch zooming
-            wheel={{ step: 0.05 }}
-            onZoomChange={({ state }) => setScale(state.scale)}
-          >
-            {({ zoomIn, zoomOut, resetTransform }) => (
-              <>
-                {/* Mobile-friendly controls */}
-                <div className="controls fixed bottom-4 right-4 z-10 flex gap-2">
-                  <button
-                    onClick={() => zoomIn(0.2)}
-                    className="p-2 bg-white rounded-full shadow-md"
-                    aria-label="Zoom in"
-                  >
-                    +
-                  </button>
-                  <button
-                    onClick={() => zoomOut(0.2)}
-                    className="p-2 bg-white rounded-full shadow-md"
-                    aria-label="Zoom out"
-                  >
-                    -
-                  </button>
-                  <button
-                    onClick={() => resetTransform()}
-                    className="p-2 bg-white rounded-full shadow-md"
-                    aria-label="Reset zoom"
-                  >
-                    Reset
-                  </button>
-                </div>
-
-                {/* Scale indicator */}
-                <div className="scale-display fixed top-4 left-4 z-10 bg-white p-2 rounded shadow-md">
-                  {Math.round(scale * 100)}%
-                </div>
-              
-                <TransformComponent
-                  wrapperStyle={{ width: "100%", height: "100vh" }}
-                  contentStyle={{ width: "100%", height: "100%" }}
-                  className="tables-area"
-                  ref={tablesAreaRef}
+        <div
+          className="tables-area"
+          ref={tablesAreaRef}
+          style={{
+            width: '100%',
+            height: '100%',
+            overflow: 'auto',
+            position: 'relative',
+            cursor: isDraggingView ? 'grabbing' : 'grab'
+          }}
+        >
+          {hallData ? (
+            <div
+              className="tables-content"
+              style={{
+                position: 'relative',
+                minWidth: '5000px',  // Large value to ensure hall fits
+                minHeight: '5000px', // Large value to ensure hall fits
+                transformOrigin: 'top left',
+                transform: `scale(${zoom})`,
+                willChange: 'transform', // Optimize for performance
+              }}
+            >
+              {/* Render shapes using Konva Stage */}
+              <div style={{ 
+                position: 'absolute', 
+                top: 0, 
+                left: 0, 
+                width: '100%', 
+                height: '100%', 
+                pointerEvents: 'none',
+                zIndex: 1
+              }}>
+                <Stage 
+                  ref={stageRef} 
+                  width={5000} 
+                  height={5000}
                 >
-                  {hallData ? (
-                    <div
-                      className="tables-content"
-                      style={{
-                        position: 'relative',
-                        minWidth: '5000px',  // Large value to ensure hall fits
-                        minHeight: '5000px', // Large value to ensure hall fits
-                        transformOrigin: 'top left',
-                        transform: `scale(${zoom})`,
-                        willChange: 'transform', // Optimize for performance
-                      }}
-                    >
-                      {/* Render shapes using Konva Stage */}
-                      <div style={{ 
-                        position: 'absolute', 
-                        top: 0, 
-                        left: 0, 
-                        width: '100%', 
-                        height: '100%', 
-                        pointerEvents: 'none',
-                        zIndex: 1
-                      }}>
-                        <Stage 
-                          ref={stageRef} 
-                          width={5000} 
-                          height={5000}
-                        >
-                          <Layer>
-                            {shapes.map(shape => renderShape(shape))}
-                          </Layer>
-                        </Stage>
-                      </div>
+                  <Layer>
+                    {shapes.map(shape => renderShape(shape))}
+                  </Layer>
+                </Stage>
+              </div>
 
-                      {/* Render tables */}
-                      {hallData.tables && hallData.tables.map((table) => (
-                        <TableComponent key={table.id} table={table} />
-                      ))}
+              {/* Render tables */}
+              {hallData.tables && hallData.tables.map((table) => (
+                <TableComponent key={table.id} table={table} />
+              ))}
 
-                      {/* Render hall elements (entrances, bathrooms, etc.) */}
-                      {hallData.hallElements && hallData.hallElements.map(element => (
-                        <div
-                          key={element.id}
-                          className="hall-element"
-                          style={{
-                            position: 'absolute',
-                            left: `${element.x}px`,
-                            top: `${element.y}px`,
-                            transform: `rotate(${element.rotation || 0}deg)`,
-                            opacity: element.opacity || 1,
-                            zIndex: 2 // Make hall elements appear above shapes but same level as tables
-                          }}
-                        >
-                          <img
-                            src={element.icon}
-                            alt={element.name}
-                            style={{
-                              width: `${element.fontSize || 100}px`,
-                              height: 'auto',
-                            }}
-                          />
-                          <div className="element-label" style={{ textAlign: 'center', marginTop: '5px' }}>
-                            {element.customName || element.name}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                                <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      height: '100%',
-                      width: '100%',
-                      flexDirection: 'column',
-                      padding: '20px'
-                    }}>
-                      <div style={{
-                        backgroundColor: 'white',
-                        padding: '30px',
-                        borderRadius: '8px',
-                        boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1)',
-                        textAlign: 'center',
-                        maxWidth: '500px',
-                        width: '90%'
-                      }}>
-                        <h2 style={{ marginTop: 0 }}>Добро пожаловать в систему бронирования</h2>
-                        <p>Чтобы начать, загрузите план зала с помощью кнопки "Импорт плана зала".</p>
-                        <input
-                          type="file"
-                          accept=".json"
-                          // onChange={handleFileUpload}
-                          id="import-file-center"
-                          className="file-input"
-                          style={{ display: 'none' }}
-                        />
-                        <label
-                          htmlFor="import-file-center"
-                          className="import-button-large"
-                          style={{
-                            backgroundColor: '#2ecc71',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            padding: '12px 24px',
-                            cursor: 'pointer',
-                            fontSize: '16px',
-                            display: 'inline-block',
-                            marginTop: '15px',
-                            fontWeight: 'bold'
-                          }}
-                        >
-                          Импортировать план зала
-                        </label>
-                      </div>
-                    </div>
-                  )}
-                </TransformComponent>
-              </>
-            )}
-          </TransformWrapper>
+              {/* Render hall elements (entrances, bathrooms, etc.) */}
+              {hallData.hallElements && hallData.hallElements.map(element => (
+                <div
+                  key={element.id}
+                  className="hall-element"
+                  style={{
+                    position: 'absolute',
+                    left: `${element.x}px`,
+                    top: `${element.y}px`,
+                    transform: `rotate(${element.rotation || 0}deg)`,
+                    opacity: element.opacity || 1,
+                    zIndex: 2 // Make hall elements appear above shapes but same level as tables
+                  }}
+                >
+                  <img
+                    src={element.icon}
+                    alt={element.name}
+                    style={{
+                      width: `${element.fontSize || 100}px`,
+                      height: 'auto',
+                    }}
+                  />
+                  <div className="element-label" style={{ textAlign: 'center', marginTop: '5px' }}>
+                    {element.customName || element.name}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: '100%',
+              width: '100%',
+              flexDirection: 'column',
+              padding: '20px'
+            }}>
+              <div style={{
+                backgroundColor: 'white',
+                padding: '30px',
+                borderRadius: '8px',
+                boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1)',
+                textAlign: 'center',
+                maxWidth: '500px',
+                width: '90%'
+              }}>
+                <h2 style={{ marginTop: 0 }}>Добро пожаловать в систему бронирования</h2>
+                <p>Чтобы начать, загрузите план зала с помощью кнопки "Импорт плана зала".</p>
+                <input
+                  type="file"
+                  accept=".json"
+                  onChange={handleFileUpload}
+                  id="import-file-center"
+                  className="file-input"
+                  style={{ display: 'none' }}
+                />
+                <label
+                  htmlFor="import-file-center"
+                  className="import-button-large"
+                  style={{
+                    backgroundColor: '#2ecc71',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    padding: '12px 24px',
+                    cursor: 'pointer',
+                    fontSize: '16px',
+                    display: 'inline-block',
+                    marginTop: '15px',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  Импортировать план зала
+                </label>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
