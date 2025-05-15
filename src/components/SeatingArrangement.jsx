@@ -88,97 +88,97 @@ const SeatingArrangement = () => {
 
 
     const exportHallData = () => {
-    if (!currentHall) {
-        alert('Խնդրում ենք նախ ընտրել դահլիճը');
-        return;
-    }
-
-    // Create a complete hall data object with all components
-    const hallData = {
-        id: currentHall.id,
-        name: currentHall.name,
-        tables: tables,
-        hallElements: hallElements,
-        shapes: shapes, // Include all drawn shapes
-        chairCount: currentHall.chairCount || chairCount
-    };
-
-    // Convert to JSON
-    const jsonData = JSON.stringify(hallData, null, 2);
-    
-    // Create a blob and download link
-    const blob = new Blob([jsonData], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    
-    // Create a temporary download link
-    const downloadLink = document.createElement('a');
-    downloadLink.href = url;
-    downloadLink.download = `${currentHall.name.replace(/\s+/g, '_')}_hall_export.json`;
-    
-    // Trigger download
-    document.body.appendChild(downloadLink);
-    downloadLink.click();
-    
-    // Clean up
-    document.body.removeChild(downloadLink);
-    URL.revokeObjectURL(url);
-
-    alert(`Դահլիճը "${currentHall.name}" հաջողությամբ արտահանվել է`);
-};
-
-
-const importHallData = (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        try {
-            const importedData = JSON.parse(e.target.result);
-            
-            // Validate the imported data has required fields
-            if (!importedData.id || !importedData.name || !importedData.tables) {
-                alert('Անվավեր հատակագծի ֆայլ: պակասում են պարտադիր դաշտերը');
-                return;
-            }
-
-            // Check if a hall with this ID already exists
-            const existingHallIndex = halls.findIndex(h => h.id === importedData.id);
-            
-            let updatedHalls;
-            if (existingHallIndex >= 0) {
-                // Update existing hall
-                updatedHalls = [...halls];
-                updatedHalls[existingHallIndex] = importedData;
-            } else {
-                // Add as a new hall
-                updatedHalls = [...halls, importedData];
-            }
-
-            // Update state
-            setHalls(updatedHalls);
-            localStorage.setItem('halls', JSON.stringify(updatedHalls));
-            
-            // Set the imported hall as current
-            setCurrentHall(importedData);
-            setTables(importedData.tables || []);
-            setHallElements(importedData.hallElements || []);
-            setShapes(importedData.shapes || []);
-            
-            alert(`Դահլիճը "${importedData.name}" հաջողությամբ ներմուծվել է`);
-        } catch (error) {
-            console.error('Error importing hall data:', error);
-            alert('Սխալ ֆայլի ներմուծման ժամանակ: ' + error.message);
+        if (!currentHall) {
+            alert('Խնդրում ենք նախ ընտրել դահլիճը');
+            return;
         }
-    };
-    
-    reader.readAsText(file);
-    
-    // Reset the file input
-    event.target.value = '';
-};
 
-const fileInputRef = useRef(null);
+        // Create a complete hall data object with all components
+        const hallData = {
+            id: currentHall.id,
+            name: currentHall.name,
+            tables: tables,
+            hallElements: hallElements,
+            shapes: shapes, // Include all drawn shapes
+            chairCount: currentHall.chairCount || chairCount
+        };
+
+        // Convert to JSON
+        const jsonData = JSON.stringify(hallData, null, 2);
+
+        // Create a blob and download link
+        const blob = new Blob([jsonData], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+
+        // Create a temporary download link
+        const downloadLink = document.createElement('a');
+        downloadLink.href = url;
+        downloadLink.download = `${currentHall.name.replace(/\s+/g, '_')}_hall_export.json`;
+
+        // Trigger download
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+
+        // Clean up
+        document.body.removeChild(downloadLink);
+        URL.revokeObjectURL(url);
+
+        alert(`Դահլիճը "${currentHall.name}" հաջողությամբ արտահանվել է`);
+    };
+
+
+    const importHallData = (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const importedData = JSON.parse(e.target.result);
+
+                // Validate the imported data has required fields
+                if (!importedData.id || !importedData.name || !importedData.tables) {
+                    alert('Անվավեր հատակագծի ֆայլ: պակասում են պարտադիր դաշտերը');
+                    return;
+                }
+
+                // Check if a hall with this ID already exists
+                const existingHallIndex = halls.findIndex(h => h.id === importedData.id);
+
+                let updatedHalls;
+                if (existingHallIndex >= 0) {
+                    // Update existing hall
+                    updatedHalls = [...halls];
+                    updatedHalls[existingHallIndex] = importedData;
+                } else {
+                    // Add as a new hall
+                    updatedHalls = [...halls, importedData];
+                }
+
+                // Update state
+                setHalls(updatedHalls);
+                localStorage.setItem('halls', JSON.stringify(updatedHalls));
+
+                // Set the imported hall as current
+                setCurrentHall(importedData);
+                setTables(importedData.tables || []);
+                setHallElements(importedData.hallElements || []);
+                setShapes(importedData.shapes || []);
+
+                alert(`Դահլիճը "${importedData.name}" հաջողությամբ ներմուծվել է`);
+            } catch (error) {
+                console.error('Error importing hall data:', error);
+                alert('Սխալ ֆայլի ներմուծման ժամանակ: ' + error.message);
+            }
+        };
+
+        reader.readAsText(file);
+
+        // Reset the file input
+        event.target.value = '';
+    };
+
+    const fileInputRef = useRef(null);
 
     const handleCanvasClick = (e) => {
         // Проверяем, что клик был именно по фону холста,
@@ -1010,27 +1010,27 @@ const fileInputRef = useRef(null);
     }, []);
 
     // Save hall configuration
-   const saveHall = () => {
-    if (!currentHall) {
-        alert('Խնդրում ենք նախ ընտրել դահլիճը');
-        return;
-    }
+    const saveHall = () => {
+        if (!currentHall) {
+            alert('Խնդրում ենք նախ ընտրել դահլիճը');
+            return;
+        }
 
-    const updatedHalls = halls.map(hall =>
-        hall.id === currentHall.id
-            ? {
-                ...hall,
-                tables: tables,
-                hallElements: hallElements,
-                shapes: shapes // Add shapes to saved hall data
-              }
-            : hall
-    );
+        const updatedHalls = halls.map(hall =>
+            hall.id === currentHall.id
+                ? {
+                    ...hall,
+                    tables: tables,
+                    hallElements: hallElements,
+                    shapes: shapes // Add shapes to saved hall data
+                }
+                : hall
+        );
 
-    setHalls(updatedHalls);
-    localStorage.setItem('halls', JSON.stringify(updatedHalls));
-    alert(`Դահլիճը "${currentHall.name}" հաջողությամբ պահպանվել է`);
-};
+        setHalls(updatedHalls);
+        localStorage.setItem('halls', JSON.stringify(updatedHalls));
+        alert(`Դահլիճը "${currentHall.name}" հաջողությամբ պահպանվել է`);
+    };
 
     // Create a new hall
     const createNewHall = (hallName, tableCount, chairCount) => {
@@ -1103,20 +1103,20 @@ const fileInputRef = useRef(null);
     };
 
     // Функция загрузки зала
-   const loadHall = (hall) => {
-    setCurrentHall(hall);
-    setTables(hall.tables || []);
+    const loadHall = (hall) => {
+        setCurrentHall(hall);
+        setTables(hall.tables || []);
 
-    // Загружаем элементы зала, если они есть
-    setHallElements(hall.hallElements || []);
-    
-    // Load shapes if they exist
-    setShapes(hall.shapes || []);
+        // Загружаем элементы зала, если они есть
+        setHallElements(hall.hallElements || []);
 
-    // Сбрасываем выбор элемента
-    setSelectedElementId(null);
-    setSelectedShapeId(null);
-};
+        // Load shapes if they exist
+        setShapes(hall.shapes || []);
+
+        // Сбрасываем выбор элемента
+        setSelectedElementId(null);
+        setSelectedShapeId(null);
+    };
 
     // Delete a hall
     const deleteHall = (hallId) => {
@@ -1223,94 +1223,94 @@ const fileInputRef = useRef(null);
     };
 
     // Hall Management UI component
-   const HallManagement = () => {
-    return (
-        <div className="hall-management">
-            <h3 className="section-main-title">Դահլիճների կառավարում</h3>
+    const HallManagement = () => {
+        return (
+            <div className="hall-management">
+                <h3 className="section-main-title">Դահլիճների կառավարում</h3>
 
-            <div className="hall-controls">
-                <div className="hall-dropdown-container">
-                    <select
-                        value={currentHall ? currentHall.id : ""}
-                        onChange={(e) => {
-                            const selectedHall = halls.find(h => h.id === parseInt(e.target.value));
-                            if (selectedHall) loadHall(selectedHall);
-                        }}
-                        className="hall-select"
-                    >
-                        <option value="">Ընտրեք դահլիճը</option>
-                        {halls.map(hall => (
-                            <option key={hall.id} value={hall.id}>
-                                {hall.name} ({hall.tables.length} սեղան)
-                            </option>
-                        ))}
-                    </select>
+                <div className="hall-controls">
+                    <div className="hall-dropdown-container">
+                        <select
+                            value={currentHall ? currentHall.id : ""}
+                            onChange={(e) => {
+                                const selectedHall = halls.find(h => h.id === parseInt(e.target.value));
+                                if (selectedHall) loadHall(selectedHall);
+                            }}
+                            className="hall-select"
+                        >
+                            <option value="">Ընտրեք դահլիճը</option>
+                            {halls.map(hall => (
+                                <option key={hall.id} value={hall.id}>
+                                    {hall.name} ({hall.tables.length} սեղան)
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div className="hall-buttons">
+                        <button
+                            className="primary-btn create-hall-btn"
+                            onClick={() => setShowHallModal(true)}
+                        >
+                            Ստեղծել նոր դահլիճ
+                        </button>
+
+                        <button
+                            className="primary-btn save-hall-btn"
+                            onClick={saveHall}
+                            disabled={!currentHall}
+                        >
+                            Պահպանել դահլիճը
+                        </button>
+
+                        {currentHall && (
+                            <>
+                                <button
+                                    className="primary-btn export-hall-btn"
+                                    onClick={exportHallData}
+                                >
+                                    Արտահանել դահլիճը
+                                </button>
+
+                                <button
+                                    className="secondary-btn import-hall-btn"
+                                    onClick={() => fileInputRef.current && fileInputRef.current.click()}
+                                >
+                                    Ներմուծել դահլիճ
+                                </button>
+
+                                <button
+                                    className="secondary-btn delete-hall-btn"
+                                    onClick={() => deleteHall(currentHall.id)}
+                                >
+                                    Ջնջել դահլիճը
+                                </button>
+                            </>
+                        )}
+                    </div>
                 </div>
 
-                <div className="hall-buttons">
-                    <button
-                        className="primary-btn create-hall-btn"
-                        onClick={() => setShowHallModal(true)}
-                    >
-                        Ստեղծել նոր դահլիճ
-                    </button>
+                {/* Hidden file input for importing hall data */}
+                <input
+                    type="file"
+                    ref={fileInputRef}
+                    style={{ display: 'none' }}
+                    accept=".json"
+                    onChange={importHallData}
+                />
 
-                    <button
-                        className="primary-btn save-hall-btn"
-                        onClick={saveHall}
-                        disabled={!currentHall}
-                    >
-                        Պահպանել դահլիճը
-                    </button>
-
-                    {currentHall && (
-                        <>
-                            <button
-                                className="primary-btn export-hall-btn"
-                                onClick={exportHallData}
-                            >
-                                Արտահանել դահլիճը
-                            </button>
-                            
-                            <button
-                                className="secondary-btn import-hall-btn"
-                                onClick={() => fileInputRef.current && fileInputRef.current.click()}
-                            >
-                                Ներմուծել դահլիճ
-                            </button>
-                            
-                            <button
-                                className="secondary-btn delete-hall-btn"
-                                onClick={() => deleteHall(currentHall.id)}
-                            >
-                                Ջնջել դահլիճը
-                            </button>
-                        </>
-                    )}
-                </div>
+                {currentHall && (
+                    <div className="current-hall-info">
+                        <h4>Ընթացիկ դահլիճ: {currentHall.name}</h4>
+                        <p>{currentHall.tables.length} սեղաններ</p>
+                        {currentHall.shapes && currentHall.shapes.length > 0 && (
+                            <p>{currentHall.shapes.length} նկարներ</p>
+                        )}
+                    </div>
+                )}
             </div>
-
-            {/* Hidden file input for importing hall data */}
-            <input
-                type="file"
-                ref={fileInputRef}
-                style={{ display: 'none' }}
-                accept=".json"
-                onChange={importHallData}
-            />
-
-            {currentHall && (
-                <div className="current-hall-info">
-                    <h4>Ընթացիկ դահլիճ: {currentHall.name}</h4>
-                    <p>{currentHall.tables.length} սեղաններ</p>
-                    {currentHall.shapes && currentHall.shapes.length > 0 && (
-                        <p>{currentHall.shapes.length} նկարներ</p>
-                    )}
-                </div>
-            )}
-        </div>
-    );
-};
+        );
+    };
 
     { showHallModal && <HallModal /> }
     const handleTableCountChange = (e) => {
@@ -2169,96 +2169,96 @@ const fileInputRef = useRef(null);
                     {showHallModal && <HallModal />}
                 </header>
                 <div className="main-content2">
-                  <div className="drawing-tools">
-  <div className="tool-section">
-    <div className="tool-buttons">
-      <button
-        onClick={() => setActiveTool(activeTool === 'rect' ? null : 'rect')}
-        className={`tool-btn ${activeTool === 'rect' ? 'active' : ''}`}
-      >
-        <svg width="24" height="24" viewBox="0 0 220 120" xmlns="http://www.w3.org/2000/svg">
-          <rect x="10" y="10" width="200" height="100" fill="white" stroke="white" strokeWidth="10" />
-        </svg>
-      </button>
-      <button
-        onClick={() => setActiveTool(activeTool === 'circle' ? null : 'circle')}
-        className={`tool-btn ${activeTool === 'circle' ? 'active' : ''}`}
-      >
-        <svg width="24" height="24" viewBox="0 0 100 100">
-          <circle cx="50" cy="50" r="40" stroke="white" strokeWidth="5" fill="white" />
-        </svg>
-      </button>
-      <button
-        onClick={() => setActiveTool(activeTool === 'line' ? null : 'line')}
-        className={`tool-btn ${activeTool === 'line' ? 'active' : ''}`}
-      >
-        <svg width="32" height="24" viewBox="0 0 300 100" xmlns="http://www.w3.org/2000/svg">
-          <line x1="10" y1="50" x2="290" y2="50" stroke="white" strokeWidth="10" />
-        </svg>
-      </button>
-      <button
-        onClick={() => setActiveTool(activeTool === 'select' ? null : 'select')}
-        className={`tool-btn ${activeTool === 'select' ? 'active' : ''}`}
-      >
-        <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <polyline points="5 9 2 12 5 15" />
-          <polyline points="9 5 12 2 15 5" />
-          <polyline points="15 19 12 22 9 19" />
-          <polyline points="19 9 22 12 19 15" />
-          <line x1="2" y1="12" x2="22" y2="12" />
-          <line x1="12" y1="2" x2="12" y2="22" />
-        </svg>
-      </button>
-      <button
-        onClick={() => setActiveTool(activeTool === 'eraser' ? null : 'eraser')}
-        className={`tool-btn ${activeTool === 'eraser' ? 'active' : ''}`}
-      >
-        <svg width="24" height="24" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-          <polygon points="20,80 50,20 80,50 50,80" fill="white" stroke="white" strokeWidth="3" />
-          <polygon points="50,20 60,30 30,70 20,60" fill="white" stroke="white" strokeWidth="2" />
-        </svg>
-      </button>
+                    <div className="drawing-tools">
+                        <div className="tool-section">
+                            <div className="tool-buttons">
+                                <button
+                                    onClick={() => setActiveTool(activeTool === 'rect' ? null : 'rect')}
+                                    className={`tool-btn ${activeTool === 'rect' ? 'active' : ''}`}
+                                >
+                                    <svg width="24" height="24" viewBox="0 0 220 120" xmlns="http://www.w3.org/2000/svg">
+                                        <rect x="10" y="10" width="200" height="100" fill="white" stroke="white" strokeWidth="10" />
+                                    </svg>
+                                </button>
+                                <button
+                                    onClick={() => setActiveTool(activeTool === 'circle' ? null : 'circle')}
+                                    className={`tool-btn ${activeTool === 'circle' ? 'active' : ''}`}
+                                >
+                                    <svg width="24" height="24" viewBox="0 0 100 100">
+                                        <circle cx="50" cy="50" r="40" stroke="white" strokeWidth="5" fill="white" />
+                                    </svg>
+                                </button>
+                                <button
+                                    onClick={() => setActiveTool(activeTool === 'line' ? null : 'line')}
+                                    className={`tool-btn ${activeTool === 'line' ? 'active' : ''}`}
+                                >
+                                    <svg width="32" height="24" viewBox="0 0 300 100" xmlns="http://www.w3.org/2000/svg">
+                                        <line x1="10" y1="50" x2="290" y2="50" stroke="white" strokeWidth="10" />
+                                    </svg>
+                                </button>
+                                <button
+                                    onClick={() => setActiveTool(activeTool === 'select' ? null : 'select')}
+                                    className={`tool-btn ${activeTool === 'select' ? 'active' : ''}`}
+                                >
+                                    <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <polyline points="5 9 2 12 5 15" />
+                                        <polyline points="9 5 12 2 15 5" />
+                                        <polyline points="15 19 12 22 9 19" />
+                                        <polyline points="19 9 22 12 19 15" />
+                                        <line x1="2" y1="12" x2="22" y2="12" />
+                                        <line x1="12" y1="2" x2="12" y2="22" />
+                                    </svg>
+                                </button>
+                                <button
+                                    onClick={() => setActiveTool(activeTool === 'eraser' ? null : 'eraser')}
+                                    className={`tool-btn ${activeTool === 'eraser' ? 'active' : ''}`}
+                                >
+                                    <svg width="24" height="24" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                                        <polygon points="20,80 50,20 80,50 50,80" fill="white" stroke="white" strokeWidth="3" />
+                                        <polygon points="50,20 60,30 30,70 20,60" fill="white" stroke="white" strokeWidth="2" />
+                                    </svg>
+                                </button>
 
-      {activeTool && (
-        <button onClick={() => setActiveTool(null)}>
-          Exit
-        </button>
-      )}
-    </div>
+                                {activeTool && (
+                                    <button onClick={() => setActiveTool(null)}>
+                                        Exit
+                                    </button>
+                                )}
+                            </div>
 
-    <div className="style-controls">
-      <div className="control-group">
-        <label>Цвет:</label>
-        <input
-          type="color"
-          value={color}
-          onChange={(e) => setColor(e.target.value)}
-        />
-      </div>
+                            <div className="style-controls">
+                                <div className="control-group">
+                                    <label>Цвет:</label>
+                                    <input
+                                        type="color"
+                                        value={color}
+                                        onChange={(e) => setColor(e.target.value)}
+                                    />
+                                </div>
 
-      <div className="control-group">
-        <label>Толщина:</label>
-        <input
-          type="range"
-          min="1"
-          max="20"
-          value={strokeWidth}
-          onChange={(e) => setStrokeWidth(parseInt(e.target.value))}
-        />
-        <span>{strokeWidth}px</span>
-      </div>
-    </div>
+                                <div className="control-group">
+                                    <label>Толщина:</label>
+                                    <input
+                                        type="range"
+                                        min="1"
+                                        max="20"
+                                        value={strokeWidth}
+                                        onChange={(e) => setStrokeWidth(parseInt(e.target.value))}
+                                    />
+                                    <span>{strokeWidth}px</span>
+                                </div>
+                            </div>
 
-    <div className="tool-section">
-      <button
-        onClick={() => setShapes([])}
-        className="clear-btn"
-      >
-        Clear
-      </button>
-    </div>
-  </div>
-</div>
+                            <div className="tool-section">
+                                <button
+                                    onClick={() => setShapes([])}
+                                    className="clear-btn"
+                                >
+                                    Clear
+                                </button>
+                            </div>
+                        </div>
+                    </div>
 
                     <TableDetailsPopup
                         table={getDetailsTable()}
@@ -2405,8 +2405,8 @@ const fileInputRef = useRef(null);
                                 left: 0,
                                 width: '100%',
                                 height: '100%',
-                                pointerEvents: activeTool ? 'auto' : 'none', // принимать события только когда инструмент активен
-                                zIndex: 50
+                                pointerEvents: activeTool ? 'auto' : 'none',
+                                zIndex: 999 // Увеличьте это значение с 50 до 999
                             }}>
                                 <Stage
                                     ref={stageRef}
@@ -2415,6 +2415,24 @@ const fileInputRef = useRef(null);
                                     onMouseDown={handleDrawingMouseDown}
                                     onMouseMove={handleDrawingMouseMove}
                                     onMouseUp={handleDrawingMouseUp}
+                                    onTouchStart={(e) => {
+                                        e.evt.preventDefault();
+                                        const touch = e.evt.touches[0];
+                                        const evt = {
+                                            clientX: touch.clientX,
+                                            clientY: touch.clientY,
+                                            target: e.target
+                                        };
+                                        handleDrawingMouseDown({ ...e, clientX: touch.clientX, clientY: touch.clientY });
+                                    }}
+                                    onTouchMove={(e) => {
+                                        e.evt.preventDefault();
+                                        const touch = e.evt.touches[0];
+                                        handleDrawingMouseMove({ ...e, clientX: touch.clientX, clientY: touch.clientY });
+                                    }}
+                                    onTouchEnd={(e) => {
+                                        handleDrawingMouseUp(e);
+                                    }}
                                     style={{
                                         cursor: activeTool === 'eraser'
                                             ? 'url("data:image/svg+xml,%3Csvg width=\'24\' height=\'24\' viewBox=\'0 0 24 24\' fill=\'none\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M18 5L5 18M6 5H18V17\' stroke=\'black\'/%3E%3C/svg%3E") 0 24, auto'
@@ -2422,7 +2440,8 @@ const fileInputRef = useRef(null);
                                                 ? 'move'
                                                 : activeTool
                                                     ? 'crosshair'
-                                                    : 'default'
+                                                    : 'default',
+                                        touchAction: 'none' // Предотвращает стандартные действия браузера для touch-событий
                                     }}
                                 >
                                     <Layer>
