@@ -1755,18 +1755,20 @@ button {
 /* Стили для уведомления о перемещении */
 .transfer-notification {
   position: fixed;
+  height: 20px;
   top: 20px;
   right: 20px;
-  padding: 15px 20px;
   background-color: #2ecc71;
   color: white;
+  padding: 10px 15px;
   border-radius: 4px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-  font-weight: bold;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  font-size: 14px;
   z-index: 9999;
   opacity: 0;
   transform: translateY(-20px);
-  transition: opacity 0.3s ease, transform 0.3s ease;
+  transition: opacity 0.3s, transform 0.3s;
+  max-width: 300px;
 }
 
 .transfer-notification.show {

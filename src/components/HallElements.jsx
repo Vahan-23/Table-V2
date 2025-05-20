@@ -666,9 +666,9 @@ export const HallElementsManager = ({
     return (
         <>
             {/* Слой для элементов зала с обработчиком клика */}
-            <div
+            {/* <div
                 ref={elementsLayerRef}
-                className="hall-elements-layer"
+                className="tables-area"
                 onClick={handleAreaClick}
                 style={{
                     position: 'absolute',
@@ -678,7 +678,7 @@ export const HallElementsManager = ({
                     bottom: 0,
                     pointerEvents: 'none' // Обеспечиваем работу кликов
                 }}
-            />
+            /> */}
 
             {/* Рендерим все элементы зала */}
             {elements.map((element) => (

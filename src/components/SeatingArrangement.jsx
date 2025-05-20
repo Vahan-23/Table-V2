@@ -2,9 +2,6 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useDrag, useDrop } from 'react-dnd';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
-import { Stage, Layer, Rect, Circle, Line } from 'react-konva';
-import KonvaDrawingBoard from './KonvaDrawingBoard';
-import './KonvaDrawingBoard.css'; // Или скопируйте стили в ваш основной CSS файл
 import './HallElement.css';
 import './ElementProperties.css';
 import './App.css';
@@ -67,24 +64,9 @@ const SeatingArrangement = () => {
     const [activeMode, setActiveMode] = useState('tables'); // 'tables' или 'elements'
     const [hallElements, setHallElements] = useState([]);
     const [selectedElementId, setSelectedElementId] = useState(null);
-
-    const [drawingMode, setDrawingMode] = useState(false);
-    // Add these states to track drawing
-    const [isDrawing, setIsDrawing] = useState(false);
-    const [currentShape, setCurrentShape] = useState(null);
-    const [startPoint, setStartPoint] = useState({ x: 0, y: 0 });
-    const [shapes, setShapes] = useState([]);
-    const [color, setColor] = useState('#000000');
-    const [strokeWidth, setStrokeWidth] = useState(3);
-    const [activeTool, setActiveTool] = useState(null);
-    const [selectedShapeId, setSelectedShapeId] = useState(null);
-    const [isDraggingShape, setIsDraggingShape] = useState(false);
-
     // Добавляем новые состояния для отслеживания позиции перетаскивания
     const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
 
-    // Добавить эти строки после других объявлений состояний
-    const stageRef = useRef(null);
 
 
     const exportHallData = () => {
@@ -99,7 +81,6 @@ const SeatingArrangement = () => {
             name: currentHall.name,
             tables: tables,
             hallElements: hallElements,
-            shapes: shapes, // Include all drawn shapes
             chairCount: currentHall.chairCount || chairCount
         };
 
@@ -163,7 +144,6 @@ const SeatingArrangement = () => {
                 setCurrentHall(importedData);
                 setTables(importedData.tables || []);
                 setHallElements(importedData.hallElements || []);
-                setShapes(importedData.shapes || []);
 
                 alert(`Դահլիճը "${importedData.name}" հաջողությամբ ներմուծվել է`);
             } catch (error) {
@@ -189,246 +169,6 @@ const SeatingArrangement = () => {
             // setActiveMode('tables');
         }
     };
-
-
-    // Функция для экспорта изображения
-    useEffect(() => {
-        const handleKeyDown = (e) => {
-            if (e.key === 'Escape' && activeTool) {
-                setActiveTool(null);
-            }
-        };
-
-        window.addEventListener('keydown', handleKeyDown);
-
-        return () => {
-            window.removeEventListener('keydown', handleKeyDown);
-        };
-    }, [activeTool]);
-
-
-    const handleDrawingMouseDown = (e) => {
-        if (!activeTool || !stageRef.current) return;
-
-        // Get stage and cursor position directly from the event
-        const stage = e.target.getStage();
-        if (!stage) return;
-
-        const pointerPos = stage.getPointerPosition();
-        if (!pointerPos) return;
-
-        // Если выбран инструмент "select", проверяем, клик был по фигуре или нет
-        if (activeTool === 'select') {
-            // Проверяем, кликнул ли пользователь по фигуре
-            const clickedOnShape = e.target !== stage;
-
-            if (clickedOnShape) {
-                // Если кликнули по фигуре, устанавливаем её как выбранную
-                const shapeId = e.target.attrs.id;
-                setSelectedShapeId(shapeId);
-                setIsDraggingShape(true);
-                return;
-            } else {
-                // Если кликнули по пустому месту, снимаем выделение
-                setSelectedShapeId(null);
-                return;
-            }
-        }
-
-        // Если выбран ластик, ничего не рисуем, а просто активируем режим ластика
-        if (activeTool === 'eraser') {
-            // Обработка будет в handleDrawingMouseMove
-            setIsDrawing(true);
-            return;
-        }
-
-        // Start drawing for other tools
-        setIsDrawing(true);
-        setStartPoint({ x: pointerPos.x, y: pointerPos.y });
-
-        // Create initial shape
-        const newShape = {
-            id: Date.now(),
-            type: activeTool,
-            x: pointerPos.x,
-            y: pointerPos.y,
-            width: 0,
-            height: 0,
-            radius: 0,
-            points: [pointerPos.x, pointerPos.y, pointerPos.x, pointerPos.y],
-            color: color,
-            strokeWidth: strokeWidth,
-            fill: 'transparent',
-            draggable: true // Помечаем все фигуры как перемещаемые
-        };
-
-        setCurrentShape(newShape);
-    };
-
-    const handleDrawingMouseMove = (e) => {
-        if (!isDrawing || !activeTool) return;
-
-        // Get stage and cursor position
-        const stage = e.target.getStage();
-        if (!stage) return;
-
-        const pointerPos = stage.getPointerPosition();
-        if (!pointerPos) return;
-
-        // Обработка ластика
-        if (activeTool === 'eraser') {
-            // Находим фигуры, которые находятся под курсором
-            const elementsToRemove = stage.getIntersection(pointerPos);
-            if (elementsToRemove && elementsToRemove.attrs.id) {
-                // Удаляем фигуру, над которой находится курсор
-                setShapes(prevShapes =>
-                    prevShapes.filter(shape => shape.id !== parseInt(elementsToRemove.attrs.id))
-                );
-            }
-            return;
-        }
-
-        // Обработка перемещения фигуры
-        if (activeTool === 'select' && isDraggingShape) {
-            // Перемещение обрабатывается автоматически Konva, не нужно ничего делать здесь
-            return;
-        }
-
-        // Обработка рисования
-        if (!currentShape) return;
-
-        // Update shape based on tool type
-        let updatedShape = { ...currentShape };
-
-        switch (activeTool) {
-            case 'rect':
-                // Calculate width and height
-                const width = pointerPos.x - startPoint.x;
-                const height = pointerPos.y - startPoint.y;
-
-                // Update rectangle properties
-                updatedShape.width = Math.abs(width);
-                updatedShape.height = Math.abs(height);
-
-                // Set the x,y to the top-left corner
-                updatedShape.x = width < 0 ? pointerPos.x : startPoint.x;
-                updatedShape.y = height < 0 ? pointerPos.y : startPoint.y;
-                break;
-
-            case 'circle':
-                // Calculate radius from center to cursor
-                const dx = pointerPos.x - startPoint.x;
-                const dy = pointerPos.y - startPoint.y;
-                const radius = Math.sqrt(dx * dx + dy * dy);
-
-                // Update circle properties
-                updatedShape.radius = radius;
-                break;
-
-            case 'line':
-                // Update line points
-                updatedShape.points = [startPoint.x, startPoint.y, pointerPos.x, pointerPos.y];
-                break;
-
-            default:
-                break;
-        }
-
-        setCurrentShape(updatedShape);
-    };
-
-    const handleDrawingMouseUp = (e) => {
-        if (!isDrawing) return;
-
-        // Если это был ластик или выбор, просто сбрасываем состояние
-        if (activeTool === 'eraser' || (activeTool === 'select' && isDraggingShape)) {
-            setIsDrawing(false);
-            setIsDraggingShape(false);
-            return;
-        }
-
-        // Для остальных инструментов добавляем фигуру
-        if (currentShape) {
-            setShapes([...shapes, currentShape]);
-        }
-
-        // Reset drawing state
-        setIsDrawing(false);
-        setCurrentShape(null);
-    };
-
-    // const handleDrawingClick = (e) => {
-    //     // Don't proceed if no active tool
-    //     if (!activeTool) {
-    //         return;
-    //     }
-
-    //     // Check if we have a reference to the stage
-    //     if (!stageRef.current) {
-    //         return;
-    //     }
-
-    //     // Get the stage
-    //     const stage = stageRef.current;
-
-    //     // Convert DOM event coordinates to stage coordinates
-    //     const stageContainer = stage.container();
-    //     const stageRect = stageContainer.getBoundingClientRect();
-    //     const pos = {
-    //         x: e.clientX - stageRect.left,
-    //         y: e.clientY - stageRect.top
-    //     };
-
-    //     let newShape;
-
-    //     switch (activeTool) {
-    //         case 'rect':
-    //             // Create rectangle with fixed size
-    //             newShape = {
-    //                 id: Date.now(),
-    //                 type: 'rect',
-    //                 x: pos.x - 25, // center shape on cursor
-    //                 y: pos.y - 25,
-    //                 width: 50,     // fixed width
-    //                 height: 50,    // fixed height
-    //                 color: color,
-    //                 strokeWidth: strokeWidth,
-    //                 fill: 'transparent'
-    //             };
-    //             break;
-
-    //         case 'circle':
-    //             // Create circle with fixed size
-    //             newShape = {
-    //                 id: Date.now(),
-    //                 type: 'circle',
-    //                 x: pos.x,
-    //                 y: pos.y,
-    //                 radius: 25,    // fixed radius
-    //                 color: color,
-    //                 strokeWidth: strokeWidth,
-    //                 fill: 'transparent'
-    //             };
-    //             break;
-
-    //         case 'line':
-    //             // For a line we need two points, so create a horizontal line
-    //             newShape = {
-    //                 id: Date.now(),
-    //                 type: 'line',
-    //                 points: [pos.x - 25, pos.y, pos.x + 25, pos.y], // horizontal line 50px
-    //                 color: color,
-    //                 strokeWidth: strokeWidth
-    //             };
-    //             break;
-
-    //         default:
-    //             return;
-    //     }
-
-    //     // Add the new shape
-    //     setShapes([...shapes, newShape]);
-    // };
 
     const handleCanvasDrop = (e) => {
         e.preventDefault();
@@ -1022,7 +762,6 @@ const SeatingArrangement = () => {
                     ...hall,
                     tables: tables,
                     hallElements: hallElements,
-                    shapes: shapes // Add shapes to saved hall data
                 }
                 : hall
         );
@@ -1110,12 +849,10 @@ const SeatingArrangement = () => {
         // Загружаем элементы зала, если они есть
         setHallElements(hall.hallElements || []);
 
-        // Load shapes if they exist
-        setShapes(hall.shapes || []);
+
 
         // Сбрасываем выбор элемента
         setSelectedElementId(null);
-        setSelectedShapeId(null);
     };
 
     // Delete a hall
@@ -2169,96 +1906,6 @@ const SeatingArrangement = () => {
                     {showHallModal && <HallModal />}
                 </header>
                 <div className="main-content2">
-                    <div className="drawing-tools">
-                        <div className="tool-section">
-                            <div className="tool-buttons">
-                                <button
-                                    onClick={() => setActiveTool(activeTool === 'rect' ? null : 'rect')}
-                                    className={`tool-btn ${activeTool === 'rect' ? 'active' : ''}`}
-                                >
-                                    <svg width="24" height="24" viewBox="0 0 220 120" xmlns="http://www.w3.org/2000/svg">
-                                        <rect x="10" y="10" width="200" height="100" fill="white" stroke="white" strokeWidth="10" />
-                                    </svg>
-                                </button>
-                                <button
-                                    onClick={() => setActiveTool(activeTool === 'circle' ? null : 'circle')}
-                                    className={`tool-btn ${activeTool === 'circle' ? 'active' : ''}`}
-                                >
-                                    <svg width="24" height="24" viewBox="0 0 100 100">
-                                        <circle cx="50" cy="50" r="40" stroke="white" strokeWidth="5" fill="white" />
-                                    </svg>
-                                </button>
-                                <button
-                                    onClick={() => setActiveTool(activeTool === 'line' ? null : 'line')}
-                                    className={`tool-btn ${activeTool === 'line' ? 'active' : ''}`}
-                                >
-                                    <svg width="32" height="24" viewBox="0 0 300 100" xmlns="http://www.w3.org/2000/svg">
-                                        <line x1="10" y1="50" x2="290" y2="50" stroke="white" strokeWidth="10" />
-                                    </svg>
-                                </button>
-                                <button
-                                    onClick={() => setActiveTool(activeTool === 'select' ? null : 'select')}
-                                    className={`tool-btn ${activeTool === 'select' ? 'active' : ''}`}
-                                >
-                                    <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <polyline points="5 9 2 12 5 15" />
-                                        <polyline points="9 5 12 2 15 5" />
-                                        <polyline points="15 19 12 22 9 19" />
-                                        <polyline points="19 9 22 12 19 15" />
-                                        <line x1="2" y1="12" x2="22" y2="12" />
-                                        <line x1="12" y1="2" x2="12" y2="22" />
-                                    </svg>
-                                </button>
-                                <button
-                                    onClick={() => setActiveTool(activeTool === 'eraser' ? null : 'eraser')}
-                                    className={`tool-btn ${activeTool === 'eraser' ? 'active' : ''}`}
-                                >
-                                    <svg width="24" height="24" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                                        <polygon points="20,80 50,20 80,50 50,80" fill="white" stroke="white" strokeWidth="3" />
-                                        <polygon points="50,20 60,30 30,70 20,60" fill="white" stroke="white" strokeWidth="2" />
-                                    </svg>
-                                </button>
-
-                                {activeTool && (
-                                    <button onClick={() => setActiveTool(null)}>
-                                        Exit
-                                    </button>
-                                )}
-                            </div>
-
-                            <div className="style-controls">
-                                <div className="control-group">
-                                    <label>Цвет:</label>
-                                    <input
-                                        type="color"
-                                        value={color}
-                                        onChange={(e) => setColor(e.target.value)}
-                                    />
-                                </div>
-
-                                <div className="control-group">
-                                    <label>Толщина:</label>
-                                    <input
-                                        type="range"
-                                        min="1"
-                                        max="20"
-                                        value={strokeWidth}
-                                        onChange={(e) => setStrokeWidth(parseInt(e.target.value))}
-                                    />
-                                    <span>{strokeWidth}px</span>
-                                </div>
-                            </div>
-
-                            <div className="tool-section">
-                                <button
-                                    onClick={() => setShapes([])}
-                                    className="clear-btn"
-                                >
-                                    Clear
-                                </button>
-                            </div>
-                        </div>
-                    </div>
 
                     <TableDetailsPopup
                         table={getDetailsTable()}
@@ -2397,213 +2044,6 @@ const SeatingArrangement = () => {
                                 }}
 
                             />
-
-                            {/* Добавляем слой для рисования Konva ПОВЕРХ всего содержимого */}
-                            <div className="konva-drawing-layer" style={{
-                                position: 'absolute',
-                                top: 0,
-                                left: 0,
-                                width: '100%',
-                                height: '100%',
-                                pointerEvents: activeTool ? 'auto' : 'none',
-                                zIndex: 999 // Увеличьте это значение с 50 до 999
-                            }}>
-                                <Stage
-                                    ref={stageRef}
-                                    width={tablesAreaRef.current?.clientWidth || window.innerWidth}
-                                    height={tablesAreaRef.current?.clientHeight || window.innerHeight}
-                                    onMouseDown={handleDrawingMouseDown}
-                                    onMouseMove={handleDrawingMouseMove}
-                                    onMouseUp={handleDrawingMouseUp}
-                                    onTouchStart={(e) => {
-                                        e.evt.preventDefault();
-                                        const touch = e.evt.touches[0];
-                                        const evt = {
-                                            clientX: touch.clientX,
-                                            clientY: touch.clientY,
-                                            target: e.target
-                                        };
-                                        handleDrawingMouseDown({ ...e, clientX: touch.clientX, clientY: touch.clientY });
-                                    }}
-                                    onTouchMove={(e) => {
-                                        e.evt.preventDefault();
-                                        const touch = e.evt.touches[0];
-                                        handleDrawingMouseMove({ ...e, clientX: touch.clientX, clientY: touch.clientY });
-                                    }}
-                                    onTouchEnd={(e) => {
-                                        handleDrawingMouseUp(e);
-                                    }}
-                                    style={{
-                                        cursor: activeTool === 'eraser'
-                                            ? 'url("data:image/svg+xml,%3Csvg width=\'24\' height=\'24\' viewBox=\'0 0 24 24\' fill=\'none\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M18 5L5 18M6 5H18V17\' stroke=\'black\'/%3E%3C/svg%3E") 0 24, auto'
-                                            : activeTool === 'select'
-                                                ? 'move'
-                                                : activeTool
-                                                    ? 'crosshair'
-                                                    : 'default',
-                                        touchAction: 'none' // Предотвращает стандартные действия браузера для touch-событий
-                                    }}
-                                >
-                                    <Layer>
-                                        {/* Draw all existing shapes */}
-                                        {shapes.map((shape) => {
-                                            if (shape.type === 'line') {
-                                                return (
-                                                    <Line
-                                                        key={shape.id}
-                                                        id={shape.id.toString()}
-                                                        points={shape.points}
-                                                        stroke={shape.color}
-                                                        strokeWidth={shape.strokeWidth}
-                                                        lineCap="round"
-                                                        draggable={activeTool === 'select'}
-                                                        onDragStart={() => setSelectedShapeId(shape.id)}
-                                                        onDragEnd={(e) => {
-                                                            // Обновляем позицию линии в массиве shapes
-                                                            const updatedShapes = shapes.map(s => {
-                                                                if (s.id === shape.id) {
-                                                                    // Для линий нужно обновить все точки
-                                                                    const newPoints = [...s.points];
-                                                                    const dx = e.target.x();
-                                                                    const dy = e.target.y();
-
-                                                                    // Смещаем все точки линии
-                                                                    for (let i = 0; i < newPoints.length; i += 2) {
-                                                                        newPoints[i] += dx;
-                                                                        newPoints[i + 1] += dy;
-                                                                    }
-
-                                                                    return {
-                                                                        ...s,
-                                                                        points: newPoints
-                                                                    };
-                                                                }
-                                                                return s;
-                                                            });
-
-                                                            setShapes(updatedShapes);
-                                                            // Сбрасываем позицию, чтобы не было двойного смещения
-                                                            e.target.position({ x: 0, y: 0 });
-                                                        }}
-                                                        shadowEnabled={selectedShapeId === shape.id}
-                                                        shadowColor="blue"
-                                                        shadowBlur={10}
-                                                        shadowOpacity={0.6}
-                                                    />
-                                                );
-                                            } else if (shape.type === 'rect') {
-                                                return (
-                                                    <Rect
-                                                        key={shape.id}
-                                                        id={shape.id.toString()}
-                                                        x={shape.x}
-                                                        y={shape.y}
-                                                        width={shape.width}
-                                                        height={shape.height}
-                                                        stroke={shape.color}
-                                                        strokeWidth={shape.strokeWidth}
-                                                        fill={shape.fill || "transparent"}
-                                                        draggable={activeTool === 'select'}
-                                                        onDragStart={() => setSelectedShapeId(shape.id)}
-                                                        onDragEnd={(e) => {
-                                                            // Обновляем позицию прямоугольника в массиве shapes
-                                                            const updatedShapes = shapes.map(s => {
-                                                                if (s.id === shape.id) {
-                                                                    return {
-                                                                        ...s,
-                                                                        x: e.target.x(),
-                                                                        y: e.target.y()
-                                                                    };
-                                                                }
-                                                                return s;
-                                                            });
-
-                                                            setShapes(updatedShapes);
-                                                        }}
-                                                        shadowEnabled={selectedShapeId === shape.id}
-                                                        shadowColor="blue"
-                                                        shadowBlur={10}
-                                                        shadowOpacity={0.6}
-                                                    />
-                                                );
-                                            } else if (shape.type === 'circle') {
-                                                return (
-                                                    <Circle
-                                                        key={shape.id}
-                                                        id={shape.id.toString()}
-                                                        x={shape.x}
-                                                        y={shape.y}
-                                                        radius={shape.radius}
-                                                        stroke={shape.color}
-                                                        strokeWidth={shape.strokeWidth}
-                                                        fill={shape.fill || "transparent"}
-                                                        draggable={activeTool === 'select'}
-                                                        onDragStart={() => setSelectedShapeId(shape.id)}
-                                                        onDragEnd={(e) => {
-                                                            // Обновляем позицию круга в массиве shapes
-                                                            const updatedShapes = shapes.map(s => {
-                                                                if (s.id === shape.id) {
-                                                                    return {
-                                                                        ...s,
-                                                                        x: e.target.x(),
-                                                                        y: e.target.y()
-                                                                    };
-                                                                }
-                                                                return s;
-                                                            });
-
-                                                            setShapes(updatedShapes);
-                                                        }}
-                                                        shadowEnabled={selectedShapeId === shape.id}
-                                                        shadowColor="blue"
-                                                        shadowBlur={10}
-                                                        shadowOpacity={0.6}
-                                                    />
-                                                );
-                                            }
-                                            return null;
-                                        })}
-
-                                        {/* Draw the current shape being created */}
-                                        {isDrawing && currentShape && (() => {
-                                            if (currentShape.type === 'line') {
-                                                return (
-                                                    <Line
-                                                        points={currentShape.points}
-                                                        stroke={currentShape.color}
-                                                        strokeWidth={currentShape.strokeWidth}
-                                                        lineCap="round"
-                                                    />
-                                                );
-                                            } else if (currentShape.type === 'rect') {
-                                                return (
-                                                    <Rect
-                                                        x={currentShape.x}
-                                                        y={currentShape.y}
-                                                        width={currentShape.width}
-                                                        height={currentShape.height}
-                                                        stroke={currentShape.color}
-                                                        strokeWidth={currentShape.strokeWidth}
-                                                        fill={currentShape.fill || "transparent"}
-                                                    />
-                                                );
-                                            } else if (currentShape.type === 'circle') {
-                                                return (
-                                                    <Circle
-                                                        x={startPoint.x}
-                                                        y={startPoint.y}
-                                                        radius={currentShape.radius}
-                                                        stroke={currentShape.color}
-                                                        strokeWidth={currentShape.strokeWidth}
-                                                        fill={currentShape.fill || "transparent"}
-                                                    />
-                                                );
-                                            }
-                                            return null;
-                                        })()}
-                                    </Layer>
-                                </Stage>
-                            </div>
                         </div>
 
                     </div>

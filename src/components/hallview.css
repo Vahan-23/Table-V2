@@ -264,22 +264,7 @@
 }
 
 /* Style notification for feedback */
-.transfer-notification {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  background-color: #2ecc71;
-  color: white;
-  padding: 10px 15px;
-  border-radius: 4px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-  font-size: 14px;
-  z-index: 9999;
-  opacity: 0;
-  transform: translateY(-20px);
-  transition: opacity 0.3s, transform 0.3s;
-  max-width: 300px;
-}
+
 
 .transfer-notification.show {
   opacity: 1;
@@ -430,18 +415,6 @@ body.dragging-active * {
   position: relative;
 }
 
-/* Стили для содержимого зала */
-/* .tables-content {
-  position: relative;
-  background: linear-gradient(rgba(255, 255, 255, 0.2) 1px, transparent 1px), 
-              linear-gradient(90deg, rgba(255, 255, 255, 0.2) 1px, transparent 1px);
-  background-size: 20px 20px;
-  background-color: #e6eef5;
-  border: 2px dashed #3a3a3a;
-  padding: 20px;
-  min-width: 5000px;
-  min-height: 5000px;
-} */
 
 /* Стили для дроп-таргета */
 .drop-target {
@@ -450,23 +423,6 @@ body.dragging-active * {
   transition: outline 0.2s ease;
 }
 
-/* Анимация уведомления */
-.transfer-notification {
-  position: fixed;
-  bottom: -100px;
-  left: 50%;
-  transform: translateX(-50%);
-  background-color: #2ecc71;
-  color: white;
-  padding: 10px 20px;
-  border-radius: 5px;
-  box-shadow: 0 3px 10px rgba(0,0,0,0.2);
-  z-index: 1000;
-  transition: bottom 0.3s ease;
-  font-size: 14px;
-  max-width: 80%;
-  text-align: center;
-}
 
 .transfer-notification.show {
   bottom: 20px;
