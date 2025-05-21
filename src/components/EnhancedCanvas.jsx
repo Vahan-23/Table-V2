@@ -611,173 +611,180 @@ const EnhancedCanvas = React.forwardRef((
 }, [activeMode, isDrawing]);
 
   // Handle different canvas modes
-  useEffect(() => {
-    const canvas = fabricCanvasRef.current;
-    if (!canvas || !isCanvasReady) return;
+ useEffect(() => {
+  const canvas = fabricCanvasRef.current;
+  if (!canvas || !isCanvasReady) return;
 
-    try {
-      // Call separate function for hybrid mode
-      if (activeMode === ELEMENT_TYPES.HYBRID) {
-        setupHybridMode(canvas);
-        return;
-      }
+  try {
+    // Call separate function for hybrid mode
+    if (activeMode === ELEMENT_TYPES.HYBRID) {
+      setupHybridMode(canvas);
+      return;
+    }
 
-      // Clear all previous handlers
-      canvas.off('mouse:down');
-      canvas.off('mouse:move');
-      canvas.off('mouse:up');
-      canvas.off('selection:created');
-      canvas.off('selection:cleared');
-      canvas.off('contextmenu');
+    // Clear all previous handlers
+    canvas.off('mouse:down');
+    canvas.off('mouse:move');
+    canvas.off('mouse:up');
+    canvas.off('selection:created');
+    canvas.off('selection:cleared');
+    canvas.off('contextmenu');
+    
+    if (canvas._hybridHandlers) {
+      window.removeEventListener('keydown', canvas._hybridHandlers.keyDown);
+      window.removeEventListener('keyup', canvas._hybridHandlers.keyUp);
+      canvas._hybridHandlers = null;
+    }
+    
+    // For pure pan mode
+    if (activeMode === ELEMENT_TYPES.PAN) {
+      // In pan mode, disable object selection completely
+      canvas.selection = false;
+      canvas.defaultCursor = 'grab';
+      canvas.hoverCursor = 'grab';
       
-      if (canvas._hybridHandlers) {
-        window.removeEventListener('keydown', canvas._hybridHandlers.keyDown);
-        window.removeEventListener('keyup', canvas._hybridHandlers.keyUp);
-        canvas._hybridHandlers = null;
-      }
+      // Clear current selection
+      canvas.discardActiveObject();
+      canvas.renderAll();
       
-      // For pure pan mode
-      if (activeMode === ELEMENT_TYPES.PAN) {
-        // In pan mode, disable object selection completely
-        canvas.selection = false;
-        canvas.defaultCursor = 'grab';
-        canvas.hoverCursor = 'grab';
-        
-        // Clear current selection
-        canvas.discardActiveObject();
-        canvas.renderAll();
-        
-        // Disable interaction with all objects
-        canvas.forEachObject(obj => {
-          if (!obj.gridLine) {
-            obj._previousSelectable = obj.selectable;
-            obj._previousEvented = obj.evented;
-          }
-          
-          obj.set({
-            selectable: false, 
-            evented: false,
-            hasControls: false,
-            hasBorders: false
-          });
-        });
-        
-        // Special handlers for pure pan mode
-        const handlePanMouseDown = (opt) => {
-          const evt = opt.e;
-          canvas.lastPosX = evt.clientX;
-          canvas.lastPosY = evt.clientY;
-          canvas.isDragging = true;
-          canvas.defaultCursor = 'grabbing';
-          canvas.hoverCursor = 'grabbing';
-          
-          // Cancel event to prevent any other interaction
-          evt.preventDefault();
-          evt.stopPropagation();
-        };
-        
-        const handlePanMouseMove = (opt) => {
-          if (!canvas.isDragging) return;
-          
-          const evt = opt.e;
-          const vpt = canvas.viewportTransform;
-          
-          vpt[4] += evt.clientX - canvas.lastPosX;
-          vpt[5] += evt.clientY - canvas.lastPosY;
-          
-          canvas.lastPosX = evt.clientX;
-          canvas.lastPosY = evt.clientY;
-          canvas.renderAll();
-          
-          // Cancel event
-          evt.preventDefault();
-          evt.stopPropagation();
-        };
-        
-        const handlePanMouseUp = () => {
-          canvas.isDragging = false;
-          canvas.defaultCursor = 'grab';
-          canvas.hoverCursor = 'grab';
-        };
-        
-        // Add handlers
-        canvas.on('mouse:down', handlePanMouseDown);
-        canvas.on('mouse:move', handlePanMouseMove);
-        canvas.on('mouse:up', handlePanMouseUp);
-        
-        // Important: intercept selection:created to prevent
-        // object selection in pan mode
-        canvas.on('selection:created', (e) => {
-          canvas.discardActiveObject();
-          canvas.renderAll();
-          // IMPORTANT: Don't change activeMode
-        });
-        
-        // Add mouse wheel handler for zoom
-        canvas.on('mouse:wheel', handleMouseWheel);
-        
-        console.log('Pure PAN mode activated');
-      } 
-      else {
-        // For other modes restore standard behavior
-        canvas.selection = true;
-        canvas.defaultCursor = 'default';
-        canvas.hoverCursor = 'move';
-        
-        // Restore object interactivity, except for grid
-        canvas.forEachObject(obj => {
-          if (!obj.gridLine) {
-            // Restore previous values if they exist
-            if (obj._previousSelectable !== undefined) {
-              obj.set({
-                selectable: obj._previousSelectable,
-                evented: obj._previousEvented
-              });
-              
-              delete obj._previousSelectable;
-              delete obj._previousEvented;
-            } else {
-              // Otherwise make object interactive by default
-              obj.set({
-                selectable: true,
-                evented: true,
-                hasControls: true,
-                hasBorders: true
-              });
-            }
-          }
-        });
-        
-        // For drawing modes set appropriate parameters
-        if (activeMode === ELEMENT_TYPES.DRAW) {
-          canvas.isDrawingMode = true;
-          if (!canvas.freeDrawingBrush) {
-            canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
-          }
-          canvas.freeDrawingBrush.width = strokeWidth;
-          canvas.freeDrawingBrush.color = strokeColor;
-        } else if (activeMode === ELEMENT_TYPES.ERASER) {
-          canvas.isDrawingMode = true;
-          if (!canvas.freeDrawingBrush) {
-            canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
-          }
-          canvas.freeDrawingBrush.width = strokeWidth * 3;
-          canvas.freeDrawingBrush.color = '#ffffff';
-        } else {
-          canvas.isDrawingMode = false;
-          
-          // For all modes except drawing, restore
-          // standard event handlers
-          setupDefaultEventHandlers(canvas);
+      // Disable interaction with all objects
+      canvas.forEachObject(obj => {
+        if (!obj.gridLine) {
+          obj._previousSelectable = obj.selectable;
+          obj._previousEvented = obj.evented;
         }
         
-        // Add mouse wheel handler for zoom
-        canvas.on('mouse:wheel', handleMouseWheel);
+        obj.set({
+          selectable: false, 
+          evented: false,
+          hasControls: false,
+          hasBorders: false
+        });
+      });
+      
+      // Special handlers for pure pan mode
+      const handlePanMouseDown = (opt) => {
+        const evt = opt.e;
+        canvas.lastPosX = evt.clientX;
+        canvas.lastPosY = evt.clientY;
+        canvas.isDragging = true;
+        canvas.defaultCursor = 'grabbing';
+        canvas.hoverCursor = 'grabbing';
+        
+        // Cancel event to prevent any other interaction
+        evt.preventDefault();
+        evt.stopPropagation();
+      };
+      
+      const handlePanMouseMove = (opt) => {
+        if (!canvas.isDragging) return;
+        
+        const evt = opt.e;
+        const vpt = canvas.viewportTransform;
+        
+        vpt[4] += evt.clientX - canvas.lastPosX;
+        vpt[5] += evt.clientY - canvas.lastPosY;
+        
+        canvas.lastPosX = evt.clientX;
+        canvas.lastPosY = evt.clientY;
+        canvas.renderAll();
+        
+        // Cancel event
+        evt.preventDefault();
+        evt.stopPropagation();
+      };
+      
+      const handlePanMouseUp = () => {
+        canvas.isDragging = false;
+        canvas.defaultCursor = 'grab';
+        canvas.hoverCursor = 'grab';
+      };
+      
+      // Add handlers
+      canvas.on('mouse:down', handlePanMouseDown);
+      canvas.on('mouse:move', handlePanMouseMove);
+      canvas.on('mouse:up', handlePanMouseUp);
+      
+      // Important: intercept selection:created to prevent
+      // object selection in pan mode
+      canvas.on('selection:created', (e) => {
+        canvas.discardActiveObject();
+        canvas.renderAll();
+        // IMPORTANT: Don't change activeMode
+      });
+      
+      // Add mouse wheel handler for zoom
+      canvas.on('mouse:wheel', handleMouseWheel);
+      
+      console.log('Pure PAN mode activated');
+    } 
+    else {
+      // For other modes restore standard behavior
+      canvas.selection = true;
+      canvas.defaultCursor = 'default';
+      canvas.hoverCursor = 'move';
+      
+      // Restore object interactivity, except for grid
+      canvas.forEachObject(obj => {
+        if (!obj.gridLine) {
+          // Restore previous values if they exist
+          if (obj._previousSelectable !== undefined) {
+            obj.set({
+              selectable: obj._previousSelectable,
+              evented: obj._previousEvented
+            });
+            
+            delete obj._previousSelectable;
+            delete obj._previousEvented;
+          } else {
+            // Otherwise make object interactive by default
+            obj.set({
+              selectable: true,
+              evented: true,
+              hasControls: true,
+              hasBorders: true
+            });
+          }
+        }
+      });
+      
+      // For drawing modes set appropriate parameters
+      if (activeMode === ELEMENT_TYPES.DRAW) {
+        canvas.isDrawingMode = true;
+        if (!canvas.freeDrawingBrush) {
+          canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
+        }
+        canvas.freeDrawingBrush.width = strokeWidth;
+        canvas.freeDrawingBrush.color = strokeColor;
+      } else if (activeMode === ELEMENT_TYPES.ERASER) {
+        canvas.isDrawingMode = true;
+        if (!canvas.freeDrawingBrush) {
+          canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
+        }
+        canvas.freeDrawingBrush.width = strokeWidth * 3;
+        canvas.freeDrawingBrush.color = '#ffffff';
+      } else {
+        canvas.isDrawingMode = false;
+        
+        // ИЗМЕНЕНО: Проверяем режимы рисования фигур и устанавливаем соответствующие обработчики
+        if (activeMode === ELEMENT_TYPES.RECTANGLE || 
+            activeMode === ELEMENT_TYPES.CIRCLE || 
+            activeMode === ELEMENT_TYPES.LINE) {
+          // Устанавливаем обработчики для режимов рисования фигур
+          setupDrawingEvents(canvas);
+        } else {
+          // Для всех остальных режимов используем стандартные обработчики
+          setupDefaultEventHandlers(canvas);
+        }
       }
-    } catch (error) {
-      console.error('Error updating active mode:', error);
+      
+      // Add mouse wheel handler for zoom
+      canvas.on('mouse:wheel', handleMouseWheel);
     }
-  }, [activeMode, strokeColor, strokeWidth, isCanvasReady]);
+  } catch (error) {
+    console.error('Error updating active mode:', error);
+  }
+}, [activeMode, strokeColor, strokeWidth, isCanvasReady, setupDrawingEvents]);
 
   // Additional restrictions for PAN mode
   useEffect(() => {
