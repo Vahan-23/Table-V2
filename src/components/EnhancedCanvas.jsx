@@ -67,6 +67,9 @@ const EnhancedCanvas = React.forwardRef((
   const [redoStack, setRedoStack] = useState([]);
   const [maxHistoryLength] = useState(50); // Ограничиваем размер истории
 
+
+ 
+
   const saveToHistory = useCallback(() => {
     // Не сохраняем если операция рисования активна
 
@@ -210,90 +213,350 @@ const EnhancedCanvas = React.forwardRef((
 
 
   const deleteSelectedObject = () => {
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return;
+
+    try {
+      // Сохраняем состояние перед удалением
+      saveToHistory();
+
+      const activeObject = canvas.getActiveObject();
+      if (!activeObject) return;
+
+      // Проверяем, выбрана ли группа объектов
+      if (activeObject.type === 'activeSelection') {
+        // Удаляем все объекты из выделения
+        const objectsInGroup = activeObject.getObjects();
+
+        // Разгруппировываем выделение
+        activeObject.destroy();
+
+        // Удаляем каждый объект
+        objectsInGroup.forEach(obj => {
+          canvas.remove(obj);
+
+          // Обновляем состояние в зависимости от типа объекта
+          if (obj.tableId) {
+            setTables(prev => prev.filter(table => table.id !== obj.tableId));
+          } else if (obj.elementId) {
+            setHallElements(prev => prev.filter(element => element.id !== obj.elementId));
+          }
+        });
+      } else {
+        // Удаляем один выбранный объект (как у вас сейчас)
+        if (activeObject.tableId) {
+          setTables(prev => prev.filter(table => table.id !== activeObject.tableId));
+        } else if (activeObject.elementId) {
+          setHallElements(prev => prev.filter(element => element.id !== activeObject.elementId));
+        }
+
+        canvas.remove(activeObject);
+      }
+
+      canvas.discardActiveObject();
+      canvas.requestRenderAll();
+
+      setSelectedObject(null);
+      setSelectedElementId(null);
+      setUnsavedChanges(true);
+    } catch (error) {
+      console.error('Error deleting selected objects:', error);
+    }
+  };
+
+
+  const selectAllObjects = useCallback(() => {
   const canvas = fabricCanvasRef.current;
   if (!canvas) return;
+  
+  try {
+    // Получаем все объекты на холсте (исключая линии сетки)
+    const selectableObjects = canvas.getObjects().filter(obj => !obj.gridLine);
+    
+    if (selectableObjects.length === 0) return;
+    
+    // Если выбран только один объект и это единственный объект на холсте - не делаем ничего
+    if (selectableObjects.length === 1 && canvas.getActiveObject() === selectableObjects[0]) {
+      return;
+    }
+    
+    // Снимаем текущее выделение
+    canvas.discardActiveObject();
+    
+    // Создаем новую группу выделения со всеми объектами
+    const selection = new fabric.ActiveSelection(selectableObjects, { canvas });
+    
+    // Устанавливаем её как активную
+    canvas.setActiveObject(selection);
+    canvas.renderAll();
+    
+    console.log(`Выбрано ${selectableObjects.length} объектов`);
+  } catch (error) {
+    console.error('Ошибка при выборе всех объектов:', error);
+  }
+}, []);
+
+const duplicateSelectedObject = useCallback(() => {
+  const canvas = fabricCanvasRef.current;
+  if (!canvas) return;
+  
+  const activeObject = canvas.getActiveObject();
+  if (!activeObject) return;
 
   try {
-    // Сохраняем состояние перед удалением
+    // Сохраняем состояние перед дублированием
     saveToHistory();
-
-    const activeObject = canvas.getActiveObject();
-    if (!activeObject) return;
-
-    // Проверяем, выбрана ли группа объектов
+    
+    // Проверяем, является ли выбранный объект группой (activeSelection)
     if (activeObject.type === 'activeSelection') {
-      // Удаляем все объекты из выделения
-      const objectsInGroup = activeObject.getObjects();
+      // Получаем все объекты в группе
+      const selectedObjects = activeObject.getObjects();
+      const newObjects = [];
       
-      // Разгруппировываем выделение
-      activeObject.destroy();
+      // Рассчитываем смещение
+      const groupLeft = activeObject.left || 0;
+      const groupTop = activeObject.top || 0;
       
-      // Удаляем каждый объект
-      objectsInGroup.forEach(obj => {
-        canvas.remove(obj);
+      // Получаем масштаб и угол группы
+      const groupScaleX = activeObject.scaleX || 1;
+      const groupScaleY = activeObject.scaleY || 1;
+      const groupAngle = activeObject.angle || 0;
+      
+      // Создаем новые объекты для каждого выбранного объекта
+      selectedObjects.forEach(obj => {
+        // Сохраняем исходные координаты относительно холста
+        // с учетом положения группы
+        const objLeft = groupLeft + obj.left * groupScaleX;
+        const objTop = groupTop + obj.top * groupScaleY;
         
-        // Обновляем состояние в зависимости от типа объекта
         if (obj.tableId) {
-          setTables(prev => prev.filter(table => table.id !== obj.tableId));
+          // Дублирование для таблицы
+          const originalTable = tables.find(table => table.id === obj.tableId);
+          if (originalTable) {
+            const newTableId = Date.now() + Math.floor(Math.random() * 1000);
+            
+            // Создаем новую таблицу в данных
+            const newTable = {
+              ...JSON.parse(JSON.stringify(originalTable)),
+              id: newTableId,
+              x: objLeft + 10,  // Добавляем смещение к исходной позиции
+              y: objTop + 10
+            };
+            
+            // Добавляем новую таблицу
+            setTables(prev => [...prev, newTable]);
+            
+            // Рендерим новую таблицу на холст
+            setTimeout(() => {
+              const newTableObj = renderTable(canvas, newTable);
+              if (newTableObj) {
+                newObjects.push(newTableObj);
+              }
+            }, 10);
+          }
         } else if (obj.elementId) {
-          setHallElements(prev => prev.filter(element => element.id !== obj.elementId));
+          // Дублирование для элемента
+          const originalElement = hallElements.find(element => element.id === obj.elementId);
+          if (originalElement) {
+            const newElementId = Date.now() + Math.floor(Math.random() * 1000);
+            
+            // Создаем новый элемент в данных
+            const newElement = {
+              ...JSON.parse(JSON.stringify(originalElement)),
+              id: newElementId,
+              x: objLeft + 10,  // Добавляем смещение к исходной позиции
+              y: objTop + 10
+            };
+            
+            // Для линий обновляем координаты
+            if (originalElement.type === 'line') {
+              // Вычисляем смещение относительно текущей позиции
+              const deltaX = objLeft - originalElement.x;
+              const deltaY = objTop - originalElement.y;
+              
+              newElement.x1 = originalElement.x1 + deltaX + 10;
+              newElement.y1 = originalElement.y1 + deltaY + 10;
+              newElement.x2 = originalElement.x2 + deltaX + 10;
+              newElement.y2 = originalElement.y2 + deltaY + 10;
+            }
+            
+            // Добавляем новый элемент
+            setHallElements(prev => [...prev, newElement]);
+            
+            // Рендерим новый элемент на холст
+            setTimeout(() => {
+              const newElementObj = renderHallElement(canvas, newElement);
+              if (newElementObj) {
+                newObjects.push(newElementObj);
+              }
+            }, 10);
+          }
         }
       });
-    } else {
-      // Удаляем один выбранный объект (как у вас сейчас)
-      if (activeObject.tableId) {
-        setTables(prev => prev.filter(table => table.id !== activeObject.tableId));
-      } else if (activeObject.elementId) {
-        setHallElements(prev => prev.filter(element => element.id !== activeObject.elementId));
-      }
       
-      canvas.remove(activeObject);
+      // Дожидаемся, пока все объекты будут добавлены
+      setTimeout(() => {
+        // Если есть дублированные объекты, выбираем их как группу
+        if (newObjects.length > 0) {
+          // Снимаем выделение с текущей группы
+          canvas.discardActiveObject();
+          
+          // Создаем новую группу выделения
+          const newSelection = new fabric.ActiveSelection(newObjects, {
+            canvas: canvas
+          });
+          
+          // Устанавливаем новую группу как активный объект
+          canvas.setActiveObject(newSelection);
+          canvas.renderAll();
+        }
+      }, 100); // Увеличиваем задержку для полной отрисовки объектов
+      
+      setUnsavedChanges(true);
+      setObjectCount(prev => prev + newObjects.length);
+    } else {
+      // Дублирование одиночного объекта (существующая логика)
+      if (activeObject.tableId) {
+        // Дублирование стола
+        const originalTable = tables.find(table => table.id === activeObject.tableId);
+        if (!originalTable) return;
+        
+        // Получаем актуальные координаты из выбранного объекта на холсте
+        const currentLeft = activeObject.left;
+        const currentTop = activeObject.top;
+        
+        // Создаем новый стол с новым ID и смещением от текущей позиции
+        const newTable = {
+          ...JSON.parse(JSON.stringify(originalTable)),
+          id: Date.now(),
+          x: currentLeft + 10,
+          y: currentTop + 10
+        };
+
+        // Добавляем новый стол
+        setTables(prev => [...prev, newTable]);
+        
+        // Рендерим новый стол
+        setTimeout(() => {
+          // Используем функцию renderTable напрямую через контекст компонента
+          // вместо ссылки на неё в зависимостях
+          const newTableObj = renderTable(canvas, newTable);
+          if (newTableObj) {
+            // Выбираем новый объект
+            canvas.setActiveObject(newTableObj);
+            canvas.renderAll();
+          }
+        }, 50);
+        
+      } else if (activeObject.elementId) {
+        // Дублирование элемента зала
+        const originalElement = hallElements.find(element => element.id === activeObject.elementId);
+        if (!originalElement) return;
+
+        // Получаем актуальные координаты из выбранного объекта на холсте
+        const currentLeft = activeObject.left;
+        const currentTop = activeObject.top;
+        
+        // Создаем новый элемент с новым ID и смещением от текущей позиции
+        const newElement = {
+          ...JSON.parse(JSON.stringify(originalElement)),
+          id: Date.now(),
+          x: currentLeft + 10,
+          y: currentTop + 10
+        };
+
+        // Для линий нужно также обновить координаты точек
+        if (originalElement.type === 'line') {
+          // Вычисляем смещение относительно текущей позиции
+          const deltaX = currentLeft - originalElement.x;
+          const deltaY = currentTop - originalElement.y;
+          
+          // Обновляем все координаты с учетом текущего положения и дополнительного смещения
+          newElement.x1 = originalElement.x1 + deltaX + 10;
+          newElement.y1 = originalElement.y1 + deltaY + 10;
+          newElement.x2 = originalElement.x2 + deltaX + 10;
+          newElement.y2 = originalElement.y2 + deltaY + 10;
+        }
+
+        // Добавляем новый элемент
+        setHallElements(prev => [...prev, newElement]);
+        
+        // Рендерим новый элемент
+        setTimeout(() => {
+          // Используем функцию renderHallElement напрямую через контекст компонента
+          // вместо ссылки на неё в зависимостях
+          const newElementObj = renderHallElement(canvas, newElement);
+          if (newElementObj) {
+            // Выбираем новый объект
+            canvas.setActiveObject(newElementObj);
+            setSelectedElementId(newElement.id);
+            setSelectedObject(newElementObj);
+            canvas.renderAll();
+          }
+        }, 50);
+      }
+
+      setUnsavedChanges(true);
+      setObjectCount(prev => prev + 1);
+    }
+  } catch (error) {
+    console.error('Ошибка при дублировании объекта:', error);
+  }
+}, [tables, hallElements, saveToHistory, setTables, setHallElements, setSelectedElementId, setSelectedObject]);
+
+
+useEffect(() => {
+  const handleKeyDown = (e) => {
+    // Если фокус на поле ввода - не обрабатываем
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+      return;
     }
 
-    canvas.discardActiveObject();
-    canvas.requestRenderAll();
+    // Отмена действия (Ctrl+Z)
+    if (e.ctrlKey && !e.shiftKey && e.key.toLowerCase() === 'z') {
+      e.preventDefault();
+      console.log("Нажата комбинация Ctrl+Z");
+      undo();
+    }
+
+    // Повтор действия (Ctrl+Shift+Z)
+    if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'z') {
+      e.preventDefault();
+      console.log("Нажата комбинация Ctrl+Shift+Z");
+      redo();
+    }
+
+    // Дублирование выбранного объекта (Ctrl+D)
+    if (e.ctrlKey && e.key.toLowerCase() === 'd') {
+      // Важно вызвать preventDefault до проверки на объект
+      e.preventDefault();
+      
+      if (fabricCanvasRef.current && fabricCanvasRef.current.getActiveObject()) {
+        console.log("Нажата комбинация Ctrl+D");
+        duplicateSelectedObject();
+      }
+    }
     
-    setSelectedObject(null);
-    setSelectedElementId(null);
-    setUnsavedChanges(true);
-  } catch (error) {
-    console.error('Error deleting selected objects:', error);
-  }
-};
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      // Если фокус на поле ввода - не обрабатываем
-      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
-        return;
-      }
+    // Выбор всех объектов (Ctrl+A)
+    if (e.ctrlKey && e.key.toLowerCase() === 'a') {
+      e.preventDefault();
+      console.log("Нажата комбинация Ctrl+A");
+      selectAllObjects();
+    }
 
-      // Отмена действия (Ctrl+Z)
-      if (e.ctrlKey && !e.shiftKey && e.key.toLowerCase() === 'z') {
-        e.preventDefault();
-        console.log("Нажата комбинация Ctrl+Z");
-        undo();
-      }
+    // Удаление выбранного объекта (Delete)
+    if (e.key === 'Delete' && fabricCanvasRef.current && fabricCanvasRef.current.getActiveObject()) {
+      e.preventDefault();
+      deleteSelectedObject();
+    }
+  };
 
-      // Повтор действия (Ctrl+Shift+Z)
-      if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'z') {
-        e.preventDefault();
-        console.log("Нажата комбинация Ctrl+Shift+Z");
-        redo();
-      }
+  window.addEventListener('keydown', handleKeyDown);
 
-      // Удаление выбранного объекта (Delete)
-      if (e.key === 'Delete' && selectedObject) {
-        e.preventDefault();
-        deleteSelectedObject();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [undo, redo, deleteSelectedObject, selectedObject]);
+  return () => {
+    window.removeEventListener('keydown', handleKeyDown);
+  };
+}, [undo, redo, deleteSelectedObject, duplicateSelectedObject, selectAllObjects]);
 
   useEffect(() => {
     if (isCanvasReady && initialized) {
@@ -353,16 +616,16 @@ const EnhancedCanvas = React.forwardRef((
     try {
       // Create new canvas with explicit dimensions
       const canvas = new fabric.Canvas(canvasRef.current, {
-  width: width,
-  height: height,
-  backgroundColor: '#f5f5f5',
-  selection: true, // Разрешает выделение
-  selectionColor: 'rgba(100, 100, 255, 0.3)', // Цвет выделения
-  selectionLineWidth: 1, // Ширина линии выделения
-  preserveObjectStacking: true,
-  fireRightClick: true,
-  stopContextMenu: true
-});
+        width: width,
+        height: height,
+        backgroundColor: '#f5f5f5',
+        selection: true, // Разрешает выделение
+        selectionColor: 'rgba(100, 100, 255, 0.3)', // Цвет выделения
+        selectionLineWidth: 1, // Ширина линии выделения
+        preserveObjectStacking: true,
+        fireRightClick: true,
+        stopContextMenu: true
+      });
 
       // Store reference
       fabricCanvasRef.current = canvas;
@@ -2709,21 +2972,25 @@ const EnhancedCanvas = React.forwardRef((
     }
   }, [isCanvasReady]);
 
+  
+
 
   // Export methods via ref
-  React.useImperativeHandle(ref, () => ({
-    exportCanvasAsJSON,
-    importCanvasFromJSON,
-    zoomIn,
-    zoomOut,
-    resetZoom,
-    addNewTable,
-    addNewText,
-    deleteSelectedObject,
-    getCanvas: () => fabricCanvasRef.current,
-    undo,
-    redo
-  }));
+ React.useImperativeHandle(ref, () => ({
+  exportCanvasAsJSON,
+  importCanvasFromJSON,
+  zoomIn,
+  zoomOut,
+  resetZoom,
+  addNewTable,
+  addNewText,
+  deleteSelectedObject,
+  duplicateSelectedObject,
+  selectAllObjects,
+  getCanvas: () => fabricCanvasRef.current,
+  undo,
+  redo
+}));
 
   return (
     <DndProvider backend={HTML5Backend}>
@@ -2910,6 +3177,13 @@ const EnhancedCanvas = React.forwardRef((
 
                 </button>
 
+                <button
+                  className="tool-btn"
+                  onClick={duplicateSelectedObject}
+                  title="Дублировать выбранный объект (Ctrl+D)"
+                >
+                  <i className="fas fa-copy">📋</i>
+                </button>
                 <button
                   className="tool-btn"
                   onClick={() => {
