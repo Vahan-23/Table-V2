@@ -103,10 +103,10 @@ export const HallElementsCatalog = memo(({ onAddElement }) => {
 
     return (
         <div className="hall-elements-catalog">
-            <h3 className="catalog-title">Элементы зала</h3>
+            {/* <h3 className="catalog-title">Элементы зала</h3>
             <div className="catalog-items">
                 {catalogItems}
-            </div>
+            </div> */}
         </div>
     );
 });

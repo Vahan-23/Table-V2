@@ -1,0 +1,223 @@
+/* EnhancedCanvas.css */
+.enhanced-canvas-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 600px;
+  position: relative;
+  background: #f7f7f7;
+  border: 3px dashed #3a3a3a;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.canvas-toolbar {
+  display: flex;
+  background-color: #1a1a1a;
+  color: white;
+  padding: 10px;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  z-index: 100;
+}
+
+.tool-group {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+
+.tool-btn {
+  width: 36px;
+  height: 36px;
+  background-color: #333;
+  border: none;
+  border-radius: 4px;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.tool-btn:hover {
+  background-color: #444;
+}
+
+.tool-btn.active {
+  background-color: #3498db;
+}
+
+.color-picker {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.color-picker label {
+  font-size: 12px;
+}
+
+.color-picker input[type="color"] {
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.stroke-width, .font-size {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.stroke-width label, .font-size label {
+  font-size: 12px;
+}
+
+.stroke-width input[type="range"], .font-size input[type="range"] {
+  width: 80px;
+}
+
+.stroke-width span, .font-size span, .zoom-level {
+  font-size: 12px;
+  min-width: 36px;
+  text-align: center;
+}
+
+.canvas-wrapper canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.canvas-status {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #1a1a1a;
+  color: white;
+  padding: 5px 10px;
+  font-size: 12px;
+}
+
+.stats {
+  display: flex;
+  gap: 15px;
+}
+
+.unsaved-changes {
+  color: #f39c12;
+  font-style: italic;
+}
+
+/* Стили для мобильной версии */
+@media (max-width: 768px) {
+  .canvas-toolbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .tool-group {
+    width: 100%;
+    overflow-x: auto;
+    padding-bottom: 5px;
+  }
+}
+
+/* Стили для подсказок при наведении */
+.tooltip {
+  position: absolute;
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 5px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+/* Стили курсора в зависимости от активного инструмента */
+.canvas-wrapper.mode-select {
+  cursor: default;
+}
+
+.canvas-wrapper.mode-draw {
+  cursor: crosshair;
+}
+
+.canvas-wrapper.mode-line,
+.canvas-wrapper.mode-rectangle,
+.canvas-wrapper.mode-circle {
+  cursor: crosshair;
+}
+
+.canvas-wrapper.mode-text {
+  cursor: text;
+}
+
+.canvas-wrapper.mode-eraser {
+  cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path d="M0 0h24v24H0z" fill="none"/><path d="M20.37 8.91l-1.48-1.48a.996.996 0 00-1.41 0L2.29 22.62c-.39.39-.39 1.02 0 1.41l.29.29c.39.39 1.02.39 1.41 0l15.19-15.19c.38-.38.38-1.02 0-1.41zM7.46 21.18l-4.87-4.87 6.29-6.29 4.87 4.87-6.29 6.29z" fill="white"/></svg>') 10 10, auto;
+}
+
+/* Стили для миникарты (опционально) */
+.mini-map {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  width: 200px;
+  height: 150px;
+  background-color: rgba(255, 255, 255, 0.9);
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  overflow: hidden;
+  z-index: 100;
+}
+
+.mini-map-header {
+  background-color: #1a1a1a;
+  color: white;
+  padding: 2px 5px;
+  font-size: 10px;
+}
+
+.mini-map canvas {
+  width: 100%;
+  height: calc(100% - 20px);
+}
+
+.canvas-wrapper {
+  width: 100%;
+  height: 600px;
+  position: relative;
+  overflow: auto;
+  border: 1px solid #ccc;
+}
+.canvas-wrapper canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+
+.tool-btn.active {
+  background-color: #e0e0e0;
+  box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.2);
+}
+
+/* Optional: add these styles for better visual feedback */
+.canvas-wrapper.pan-mode {
+  cursor: grab;
+}
+
+.canvas-wrapper.pan-mode:active {
+  cursor: grabbing;
+}

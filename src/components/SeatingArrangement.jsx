@@ -5,7 +5,7 @@ import { HTML5Backend } from 'react-dnd-html5-backend';
 import './HallElement.css';
 import './ElementProperties.css';
 import './App.css';
-
+import EnhancedCanvas from './EnhancedCanvas';
 
 import { HallElementsManager, ElementProperties } from './index';
 import { ItemTypes as HallElementItemTypes, HallElementsCatalog } from './HallElements'
@@ -68,7 +68,7 @@ const SeatingArrangement = () => {
     const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
 
 
-
+    const enhancedCanvasRef = useRef(null);
     const exportHallData = () => {
         if (!currentHall) {
             alert('Խնդրում ենք նախ ընտրել դահլիճը');
@@ -1058,10 +1058,18 @@ const SeatingArrangement = () => {
         const newTables = [];
         const currentTime = Date.now();
 
-        // Get container dimensions
-        const containerRect = tablesAreaRef.current.getBoundingClientRect();
-        const containerWidth = containerRect.width / zoom;
-        const containerHeight = containerRect.height / zoom;
+        // Default values for container dimensions if ref is not available
+        let containerWidth = 1000;  // Default width
+        let containerHeight = 800;  // Default height
+
+        // Only try to get container dimensions if tablesAreaRef.current exists
+        if (tablesAreaRef.current) {
+            const containerRect = tablesAreaRef.current.getBoundingClientRect();
+            containerWidth = containerRect.width / zoom;
+            containerHeight = containerRect.height / zoom;
+        } else {
+            console.warn("tablesAreaRef.current is null, using default dimensions");
+        }
 
         // Estimate table size (approximate values)
         const tableWidth = 300;
@@ -1088,6 +1096,7 @@ const SeatingArrangement = () => {
                 id: currentTime + i, // Ensure unique IDs
                 people: [],
                 chairCount,
+                shape: 'round',
                 x: safeX,
                 y: safeY,
                 width: tableWidth,
@@ -1931,9 +1940,15 @@ const SeatingArrangement = () => {
                                 onAddElement={(elementType) => {
                                 }} />
 
+                            {/* <HallElementsCatalog
+                                onAddElement={(elementType) => {
+                                    console.log("Element catalog item clicked:", elementType);
+                                    // This is just for logging - the actual drag and drop is handled by the catalog component
+                                }}
+                            /> */}
 
                         </SidebarLayout>
-                        <div className="zoom-controls">
+                        {/* <div className="zoom-controls">
                             <div className="zoom-buttons">
                                 <button
                                     className="zoom-btn zoom-out-btn"
@@ -1949,102 +1964,25 @@ const SeatingArrangement = () => {
                             </div>
 
 
-                        </div>
-                        <div
-                            className={`tables-area ${isDraggingCanvas ? 'dragging' : ''} ${draggingGroup ? 'active-drop-area' : ''}`}
-                            ref={tablesAreaRef}
-                            onMouseDown={handleCanvasMouseDown}
-                            onMouseMove={handleMouseMoveOnCanvas}
-                            onClick={handleCanvasClick}
-                            onDragOver={handleCanvasDragOver}
-                            onDragLeave={(e) => {
-                                e.currentTarget.style.backgroundColor = '';
+                        </div> */}
+                        <EnhancedCanvas
+                            ref={enhancedCanvasRef}
+                            tables={tables}
+                            setTables={setTables}
+                            hallElements={hallElements}
+                            setHallElements={setHallElements}
+                            selectedElementId={selectedElementId}
+                            setSelectedElementId={setSelectedElementId}
+                            canvasMode={activeMode}  // Changed from activeMode to canvasMode to match the prop name in EnhancedCanvas
+                            onChairClick={handleChairClick}
+                            onTableSelect={handleShowTableDetails}
+                            onTableMove={(tableId, x, y) => {
+                                // Handle table movement
                             }}
-                            onDrop={handleCanvasDrop}
-                            style={{
-                                transform: `scale(${zoom})`,
-                                transformOrigin: 'top left',
-                                display: 'flex',
-                                overflow: 'auto',
-                                width: `${100 / zoom}%`,
-                                height: `${100 / zoom}%`,
-                                minHeight: `${100 / zoom}%`,
-                                padding: '20px',
-                                position: 'relative',
-                                cursor: isDraggingCanvas ? 'grabbing' : (draggingGroup ? 'copy' : 'default'),
-                                '--zoom-level': zoom,
-                                transition: isZooming ? 'transform 0.1s ease-out' : 'none',
-                                willChange: 'transform',
-                            }}
-                        >
-                            {/* Показываем визуальный индикатор при перетаскивании группы */}
-                            {draggingGroup && (
-                                <div className="new-table-preview" style={{
-                                    position: 'absolute',
-                                    left: `${dragPosition.x - 150}px`,
-                                    top: `${dragPosition.y - 150}px`,
-                                    width: '300px',
-                                    height: '300px',
-                                    borderRadius: '50%',
-                                    border: '2px dashed #3498db',
-                                    backgroundColor: 'rgba(52, 152, 219, 0.1)',
-                                    pointerEvents: 'none',
-                                    display: 'flex',
-                                    justifyContent: 'center',
-                                    alignItems: 'center',
-                                    zIndex: 1
-                                }}
-                                >
-                                    <div style={{
-                                        backgroundColor: 'rgba(52, 152, 219, 0.7)',
-                                        color: 'white',
-                                        padding: '8px 12px',
-                                        borderRadius: '4px',
-                                        fontSize: '14px'
-                                    }}>
-                                        Отпустите для создания стола
-                                    </div>
-                                </div>
-                            )}
+                            initialZoom={0.2}
+                        />
 
-                            {/* Отображаем столы независимо от режима */}
-                            {tables.map((table) => (
-                                <Table
-                                    key={table.id}
-                                    table={table}
-                                    setTables={setTables}
-                                    handleDeleteTable={handleDeleteTable}
-                                    draggingGroup={draggingGroup}
-                                    setDraggingGroup={setDraggingGroup}
-                                    people={people}
-                                    setPeople={setPeople}
-                                    onChairClick={(chairIndex) => handleChairClick(table.id, chairIndex)}
-                                    isDraggable={true}
-                                    onShowDetails={handleShowTableDetails}
-                                    onDrop={(e) => handleTableDrop(e, table.id)}
-                                    isTableHighlighted={isTableHighlighted(table.id)}
-                                    tables={tables}
-                                    setGroupToPlace={setGroupToPlace}
-                                    setTargetTableId={setTargetTableId}
-                                    setAvailableSeats={setAvailableSeats}
-                                    setGroupSelectionActive={setGroupSelectionActive}
-                                    showTransferNotification={showTransferNotification}
-                                />
-                            ))}
 
-                            <HallElementsManager
-                                tablesAreaRef={tablesAreaRef}
-                                zoom={zoom}
-                                elements={hallElements}
-                                setElements={setHallElements}
-                                selectedElementId={selectedElementId}
-                                setSelectedElementId={(elementId) => {
-                                    setSelectedElementId(elementId); // Выбираем элемент
-                                    setActiveMode('elements');      // Переключаем режим
-                                }}
-
-                            />
-                        </div>
 
                     </div>
                 </div>

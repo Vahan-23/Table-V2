@@ -1,9 +1,9 @@
 /* Стили для боковой панели */
 .sidebar-layout {
-    position: absolute;
+    /* position: absolute; */
     background-color: #252525;
     display: flex;
-    flex-direction: row;
+    flex-direction: column;
     overflow-y: auto;
     z-index: 50;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
