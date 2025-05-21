@@ -36,7 +36,7 @@ const EnhancedCanvas = React.forwardRef((
     onTableMove,
     initialZoom = 1,
     selectedElementId = null,
-    setSelectedElementId = () => {},
+    setSelectedElementId = () => { },
     canvasMode = 'tables'
   },
   ref
@@ -45,7 +45,7 @@ const EnhancedCanvas = React.forwardRef((
   const canvasRef = useRef(null);
   const canvasContainerRef = useRef(null);
   const fabricCanvasRef = useRef(null);
-  
+
   // States
   const [activeMode, setActiveMode] = useState(ELEMENT_TYPES.HYBRID);
   const [zoom, setZoom] = useState(initialZoom);
@@ -62,6 +62,246 @@ const EnhancedCanvas = React.forwardRef((
   const [isPanMode, setIsPanMode] = useState(true);
   const [isCanvasReady, setIsCanvasReady] = useState(false);
 
+  // Состояния для истории действий (отмена/повтор)
+  const [historyStack, setHistoryStack] = useState([]);
+  const [redoStack, setRedoStack] = useState([]);
+  const [maxHistoryLength] = useState(50); // Ограничиваем размер истории
+
+  const saveToHistory = useCallback(() => {
+    // Не сохраняем если операция рисования активна
+
+    console.log("Сохранение снимка в историю");
+
+    // Предотвращаем дублирование состояний
+    if (historyStack.length > 0) {
+      const lastState = historyStack[historyStack.length - 1];
+      const currentStateJson = JSON.stringify({
+        tables,
+        hallElements
+      });
+      const lastStateJson = JSON.stringify({
+        tables: lastState.tables,
+        hallElements: lastState.hallElements
+      });
+
+      // Если состояние не изменилось, не сохраняем
+      if (currentStateJson === lastStateJson) {
+        console.log("Состояние не изменилось, пропускаем сохранение");
+        return;
+      }
+    }
+
+    // Остальной код по сохранению...
+    const currentState = {
+      tables: JSON.parse(JSON.stringify(tables)),
+      hallElements: JSON.parse(JSON.stringify(hallElements))
+    };
+
+    setHistoryStack(prev => {
+      const newStack = [...prev, currentState];
+      if (newStack.length > maxHistoryLength) {
+        return newStack.slice(newStack.length - maxHistoryLength);
+      }
+      return newStack;
+    });
+
+    // Очищаем стек повтора при новом действии
+    setRedoStack([]);
+  }, [tables, hallElements, maxHistoryLength, isDrawing, historyStack]);
+
+  // Отмена последнего действия (Undo)
+  const undo = useCallback(() => {
+    if (historyStack.length === 0) {
+      console.log("Нет действий для отмены");
+      return;
+    }
+
+    console.log("Отмена действия, осталось в истории:", historyStack.length - 1);
+
+    // Получаем предыдущее состояние
+    const newHistoryStack = [...historyStack];
+    const prevState = newHistoryStack.pop();
+
+    // Сохраняем текущее состояние для возможности повтора
+    const currentState = {
+      tables: JSON.parse(JSON.stringify(tables)),
+      hallElements: JSON.parse(JSON.stringify(hallElements))
+    };
+
+    setRedoStack(prev => [...prev, currentState]);
+    setHistoryStack(newHistoryStack);
+
+    // Восстанавливаем предыдущее состояние
+    setTables(prevState.tables);
+    setHallElements(prevState.hallElements);
+
+    // Перерисовываем холст
+    setTimeout(() => {
+      if (fabricCanvasRef.current) {
+        // Сначала очищаем холст от объектов (кроме сетки)
+        fabricCanvasRef.current.getObjects().forEach(obj => {
+          if (!obj.gridLine) {
+            fabricCanvasRef.current.remove(obj);
+          }
+        });
+
+        // Затем перерисовываем все элементы
+        renderAllElements(fabricCanvasRef.current);
+
+        // Сбрасываем выделение
+        fabricCanvasRef.current.discardActiveObject();
+        fabricCanvasRef.current.renderAll();
+
+        // Очищаем выбранный объект
+        setSelectedObject(null);
+        setSelectedElementId(null);
+      }
+    }, 50);
+  }, [historyStack, tables, hallElements]);
+  // Повтор отмененного действия (Redo)
+  const redo = useCallback(() => {
+    if (redoStack.length === 0) {
+      console.log("Нет действий для повтора");
+      return;
+    }
+
+    console.log("Повтор действия, осталось для повтора:", redoStack.length - 1);
+
+    // Получаем следующее состояние
+    const newRedoStack = [...redoStack];
+    const nextState = newRedoStack.pop();
+
+    // Сохраняем текущее состояние для возможности отмены
+    const currentState = {
+      tables: JSON.parse(JSON.stringify(tables)),
+      hallElements: JSON.parse(JSON.stringify(hallElements))
+    };
+
+    setHistoryStack(prev => [...prev, currentState]);
+    setRedoStack(newRedoStack);
+
+    // Восстанавливаем следующее состояние
+    setTables(nextState.tables);
+    setHallElements(nextState.hallElements);
+
+    // Перерисовываем холст
+    setTimeout(() => {
+      if (fabricCanvasRef.current) {
+        // Сначала очищаем холст от объектов (кроме сетки)
+        fabricCanvasRef.current.getObjects().forEach(obj => {
+          if (!obj.gridLine) {
+            fabricCanvasRef.current.remove(obj);
+          }
+        });
+
+        // Затем перерисовываем все элементы
+        renderAllElements(fabricCanvasRef.current);
+
+        // Сбрасываем выделение
+        fabricCanvasRef.current.discardActiveObject();
+        fabricCanvasRef.current.renderAll();
+
+        // Очищаем выбранный объект
+        setSelectedObject(null);
+        setSelectedElementId(null);
+      }
+    }, 50);
+  }, [redoStack, tables, hallElements]);
+
+
+  const deleteSelectedObject = () => {
+  const canvas = fabricCanvasRef.current;
+  if (!canvas) return;
+
+  try {
+    // Сохраняем состояние перед удалением
+    saveToHistory();
+
+    const activeObject = canvas.getActiveObject();
+    if (!activeObject) return;
+
+    // Проверяем, выбрана ли группа объектов
+    if (activeObject.type === 'activeSelection') {
+      // Удаляем все объекты из выделения
+      const objectsInGroup = activeObject.getObjects();
+      
+      // Разгруппировываем выделение
+      activeObject.destroy();
+      
+      // Удаляем каждый объект
+      objectsInGroup.forEach(obj => {
+        canvas.remove(obj);
+        
+        // Обновляем состояние в зависимости от типа объекта
+        if (obj.tableId) {
+          setTables(prev => prev.filter(table => table.id !== obj.tableId));
+        } else if (obj.elementId) {
+          setHallElements(prev => prev.filter(element => element.id !== obj.elementId));
+        }
+      });
+    } else {
+      // Удаляем один выбранный объект (как у вас сейчас)
+      if (activeObject.tableId) {
+        setTables(prev => prev.filter(table => table.id !== activeObject.tableId));
+      } else if (activeObject.elementId) {
+        setHallElements(prev => prev.filter(element => element.id !== activeObject.elementId));
+      }
+      
+      canvas.remove(activeObject);
+    }
+
+    canvas.discardActiveObject();
+    canvas.requestRenderAll();
+    
+    setSelectedObject(null);
+    setSelectedElementId(null);
+    setUnsavedChanges(true);
+  } catch (error) {
+    console.error('Error deleting selected objects:', error);
+  }
+};
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Если фокус на поле ввода - не обрабатываем
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+        return;
+      }
+
+      // Отмена действия (Ctrl+Z)
+      if (e.ctrlKey && !e.shiftKey && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        console.log("Нажата комбинация Ctrl+Z");
+        undo();
+      }
+
+      // Повтор действия (Ctrl+Shift+Z)
+      if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        console.log("Нажата комбинация Ctrl+Shift+Z");
+        redo();
+      }
+
+      // Удаление выбранного объекта (Delete)
+      if (e.key === 'Delete' && selectedObject) {
+        e.preventDefault();
+        deleteSelectedObject();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [undo, redo, deleteSelectedObject, selectedObject]);
+
+  useEffect(() => {
+    if (isCanvasReady && initialized) {
+      console.log("Инициализация истории - сохранение начального состояния");
+      setTimeout(() => saveToHistory(), 500);
+    }
+  }, [isCanvasReady, initialized]);
+
   // Initialize canvas with a delay to ensure it's properly set up
   useEffect(() => {
     const initialize = () => {
@@ -71,9 +311,9 @@ const EnhancedCanvas = React.forwardRef((
         setActiveMode(ELEMENT_TYPES.HYBRID);
       }, 300);
     };
-    
+
     initialize();
-    
+
     // Cleanup
     return () => {
       if (fabricCanvasRef.current) {
@@ -105,7 +345,7 @@ const EnhancedCanvas = React.forwardRef((
     // Get container dimensions
     const container = canvasContainerRef.current;
     if (!container) return;
-    
+
     // Set safe initial dimensions
     const width = container.clientWidth || 800;
     const height = container.clientHeight || 600;
@@ -113,14 +353,16 @@ const EnhancedCanvas = React.forwardRef((
     try {
       // Create new canvas with explicit dimensions
       const canvas = new fabric.Canvas(canvasRef.current, {
-        width: width,
-        height: height,
-        backgroundColor: '#f5f5f5',
-        selection: true,
-        preserveObjectStacking: true,
-        fireRightClick: true, // Allow right-click events
-        stopContextMenu: true // Prevent default context menu
-      });
+  width: width,
+  height: height,
+  backgroundColor: '#f5f5f5',
+  selection: true, // Разрешает выделение
+  selectionColor: 'rgba(100, 100, 255, 0.3)', // Цвет выделения
+  selectionLineWidth: 1, // Ширина линии выделения
+  preserveObjectStacking: true,
+  fireRightClick: true,
+  stopContextMenu: true
+});
 
       // Store reference
       fabricCanvasRef.current = canvas;
@@ -129,20 +371,20 @@ const EnhancedCanvas = React.forwardRef((
       fabric.Object.prototype.transparentCorners = false;
       fabric.Object.prototype.cornerColor = '#2196F3';
       fabric.Object.prototype.cornerSize = 8;
-      
+
       // Override isControlVisible method for all objects
       // to properly handle gridLine objects
       const originalIsControlVisible = fabric.Object.prototype.isControlVisible;
-      fabric.Object.prototype.isControlVisible = function(controlName) {
+      fabric.Object.prototype.isControlVisible = function (controlName) {
         if (this.gridLine === true) {
           return false;
         }
         return originalIsControlVisible.call(this, controlName);
       };
-      
+
       // Override findTarget method to ignore grid lines
-      canvas.findTarget = (function(originalFn) {
-        return function(e, skipGroup) {
+      canvas.findTarget = (function (originalFn) {
+        return function (e, skipGroup) {
           const target = originalFn.call(this, e, skipGroup);
           if (target && target.gridLine) {
             return null; // If object is a grid line, return null (not selectable)
@@ -150,10 +392,10 @@ const EnhancedCanvas = React.forwardRef((
           return target;
         };
       })(canvas.findTarget);
-      
+
       // Update state
       setInitialized(true);
-      
+
       // Setup event handlers
       setupCanvasEventHandlers(canvas);
 
@@ -163,11 +405,11 @@ const EnhancedCanvas = React.forwardRef((
       // Add safe check before handling resize
       const handleResize = () => {
         if (!canvas || !container || !canvas.wrapperEl) return;
-        
+
         // Safely get dimensions
         const newWidth = container.clientWidth || 800;
         const newHeight = container.clientHeight || 600;
-        
+
         // Set with checking
         try {
           canvas.setWidth(newWidth);
@@ -236,10 +478,10 @@ const EnhancedCanvas = React.forwardRef((
           gridLine: true,
           excludeFromExport: true
         });
-        
+
         // Add explicit property to easily identify grid
         line.set('interactive', false);
-        
+
         return line;
       };
 
@@ -280,21 +522,21 @@ const EnhancedCanvas = React.forwardRef((
       // Object selection
       canvas.on('selection:created', (e) => {
         if (!e.selected || e.selected.length === 0) return;
-        
+
         const obj = e.selected[0];
-        
+
         // If a grid line is selected by mistake - cancel selection
         if (obj.gridLine) {
           canvas.discardActiveObject();
           canvas.renderAll();
           return;
         }
-        
+
         setSelectedObject(obj);
 
         if (obj.elementId) {
           setSelectedElementId(obj.elementId);
-          
+
           // Force update selected object properties
           obj.set({
             selectable: true,
@@ -305,9 +547,9 @@ const EnhancedCanvas = React.forwardRef((
         } else if (obj.tableId && onTableSelect) {
           onTableSelect(obj.tableId);
         }
-        
+
         // IMPORTANT: Don't change activeMode here
-        
+
         canvas.renderAll();
       });
 
@@ -319,15 +561,15 @@ const EnhancedCanvas = React.forwardRef((
       // Object moving
       canvas.on('object:moving', (e) => {
         if (!e.target) return;
-        
+        saveToHistory();
         const obj = e.target;
         setUnsavedChanges(true);
 
         if (obj.tableId) {
           // Update table position
-          setTables(prevTables => prevTables.map(table => 
-            table.id === obj.tableId 
-              ? { ...table, x: Math.round(obj.left), y: Math.round(obj.top) } 
+          setTables(prevTables => prevTables.map(table =>
+            table.id === obj.tableId
+              ? { ...table, x: Math.round(obj.left), y: Math.round(obj.top) }
               : table
           ));
 
@@ -342,14 +584,14 @@ const EnhancedCanvas = React.forwardRef((
             setHallElements(prevElements => prevElements.map(el =>
               el.id === obj.elementId
                 ? {
-                    ...el,
-                    x: Math.round(obj.left),
-                    y: Math.round(obj.top),
-                    x1: el.x1 + deltaX,
-                    y1: el.y1 + deltaY,
-                    x2: el.x2 + deltaX,
-                    y2: el.y2 + deltaY
-                  }
+                  ...el,
+                  x: Math.round(obj.left),
+                  y: Math.round(obj.top),
+                  x1: el.x1 + deltaX,
+                  y1: el.y1 + deltaY,
+                  x2: el.x2 + deltaX,
+                  y2: el.y2 + deltaY
+                }
                 : el
             ));
           } else {
@@ -362,10 +604,14 @@ const EnhancedCanvas = React.forwardRef((
         }
       });
 
+      canvas.on('object:modified', () => {
+        saveToHistory();
+      });
+
       // Object scaling
       canvas.on('object:scaling', (e) => {
         if (!e.target) return;
-        
+
         const obj = e.target;
         setUnsavedChanges(true);
 
@@ -375,82 +621,82 @@ const EnhancedCanvas = React.forwardRef((
             const element = hallElements.find(el => el.id === obj.elementId);
             if (element) {
               const newFontSize = Math.max(20, Math.round(element.fontSize * obj.scaleX));
-              
-              setHallElements(prevElements => prevElements.map(el => 
-                el.id === obj.elementId 
-                  ? { ...el, fontSize: newFontSize } 
+
+              setHallElements(prevElements => prevElements.map(el =>
+                el.id === obj.elementId
+                  ? { ...el, fontSize: newFontSize }
                   : el
               ));
             }
           } else if (obj.type === 'rect') {
             // Scale rectangle
-            setHallElements(prevElements => prevElements.map(el => 
-              el.id === obj.elementId 
-                ? { 
-                    ...el, 
-                    width: Math.round(obj.width * obj.scaleX), 
-                    height: Math.round(obj.height * obj.scaleY) 
-                  } 
+            setHallElements(prevElements => prevElements.map(el =>
+              el.id === obj.elementId
+                ? {
+                  ...el,
+                  width: Math.round(obj.width * obj.scaleX),
+                  height: Math.round(obj.height * obj.scaleY)
+                }
                 : el
             ));
           } else if (obj.type === 'circle') {
             // Scale circle
-            setHallElements(prevElements => prevElements.map(el => 
-              el.id === obj.elementId 
-                ? { ...el, radius: Math.round(obj.radius * obj.scaleX) } 
+            setHallElements(prevElements => prevElements.map(el =>
+              el.id === obj.elementId
+                ? { ...el, radius: Math.round(obj.radius * obj.scaleX) }
                 : el
             ));
           } else if (obj.type === 'i-text') {
             // Scale text
             const newFontSize = Math.round(obj.fontSize * obj.scaleX);
-            
-            setHallElements(prevElements => prevElements.map(el => 
-              el.id === obj.elementId 
-                ? { ...el, fontSize: newFontSize } 
+
+            setHallElements(prevElements => prevElements.map(el =>
+              el.id === obj.elementId
+                ? { ...el, fontSize: newFontSize }
                 : el
             ));
-            
+
             obj.set({
               fontSize: newFontSize,
               scaleX: 1,
               scaleY: 1
             });
-            
+
             canvas.renderAll();
           }
         } else if (obj.tableId) {
           // Handle table scaling
           const table = tables.find(t => t.id === obj.tableId);
-          
+
           if (table) {
             // For round tables
             if (obj.tableShape === 'round') {
               const newWidth = Math.round(table.width * obj.scaleX);
-              
-              setTables(prevTables => prevTables.map(t => 
-                t.id === obj.tableId 
-                  ? { ...t, width: newWidth } 
+
+              setTables(prevTables => prevTables.map(t =>
+                t.id === obj.tableId
+                  ? { ...t, width: newWidth }
                   : t
               ));
-            } 
+            }
             // For rectangle tables
             else if (obj.tableShape === 'rectangle') {
               const newWidth = Math.round(table.width * obj.scaleX);
               const newHeight = Math.round(table.height * obj.scaleY);
-              
-              setTables(prevTables => prevTables.map(t => 
-                t.id === obj.tableId 
-                  ? { ...t, width: newWidth, height: newHeight } 
+
+              setTables(prevTables => prevTables.map(t =>
+                t.id === obj.tableId
+                  ? { ...t, width: newWidth, height: newHeight }
                   : t
               ));
             }
-            
+
             // After scaling, we need to re-render the table with the new dimensions
             // This ensures chairs and other elements are properly positioned
             setTimeout(() => {
               // Remove the old table object
               canvas.remove(obj);
-              
+
               // Get the updated table data
               const updatedTable = tables.find(t => t.id === obj.tableId);
               if (updatedTable) {
@@ -466,22 +712,22 @@ const EnhancedCanvas = React.forwardRef((
       // Object rotating
       canvas.on('object:rotating', (e) => {
         if (!e.target) return;
-        
+
         const obj = e.target;
         setUnsavedChanges(true);
 
         if (obj.tableId && obj.tableShape === 'rectangle') {
           // Rotate rectangle table
-          setTables(prevTables => prevTables.map(table => 
-            table.id === obj.tableId 
-              ? { ...table, rotation: Math.round(obj.angle) } 
+          setTables(prevTables => prevTables.map(table =>
+            table.id === obj.tableId
+              ? { ...table, rotation: Math.round(obj.angle) }
               : table
           ));
         } else if (obj.elementId) {
           // Rotate hall element
-          setHallElements(prevElements => prevElements.map(element => 
-            element.id === obj.elementId 
-              ? { ...element, rotation: Math.round(obj.angle) } 
+          setHallElements(prevElements => prevElements.map(element =>
+            element.id === obj.elementId
+              ? { ...element, rotation: Math.round(obj.angle) }
               : element
           ));
         }
@@ -490,10 +736,10 @@ const EnhancedCanvas = React.forwardRef((
       // Path creation (for drawing)
       canvas.on('path:created', (e) => {
         if (!e.path) return;
-        
+
         const path = e.path;
         setUnsavedChanges(true);
-
+        saveToHistory()
         // Create new element
         const newElement = {
           id: Date.now(),
@@ -529,7 +775,7 @@ const EnhancedCanvas = React.forwardRef((
   // Common mouse wheel handler for zoom
   const handleMouseWheel = (opt) => {
     if (!opt.e) return;
-    
+
     opt.e.preventDefault();
     opt.e.stopPropagation();
 
@@ -558,281 +804,282 @@ const EnhancedCanvas = React.forwardRef((
 
   // Set up drawing events
   const setupDrawingEvents = useCallback((canvas) => {
-  if (!canvas) return;
-  
-  try {
-    // Clear any existing event handlers first to avoid duplicates
-    canvas.off('mouse:down');
-    canvas.off('mouse:move');
-    canvas.off('mouse:up');
+    if (!canvas) return;
 
-    // Mouse down
-    canvas.on('mouse:down', (opt) => {
-      if (activeMode === ELEMENT_TYPES.LINE) {
-        startDrawingLine(canvas, opt);
-      } else if (activeMode === ELEMENT_TYPES.RECTANGLE) {
-        startDrawingRectangle(canvas, opt);
-      } else if (activeMode === ELEMENT_TYPES.CIRCLE) {
-        startDrawingCircle(canvas, opt);
-      }
-    });
+    try {
+      // Clear any existing event handlers first to avoid duplicates
+      canvas.off('mouse:down');
+      canvas.off('mouse:move');
+      canvas.off('mouse:up');
 
-    // Mouse move
-    canvas.on('mouse:move', (opt) => {
-      if (!isDrawing) return;
+      // Mouse down
+      canvas.on('mouse:down', (opt) => {
+        if (activeMode === ELEMENT_TYPES.LINE) {
+          startDrawingLine(canvas, opt);
+          saveToHistory();
+        } else if (activeMode === ELEMENT_TYPES.RECTANGLE) {
+          startDrawingRectangle(canvas, opt);
+        } else if (activeMode === ELEMENT_TYPES.CIRCLE) {
+          startDrawingCircle(canvas, opt);
+        }
+      });
 
-      if (activeMode === ELEMENT_TYPES.LINE) {
-        updateDrawingLine(canvas, opt);
-      } else if (activeMode === ELEMENT_TYPES.RECTANGLE) {
-        updateDrawingRectangle(canvas, opt);
-      } else if (activeMode === ELEMENT_TYPES.CIRCLE) {
-        updateDrawingCircle(canvas, opt);
-      }
-    });
+      // Mouse move
+      canvas.on('mouse:move', (opt) => {
+        if (!isDrawing) return;
 
-    // Mouse up
-    canvas.on('mouse:up', () => {
-      if (!isDrawing) return;
+        if (activeMode === ELEMENT_TYPES.LINE) {
+          updateDrawingLine(canvas, opt);
+        } else if (activeMode === ELEMENT_TYPES.RECTANGLE) {
+          updateDrawingRectangle(canvas, opt);
+        } else if (activeMode === ELEMENT_TYPES.CIRCLE) {
+          updateDrawingCircle(canvas, opt);
+        }
+      });
 
-      if (activeMode === ELEMENT_TYPES.LINE) {
-        finishDrawingLine(canvas);
-      } else if (activeMode === ELEMENT_TYPES.RECTANGLE) {
-        finishDrawingRectangle(canvas);
-      } else if (activeMode === ELEMENT_TYPES.CIRCLE) {
-        finishDrawingCircle(canvas);
-      }
-      
-      // После завершения рисования переключаемся в гибридный режим
-      setActiveMode(ELEMENT_TYPES.HYBRID);
-    });
-  } catch (error) {
-    console.error('Error setting up drawing events:', error);
-  }
-}, [activeMode, isDrawing]);
+      // Mouse up
+      canvas.on('mouse:up', () => {
+        if (!isDrawing) return;
+
+        if (activeMode === ELEMENT_TYPES.LINE) {
+          finishDrawingLine(canvas);
+        } else if (activeMode === ELEMENT_TYPES.RECTANGLE) {
+          finishDrawingRectangle(canvas);
+        } else if (activeMode === ELEMENT_TYPES.CIRCLE) {
+          finishDrawingCircle(canvas);
+        }
+
+        // После завершения рисования переключаемся в гибридный режим
+        setActiveMode(ELEMENT_TYPES.HYBRID);
+      });
+    } catch (error) {
+      console.error('Error setting up drawing events:', error);
+    }
+  }, [activeMode, isDrawing]);
 
   // Handle different canvas modes
- useEffect(() => {
-  const canvas = fabricCanvasRef.current;
-  if (!canvas || !isCanvasReady) return;
+  useEffect(() => {
+    const canvas = fabricCanvasRef.current;
+    if (!canvas || !isCanvasReady) return;
 
-  try {
-    // Call separate function for hybrid mode
-    if (activeMode === ELEMENT_TYPES.HYBRID) {
-      setupHybridMode(canvas);
-      return;
-    }
+    try {
+      // Call separate function for hybrid mode
+      if (activeMode === ELEMENT_TYPES.HYBRID) {
+        setupHybridMode(canvas);
+        return;
+      }
 
-    // Clear all previous handlers
-    canvas.off('mouse:down');
-    canvas.off('mouse:move');
-    canvas.off('mouse:up');
-    canvas.off('selection:created');
-    canvas.off('selection:cleared');
-    canvas.off('contextmenu');
-    
-    if (canvas._hybridHandlers) {
-      window.removeEventListener('keydown', canvas._hybridHandlers.keyDown);
-      window.removeEventListener('keyup', canvas._hybridHandlers.keyUp);
-      canvas._hybridHandlers = null;
-    }
-    
-    // For pure pan mode
-    if (activeMode === ELEMENT_TYPES.PAN) {
-      // In pan mode, disable object selection completely
-      canvas.selection = false;
-      canvas.defaultCursor = 'grab';
-      canvas.hoverCursor = 'grab';
-      
-      // Clear current selection
-      canvas.discardActiveObject();
-      canvas.renderAll();
-      
-      // Disable interaction with all objects
-      canvas.forEachObject(obj => {
-        if (!obj.gridLine) {
-          obj._previousSelectable = obj.selectable;
-          obj._previousEvented = obj.evented;
-        }
-        
-        obj.set({
-          selectable: false, 
-          evented: false,
-          hasControls: false,
-          hasBorders: false
-        });
-      });
-      
-      // Special handlers for pure pan mode
-      const handlePanMouseDown = (opt) => {
-        const evt = opt.e;
-        canvas.lastPosX = evt.clientX;
-        canvas.lastPosY = evt.clientY;
-        canvas.isDragging = true;
-        canvas.defaultCursor = 'grabbing';
-        canvas.hoverCursor = 'grabbing';
-        
-        // Cancel event to prevent any other interaction
-        evt.preventDefault();
-        evt.stopPropagation();
-      };
-      
-      const handlePanMouseMove = (opt) => {
-        if (!canvas.isDragging) return;
-        
-        const evt = opt.e;
-        const vpt = canvas.viewportTransform;
-        
-        vpt[4] += evt.clientX - canvas.lastPosX;
-        vpt[5] += evt.clientY - canvas.lastPosY;
-        
-        canvas.lastPosX = evt.clientX;
-        canvas.lastPosY = evt.clientY;
-        canvas.renderAll();
-        
-        // Cancel event
-        evt.preventDefault();
-        evt.stopPropagation();
-      };
-      
-      const handlePanMouseUp = () => {
-        canvas.isDragging = false;
+      // Clear all previous handlers
+      canvas.off('mouse:down');
+      canvas.off('mouse:move');
+      canvas.off('mouse:up');
+      canvas.off('selection:created');
+      canvas.off('selection:cleared');
+      canvas.off('contextmenu');
+
+      if (canvas._hybridHandlers) {
+        window.removeEventListener('keydown', canvas._hybridHandlers.keyDown);
+        window.removeEventListener('keyup', canvas._hybridHandlers.keyUp);
+        canvas._hybridHandlers = null;
+      }
+
+      // For pure pan mode
+      if (activeMode === ELEMENT_TYPES.PAN) {
+        // In pan mode, disable object selection completely
+        canvas.selection = false;
         canvas.defaultCursor = 'grab';
         canvas.hoverCursor = 'grab';
-      };
-      
-      // Add handlers
-      canvas.on('mouse:down', handlePanMouseDown);
-      canvas.on('mouse:move', handlePanMouseMove);
-      canvas.on('mouse:up', handlePanMouseUp);
-      
-      // Important: intercept selection:created to prevent
-      // object selection in pan mode
-      canvas.on('selection:created', (e) => {
+
+        // Clear current selection
         canvas.discardActiveObject();
         canvas.renderAll();
-        // IMPORTANT: Don't change activeMode
-      });
-      
-      // Add mouse wheel handler for zoom
-      canvas.on('mouse:wheel', handleMouseWheel);
-      
-      console.log('Pure PAN mode activated');
-    } 
-    else {
-      // For other modes restore standard behavior
-      canvas.selection = true;
-      canvas.defaultCursor = 'default';
-      canvas.hoverCursor = 'move';
-      
-      // Restore object interactivity, except for grid
-      canvas.forEachObject(obj => {
-        if (!obj.gridLine) {
-          // Restore previous values if they exist
-          if (obj._previousSelectable !== undefined) {
-            obj.set({
-              selectable: obj._previousSelectable,
-              evented: obj._previousEvented
-            });
-            
-            delete obj._previousSelectable;
-            delete obj._previousEvented;
+
+        // Disable interaction with all objects
+        canvas.forEachObject(obj => {
+          if (!obj.gridLine) {
+            obj._previousSelectable = obj.selectable;
+            obj._previousEvented = obj.evented;
+          }
+
+          obj.set({
+            selectable: false,
+            evented: false,
+            hasControls: false,
+            hasBorders: false
+          });
+        });
+
+        // Special handlers for pure pan mode
+        const handlePanMouseDown = (opt) => {
+          const evt = opt.e;
+          canvas.lastPosX = evt.clientX;
+          canvas.lastPosY = evt.clientY;
+          canvas.isDragging = true;
+          canvas.defaultCursor = 'grabbing';
+          canvas.hoverCursor = 'grabbing';
+
+          // Cancel event to prevent any other interaction
+          evt.preventDefault();
+          evt.stopPropagation();
+        };
+
+        const handlePanMouseMove = (opt) => {
+          if (!canvas.isDragging) return;
+
+          const evt = opt.e;
+          const vpt = canvas.viewportTransform;
+
+          vpt[4] += evt.clientX - canvas.lastPosX;
+          vpt[5] += evt.clientY - canvas.lastPosY;
+
+          canvas.lastPosX = evt.clientX;
+          canvas.lastPosY = evt.clientY;
+          canvas.renderAll();
+
+          // Cancel event
+          evt.preventDefault();
+          evt.stopPropagation();
+        };
+
+        const handlePanMouseUp = () => {
+          canvas.isDragging = false;
+          canvas.defaultCursor = 'grab';
+          canvas.hoverCursor = 'grab';
+        };
+
+        // Add handlers
+        canvas.on('mouse:down', handlePanMouseDown);
+        canvas.on('mouse:move', handlePanMouseMove);
+        canvas.on('mouse:up', handlePanMouseUp);
+
+        // Important: intercept selection:created to prevent
+        // object selection in pan mode
+        canvas.on('selection:created', (e) => {
+          canvas.discardActiveObject();
+          canvas.renderAll();
+          // IMPORTANT: Don't change activeMode
+        });
+
+        // Add mouse wheel handler for zoom
+        canvas.on('mouse:wheel', handleMouseWheel);
+
+        console.log('Pure PAN mode activated');
+      }
+      else {
+        // For other modes restore standard behavior
+        canvas.selection = true;
+        canvas.defaultCursor = 'default';
+        canvas.hoverCursor = 'move';
+
+        // Restore object interactivity, except for grid
+        canvas.forEachObject(obj => {
+          if (!obj.gridLine) {
+            // Restore previous values if they exist
+            if (obj._previousSelectable !== undefined) {
+              obj.set({
+                selectable: obj._previousSelectable,
+                evented: obj._previousEvented
+              });
+
+              delete obj._previousSelectable;
+              delete obj._previousEvented;
+            } else {
+              // Otherwise make object interactive by default
+              obj.set({
+                selectable: true,
+                evented: true,
+                hasControls: true,
+                hasBorders: true
+              });
+            }
+          }
+        });
+
+        // For drawing modes set appropriate parameters
+        if (activeMode === ELEMENT_TYPES.DRAW) {
+          canvas.isDrawingMode = true;
+          if (!canvas.freeDrawingBrush) {
+            canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
+          }
+          canvas.freeDrawingBrush.width = strokeWidth;
+          canvas.freeDrawingBrush.color = strokeColor;
+        } else if (activeMode === ELEMENT_TYPES.ERASER) {
+          canvas.isDrawingMode = true;
+          if (!canvas.freeDrawingBrush) {
+            canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
+          }
+          canvas.freeDrawingBrush.width = strokeWidth * 3;
+          canvas.freeDrawingBrush.color = '#ffffff';
+        } else {
+          canvas.isDrawingMode = false;
+
+          // ИЗМЕНЕНО: Проверяем режимы рисования фигур и устанавливаем соответствующие обработчики
+          if (activeMode === ELEMENT_TYPES.RECTANGLE ||
+            activeMode === ELEMENT_TYPES.CIRCLE ||
+            activeMode === ELEMENT_TYPES.LINE) {
+            // Устанавливаем обработчики для режимов рисования фигур
+            setupDrawingEvents(canvas);
           } else {
-            // Otherwise make object interactive by default
-            obj.set({
-              selectable: true,
-              evented: true,
-              hasControls: true,
-              hasBorders: true
-            });
+            // Для всех остальных режимов используем стандартные обработчики
+            setupDefaultEventHandlers(canvas);
           }
         }
-      });
-      
-      // For drawing modes set appropriate parameters
-      if (activeMode === ELEMENT_TYPES.DRAW) {
-        canvas.isDrawingMode = true;
-        if (!canvas.freeDrawingBrush) {
-          canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
-        }
-        canvas.freeDrawingBrush.width = strokeWidth;
-        canvas.freeDrawingBrush.color = strokeColor;
-      } else if (activeMode === ELEMENT_TYPES.ERASER) {
-        canvas.isDrawingMode = true;
-        if (!canvas.freeDrawingBrush) {
-          canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
-        }
-        canvas.freeDrawingBrush.width = strokeWidth * 3;
-        canvas.freeDrawingBrush.color = '#ffffff';
-      } else {
-        canvas.isDrawingMode = false;
-        
-        // ИЗМЕНЕНО: Проверяем режимы рисования фигур и устанавливаем соответствующие обработчики
-        if (activeMode === ELEMENT_TYPES.RECTANGLE || 
-            activeMode === ELEMENT_TYPES.CIRCLE || 
-            activeMode === ELEMENT_TYPES.LINE) {
-          // Устанавливаем обработчики для режимов рисования фигур
-          setupDrawingEvents(canvas);
-        } else {
-          // Для всех остальных режимов используем стандартные обработчики
-          setupDefaultEventHandlers(canvas);
-        }
+
+        // Add mouse wheel handler for zoom
+        canvas.on('mouse:wheel', handleMouseWheel);
       }
-      
-      // Add mouse wheel handler for zoom
-      canvas.on('mouse:wheel', handleMouseWheel);
+    } catch (error) {
+      console.error('Error updating active mode:', error);
     }
-  } catch (error) {
-    console.error('Error updating active mode:', error);
-  }
-}, [activeMode, strokeColor, strokeWidth, isCanvasReady, setupDrawingEvents]);
+  }, [activeMode, strokeColor, strokeWidth, isCanvasReady, setupDrawingEvents]);
 
   // Additional restrictions for PAN mode
   useEffect(() => {
     const canvas = fabricCanvasRef.current;
     if (!canvas || !isCanvasReady) return;
-    
+
     if (activeMode === ELEMENT_TYPES.PAN) {
       console.log('Enforcing PAN mode restrictions...');
-      
+
       // Override findTarget method for PAN mode
       const originalFindTarget = canvas.findTarget;
       canvas._originalFindTarget = originalFindTarget;
-      
-      canvas.findTarget = function() {
+
+      canvas.findTarget = function () {
         // In PAN mode always return null - no objects are selectable
         return null;
       };
-      
+
       // Disable interactivity for all objects
       canvas.forEachObject(obj => {
         obj._previousSelectable = obj.selectable;
         obj._previousEvented = obj.evented;
-        
+
         obj.set({
           selectable: false,
           evented: false,
           hoverCursor: 'grab'
         });
       });
-      
+
       // Ensure mode won't switch when interacting with objects
       const enforceMode = () => {
         if (activeMode !== ELEMENT_TYPES.PAN) {
           setActiveMode(ELEMENT_TYPES.PAN);
         }
       };
-      
+
       // Intercept selection attempts
       canvas.on('selection:created', enforceMode);
       canvas.on('selection:updated', enforceMode);
-      
+
       return () => {
         // Restore method and cleanup
         if (canvas._originalFindTarget) {
           canvas.findTarget = canvas._originalFindTarget;
           delete canvas._originalFindTarget;
         }
-        
+
         // Restore object properties
         canvas.forEachObject(obj => {
           if (obj._previousSelectable !== undefined) {
@@ -840,12 +1087,12 @@ const EnhancedCanvas = React.forwardRef((
               selectable: obj._previousSelectable,
               evented: obj._previousEvented
             });
-            
+
             delete obj._previousSelectable;
             delete obj._previousEvented;
           }
         });
-        
+
         canvas.off('selection:created', enforceMode);
         canvas.off('selection:updated', enforceMode);
       };
@@ -861,7 +1108,7 @@ const EnhancedCanvas = React.forwardRef((
       if (existingTooltip) {
         existingTooltip.remove();
       }
-      
+
       const tooltipContainer = document.createElement('div');
       tooltipContainer.className = 'mode-tooltip';
       tooltipContainer.style.position = 'absolute';
@@ -880,9 +1127,9 @@ const EnhancedCanvas = React.forwardRef((
       tooltipContainer.style.maxWidth = '400px';
       tooltipContainer.style.textAlign = 'center';
       tooltipContainer.innerHTML = message;
-      
+
       document.body.appendChild(tooltipContainer);
-      
+
       // Hide after 4 seconds
       setTimeout(() => {
         tooltipContainer.style.opacity = '0';
@@ -893,40 +1140,41 @@ const EnhancedCanvas = React.forwardRef((
         }, 300);
       }, 4000);
     };
-    
+
     let tooltipMessage = '';
-    
+
     if (activeMode === ELEMENT_TYPES.HYBRID) {
-      tooltipMessage = 
-        '<strong>Гибридный режим активирован</strong><br>'+
-        'Используйте пробел или правую кнопку мыши для панорамирования.<br>'+
+      tooltipMessage =
+        '<strong>Гибридный режим активирован</strong><br>' +
+        'Используйте пробел или правую кнопку мыши для панорамирования.<br>' +
         'Нажмите и перетащите объекты для их перемещения.';
-    } 
+    }
     else if (activeMode === ELEMENT_TYPES.PAN) {
-      tooltipMessage = 
-        '<strong>Режим панорамирования активирован</strong><br>'+
-        'Перетаскивайте холст, чтобы перемещаться по нему.<br>'+
+      tooltipMessage =
+        '<strong>Режим панорамирования активирован</strong><br>' +
+        'Перетаскивайте холст, чтобы перемещаться по нему.<br>' +
         'В этом режиме объекты не выбираются.';
     }
     else if (activeMode === ELEMENT_TYPES.SELECT) {
-      tooltipMessage = 
-        '<strong>Режим выбора объектов активирован</strong><br>'+
+      tooltipMessage =
+        '<strong>Режим выбора объектов активирован</strong><br>' +
         'Нажмите на объект для его выбора и изменения.';
     }
-    
+
     if (tooltipMessage) {
       showTooltip(tooltipMessage);
     }
-    
+
     // Logging for debugging
     console.log(`Mode changed to: ${activeMode}`);
-    
+
   }, [activeMode]);
 
   // Set up hybrid mode
   const setupHybridMode = (canvas) => {
     console.log('Setting up hybrid mode...');
-    
+    canvas.isDrawingMode = false;
+    setIsDrawing(false);
     // Clear previous handlers
     canvas.off('mouse:down');
     canvas.off('mouse:move');
@@ -935,15 +1183,15 @@ const EnhancedCanvas = React.forwardRef((
     canvas.off('selection:created');
     canvas.off('selection:cleared');
     canvas.off('contextmenu');
-    
+
     if (canvas._hybridHandlers) {
       window.removeEventListener('keydown', canvas._hybridHandlers.keyDown);
       window.removeEventListener('keyup', canvas._hybridHandlers.keyUp);
     }
-    
+
     // Make sure object selection is enabled
     canvas.selection = true;
-    
+
     // Set up objects for selection
     canvas.forEachObject(obj => {
       // Grid lines should never be selectable
@@ -964,7 +1212,7 @@ const EnhancedCanvas = React.forwardRef((
             hasControls: true,
             hasBorders: true
           });
-          
+
           delete obj._previousSelectable;
           delete obj._previousEvented;
         } else {
@@ -977,25 +1225,25 @@ const EnhancedCanvas = React.forwardRef((
         }
       }
     });
-    
+
     // Object selection handlers
     canvas.on('selection:created', (e) => {
       if (!e.selected || e.selected.length === 0) return;
-      
+
       const obj = e.selected[0];
-      
+
       // If grid line is selected - cancel selection
       if (obj.gridLine) {
         canvas.discardActiveObject();
         canvas.renderAll();
         return;
       }
-      
+
       setSelectedObject(obj);
-    
+
       if (obj.elementId) {
         setSelectedElementId(obj.elementId);
-        
+
         obj.set({
           selectable: true,
           evented: true,
@@ -1005,27 +1253,28 @@ const EnhancedCanvas = React.forwardRef((
       } else if (obj.tableId && onTableSelect) {
         onTableSelect(obj.tableId);
       }
-      
+
       // IMPORTANT: Don't change activeMode here
-      
+
       canvas.renderAll();
     });
-    
+
     canvas.on('selection:cleared', () => {
       setSelectedObject(null);
       setSelectedElementId(null);
     });
-    
+
     // Hybrid mode: panning with space or right mouse button
     let isSpacePressed = false;
     let isDraggingCanvas = false;
-    
+
     const handleKeyDown = (e) => {
+
       if (e.key === ' ' && !isSpacePressed) {
         isSpacePressed = true;
         isDraggingCanvas = false;
         canvas.defaultCursor = 'grab';
-        
+
         // Temporarily disable object selection
         canvas.forEachObject(obj => {
           if (!obj.gridLine) {
@@ -1037,20 +1286,21 @@ const EnhancedCanvas = React.forwardRef((
             });
           }
         });
-        
+
         canvas.discardActiveObject();
         canvas.renderAll();
-        
+
         e.preventDefault();
       }
     };
-    
+
+
     const handleKeyUp = (e) => {
       if (e.key === ' ' && isSpacePressed) {
         isSpacePressed = false;
         isDraggingCanvas = false;
         canvas.defaultCursor = 'default';
-        
+
         // Restore object selection
         canvas.forEachObject(obj => {
           if (!obj.gridLine && obj._previousSelectable !== undefined) {
@@ -1058,19 +1308,19 @@ const EnhancedCanvas = React.forwardRef((
               selectable: obj._previousSelectable,
               evented: obj._previousEvented
             });
-            
+
             delete obj._previousSelectable;
             delete obj._previousEvented;
           }
         });
-        
+
         canvas.renderAll();
       }
     };
-    
+
     const handleMouseDown = (opt) => {
       const evt = opt.e;
-      
+
       // Panning with space or right mouse button
       if (isSpacePressed || evt.buttons === 2) {
         isDraggingCanvas = true;
@@ -1078,7 +1328,7 @@ const EnhancedCanvas = React.forwardRef((
         canvas.lastPosY = evt.clientY;
         canvas.isDragging = true;
         canvas.defaultCursor = 'grabbing';
-        
+
         // Prevent context menu for right button
         if (evt.buttons === 2) {
           evt.preventDefault();
@@ -1086,31 +1336,31 @@ const EnhancedCanvas = React.forwardRef((
         }
       }
     };
-    
+
     const handleMouseMove = (opt) => {
       const evt = opt.e;
-      
+
       if (canvas.isDragging && (isSpacePressed || isDraggingCanvas)) {
         const vpt = canvas.viewportTransform;
-        
+
         vpt[4] += evt.clientX - canvas.lastPosX;
         vpt[5] += evt.clientY - canvas.lastPosY;
-        
+
         canvas.lastPosX = evt.clientX;
         canvas.lastPosY = evt.clientY;
         canvas.renderAll();
-        
+
         evt.preventDefault();
         evt.stopPropagation();
       }
     };
-    
+
     const handleMouseUp = () => {
       if (canvas.isDragging) {
         canvas.isDragging = false;
         isDraggingCanvas = false;
         canvas.defaultCursor = isSpacePressed ? 'grab' : 'default';
-        
+
         // Restore objects if space is not pressed
         if (!isSpacePressed) {
           canvas.forEachObject(obj => {
@@ -1119,17 +1369,17 @@ const EnhancedCanvas = React.forwardRef((
                 selectable: obj._previousSelectable,
                 evented: obj._previousEvented
               });
-              
+
               delete obj._previousSelectable;
               delete obj._previousEvented;
             }
           });
         }
-        
+
         canvas.renderAll();
       }
     };
-    
+
     // Prevent context menu
     const preventContextMenu = (evt) => {
       if (evt.e && (isDraggingCanvas || evt.e.buttons === 2)) {
@@ -1137,7 +1387,7 @@ const EnhancedCanvas = React.forwardRef((
         return false;
       }
     };
-    
+
     // Add handlers
     canvas.on('mouse:down', handleMouseDown);
     canvas.on('mouse:move', handleMouseMove);
@@ -1146,7 +1396,7 @@ const EnhancedCanvas = React.forwardRef((
     canvas.on('contextmenu', preventContextMenu);
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
-    
+
     // Save references for cleanup
     canvas._hybridHandlers = {
       mouseDown: handleMouseDown,
@@ -1163,31 +1413,31 @@ const EnhancedCanvas = React.forwardRef((
     // Clear previous handlers
     canvas.off('selection:created');
     canvas.off('selection:cleared');
-    
+
     // Object selection handler
     canvas.on('selection:created', (e) => {
       if (!e.selected || e.selected.length === 0) return;
-      
+
       const obj = e.selected[0];
-      
+
       // Ignore grid lines
       if (obj.gridLine) {
         canvas.discardActiveObject();
         canvas.renderAll();
         return;
       }
-      
+
       setSelectedObject(obj);
-    
+
       if (obj.elementId) {
         setSelectedElementId(obj.elementId);
       } else if (obj.tableId && onTableSelect) {
         onTableSelect(obj.tableId);
       }
-      
+
       canvas.renderAll();
     });
-    
+
     canvas.on('selection:cleared', () => {
       setSelectedObject(null);
       setSelectedElementId(null);
@@ -1768,7 +2018,7 @@ const EnhancedCanvas = React.forwardRef((
 
       if (fabricObj) {
         canvas.add(fabricObj);
-        
+
         // Select if this is the selected element
         if (selectedElementId === element.id) {
           canvas.setActiveObject(fabricObj);
@@ -1874,13 +2124,13 @@ const EnhancedCanvas = React.forwardRef((
 
     try {
       const pointer = canvas.getPointer(opt.e);
-      
+
       // Update line end point
       canvas._tempLine.set({
         x2: pointer.x,
         y2: pointer.y
       });
-      
+
       canvas.renderAll();
     } catch (error) {
       console.error('Error updating line drawing:', error);
@@ -1895,7 +2145,7 @@ const EnhancedCanvas = React.forwardRef((
       setUnsavedChanges(true);
 
       const line = canvas._tempLine;
-      
+
       // Make line interactive
       line.set({
         selectable: true,
@@ -1932,10 +2182,10 @@ const EnhancedCanvas = React.forwardRef((
 
       // Set this object as selected
       canvas.setActiveObject(line);
-      
+
       // Switch to select mode
       setActiveMode(ELEMENT_TYPES.HYBRID);
-      
+      saveToHistory();
       // Ensure canvas is updated
       canvas.renderAll();
     } catch (error) {
@@ -1947,9 +2197,9 @@ const EnhancedCanvas = React.forwardRef((
     if (!canvas) return;
 
     try {
+      saveToHistory();
       const pointer = canvas.getPointer(opt.e);
       setIsDrawing(true);
-
       // Create new rectangle
       const rect = new fabric.Rect({
         left: pointer.x,
@@ -2017,7 +2267,7 @@ const EnhancedCanvas = React.forwardRef((
       setUnsavedChanges(true);
 
       const rect = canvas._tempRect;
-      
+
       // Make rectangle interactive
       rect.set({
         selectable: true,
@@ -2054,10 +2304,10 @@ const EnhancedCanvas = React.forwardRef((
 
       // Set this object as selected
       canvas.setActiveObject(rect);
-      
+
       // Switch to select mode
-     setActiveMode(ELEMENT_TYPES.HYBRID);
-      
+      setActiveMode(ELEMENT_TYPES.HYBRID);
+      saveToHistory();
       // Ensure canvas is updated
       canvas.renderAll();
     } catch (error) {
@@ -2127,7 +2377,7 @@ const EnhancedCanvas = React.forwardRef((
       setUnsavedChanges(true);
 
       const circle = canvas._tempCircle;
-      
+
       // Make circle interactive
       circle.set({
         selectable: true,
@@ -2163,10 +2413,10 @@ const EnhancedCanvas = React.forwardRef((
 
       // Set this object as selected
       canvas.setActiveObject(circle);
-      
+
       // Switch to select mode
-     setActiveMode(ELEMENT_TYPES.HYBRID);
-      
+      setActiveMode(ELEMENT_TYPES.HYBRID);
+      saveToHistory();
       // Ensure canvas is updated
       canvas.renderAll();
     } catch (error) {
@@ -2224,20 +2474,20 @@ const EnhancedCanvas = React.forwardRef((
 
       // Calculate canvas position
       const canvasRect = canvasContainerRef.current.getBoundingClientRect();
-      
+
       // Get scroll offset
       const containerScroll = {
         scrollLeft: canvasContainerRef.current.scrollLeft || 0,
         scrollTop: canvasContainerRef.current.scrollTop || 0
       };
-      
+
       // Calculate drop coordinates in canvas space
       const x = (dropOffset.x - canvasRect.left + containerScroll.scrollLeft) / zoom;
       const y = (dropOffset.y - canvasRect.top + containerScroll.scrollTop) / zoom;
-      
+
       // Create new element
       const newElement = handleElementDrop(item.elementData, { x, y });
-      
+
       return { success: true, elementId: newElement ? newElement.id : null };
     } catch (error) {
       console.error('Error handling DnD drop:', error);
@@ -2250,6 +2500,7 @@ const EnhancedCanvas = React.forwardRef((
     if (!fabricCanvasRef.current) return;
 
     try {
+      saveToHistory();
       const canvas = fabricCanvasRef.current;
       const center = canvas.getCenter();
 
@@ -2288,6 +2539,7 @@ const EnhancedCanvas = React.forwardRef((
       setObjectCount(prev => prev + 1);
       setUnsavedChanges(true);
       setActiveMode(ELEMENT_TYPES.HYBRID);
+
     } catch (error) {
       console.error('Error adding text:', error);
     }
@@ -2315,13 +2567,13 @@ const EnhancedCanvas = React.forwardRef((
 
       // Add to tables
       setTables(prev => [...prev, newTable]);
-      
+
       // Render on canvas
       renderTable(canvas, newTable);
-      
+      saveToHistory();
       setUnsavedChanges(true);
       setObjectCount(prev => prev + 1);
-     setActiveMode(ELEMENT_TYPES.HYBRID);
+      setActiveMode(ELEMENT_TYPES.HYBRID);
     } catch (error) {
       console.error('Error adding table:', error);
     }
@@ -2373,32 +2625,7 @@ const EnhancedCanvas = React.forwardRef((
   };
 
   // Delete selected object
-  const deleteSelectedObject = () => {
-    if (!fabricCanvasRef.current || !selectedObject) return;
 
-    try {
-      const canvas = fabricCanvasRef.current;
-
-      if (selectedObject.tableId) {
-        // Delete table
-        setTables(prev => prev.filter(table => table.id !== selectedObject.tableId));
-      } else if (selectedObject.elementId) {
-        // Delete element
-        setHallElements(prev => prev.filter(element => element.id !== selectedObject.elementId));
-      }
-
-      // Remove from canvas
-      canvas.remove(selectedObject);
-      canvas.renderAll();
-
-      // Reset selection
-      setSelectedObject(null);
-      setSelectedElementId(null);
-      setUnsavedChanges(true);
-    } catch (error) {
-      console.error('Error deleting selected object:', error);
-    }
-  };
 
   // Export/import functions
   const exportCanvasAsJSON = () => {
@@ -2441,7 +2668,7 @@ const EnhancedCanvas = React.forwardRef((
       if (importData.canvasData && importData.canvasData.zoom && fabricCanvasRef.current) {
         const canvas = fabricCanvasRef.current;
         const center = canvas.getCenter();
-        
+
         setZoom(importData.canvasData.zoom);
         canvas.zoomToPoint({ x: center.left, y: center.top }, importData.canvasData.zoom);
       }
@@ -2450,6 +2677,7 @@ const EnhancedCanvas = React.forwardRef((
       setTimeout(() => {
         if (fabricCanvasRef.current) {
           renderAllElements(fabricCanvasRef.current);
+          saveToHistory();
         }
       }, 100);
 
@@ -2461,6 +2689,7 @@ const EnhancedCanvas = React.forwardRef((
     }
   };
 
+
   // Enable/disable pan mode
   const enablePanMode = () => {
     setActiveMode(ELEMENT_TYPES.PAN);
@@ -2470,7 +2699,17 @@ const EnhancedCanvas = React.forwardRef((
     setActiveMode(ELEMENT_TYPES.SELECT);
   };
 
-  
+  useEffect(() => {
+    // После инициализации холста и рендеринга всех элементов
+    if (isCanvasReady && fabricCanvasRef.current) {
+      // Дайте немного времени для полной загрузки
+      setTimeout(() => {
+        saveToHistory();
+      }, 500);
+    }
+  }, [isCanvasReady]);
+
+
   // Export methods via ref
   React.useImperativeHandle(ref, () => ({
     exportCanvasAsJSON,
@@ -2481,7 +2720,9 @@ const EnhancedCanvas = React.forwardRef((
     addNewTable,
     addNewText,
     deleteSelectedObject,
-    getCanvas: () => fabricCanvasRef.current
+    getCanvas: () => fabricCanvasRef.current,
+    undo,
+    redo
   }));
 
   return (
@@ -2494,7 +2735,7 @@ const EnhancedCanvas = React.forwardRef((
               onClick={() => setActiveMode(ELEMENT_TYPES.HYBRID)}
               title="Гибридный режим: выбор и панорамирование. Используйте ПРОБЕЛ или правую кнопку мыши для панорамирования."
             >
-              
+
               <i className="fas fa-hand-paper"></i> ✋ + 🖱️ <i className="fas fa-mouse-pointer"></i>
             </button>
             <button
@@ -2509,7 +2750,7 @@ const EnhancedCanvas = React.forwardRef((
               onClick={() => setActiveMode(ELEMENT_TYPES.SELECT)}
               title="Выбор объектов"
             >
-              
+
               <i className="fas fa-mouse-pointer">🖱️</i>
             </button>
             <button
@@ -2641,7 +2882,22 @@ const EnhancedCanvas = React.forwardRef((
               <i className="fas fa-compress-arrows-alt">↔️</i>
             </button>
           </div>
-
+          <button
+            className="tool-btn"
+            onClick={undo}
+            title="Отмена (Ctrl+Z)"
+            disabled={historyStack.length === 0}
+          >
+            <i className="fas fa-undo">↩️</i>
+          </button>
+          <button
+            className="tool-btn"
+            onClick={redo}
+            title="Повтор (Ctrl+Shift+Z)"
+            disabled={redoStack.length === 0}
+          >
+            <i className="fas fa-redo">↪️</i>
+          </button>
           <div className="tool-group">
             {selectedObject && (
               <>
@@ -2650,8 +2906,8 @@ const EnhancedCanvas = React.forwardRef((
                   onClick={deleteSelectedObject}
                   title="Удалить выбранный объект"
                 >
-                  <i className="fas fa-trash"> </i>
-                 
+                  <i className="fas fa-trash">🗑️</i>
+
                 </button>
 
                 <button
@@ -2734,19 +2990,19 @@ const EnhancedCanvas = React.forwardRef((
 
         <div className="canvas-content-area">
           <div className="canvas-and-sidebar-container" style={{ display: 'flex', width: '100%' }}>
-            <div 
-              className="canvas-wrapper" 
-              ref={canvasContainerRef} 
-              style={{ 
-                width: '100%', 
+            <div
+              className="canvas-wrapper"
+              ref={canvasContainerRef}
+              style={{
+                width: '100%',
                 position: 'relative',
                 border: '1px solid #ddd',
                 overflow: 'hidden'
               }}
             >
-              <canvas 
-                ref={canvasRef} 
-                style={{ 
+              <canvas
+                ref={canvasRef}
+                style={{
                   display: 'block',
                   touchAction: 'none'
                 }}
@@ -2768,14 +3024,14 @@ const EnhancedCanvas = React.forwardRef((
                 </div>
               )}
             </div>
-            
+
             {canvasMode === 'elements' && (
               <div className="elements-sidebar" style={{ width: '250px', padding: '10px', background: '#f5f5f5', borderLeft: '1px solid #ddd' }}>
                 <HallElementsCatalog onAddElement={handleElementDrop} />
               </div>
             )}
           </div>
-          
+
           {initialized && canvasMode === 'elements' && (
             <HallElementsManager
               tablesAreaRef={canvasContainerRef}
