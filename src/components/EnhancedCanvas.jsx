@@ -15,7 +15,8 @@ const ELEMENT_TYPES = {
   TEXT: 'text',
   TABLE: 'table',
   ERASER: 'eraser',
-  PAN: 'pan'
+  PAN: 'pan',
+  HYBRID: 'hybrid_pan_select' // Гибридный режим
 };
 
 // Define DnD item types
@@ -46,7 +47,7 @@ const EnhancedCanvas = React.forwardRef((
   const fabricCanvasRef = useRef(null);
   
   // States
-  const [activeMode, setActiveMode] = useState(ELEMENT_TYPES.SELECT);
+  const [activeMode, setActiveMode] = useState(ELEMENT_TYPES.HYBRID);
   const [zoom, setZoom] = useState(initialZoom);
   const [isDrawing, setIsDrawing] = useState(false);
   const [strokeColor, setStrokeColor] = useState('#000000');
@@ -58,103 +59,21 @@ const EnhancedCanvas = React.forwardRef((
   const [objectCount, setObjectCount] = useState(0);
   const [deleteConfirmation, setDeleteConfirmation] = useState(null);
   const [initialized, setInitialized] = useState(false);
-  const [isPanMode, setIsPanMode] = useState(false);
+  const [isPanMode, setIsPanMode] = useState(true);
   const [isCanvasReady, setIsCanvasReady] = useState(false);
 
-  // Initialize canvas
+  // Initialize canvas with a delay to ensure it's properly set up
   useEffect(() => {
-  // В функцию initializeCanvas внесите следующие изменения:
-const initializeCanvas = () => {
-  console.log('Initializing canvas...');
-  if (!canvasRef.current) return;
-
-  // Clean up any existing canvas
-  if (fabricCanvasRef.current) {
-    try {
-      fabricCanvasRef.current.dispose();
-      fabricCanvasRef.current = null;
-    } catch (e) {
-      console.error('Error disposing existing canvas:', e);
-    }
-  }
-
-  // Get container dimensions
-  const container = canvasContainerRef.current;
-  if (!container) return;
-  
-  // Устанавливаем безопасные начальные размеры
-  const width = container.clientWidth || 800;
-  const height = container.clientHeight || 600;
-
-  try {
-    // Create new canvas с явными размерами
-    const canvas = new fabric.Canvas(canvasRef.current, {
-      width: width,
-      height: height,
-      backgroundColor: '#f5f5f5',
-      selection: true,
-      preserveObjectStacking: true
-    });
-
-    // Store reference
-    fabricCanvasRef.current = canvas;
-
-    // Set default properties
-    fabric.Object.prototype.transparentCorners = false;
-    fabric.Object.prototype.cornerColor = '#2196F3';
-    fabric.Object.prototype.cornerSize = 8;
+    const initialize = () => {
+      initializeCanvas();
+      // Set initial mode with a delay
+      setTimeout(() => {
+        setActiveMode(ELEMENT_TYPES.HYBRID);
+      }, 300);
+    };
     
-    // Update state
-    setInitialized(true);
-setupCanvasEventHandlers(canvas);
-
-    // Create grid
-    createGrid(canvas);
-
-    // Добавляем безопасную проверку перед обработкой изменения размера
-    const handleResize = () => {
-      if (!canvas || !container || !canvas.wrapperEl) return;
-      
-      // Безопасно получаем размеры
-      const newWidth = container.clientWidth || 800;
-      const newHeight = container.clientHeight || 600;
-      
-      // Устанавливаем с проверкой
-      try {
-        canvas.setWidth(newWidth);
-        canvas.setHeight(newHeight);
-        canvas.renderAll();
-        createGrid(canvas);
-      } catch (error) {
-        console.error('Error resizing canvas:', error);
-      }
-    };
-
-    // Добавляем небольшую задержку перед первым ресайзом
-    setTimeout(handleResize, 100);
-
-    window.addEventListener('resize', handleResize);
-
-    // Mark as ready
-    setIsCanvasReady(true);
-    console.log('Canvas initialization complete');
-
-    // Load initial data с задержкой
-    setTimeout(() => {
-      renderAllElements(canvas);
-    }, 200);
-
-    return () => {
-      window.removeEventListener('resize', handleResize);
-    };
-  } catch (error) {
-    console.error('Canvas initialization error:', error);
-  }
-};
-
-    // Initialize canvas
-    initializeCanvas();
-
+    initialize();
+    
     // Cleanup
     return () => {
       if (fabricCanvasRef.current) {
@@ -167,6 +86,120 @@ setupCanvasEventHandlers(canvas);
       }
     };
   }, []);
+
+  // Initialize canvas
+  const initializeCanvas = () => {
+    console.log('Initializing canvas...');
+    if (!canvasRef.current) return;
+
+    // Clean up any existing canvas
+    if (fabricCanvasRef.current) {
+      try {
+        fabricCanvasRef.current.dispose();
+        fabricCanvasRef.current = null;
+      } catch (e) {
+        console.error('Error disposing existing canvas:', e);
+      }
+    }
+
+    // Get container dimensions
+    const container = canvasContainerRef.current;
+    if (!container) return;
+    
+    // Set safe initial dimensions
+    const width = container.clientWidth || 800;
+    const height = container.clientHeight || 600;
+
+    try {
+      // Create new canvas with explicit dimensions
+      const canvas = new fabric.Canvas(canvasRef.current, {
+        width: width,
+        height: height,
+        backgroundColor: '#f5f5f5',
+        selection: true,
+        preserveObjectStacking: true,
+        fireRightClick: true, // Allow right-click events
+        stopContextMenu: true // Prevent default context menu
+      });
+
+      // Store reference
+      fabricCanvasRef.current = canvas;
+
+      // Set default properties
+      fabric.Object.prototype.transparentCorners = false;
+      fabric.Object.prototype.cornerColor = '#2196F3';
+      fabric.Object.prototype.cornerSize = 8;
+      
+      // Override isControlVisible method for all objects
+      // to properly handle gridLine objects
+      const originalIsControlVisible = fabric.Object.prototype.isControlVisible;
+      fabric.Object.prototype.isControlVisible = function(controlName) {
+        if (this.gridLine === true) {
+          return false;
+        }
+        return originalIsControlVisible.call(this, controlName);
+      };
+      
+      // Override findTarget method to ignore grid lines
+      canvas.findTarget = (function(originalFn) {
+        return function(e, skipGroup) {
+          const target = originalFn.call(this, e, skipGroup);
+          if (target && target.gridLine) {
+            return null; // If object is a grid line, return null (not selectable)
+          }
+          return target;
+        };
+      })(canvas.findTarget);
+      
+      // Update state
+      setInitialized(true);
+      
+      // Setup event handlers
+      setupCanvasEventHandlers(canvas);
+
+      // Create grid
+      createGrid(canvas);
+
+      // Add safe check before handling resize
+      const handleResize = () => {
+        if (!canvas || !container || !canvas.wrapperEl) return;
+        
+        // Safely get dimensions
+        const newWidth = container.clientWidth || 800;
+        const newHeight = container.clientHeight || 600;
+        
+        // Set with checking
+        try {
+          canvas.setWidth(newWidth);
+          canvas.setHeight(newHeight);
+          canvas.renderAll();
+          createGrid(canvas);
+        } catch (error) {
+          console.error('Error resizing canvas:', error);
+        }
+      };
+
+      // Add small delay before first resize
+      setTimeout(handleResize, 100);
+
+      window.addEventListener('resize', handleResize);
+
+      // Mark as ready
+      setIsCanvasReady(true);
+      console.log('Canvas initialization complete');
+
+      // Load initial data with delay
+      setTimeout(() => {
+        renderAllElements(canvas);
+      }, 200);
+
+      return () => {
+        window.removeEventListener('resize', handleResize);
+      };
+    } catch (error) {
+      console.error('Canvas initialization error:', error);
+    }
+  };
 
   // Create grid
   const createGrid = (canvas) => {
@@ -184,48 +217,49 @@ setupCanvasEventHandlers(canvas);
       const height = canvas.height || 600;
       const gridSize = 20;
 
-      // Create vertical lines
-      for (let i = 0; i <= width / gridSize; i++) {
-        const line = new fabric.Line([i * gridSize, 0, i * gridSize, height], {
-          stroke: '#dddddd',
-          strokeWidth: 1,
+      // Function to create grid lines with correct properties
+      const createGridLine = (coords, isCenter = false) => {
+        const line = new fabric.Line(coords, {
+          stroke: isCenter ? '#aaaaaa' : '#dddddd',
+          strokeWidth: isCenter ? 2 : 1,
           selectable: false,
           evented: false,
-          gridLine: true
+          hoverCursor: 'default',
+          hasControls: false,
+          hasBorders: false,
+          lockMovementX: true,
+          lockMovementY: true,
+          lockRotation: true,
+          lockScalingX: true,
+          lockScalingY: true,
+          perPixelTargetFind: false,
+          gridLine: true,
+          excludeFromExport: true
         });
+        
+        // Add explicit property to easily identify grid
+        line.set('interactive', false);
+        
+        return line;
+      };
+
+      // Create vertical lines
+      for (let i = 0; i <= width / gridSize; i++) {
+        const line = createGridLine([i * gridSize, 0, i * gridSize, height]);
         canvas.add(line);
         line.sendToBack();
       }
 
       // Create horizontal lines
       for (let i = 0; i <= height / gridSize; i++) {
-        const line = new fabric.Line([0, i * gridSize, width, i * gridSize], {
-          stroke: '#dddddd',
-          strokeWidth: 1,
-          selectable: false,
-          evented: false,
-          gridLine: true
-        });
+        const line = createGridLine([0, i * gridSize, width, i * gridSize]);
         canvas.add(line);
         line.sendToBack();
       }
 
       // Add center lines
-      const xAxis = new fabric.Line([0, height / 2, width, height / 2], {
-        stroke: '#aaaaaa',
-        strokeWidth: 2,
-        selectable: false,
-        evented: false,
-        gridLine: true
-      });
-
-      const yAxis = new fabric.Line([width / 2, 0, width / 2, height], {
-        stroke: '#aaaaaa',
-        strokeWidth: 2,
-        selectable: false,
-        evented: false,
-        gridLine: true
-      });
+      const xAxis = createGridLine([0, height / 2, width, height / 2], true);
+      const yAxis = createGridLine([width / 2, 0, width / 2, height], true);
 
       canvas.add(xAxis);
       canvas.add(yAxis);
@@ -245,28 +279,37 @@ setupCanvasEventHandlers(canvas);
     try {
       // Object selection
       canvas.on('selection:created', (e) => {
-  if (!e.selected || e.selected.length === 0) return;
-  
-  const obj = e.selected[0];
-  setSelectedObject(obj);
+        if (!e.selected || e.selected.length === 0) return;
+        
+        const obj = e.selected[0];
+        
+        // If a grid line is selected by mistake - cancel selection
+        if (obj.gridLine) {
+          canvas.discardActiveObject();
+          canvas.renderAll();
+          return;
+        }
+        
+        setSelectedObject(obj);
 
-  if (obj.elementId) {
-    setSelectedElementId(obj.elementId);
-    
-    // Принудительное обновление свойств выбранного объекта
-    obj.set({
-      selectable: true,
-      evented: true,
-      hasControls: true,
-      hasBorders: true
-    });
-  } else if (obj.tableId && onTableSelect) {
-    onTableSelect(obj.tableId);
-  }
-  
-  // Принудительное обновление canvas
-  canvas.renderAll();
-});
+        if (obj.elementId) {
+          setSelectedElementId(obj.elementId);
+          
+          // Force update selected object properties
+          obj.set({
+            selectable: true,
+            evented: true,
+            hasControls: true,
+            hasBorders: true
+          });
+        } else if (obj.tableId && onTableSelect) {
+          onTableSelect(obj.tableId);
+        }
+        
+        // IMPORTANT: Don't change activeMode here
+        
+        canvas.renderAll();
+      });
 
       canvas.on('selection:cleared', () => {
         setSelectedObject(null);
@@ -375,6 +418,48 @@ setupCanvasEventHandlers(canvas);
             
             canvas.renderAll();
           }
+        } else if (obj.tableId) {
+          // Handle table scaling
+          const table = tables.find(t => t.id === obj.tableId);
+          
+          if (table) {
+            // For round tables
+            if (obj.tableShape === 'round') {
+              const newWidth = Math.round(table.width * obj.scaleX);
+              
+              setTables(prevTables => prevTables.map(t => 
+                t.id === obj.tableId 
+                  ? { ...t, width: newWidth } 
+                  : t
+              ));
+            } 
+            // For rectangle tables
+            else if (obj.tableShape === 'rectangle') {
+              const newWidth = Math.round(table.width * obj.scaleX);
+              const newHeight = Math.round(table.height * obj.scaleY);
+              
+              setTables(prevTables => prevTables.map(t => 
+                t.id === obj.tableId 
+                  ? { ...t, width: newWidth, height: newHeight } 
+                  : t
+              ));
+            }
+            
+            // After scaling, we need to re-render the table with the new dimensions
+            // This ensures chairs and other elements are properly positioned
+            setTimeout(() => {
+              // Remove the old table object
+              canvas.remove(obj);
+              
+              // Get the updated table data
+              const updatedTable = tables.find(t => t.id === obj.tableId);
+              if (updatedTable) {
+                // Render the updated table
+                renderTable(canvas, updatedTable);
+                canvas.renderAll();
+              }
+            }, 100);
+          }
         }
       });
 
@@ -432,31 +517,7 @@ setupCanvasEventHandlers(canvas);
       });
 
       // Mouse wheel (zoom)
-      canvas.on('mouse:wheel', (opt) => {
-        if (!opt.e) return;
-        
-        opt.e.preventDefault();
-        opt.e.stopPropagation();
-
-        // Calculate new zoom
-        const delta = opt.e.deltaY;
-        let newZoom = canvas.getZoom();
-
-        if (delta > 0) {
-          newZoom = Math.max(0.1, newZoom * 0.95);
-        } else {
-          newZoom = Math.min(5, newZoom * 1.05);
-        }
-
-        // Apply zoom
-        canvas.zoomToPoint(
-          { x: opt.e.offsetX, y: opt.e.offsetY },
-          newZoom
-        );
-
-        // Update state
-        setZoom(newZoom);
-      });
+      canvas.on('mouse:wheel', handleMouseWheel);
 
       // Custom drawing events
       setupDrawingEvents(canvas);
@@ -465,13 +526,40 @@ setupCanvasEventHandlers(canvas);
     }
   };
 
+  // Common mouse wheel handler for zoom
+  const handleMouseWheel = (opt) => {
+    if (!opt.e) return;
+    
+    opt.e.preventDefault();
+    opt.e.stopPropagation();
+
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return;
+
+    // Calculate new zoom
+    const delta = opt.e.deltaY;
+    let newZoom = canvas.getZoom();
+
+    if (delta > 0) {
+      newZoom = Math.max(0.1, newZoom * 0.95);
+    } else {
+      newZoom = Math.min(5, newZoom * 1.05);
+    }
+
+    // Apply zoom to point under cursor
+    canvas.zoomToPoint(
+      { x: opt.e.offsetX, y: opt.e.offsetY },
+      newZoom
+    );
+
+    // Update state
+    setZoom(newZoom);
+  };
+
   // Set up drawing events
- const setupDrawingEvents = useCallback((canvas) => {
+  const setupDrawingEvents = useCallback((canvas) => {
   if (!canvas) return;
   
-  // Не устанавливаем обработчики рисования, если в режиме панорамирования
-  if (isPanMode) return;
-
   try {
     // Clear any existing event handlers first to avoid duplicates
     canvas.off('mouse:down');
@@ -513,151 +601,591 @@ setupCanvasEventHandlers(canvas);
       } else if (activeMode === ELEMENT_TYPES.CIRCLE) {
         finishDrawingCircle(canvas);
       }
+      
+      // После завершения рисования переключаемся в гибридный режим
+      setActiveMode(ELEMENT_TYPES.HYBRID);
     });
   } catch (error) {
     console.error('Error setting up drawing events:', error);
   }
-}, [activeMode, isDrawing, isPanMode]);
+}, [activeMode, isDrawing]);
 
-  // Set up pan mode
- useEffect(() => {
-  const canvas = fabricCanvasRef.current;
-  if (!canvas || !isCanvasReady) return;
+  // Handle different canvas modes
+  useEffect(() => {
+    const canvas = fabricCanvasRef.current;
+    if (!canvas || !isCanvasReady) return;
 
-  try {
-    // Remove all previous events first to avoid conflicts
+    try {
+      // Call separate function for hybrid mode
+      if (activeMode === ELEMENT_TYPES.HYBRID) {
+        setupHybridMode(canvas);
+        return;
+      }
+
+      // Clear all previous handlers
+      canvas.off('mouse:down');
+      canvas.off('mouse:move');
+      canvas.off('mouse:up');
+      canvas.off('selection:created');
+      canvas.off('selection:cleared');
+      canvas.off('contextmenu');
+      
+      if (canvas._hybridHandlers) {
+        window.removeEventListener('keydown', canvas._hybridHandlers.keyDown);
+        window.removeEventListener('keyup', canvas._hybridHandlers.keyUp);
+        canvas._hybridHandlers = null;
+      }
+      
+      // For pure pan mode
+      if (activeMode === ELEMENT_TYPES.PAN) {
+        // In pan mode, disable object selection completely
+        canvas.selection = false;
+        canvas.defaultCursor = 'grab';
+        canvas.hoverCursor = 'grab';
+        
+        // Clear current selection
+        canvas.discardActiveObject();
+        canvas.renderAll();
+        
+        // Disable interaction with all objects
+        canvas.forEachObject(obj => {
+          if (!obj.gridLine) {
+            obj._previousSelectable = obj.selectable;
+            obj._previousEvented = obj.evented;
+          }
+          
+          obj.set({
+            selectable: false, 
+            evented: false,
+            hasControls: false,
+            hasBorders: false
+          });
+        });
+        
+        // Special handlers for pure pan mode
+        const handlePanMouseDown = (opt) => {
+          const evt = opt.e;
+          canvas.lastPosX = evt.clientX;
+          canvas.lastPosY = evt.clientY;
+          canvas.isDragging = true;
+          canvas.defaultCursor = 'grabbing';
+          canvas.hoverCursor = 'grabbing';
+          
+          // Cancel event to prevent any other interaction
+          evt.preventDefault();
+          evt.stopPropagation();
+        };
+        
+        const handlePanMouseMove = (opt) => {
+          if (!canvas.isDragging) return;
+          
+          const evt = opt.e;
+          const vpt = canvas.viewportTransform;
+          
+          vpt[4] += evt.clientX - canvas.lastPosX;
+          vpt[5] += evt.clientY - canvas.lastPosY;
+          
+          canvas.lastPosX = evt.clientX;
+          canvas.lastPosY = evt.clientY;
+          canvas.renderAll();
+          
+          // Cancel event
+          evt.preventDefault();
+          evt.stopPropagation();
+        };
+        
+        const handlePanMouseUp = () => {
+          canvas.isDragging = false;
+          canvas.defaultCursor = 'grab';
+          canvas.hoverCursor = 'grab';
+        };
+        
+        // Add handlers
+        canvas.on('mouse:down', handlePanMouseDown);
+        canvas.on('mouse:move', handlePanMouseMove);
+        canvas.on('mouse:up', handlePanMouseUp);
+        
+        // Important: intercept selection:created to prevent
+        // object selection in pan mode
+        canvas.on('selection:created', (e) => {
+          canvas.discardActiveObject();
+          canvas.renderAll();
+          // IMPORTANT: Don't change activeMode
+        });
+        
+        // Add mouse wheel handler for zoom
+        canvas.on('mouse:wheel', handleMouseWheel);
+        
+        console.log('Pure PAN mode activated');
+      } 
+      else {
+        // For other modes restore standard behavior
+        canvas.selection = true;
+        canvas.defaultCursor = 'default';
+        canvas.hoverCursor = 'move';
+        
+        // Restore object interactivity, except for grid
+        canvas.forEachObject(obj => {
+          if (!obj.gridLine) {
+            // Restore previous values if they exist
+            if (obj._previousSelectable !== undefined) {
+              obj.set({
+                selectable: obj._previousSelectable,
+                evented: obj._previousEvented
+              });
+              
+              delete obj._previousSelectable;
+              delete obj._previousEvented;
+            } else {
+              // Otherwise make object interactive by default
+              obj.set({
+                selectable: true,
+                evented: true,
+                hasControls: true,
+                hasBorders: true
+              });
+            }
+          }
+        });
+        
+        // For drawing modes set appropriate parameters
+        if (activeMode === ELEMENT_TYPES.DRAW) {
+          canvas.isDrawingMode = true;
+          if (!canvas.freeDrawingBrush) {
+            canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
+          }
+          canvas.freeDrawingBrush.width = strokeWidth;
+          canvas.freeDrawingBrush.color = strokeColor;
+        } else if (activeMode === ELEMENT_TYPES.ERASER) {
+          canvas.isDrawingMode = true;
+          if (!canvas.freeDrawingBrush) {
+            canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
+          }
+          canvas.freeDrawingBrush.width = strokeWidth * 3;
+          canvas.freeDrawingBrush.color = '#ffffff';
+        } else {
+          canvas.isDrawingMode = false;
+          
+          // For all modes except drawing, restore
+          // standard event handlers
+          setupDefaultEventHandlers(canvas);
+        }
+        
+        // Add mouse wheel handler for zoom
+        canvas.on('mouse:wheel', handleMouseWheel);
+      }
+    } catch (error) {
+      console.error('Error updating active mode:', error);
+    }
+  }, [activeMode, strokeColor, strokeWidth, isCanvasReady]);
+
+  // Additional restrictions for PAN mode
+  useEffect(() => {
+    const canvas = fabricCanvasRef.current;
+    if (!canvas || !isCanvasReady) return;
+    
+    if (activeMode === ELEMENT_TYPES.PAN) {
+      console.log('Enforcing PAN mode restrictions...');
+      
+      // Override findTarget method for PAN mode
+      const originalFindTarget = canvas.findTarget;
+      canvas._originalFindTarget = originalFindTarget;
+      
+      canvas.findTarget = function() {
+        // In PAN mode always return null - no objects are selectable
+        return null;
+      };
+      
+      // Disable interactivity for all objects
+      canvas.forEachObject(obj => {
+        obj._previousSelectable = obj.selectable;
+        obj._previousEvented = obj.evented;
+        
+        obj.set({
+          selectable: false,
+          evented: false,
+          hoverCursor: 'grab'
+        });
+      });
+      
+      // Ensure mode won't switch when interacting with objects
+      const enforceMode = () => {
+        if (activeMode !== ELEMENT_TYPES.PAN) {
+          setActiveMode(ELEMENT_TYPES.PAN);
+        }
+      };
+      
+      // Intercept selection attempts
+      canvas.on('selection:created', enforceMode);
+      canvas.on('selection:updated', enforceMode);
+      
+      return () => {
+        // Restore method and cleanup
+        if (canvas._originalFindTarget) {
+          canvas.findTarget = canvas._originalFindTarget;
+          delete canvas._originalFindTarget;
+        }
+        
+        // Restore object properties
+        canvas.forEachObject(obj => {
+          if (obj._previousSelectable !== undefined) {
+            obj.set({
+              selectable: obj._previousSelectable,
+              evented: obj._previousEvented
+            });
+            
+            delete obj._previousSelectable;
+            delete obj._previousEvented;
+          }
+        });
+        
+        canvas.off('selection:created', enforceMode);
+        canvas.off('selection:updated', enforceMode);
+      };
+    }
+  }, [activeMode, isCanvasReady]);
+
+  // Add information tooltip when activating different modes
+  useEffect(() => {
+    // Show tooltip based on mode
+    const showTooltip = (message) => {
+      // Remove existing tooltip if any
+      const existingTooltip = document.querySelector('.mode-tooltip');
+      if (existingTooltip) {
+        existingTooltip.remove();
+      }
+      
+      const tooltipContainer = document.createElement('div');
+      tooltipContainer.className = 'mode-tooltip';
+      tooltipContainer.style.position = 'absolute';
+      tooltipContainer.style.bottom = '110px';
+      tooltipContainer.style.left = '85%';
+      tooltipContainer.style.transform = 'translateX(-50%)';
+      tooltipContainer.style.background = 'rgba(0,0,0,0.7)';
+      tooltipContainer.style.color = 'white';
+      tooltipContainer.style.padding = '8px 12px';
+      tooltipContainer.style.borderRadius = '4px';
+      tooltipContainer.style.zIndex = '1000';
+      tooltipContainer.style.pointerEvents = 'none';
+      tooltipContainer.style.transition = 'opacity 0.3s';
+      tooltipContainer.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
+      tooltipContainer.style.fontSize = '14px';
+      tooltipContainer.style.maxWidth = '400px';
+      tooltipContainer.style.textAlign = 'center';
+      tooltipContainer.innerHTML = message;
+      
+      document.body.appendChild(tooltipContainer);
+      
+      // Hide after 4 seconds
+      setTimeout(() => {
+        tooltipContainer.style.opacity = '0';
+        setTimeout(() => {
+          if (tooltipContainer.parentNode) {
+            document.body.removeChild(tooltipContainer);
+          }
+        }, 300);
+      }, 4000);
+    };
+    
+    let tooltipMessage = '';
+    
+    if (activeMode === ELEMENT_TYPES.HYBRID) {
+      tooltipMessage = 
+        '<strong>Гибридный режим активирован</strong><br>'+
+        'Используйте пробел или правую кнопку мыши для панорамирования.<br>'+
+        'Нажмите и перетащите объекты для их перемещения.';
+    } 
+    else if (activeMode === ELEMENT_TYPES.PAN) {
+      tooltipMessage = 
+        '<strong>Режим панорамирования активирован</strong><br>'+
+        'Перетаскивайте холст, чтобы перемещаться по нему.<br>'+
+        'В этом режиме объекты не выбираются.';
+    }
+    else if (activeMode === ELEMENT_TYPES.SELECT) {
+      tooltipMessage = 
+        '<strong>Режим выбора объектов активирован</strong><br>'+
+        'Нажмите на объект для его выбора и изменения.';
+    }
+    
+    if (tooltipMessage) {
+      showTooltip(tooltipMessage);
+    }
+    
+    // Logging for debugging
+    console.log(`Mode changed to: ${activeMode}`);
+    
+  }, [activeMode]);
+
+  // Set up hybrid mode
+  const setupHybridMode = (canvas) => {
+    console.log('Setting up hybrid mode...');
+    
+    // Clear previous handlers
     canvas.off('mouse:down');
     canvas.off('mouse:move');
     canvas.off('mouse:up');
+    canvas.off('mouse:wheel');
+    canvas.off('selection:created');
+    canvas.off('selection:cleared');
+    canvas.off('contextmenu');
     
-    // Update cursor and selection based on mode
-    if (isPanMode) {
-      canvas.selection = false;
-      canvas.defaultCursor = 'grab';
-      canvas.hoverCursor = 'grab';
-
-      // Set up pan handlers
-      const panMouseDown = (opt) => {
-        const evt = opt.e;
+    if (canvas._hybridHandlers) {
+      window.removeEventListener('keydown', canvas._hybridHandlers.keyDown);
+      window.removeEventListener('keyup', canvas._hybridHandlers.keyUp);
+    }
+    
+    // Make sure object selection is enabled
+    canvas.selection = true;
+    
+    // Set up objects for selection
+    canvas.forEachObject(obj => {
+      // Grid lines should never be selectable
+      if (obj.gridLine) {
+        obj.set({
+          selectable: false,
+          evented: false,
+          hasControls: false,
+          hasBorders: false,
+          hoverCursor: 'default'
+        });
+      } else {
+        // Restore interactivity for objects
+        if (obj._previousSelectable !== undefined) {
+          obj.set({
+            selectable: obj._previousSelectable,
+            evented: obj._previousEvented,
+            hasControls: true,
+            hasBorders: true
+          });
+          
+          delete obj._previousSelectable;
+          delete obj._previousEvented;
+        } else {
+          obj.set({
+            selectable: true,
+            evented: true,
+            hasControls: true,
+            hasBorders: true
+          });
+        }
+      }
+    });
+    
+    // Object selection handlers
+    canvas.on('selection:created', (e) => {
+      if (!e.selected || e.selected.length === 0) return;
+      
+      const obj = e.selected[0];
+      
+      // If grid line is selected - cancel selection
+      if (obj.gridLine) {
+        canvas.discardActiveObject();
+        canvas.renderAll();
+        return;
+      }
+      
+      setSelectedObject(obj);
+    
+      if (obj.elementId) {
+        setSelectedElementId(obj.elementId);
+        
+        obj.set({
+          selectable: true,
+          evented: true,
+          hasControls: true,
+          hasBorders: true
+        });
+      } else if (obj.tableId && onTableSelect) {
+        onTableSelect(obj.tableId);
+      }
+      
+      // IMPORTANT: Don't change activeMode here
+      
+      canvas.renderAll();
+    });
+    
+    canvas.on('selection:cleared', () => {
+      setSelectedObject(null);
+      setSelectedElementId(null);
+    });
+    
+    // Hybrid mode: panning with space or right mouse button
+    let isSpacePressed = false;
+    let isDraggingCanvas = false;
+    
+    const handleKeyDown = (e) => {
+      if (e.key === ' ' && !isSpacePressed) {
+        isSpacePressed = true;
+        isDraggingCanvas = false;
+        canvas.defaultCursor = 'grab';
+        
+        // Temporarily disable object selection
+        canvas.forEachObject(obj => {
+          if (!obj.gridLine) {
+            obj._previousSelectable = obj.selectable;
+            obj._previousEvented = obj.evented;
+            obj.set({
+              selectable: false,
+              evented: false
+            });
+          }
+        });
+        
+        canvas.discardActiveObject();
+        canvas.renderAll();
+        
+        e.preventDefault();
+      }
+    };
+    
+    const handleKeyUp = (e) => {
+      if (e.key === ' ' && isSpacePressed) {
+        isSpacePressed = false;
+        isDraggingCanvas = false;
+        canvas.defaultCursor = 'default';
+        
+        // Restore object selection
+        canvas.forEachObject(obj => {
+          if (!obj.gridLine && obj._previousSelectable !== undefined) {
+            obj.set({
+              selectable: obj._previousSelectable,
+              evented: obj._previousEvented
+            });
+            
+            delete obj._previousSelectable;
+            delete obj._previousEvented;
+          }
+        });
+        
+        canvas.renderAll();
+      }
+    };
+    
+    const handleMouseDown = (opt) => {
+      const evt = opt.e;
+      
+      // Panning with space or right mouse button
+      if (isSpacePressed || evt.buttons === 2) {
+        isDraggingCanvas = true;
         canvas.lastPosX = evt.clientX;
         canvas.lastPosY = evt.clientY;
         canvas.isDragging = true;
         canvas.defaultCursor = 'grabbing';
-        canvas.hoverCursor = 'grabbing';
-      };
-
-      const panMouseMove = (opt) => {
-        if (!canvas.isDragging) return;
         
-        const evt = opt.e;
+        // Prevent context menu for right button
+        if (evt.buttons === 2) {
+          evt.preventDefault();
+          return false;
+        }
+      }
+    };
+    
+    const handleMouseMove = (opt) => {
+      const evt = opt.e;
+      
+      if (canvas.isDragging && (isSpacePressed || isDraggingCanvas)) {
         const vpt = canvas.viewportTransform;
-        const deltaX = evt.clientX - canvas.lastPosX;
-        const deltaY = evt.clientY - canvas.lastPosY;
         
-        vpt[4] += deltaX;
-        vpt[5] += deltaY;
+        vpt[4] += evt.clientX - canvas.lastPosX;
+        vpt[5] += evt.clientY - canvas.lastPosY;
         
         canvas.lastPosX = evt.clientX;
         canvas.lastPosY = evt.clientY;
         canvas.renderAll();
-      };
-
-      const panMouseUp = () => {
+        
+        evt.preventDefault();
+        evt.stopPropagation();
+      }
+    };
+    
+    const handleMouseUp = () => {
+      if (canvas.isDragging) {
         canvas.isDragging = false;
-        canvas.defaultCursor = 'grab';
-        canvas.hoverCursor = 'grab';
-      };
+        isDraggingCanvas = false;
+        canvas.defaultCursor = isSpacePressed ? 'grab' : 'default';
+        
+        // Restore objects if space is not pressed
+        if (!isSpacePressed) {
+          canvas.forEachObject(obj => {
+            if (!obj.gridLine && obj._previousSelectable !== undefined) {
+              obj.set({
+                selectable: obj._previousSelectable,
+                evented: obj._previousEvented
+              });
+              
+              delete obj._previousSelectable;
+              delete obj._previousEvented;
+            }
+          });
+        }
+        
+        canvas.renderAll();
+      }
+    };
+    
+    // Prevent context menu
+    const preventContextMenu = (evt) => {
+      if (evt.e && (isDraggingCanvas || evt.e.buttons === 2)) {
+        evt.e.preventDefault();
+        return false;
+      }
+    };
+    
+    // Add handlers
+    canvas.on('mouse:down', handleMouseDown);
+    canvas.on('mouse:move', handleMouseMove);
+    canvas.on('mouse:up', handleMouseUp);
+    canvas.on('mouse:wheel', handleMouseWheel);
+    canvas.on('contextmenu', preventContextMenu);
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    
+    // Save references for cleanup
+    canvas._hybridHandlers = {
+      mouseDown: handleMouseDown,
+      mouseMove: handleMouseMove,
+      mouseUp: handleMouseUp,
+      keyDown: handleKeyDown,
+      keyUp: handleKeyUp,
+      contextMenu: preventContextMenu
+    };
+  };
 
-      // Add event listeners
-      canvas.on('mouse:down', panMouseDown);
-      canvas.on('mouse:move', panMouseMove);
-      canvas.on('mouse:up', panMouseUp);
-
-      // Store handlers for cleanup
-      canvas._panHandlers = {
-        mouseDown: panMouseDown,
-        mouseMove: panMouseMove,
-        mouseUp: panMouseUp
-      };
-    } else {
-      // Disable pan mode
-      canvas.selection = true;
-      canvas.defaultCursor = 'default';
-      canvas.hoverCursor = 'move';
-
-      // Clear stored handlers
-      canvas._panHandlers = null;
+  // Set up default event handlers
+  const setupDefaultEventHandlers = (canvas) => {
+    // Clear previous handlers
+    canvas.off('selection:created');
+    canvas.off('selection:cleared');
+    
+    // Object selection handler
+    canvas.on('selection:created', (e) => {
+      if (!e.selected || e.selected.length === 0) return;
       
-      // Restore drawing events if not in pan mode
-      setupDrawingEvents(canvas);
-    }
-  } catch (error) {
-    console.error('Error setting up pan mode:', error);
-  }
-}, [isPanMode, isCanvasReady, setupDrawingEvents]);
-
-  useEffect(() => {
-  const canvas = fabricCanvasRef.current;
-  if (!canvas || !isCanvasReady) return;
-  
-  setupDrawingEvents(canvas);
-}, [activeMode, strokeColor, strokeWidth, isCanvasReady, setupDrawingEvents]);
-
-  // Update drawing mode
-useEffect(() => {
-  const canvas = fabricCanvasRef.current;
-  if (!canvas || !isCanvasReady) return;
-
-  try {
-    // Set drawing mode
-    canvas.isDrawingMode = activeMode === ELEMENT_TYPES.DRAW;
+      const obj = e.selected[0];
+      
+      // Ignore grid lines
+      if (obj.gridLine) {
+        canvas.discardActiveObject();
+        canvas.renderAll();
+        return;
+      }
+      
+      setSelectedObject(obj);
     
-    if (canvas.isDrawingMode) {
-      if (!canvas.freeDrawingBrush) {
-        canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
+      if (obj.elementId) {
+        setSelectedElementId(obj.elementId);
+      } else if (obj.tableId && onTableSelect) {
+        onTableSelect(obj.tableId);
       }
-      canvas.freeDrawingBrush.width = strokeWidth;
-      canvas.freeDrawingBrush.color = strokeColor;
-    }
-
-    // Set eraser mode
-    if (activeMode === ELEMENT_TYPES.ERASER) {
-      canvas.isDrawingMode = true;
-      if (!canvas.freeDrawingBrush) {
-        canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
-      }
-      canvas.freeDrawingBrush.width = strokeWidth * 3;
-      canvas.freeDrawingBrush.color = '#ffffff';
-    }
-
-    // Clear selection for drawing modes
-    if (activeMode !== ELEMENT_TYPES.SELECT && activeMode !== ELEMENT_TYPES.PAN) {
-      canvas.discardActiveObject();
+      
       canvas.renderAll();
-    }
-  } catch (error) {
-    console.error('Error updating drawing mode:', error);
-  }
-}, [activeMode, strokeColor, strokeWidth, isCanvasReady]);
-
-  // Set canvas mode
-  useEffect(() => {
-    if (canvasMode === 'elements') {
-      setActiveMode(ELEMENT_TYPES.SELECT);
-    }
-  }, [canvasMode]);
-
-  // Update all elements when data changes
-  useEffect(() => {
-    if (!fabricCanvasRef.current || !isCanvasReady) return;
+    });
     
-    // Debounce updates to avoid excessive re-renders
-    const updateTimer = setTimeout(() => {
-      renderAllElements(fabricCanvasRef.current);
-    }, 100);
-    
-    return () => clearTimeout(updateTimer);
-  }, [tables, hallElements, isCanvasReady]);
+    canvas.on('selection:cleared', () => {
+      setSelectedObject(null);
+      setSelectedElementId(null);
+    });
+  };
 
   // Render all elements
   const renderAllElements = (canvas) => {
@@ -666,14 +1194,16 @@ useEffect(() => {
     try {
       console.log('Rendering all elements...');
 
-      // Карта текущих объектов на канвасе
+      // Map of current objects on canvas
       const currentObjects = new Map();
       canvas.getObjects().forEach(obj => {
         if (obj.tableId) currentObjects.set(`table_${obj.tableId}`, obj);
         else if (obj.elementId) currentObjects.set(`element_${obj.elementId}`, obj);
+        // Ignore grid objects when creating map
+        // They don't have tableId or elementId, but have gridLine
       });
 
-      // Обновление столов
+      // Update tables
       tables.forEach(table => {
         const key = `table_${table.id}`;
         const existing = currentObjects.get(key);
@@ -683,7 +1213,7 @@ useEffect(() => {
         currentObjects.delete(key);
       });
 
-      // Обновление элементов
+      // Update elements
       hallElements.forEach(element => {
         const key = `element_${element.id}`;
         const existing = currentObjects.get(key);
@@ -693,9 +1223,26 @@ useEffect(() => {
         currentObjects.delete(key);
       });
 
-      // Удаление объектов, которых больше нет в состоянии
+      // Remove objects that no longer exist in state
+      // IMPORTANT: don't remove gridLine objects
       currentObjects.forEach(obj => {
         if (!obj.gridLine) canvas.remove(obj);
+      });
+
+      // Make sure all grid lines are not selectable
+      canvas.getObjects().forEach(obj => {
+        if (obj.gridLine) {
+          obj.set({
+            selectable: false,
+            evented: false,
+            hasControls: false,
+            hasBorders: false,
+            lockMovementX: true,
+            lockMovementY: true,
+            hoverCursor: 'default',
+            perPixelTargetFind: false
+          });
+        }
       });
 
       canvas.renderAll();
@@ -714,81 +1261,18 @@ useEffect(() => {
 
       // Create table group
       const tableGroup = new fabric.Group([], {
-  left: tableData.x || 0,
-  top: tableData.y || 0,
-  tableId: tableData.id,
-  tableShape: tableData.shape || 'round',
-  hasControls: true,
-  hasBorders: true,
-  selectable: true,
-  hoverCursor: 'move',
-  subTargetCheck: true,
-  originX: 'center',
-  originY: 'center',
-  // Remove or set to false:
-  // lockScalingX: true,
-  // lockScalingY: true
-});
-
-// 3. Add table scaling handler to the object:scaling event in setupCanvasEventHandlers
-
-// Inside the setupCanvasEventHandlers function, find the canvas.on('object:scaling') handler
-// and add this code to handle table scaling:
-
-// Object scaling
-canvas.on('object:scaling', (e) => {
-  if (!e.target) return;
-  
-  const obj = e.target;
-  setUnsavedChanges(true);
-
-  if (obj.elementId) {
-    // Existing code for handling element scaling
-    // ...
-  } else if (obj.tableId) {
-    // Handle table scaling
-    const table = tables.find(t => t.id === obj.tableId);
-    
-    if (table) {
-      // For round tables
-      if (obj.tableShape === 'round') {
-        const newWidth = Math.round(table.width * obj.scaleX);
-        
-        setTables(prevTables => prevTables.map(t => 
-          t.id === obj.tableId 
-            ? { ...t, width: newWidth } 
-            : t
-        ));
-      } 
-      // For rectangle tables
-      else if (obj.tableShape === 'rectangle') {
-        const newWidth = Math.round(table.width * obj.scaleX);
-        const newHeight = Math.round(table.height * obj.scaleY);
-        
-        setTables(prevTables => prevTables.map(t => 
-          t.id === obj.tableId 
-            ? { ...t, width: newWidth, height: newHeight } 
-            : t
-        ));
-      }
-      
-      // After scaling, we need to re-render the table with the new dimensions
-      // This ensures chairs and other elements are properly positioned
-      setTimeout(() => {
-        // Remove the old table object
-        canvas.remove(obj);
-        
-        // Get the updated table data
-        const updatedTable = tables.find(t => t.id === obj.tableId);
-        if (updatedTable) {
-          // Render the updated table
-          renderTable(canvas, updatedTable);
-          canvas.renderAll();
-        }
-      }, 100);
-    }
-  }
-});
+        left: tableData.x || 0,
+        top: tableData.y || 0,
+        tableId: tableData.id,
+        tableShape: tableData.shape || 'round',
+        hasControls: true,
+        hasBorders: true,
+        selectable: true,
+        hoverCursor: 'move',
+        subTargetCheck: true,
+        originX: 'center',
+        originY: 'center',
+      });
 
       if (isRound) {
         // Round table
@@ -1396,61 +1880,61 @@ canvas.on('object:scaling', (e) => {
     }
   };
 
- const finishDrawingLine = (canvas) => {
-  if (!canvas || !canvas._tempLine) return;
+  const finishDrawingLine = (canvas) => {
+    if (!canvas || !canvas._tempLine) return;
 
-  try {
-    setIsDrawing(false);
-    setUnsavedChanges(true);
+    try {
+      setIsDrawing(false);
+      setUnsavedChanges(true);
 
-    const line = canvas._tempLine;
-    
-    // Make line interactive
-    line.set({
-      selectable: true,
-      evented: true,
-      hasControls: true,
-      hasBorders: true,
-      hoverCursor: 'move'
-    });
+      const line = canvas._tempLine;
+      
+      // Make line interactive
+      line.set({
+        selectable: true,
+        evented: true,
+        hasControls: true,
+        hasBorders: true,
+        hoverCursor: 'move'
+      });
 
-    // Create new element
-    const newElement = {
-      id: Date.now(),
-      type: 'line',
-      x1: line.x1,
-      y1: line.y1,
-      x2: line.x2,
-      y2: line.y2,
-      stroke: strokeColor,
-      strokeWidth: strokeWidth,
-      x: line.left,
-      y: line.top
-    };
+      // Create new element
+      const newElement = {
+        id: Date.now(),
+        type: 'line',
+        x1: line.x1,
+        y1: line.y1,
+        x2: line.x2,
+        y2: line.y2,
+        stroke: strokeColor,
+        strokeWidth: strokeWidth,
+        x: line.left,
+        y: line.top
+      };
 
-    // Add element ID
-    line.set('elementId', newElement.id);
+      // Add element ID
+      line.set('elementId', newElement.id);
 
-    // Update state
-    setHallElements(prev => [...prev, newElement]);
-    setSelectedElementId(newElement.id);
-    setObjectCount(prev => prev + 1);
+      // Update state
+      setHallElements(prev => [...prev, newElement]);
+      setSelectedElementId(newElement.id);
+      setObjectCount(prev => prev + 1);
 
-    // Clean up
-    canvas._tempLine = null;
+      // Clean up
+      canvas._tempLine = null;
 
-    // Set this object as selected
-    canvas.setActiveObject(line);
-    
-    // Switch to select mode
-    setActiveMode(ELEMENT_TYPES.SELECT);
-    
-    // Ensure canvas is updated
-    canvas.renderAll();
-  } catch (error) {
-    console.error('Error finishing line drawing:', error);
-  }
-};
+      // Set this object as selected
+      canvas.setActiveObject(line);
+      
+      // Switch to select mode
+      setActiveMode(ELEMENT_TYPES.HYBRID);
+      
+      // Ensure canvas is updated
+      canvas.renderAll();
+    } catch (error) {
+      console.error('Error finishing line drawing:', error);
+    }
+  };
 
   const startDrawingRectangle = (canvas, opt) => {
     if (!canvas) return;
@@ -1518,61 +2002,61 @@ canvas.on('object:scaling', (e) => {
     }
   };
 
- const finishDrawingRectangle = (canvas) => {
-  if (!canvas || !canvas._tempRect) return;
+  const finishDrawingRectangle = (canvas) => {
+    if (!canvas || !canvas._tempRect) return;
 
-  try {
-    setIsDrawing(false);
-    setUnsavedChanges(true);
+    try {
+      setIsDrawing(false);
+      setUnsavedChanges(true);
 
-    const rect = canvas._tempRect;
-    
-    // Make rectangle interactive
-    rect.set({
-      selectable: true,
-      evented: true,
-      hasControls: true,
-      hasBorders: true,
-      hoverCursor: 'move'
-    });
+      const rect = canvas._tempRect;
+      
+      // Make rectangle interactive
+      rect.set({
+        selectable: true,
+        evented: true,
+        hasControls: true,
+        hasBorders: true,
+        hoverCursor: 'move'
+      });
 
-    // Create new element
-    const newElement = {
-      id: Date.now(),
-      type: 'rectangle',
-      x: rect.left,
-      y: rect.top,
-      width: rect.width,
-      height: rect.height,
-      fill: fillColor,
-      stroke: strokeColor,
-      strokeWidth: strokeWidth
-    };
+      // Create new element
+      const newElement = {
+        id: Date.now(),
+        type: 'rectangle',
+        x: rect.left,
+        y: rect.top,
+        width: rect.width,
+        height: rect.height,
+        fill: fillColor,
+        stroke: strokeColor,
+        strokeWidth: strokeWidth
+      };
 
-    // Add element ID
-    rect.set('elementId', newElement.id);
+      // Add element ID
+      rect.set('elementId', newElement.id);
 
-    // Update state
-    setHallElements(prev => [...prev, newElement]);
-    setSelectedElementId(newElement.id);
-    setObjectCount(prev => prev + 1);
+      // Update state
+      setHallElements(prev => [...prev, newElement]);
+      setSelectedElementId(newElement.id);
+      setObjectCount(prev => prev + 1);
 
-    // Clean up
-    canvas._tempRect = null;
-    canvas._tempStartPoint = null;
+      // Clean up
+      canvas._tempRect = null;
+      canvas._tempStartPoint = null;
 
-    // Set this object as selected
-    canvas.setActiveObject(rect);
-    
-    // Switch to select mode
-    setActiveMode(ELEMENT_TYPES.SELECT);
-    
-    // Ensure canvas is updated
-    canvas.renderAll();
-  } catch (error) {
-    console.error('Error finishing rectangle drawing:', error);
-  }
-};
+      // Set this object as selected
+      canvas.setActiveObject(rect);
+      
+      // Switch to select mode
+     setActiveMode(ELEMENT_TYPES.HYBRID);
+      
+      // Ensure canvas is updated
+      canvas.renderAll();
+    } catch (error) {
+      console.error('Error finishing rectangle drawing:', error);
+    }
+  };
 
   const startDrawingCircle = (canvas, opt) => {
     if (!canvas) return;
@@ -1629,59 +2113,59 @@ canvas.on('object:scaling', (e) => {
   };
 
   const finishDrawingCircle = (canvas) => {
-  if (!canvas || !canvas._tempCircle) return;
+    if (!canvas || !canvas._tempCircle) return;
 
-  try {
-    setIsDrawing(false);
-    setUnsavedChanges(true);
+    try {
+      setIsDrawing(false);
+      setUnsavedChanges(true);
 
-    const circle = canvas._tempCircle;
-    
-    // Make circle interactive
-    circle.set({
-      selectable: true,
-      evented: true,
-      hasControls: true,
-      hasBorders: true,
-      hoverCursor: 'move'
-    });
+      const circle = canvas._tempCircle;
+      
+      // Make circle interactive
+      circle.set({
+        selectable: true,
+        evented: true,
+        hasControls: true,
+        hasBorders: true,
+        hoverCursor: 'move'
+      });
 
-    // Create new element
-    const newElement = {
-      id: Date.now(),
-      type: 'circle',
-      x: circle.left,
-      y: circle.top,
-      radius: circle.radius,
-      fill: fillColor,
-      stroke: strokeColor,
-      strokeWidth: strokeWidth
-    };
+      // Create new element
+      const newElement = {
+        id: Date.now(),
+        type: 'circle',
+        x: circle.left,
+        y: circle.top,
+        radius: circle.radius,
+        fill: fillColor,
+        stroke: strokeColor,
+        strokeWidth: strokeWidth
+      };
 
-    // Add element ID
-    circle.set('elementId', newElement.id);
+      // Add element ID
+      circle.set('elementId', newElement.id);
 
-    // Update state
-    setHallElements(prev => [...prev, newElement]);
-    setSelectedElementId(newElement.id);
-    setObjectCount(prev => prev + 1);
+      // Update state
+      setHallElements(prev => [...prev, newElement]);
+      setSelectedElementId(newElement.id);
+      setObjectCount(prev => prev + 1);
 
-    // Clean up
-    canvas._tempCircle = null;
-    canvas._tempStartPoint = null;
+      // Clean up
+      canvas._tempCircle = null;
+      canvas._tempStartPoint = null;
 
-    // Set this object as selected
-    canvas.setActiveObject(circle);
-    
-    // Switch to select mode
-    setActiveMode(ELEMENT_TYPES.SELECT);
-    
-    // Ensure canvas is updated
-    canvas.renderAll();
-  } catch (error) {
-    console.error('Error finishing circle drawing:', error);
-  }
-};
+      // Set this object as selected
+      canvas.setActiveObject(circle);
+      
+      // Switch to select mode
+     setActiveMode(ELEMENT_TYPES.HYBRID);
+      
+      // Ensure canvas is updated
+      canvas.renderAll();
+    } catch (error) {
+      console.error('Error finishing circle drawing:', error);
+    }
+  };
 
   // Handle element drop
   const handleElementDrop = (elementData, position) => {
@@ -1796,7 +2280,7 @@ canvas.on('object:scaling', (e) => {
       setHallElements(prev => [...prev, newElement]);
       setObjectCount(prev => prev + 1);
       setUnsavedChanges(true);
-      setActiveMode(ELEMENT_TYPES.SELECT);
+      setActiveMode(ELEMENT_TYPES.HYBRID);
     } catch (error) {
       console.error('Error adding text:', error);
     }
@@ -1830,7 +2314,7 @@ canvas.on('object:scaling', (e) => {
       
       setUnsavedChanges(true);
       setObjectCount(prev => prev + 1);
-      setActiveMode(ELEMENT_TYPES.SELECT);
+     setActiveMode(ELEMENT_TYPES.HYBRID);
     } catch (error) {
       console.error('Error adding table:', error);
     }
@@ -1972,15 +2456,14 @@ canvas.on('object:scaling', (e) => {
 
   // Enable/disable pan mode
   const enablePanMode = () => {
-  setActiveMode(ELEMENT_TYPES.PAN);
-  setIsPanMode(true);
-};
+    setActiveMode(ELEMENT_TYPES.PAN);
+  };
 
-const disablePanMode = () => {
-  setActiveMode(ELEMENT_TYPES.SELECT);
-  setIsPanMode(false);
-};
+  const disablePanMode = () => {
+    setActiveMode(ELEMENT_TYPES.SELECT);
+  };
 
+  
   // Export methods via ref
   React.useImperativeHandle(ref, () => ({
     exportCanvasAsJSON,
@@ -2000,46 +2483,55 @@ const disablePanMode = () => {
         <div className="canvas-toolbar">
           <div className="tool-group">
             <button
-              className={`tool-btn ${isPanMode ? 'active' : ''}`}
-              onClick={() => isPanMode ? disablePanMode() : enablePanMode()}
-              title={isPanMode ? "Exit Pan Mode" : "Pan Canvas"}
+              className={`tool-btn ${activeMode === ELEMENT_TYPES.HYBRID ? 'active' : ''}`}
+              onClick={() => setActiveMode(ELEMENT_TYPES.HYBRID)}
+              title="Гибридный режим: выбор и панорамирование. Используйте ПРОБЕЛ или правую кнопку мыши для панорамирования."
             >
-              <i className="fas fa-hand-paper"></i>
+              
+              <i className="fas fa-hand-paper"></i> ✋ + 🖱️ <i className="fas fa-mouse-pointer"></i>
+            </button>
+            <button
+              className={`tool-btn ${activeMode === ELEMENT_TYPES.PAN ? 'active' : ''}`}
+              onClick={() => setActiveMode(ELEMENT_TYPES.PAN)}
+              title="Только панорамирование"
+            >
+              <i className="fas fa-hand-paper">✋</i>
             </button>
             <button
               className={`tool-btn ${activeMode === ELEMENT_TYPES.SELECT ? 'active' : ''}`}
               onClick={() => setActiveMode(ELEMENT_TYPES.SELECT)}
               title="Выбор объектов"
             >
-              <i className="fas fa-mouse-pointer"></i>
+              
+              <i className="fas fa-mouse-pointer">🖱️</i>
             </button>
             <button
               className={`tool-btn ${activeMode === ELEMENT_TYPES.DRAW ? 'active' : ''}`}
               onClick={() => setActiveMode(ELEMENT_TYPES.DRAW)}
               title="Свободное рисование"
             >
-              <i className="fas fa-pencil-alt"></i>
+              <i className="fas fa-pencil-alt">✏️</i>
             </button>
             <button
               className={`tool-btn ${activeMode === ELEMENT_TYPES.LINE ? 'active' : ''}`}
               onClick={() => setActiveMode(ELEMENT_TYPES.LINE)}
               title="Прямая линия"
             >
-              <i className="fas fa-minus"></i>
+              <i className="fas fa-minus">➖</i>
             </button>
             <button
               className={`tool-btn ${activeMode === ELEMENT_TYPES.RECTANGLE ? 'active' : ''}`}
               onClick={() => setActiveMode(ELEMENT_TYPES.RECTANGLE)}
               title="Прямоугольник"
             >
-              <i className="far fa-square"></i>
+              <i className="far fa-square">⬛</i>
             </button>
             <button
               className={`tool-btn ${activeMode === ELEMENT_TYPES.CIRCLE ? 'active' : ''}`}
               onClick={() => setActiveMode(ELEMENT_TYPES.CIRCLE)}
               title="Круг"
             >
-              <i className="far fa-circle"></i>
+              <i className="far fa-circle">⚪</i>
             </button>
             <button
               className={`tool-btn ${activeMode === ELEMENT_TYPES.TEXT ? 'active' : ''}`}
@@ -2049,7 +2541,7 @@ const disablePanMode = () => {
               }}
               title="Добавить текст"
             >
-              <i className="fas fa-font"></i>
+              <i className="fas fa-font">A</i>
             </button>
             <button
               className={`tool-btn ${activeMode === ELEMENT_TYPES.TABLE ? 'active' : ''}`}
@@ -2059,15 +2551,15 @@ const disablePanMode = () => {
               }}
               title="Добавить стол"
             >
-              <i className="fas fa-table"></i>
+              <i className="fas fa-table">T</i>
             </button>
-            <button
+            {/* <button
               className={`tool-btn ${activeMode === ELEMENT_TYPES.ERASER ? 'active' : ''}`}
               onClick={() => setActiveMode(ELEMENT_TYPES.ERASER)}
               title="Ластик"
             >
               <i className="fas fa-eraser"></i>
-            </button>
+            </button> */}
           </div>
 
           <div className="tool-group">
@@ -2124,7 +2616,7 @@ const disablePanMode = () => {
               onClick={zoomIn}
               title="Увеличить"
             >
-              <i className="fas fa-search-plus"></i>
+              <i className="fas fa-search-plus">➕</i>
             </button>
             <span className="zoom-level">{Math.round(zoom * 100)}%</span>
             <button
@@ -2132,14 +2624,14 @@ const disablePanMode = () => {
               onClick={zoomOut}
               title="Уменьшить"
             >
-              <i className="fas fa-search-minus"></i>
+              <i className="fas fa-search-minus">➖</i>
             </button>
             <button
               className="tool-btn"
               onClick={resetZoom}
               title="Сбросить масштаб"
             >
-              <i className="fas fa-compress-arrows-alt"></i>
+              <i className="fas fa-compress-arrows-alt">↔️</i>
             </button>
           </div>
 
@@ -2151,7 +2643,8 @@ const disablePanMode = () => {
                   onClick={deleteSelectedObject}
                   title="Удалить выбранный объект"
                 >
-                  <i className="fas fa-trash"></i>
+                  <i className="fas fa-trash"> </i>
+                 
                 </button>
 
                 <button
@@ -2163,7 +2656,7 @@ const disablePanMode = () => {
                   }}
                   title="Переместить вперед"
                 >
-                  <i className="fas fa-arrow-up"></i>
+                  <i className="fas fa-arrow-up">⬆️</i>
                 </button>
 
                 <button
@@ -2175,7 +2668,7 @@ const disablePanMode = () => {
                   }}
                   title="Переместить назад"
                 >
-                  <i className="fas fa-arrow-down"></i>
+                  <i className="fas fa-arrow-down">⬇️</i>
                 </button>
               </>
             )}
@@ -2200,7 +2693,7 @@ const disablePanMode = () => {
               }}
               title="Экспорт JSON"
             >
-              <i className="fas fa-file-export"></i>
+              <i className="fas fa-file-export">💾</i>
             </button>
 
             <input
@@ -2227,7 +2720,7 @@ const disablePanMode = () => {
               onClick={() => document.getElementById('import-json').click()}
               title="Импорт JSON"
             >
-              <i className="fas fa-file-import"></i>
+              <i className="fas fa-file-import">🗂️</i>
             </button>
           </div>
         </div>
@@ -2235,39 +2728,39 @@ const disablePanMode = () => {
         <div className="canvas-content-area">
           <div className="canvas-and-sidebar-container" style={{ display: 'flex', width: '100%' }}>
             <div 
-  className="canvas-wrapper" 
-  ref={canvasContainerRef} 
-  style={{ 
-    width: '100%', 
-    position: 'relative',
-    border: '1px solid #ddd',
-    overflow: 'hidden'
-  }}
->
-  <canvas 
-    ref={canvasRef} 
-    style={{ 
-      display: 'block',
-      touchAction: 'none'
-    }}
-  />
-  {!initialized && (
-    <div style={{
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      background: 'rgba(255,255,255,0.7)',
-      zIndex: 1000
-    }}>
-      <div>Initializing canvas...</div>
-    </div>
-  )}
-</div>
+              className="canvas-wrapper" 
+              ref={canvasContainerRef} 
+              style={{ 
+                width: '100%', 
+                position: 'relative',
+                border: '1px solid #ddd',
+                overflow: 'hidden'
+              }}
+            >
+              <canvas 
+                ref={canvasRef} 
+                style={{ 
+                  display: 'block',
+                  touchAction: 'none'
+                }}
+              />
+              {!initialized && (
+                <div style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: 'rgba(255,255,255,0.7)',
+                  zIndex: 1000
+                }}>
+                  <div>Initializing canvas...</div>
+                </div>
+              )}
+            </div>
             
             {canvasMode === 'elements' && (
               <div className="elements-sidebar" style={{ width: '250px', padding: '10px', background: '#f5f5f5', borderLeft: '1px solid #ddd' }}>

@@ -408,6 +408,7 @@ button {
   /* max-width: 1600px; */
   margin: 0 auto;
   width: 95%;
+  align-items: center;
 }
 
 /* Sidebar */
@@ -1624,7 +1625,6 @@ button {
   font-weight: bold;
 }
 
-.group-name2 {}
 
 .group-count {
   color: #666;
