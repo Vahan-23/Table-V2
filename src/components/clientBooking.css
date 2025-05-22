@@ -499,3 +499,12 @@
       -webkit-appearance: none;
       appearance: none;
     }
+
+
+    .tables-content > div[style*="position: absolute"] {
+  transform-origin: top left !important;
+}
+
+.tables-content .shape-element {
+  box-sizing: content-box !important;
+}
