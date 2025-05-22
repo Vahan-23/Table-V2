@@ -3398,9 +3398,16 @@ const finishDrawingCircle = (canvas) => {
               </>
             )}
 
-            <button
+             <button
               className="tool-btn"
-              onClick={() => {
+              onClick={async () => {
+                // First reset zoom to ensure clean export
+                resetZoom();
+                
+                // Wait for zoom reset to complete
+                await new Promise(resolve => setTimeout(resolve, 300));
+                
+                // Then proceed with export
                 const jsonData = exportCanvasAsJSON();
                 if (jsonData) {
                   const blob = new Blob([jsonData], { type: 'application/json' });
@@ -3416,10 +3423,8 @@ const finishDrawingCircle = (canvas) => {
                   setUnsavedChanges(false);
                 }
               }}
-              title="Экспорт JSON"
-            >
-              <i className="fas fa-file-export">💾</i>
-            </button>
+              title="Экспорт JSON (автоматически сбрасывает масштаб)"
+            >💾</button>
 
             <input
               type="file"
