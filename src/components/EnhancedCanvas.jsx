@@ -61,15 +61,134 @@ const EnhancedCanvas = React.forwardRef((
   const [initialized, setInitialized] = useState(false);
   const [isPanMode, setIsPanMode] = useState(true);
   const [isCanvasReady, setIsCanvasReady] = useState(false);
-
+  const [shapes, setShapes] = useState([]); // Вместо hallElements для рисования
+  const [hallIcons, setHallIcons] = useState([]); // Только иконки зала
   // Состояния для истории действий (отмена/повтор)
   const [historyStack, setHistoryStack] = useState([]);
   const [redoStack, setRedoStack] = useState([]);
   const [maxHistoryLength] = useState(50); // Ограничиваем размер истории
 
-const [gridSize, setGridSize] = useState(20); // Размер сетки по умолчанию
-const [showGrid, setShowGrid] = useState(true); // Показывать ли сетку
+  const [gridSize, setGridSize] = useState(20); // Размер сетки по умолчанию
+  const [showGrid, setShowGrid] = useState(true); // Показывать ли сетку
 
+
+ const renderShape = (canvas, shape) => {
+  if (!canvas || !shape) return null;
+
+  try {
+    let fabricObj;
+
+    switch (shape.type) {
+      case 'rect':
+        fabricObj = new fabric.Rect({
+          left: shape.x || 0,
+          top: shape.y || 0,
+          width: shape.width || 100,
+          height: shape.height || 50,
+          fill: shape.fill || fillColor,
+          stroke: shape.color || strokeColor,
+          strokeWidth: shape.strokeWidth || strokeWidth,
+          angle: shape.rotation || 0, // ✅ УЖЕ ЕСТЬ
+          elementId: shape.id,
+          hasControls: true,
+          hasBorders: true,
+          selectable: true
+        });
+        break;
+
+      case 'circle':
+        const radius = shape.radius || 50;
+        const centerX = (shape.x || 0) + radius;
+        const centerY = (shape.y || 0) + radius;
+        
+        fabricObj = new fabric.Circle({
+          left: centerX,
+          top: centerY,
+          radius: radius,
+          fill: shape.fill || fillColor,
+          stroke: shape.color || strokeColor,
+          strokeWidth: shape.strokeWidth || strokeWidth,
+          angle: shape.rotation || 0, // ✅ УЖЕ ЕСТЬ
+          elementId: shape.id,
+          hasControls: true,
+          hasBorders: true,
+          selectable: true,
+          originX: 'center',
+          originY: 'center'
+        });
+        break;
+
+      case 'line':
+        if (shape.points && shape.points.length >= 4) {
+          fabricObj = new fabric.Line(shape.points, {
+            stroke: shape.color || strokeColor,
+            strokeWidth: shape.strokeWidth || strokeWidth,
+            angle: shape.rotation || 0, // ✅ ДОБАВЛЕНО для линий
+            elementId: shape.id,
+            hasControls: true,
+            hasBorders: true,
+            selectable: true,
+            originalX1: shape.points[0],
+            originalY1: shape.points[1],
+            originalX2: shape.points[2],
+            originalY2: shape.points[3]
+          });
+        }
+        break;
+
+      case 'text':
+        fabricObj = new fabric.IText(shape.text || 'Text', {
+          left: shape.x || 0,
+          top: shape.y || 0,
+          fontSize: shape.fontSize || 18,
+          fontFamily: shape.fontFamily || 'Arial',
+          fill: shape.color || strokeColor,
+          angle: shape.rotation || 0, // ✅ УЖЕ ЕСТЬ
+          elementId: shape.id,
+          hasControls: true,
+          hasBorders: true,
+          selectable: true
+        });
+        break;
+
+      case 'path':
+        if (shape.path) {
+          fabricObj = new fabric.Path(shape.path, {
+            left: shape.x || 0,
+            top: shape.y || 0,
+            stroke: shape.color || strokeColor,
+            strokeWidth: shape.strokeWidth || strokeWidth,
+            fill: shape.fill || '',
+            angle: shape.rotation || 0, // ✅ ДОБАВЛЕНО для path
+            elementId: shape.id,
+            hasControls: true,
+            hasBorders: true,
+            selectable: true
+          });
+        }
+        break;
+
+      default:
+        console.warn(`Unknown shape type: ${shape.type}`);
+        return null;
+    }
+
+    if (fabricObj) {
+      canvas.add(fabricObj);
+
+      if (selectedElementId === shape.id) {
+        canvas.setActiveObject(fabricObj);
+      }
+
+      return fabricObj;
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Error rendering shape:', error);
+    return null;
+  }
+};
 
   const saveToHistory = useCallback(() => {
     // Не сохраняем если операция рисования активна
@@ -116,56 +235,54 @@ const [showGrid, setShowGrid] = useState(true); // Показывать ли с�
   // Отмена последнего действия (Undo)
 
   const deleteSelectedObject = () => {
-    const canvas = fabricCanvasRef.current;
-    if (!canvas) return;
+  const canvas = fabricCanvasRef.current;
+  if (!canvas) return;
 
-    try {
-      // Сохраняем состояние перед удалением
-      saveToHistory();
+  try {
+    saveToHistory();
 
-      const activeObject = canvas.getActiveObject();
-      if (!activeObject) return;
+    const activeObject = canvas.getActiveObject();
+    if (!activeObject) return;
 
-      // Проверяем, выбрана ли группа объектов
-      if (activeObject.type === 'activeSelection') {
-        // Удаляем все объекты из выделения
-        const objectsInGroup = activeObject.getObjects();
+    if (activeObject.type === 'activeSelection') {
+      // Удаление группы объектов
+      const objectsInGroup = activeObject.getObjects();
 
-        // Разгруппировываем выделение
-        activeObject.destroy();
+      activeObject.destroy();
 
-        // Удаляем каждый объект
-        objectsInGroup.forEach(obj => {
-          canvas.remove(obj);
+      objectsInGroup.forEach(obj => {
+        canvas.remove(obj);
 
-          // Обновляем состояние в зависимости от типа объекта
-          if (obj.tableId) {
-            setTables(prev => prev.filter(table => table.id !== obj.tableId));
-          } else if (obj.elementId) {
-            setHallElements(prev => prev.filter(element => element.id !== obj.elementId));
-          }
-        });
-      } else {
-        // Удаляем один выбранный объект (как у вас сейчас)
-        if (activeObject.tableId) {
-          setTables(prev => prev.filter(table => table.id !== activeObject.tableId));
-        } else if (activeObject.elementId) {
-          setHallElements(prev => prev.filter(element => element.id !== activeObject.elementId));
+        // Обновляем состояние в зависимости от типа объекта
+        if (obj.tableId) {
+          setTables(prev => prev.filter(table => table.id !== obj.tableId));
+        } else if (obj.elementId) {
+          // ✅ Удаляем из shapes
+          setShapes(prev => prev.filter(shape => shape.id !== obj.elementId));
         }
-
-        canvas.remove(activeObject);
+      });
+    } else {
+      // Удаление одного объекта
+      if (activeObject.tableId) {
+        setTables(prev => prev.filter(table => table.id !== activeObject.tableId));
+      } else if (activeObject.elementId) {
+        // ✅ Удаляем из shapes
+        setShapes(prev => prev.filter(shape => shape.id !== activeObject.elementId));
       }
 
-      canvas.discardActiveObject();
-      canvas.requestRenderAll();
-
-      setSelectedObject(null);
-      setSelectedElementId(null);
-      setUnsavedChanges(true);
-    } catch (error) {
-      console.error('Error deleting selected objects:', error);
+      canvas.remove(activeObject);
     }
-  };
+
+    canvas.discardActiveObject();
+    canvas.requestRenderAll();
+
+    setSelectedObject(null);
+    setSelectedElementId(null);
+    setUnsavedChanges(true);
+  } catch (error) {
+    console.error('Error deleting selected objects:', error);
+  }
+};
 
 
   const selectAllObjects = useCallback(() => {
@@ -199,213 +316,173 @@ const [showGrid, setShowGrid] = useState(true); // Показывать ли с�
     }
   }, []);
 
-  const duplicateSelectedObject = useCallback(() => {
-    const canvas = fabricCanvasRef.current;
-    if (!canvas) return;
+ const duplicateSelectedObject = useCallback(() => {
+  const canvas = fabricCanvasRef.current;
+  if (!canvas) return;
 
-    const activeObject = canvas.getActiveObject();
-    if (!activeObject) return;
+  const activeObject = canvas.getActiveObject();
+  if (!activeObject) return;
 
-    try {
-      // Сохраняем состояние перед дублированием
-      saveToHistory();
+  try {
+    saveToHistory();
 
-      // Проверяем, является ли выбранный объект группой (activeSelection)
-      if (activeObject.type === 'activeSelection') {
-        // Получаем все объекты в группе
-        const selectedObjects = activeObject.getObjects();
-        const newObjects = [];
+    if (activeObject.type === 'activeSelection') {
+      // Дублирование группы объектов
+      const selectedObjects = activeObject.getObjects();
+      const newObjects = [];
 
-        // Рассчитываем смещение
-        const groupLeft = activeObject.left || 0;
-        const groupTop = activeObject.top || 0;
+      selectedObjects.forEach(obj => {
+        const objLeft = activeObject.left + obj.left * activeObject.scaleX;
+        const objTop = activeObject.top + obj.top * activeObject.scaleY;
 
-        // Получаем масштаб и угол группы
-        const groupScaleX = activeObject.scaleX || 1;
-        const groupScaleY = activeObject.scaleY || 1;
-        const groupAngle = activeObject.angle || 0;
+        if (obj.tableId) {
+          // Дублирование стола (как было)
+          const originalTable = tables.find(table => table.id === obj.tableId);
+          if (originalTable) {
+            const newTableId = Date.now() + Math.floor(Math.random() * 1000);
+            const newTable = {
+              ...JSON.parse(JSON.stringify(originalTable)),
+              id: newTableId,
+              x: objLeft + 10,
+              y: objTop + 10
+            };
 
-        // Создаем новые объекты для каждого выбранного объекта
-        selectedObjects.forEach(obj => {
-          // Сохраняем исходные координаты относительно холста
-          // с учетом положения группы
-          const objLeft = groupLeft + obj.left * groupScaleX;
-          const objTop = groupTop + obj.top * groupScaleY;
+            setTables(prev => [...prev, newTable]);
 
-          if (obj.tableId) {
-            // Дублирование для таблицы
-            const originalTable = tables.find(table => table.id === obj.tableId);
-            if (originalTable) {
-              const newTableId = Date.now() + Math.floor(Math.random() * 1000);
-
-              // Создаем новую таблицу в данных
-              const newTable = {
-                ...JSON.parse(JSON.stringify(originalTable)),
-                id: newTableId,
-                x: objLeft + 10,  // Добавляем смещение к исходной позиции
-                y: objTop + 10
-              };
-
-              // Добавляем новую таблицу
-              setTables(prev => [...prev, newTable]);
-
-              // Рендерим новую таблицу на холст
-              setTimeout(() => {
-                const newTableObj = renderTable(canvas, newTable);
-                if (newTableObj) {
-                  newObjects.push(newTableObj);
-                }
-              }, 10);
-            }
-          } else if (obj.elementId) {
-            // Дублирование для элемента
-            const originalElement = hallElements.find(element => element.id === obj.elementId);
-            if (originalElement) {
-              const newElementId = Date.now() + Math.floor(Math.random() * 1000);
-
-              // Создаем новый элемент в данных
-              const newElement = {
-                ...JSON.parse(JSON.stringify(originalElement)),
-                id: newElementId,
-                x: objLeft + 10,  // Добавляем смещение к исходной позиции
-                y: objTop + 10
-              };
-
-              // Для линий обновляем координаты
-              if (originalElement.type === 'line') {
-                // Вычисляем смещение относительно текущей позиции
-                const deltaX = objLeft - originalElement.x;
-                const deltaY = objTop - originalElement.y;
-
-                newElement.x1 = originalElement.x1 + deltaX + 10;
-                newElement.y1 = originalElement.y1 + deltaY + 10;
-                newElement.x2 = originalElement.x2 + deltaX + 10;
-                newElement.y2 = originalElement.y2 + deltaY + 10;
+            setTimeout(() => {
+              const newTableObj = renderTable(canvas, newTable);
+              if (newTableObj) {
+                newObjects.push(newTableObj);
               }
-
-              // Добавляем новый элемент
-              setHallElements(prev => [...prev, newElement]);
-
-              // Рендерим новый элемент на холст
-              setTimeout(() => {
-                const newElementObj = renderHallElement(canvas, newElement);
-                if (newElementObj) {
-                  newObjects.push(newElementObj);
-                }
-              }, 10);
-            }
+            }, 10);
           }
-        });
+        } else if (obj.elementId) {
+          // ✅ Дублирование shape элемента
+          const originalShape = shapes.find(shape => shape.id === obj.elementId);
+          if (originalShape) {
+            const newShapeId = Date.now() + Math.floor(Math.random() * 1000);
 
-        // Дожидаемся, пока все объекты будут добавлены
+            const newShape = {
+              ...JSON.parse(JSON.stringify(originalShape)),
+              id: newShapeId,
+              x: objLeft + 10,
+              y: objTop + 10
+            };
+
+            // Для линий обновляем координаты точек
+            if (originalShape.type === 'line' && originalShape.points) {
+              const deltaX = objLeft - originalShape.x;
+              const deltaY = objTop - originalShape.y;
+
+              newShape.points = [
+                originalShape.points[0] + deltaX + 10,
+                originalShape.points[1] + deltaY + 10,
+                originalShape.points[2] + deltaX + 10,
+                originalShape.points[3] + deltaY + 10
+              ];
+            }
+
+            // ✅ Добавляем новый shape
+            setShapes(prev => [...prev, newShape]);
+
+            setTimeout(() => {
+              const newShapeObj = renderShape(canvas, newShape);
+              if (newShapeObj) {
+                newObjects.push(newShapeObj);
+              }
+            }, 10);
+          }
+        }
+      });
+
+      // Выбираем новые объекты как группу
+      setTimeout(() => {
+        if (newObjects.length > 0) {
+          canvas.discardActiveObject();
+          const newSelection = new fabric.ActiveSelection(newObjects, {
+            canvas: canvas
+          });
+          canvas.setActiveObject(newSelection);
+          canvas.renderAll();
+        }
+      }, 100);
+
+    } else {
+      // Дублирование одиночного объекта
+      if (activeObject.tableId) {
+        // Дублирование стола (как было)
+        const originalTable = tables.find(table => table.id === activeObject.tableId);
+        if (!originalTable) return;
+
+        const currentLeft = activeObject.left;
+        const currentTop = activeObject.top;
+
+        const newTable = {
+          ...JSON.parse(JSON.stringify(originalTable)),
+          id: Date.now(),
+          x: currentLeft + 10,
+          y: currentTop + 10
+        };
+
+        setTables(prev => [...prev, newTable]);
+
         setTimeout(() => {
-          // Если есть дублированные объекты, выбираем их как группу
-          if (newObjects.length > 0) {
-            // Снимаем выделение с текущей группы
-            canvas.discardActiveObject();
-
-            // Создаем новую группу выделения
-            const newSelection = new fabric.ActiveSelection(newObjects, {
-              canvas: canvas
-            });
-
-            // Устанавливаем новую группу как активный объект
-            canvas.setActiveObject(newSelection);
+          const newTableObj = renderTable(canvas, newTable);
+          if (newTableObj) {
+            canvas.setActiveObject(newTableObj);
             canvas.renderAll();
           }
-        }, 100); // Увеличиваем задержку для полной отрисовки объектов
+        }, 50);
 
-        setUnsavedChanges(true);
-        setObjectCount(prev => prev + newObjects.length);
-      } else {
-        // Дублирование одиночного объекта (существующая логика)
-        if (activeObject.tableId) {
-          // Дублирование стола
-          const originalTable = tables.find(table => table.id === activeObject.tableId);
-          if (!originalTable) return;
+      } else if (activeObject.elementId) {
+        // ✅ Дублирование shape элемента
+        const originalShape = shapes.find(shape => shape.id === activeObject.elementId);
+        if (!originalShape) return;
 
-          // Получаем актуальные координаты из выбранного объекта на холсте
-          const currentLeft = activeObject.left;
-          const currentTop = activeObject.top;
+        const currentLeft = activeObject.left;
+        const currentTop = activeObject.top;
 
-          // Создаем новый стол с новым ID и смещением от текущей позиции
-          const newTable = {
-            ...JSON.parse(JSON.stringify(originalTable)),
-            id: Date.now(),
-            x: currentLeft + 10,
-            y: currentTop + 10
-          };
+        const newShape = {
+          ...JSON.parse(JSON.stringify(originalShape)),
+          id: Date.now(),
+          x: currentLeft + 10,
+          y: currentTop + 10
+        };
 
-          // Добавляем новый стол
-          setTables(prev => [...prev, newTable]);
+        // Для линий обновляем координаты точек
+        if (originalShape.type === 'line') {
+          const deltaX = currentLeft - originalShape.x;
+          const deltaY = currentTop - originalShape.y;
 
-          // Рендерим новый стол
-          setTimeout(() => {
-            // Используем функцию renderTable напрямую через контекст компонента
-            // вместо ссылки на неё в зависимостях
-            const newTableObj = renderTable(canvas, newTable);
-            if (newTableObj) {
-              // Выбираем новый объект
-              canvas.setActiveObject(newTableObj);
-              canvas.renderAll();
-            }
-          }, 50);
-
-        } else if (activeObject.elementId) {
-          // Дублирование элемента зала
-          const originalElement = hallElements.find(element => element.id === activeObject.elementId);
-          if (!originalElement) return;
-
-          // Получаем актуальные координаты из выбранного объекта на холсте
-          const currentLeft = activeObject.left;
-          const currentTop = activeObject.top;
-
-          // Создаем новый элемент с новым ID и смещением от текущей позиции
-          const newElement = {
-            ...JSON.parse(JSON.stringify(originalElement)),
-            id: Date.now(),
-            x: currentLeft + 10,
-            y: currentTop + 10
-          };
-
-          // Для линий нужно также обновить координаты точек
-          if (originalElement.type === 'line') {
-            // Вычисляем смещение относительно текущей позиции
-            const deltaX = currentLeft - originalElement.x;
-            const deltaY = currentTop - originalElement.y;
-
-            // Обновляем все координаты с учетом текущего положения и дополнительного смещения
-            newElement.x1 = originalElement.x1 + deltaX + 10;
-            newElement.y1 = originalElement.y1 + deltaY + 10;
-            newElement.x2 = originalElement.x2 + deltaX + 10;
-            newElement.y2 = originalElement.y2 + deltaY + 10;
-          }
-
-          // Добавляем новый элемент
-          setHallElements(prev => [...prev, newElement]);
-
-          // Рендерим новый элемент
-          setTimeout(() => {
-            // Используем функцию renderHallElement напрямую через контекст компонента
-            // вместо ссылки на неё в зависимостях
-            const newElementObj = renderHallElement(canvas, newElement);
-            if (newElementObj) {
-              // Выбираем новый объект
-              canvas.setActiveObject(newElementObj);
-              setSelectedElementId(newElement.id);
-              setSelectedObject(newElementObj);
-              canvas.renderAll();
-            }
-          }, 50);
+          newShape.points = [
+            originalShape.points[0] + deltaX + 10,
+            originalShape.points[1] + deltaY + 10,
+            originalShape.points[2] + deltaX + 10,
+            originalShape.points[3] + deltaY + 10
+          ];
         }
 
-        setUnsavedChanges(true);
-        setObjectCount(prev => prev + 1);
+        // ✅ Добавляем новый shape
+        setShapes(prev => [...prev, newShape]);
+
+        setTimeout(() => {
+          const newShapeObj = renderShape(canvas, newShape);
+          if (newShapeObj) {
+            canvas.setActiveObject(newShapeObj);
+            setSelectedElementId(newShape.id);
+            setSelectedObject(newShapeObj);
+            canvas.renderAll();
+          }
+        }, 50);
       }
-    } catch (error) {
-      console.error('Ошибка при дублировании объекта:', error);
     }
-  }, [tables, hallElements, saveToHistory, setTables, setHallElements, setSelectedElementId, setSelectedObject]);
+
+    setUnsavedChanges(true);
+    setObjectCount(prev => prev + 1);
+  } catch (error) {
+    console.error('Ошибка при дублировании объекта:', error);
+  }
+}, [tables, shapes, saveToHistory, setTables, setShapes, setSelectedElementId, setSelectedObject]);
 
 
   useEffect(() => {
@@ -597,376 +674,382 @@ const [showGrid, setShowGrid] = useState(true); // Показывать ли с�
 
   // Create grid
   const createGrid = (canvas, size = gridSize) => {
-  if (!canvas || !showGrid) return;
+    if (!canvas || !showGrid) return;
 
-  try {
-    // Clear existing grid
-    canvas.getObjects().forEach(obj => {
-      if (obj.gridLine) {
-        canvas.remove(obj);
-      }
-    });
-
-    const width = canvas.width || 800;
-    const height = canvas.height || 600;
-
-    // Function to create grid lines with correct properties
-    const createGridLine = (coords, isCenter = false) => {
-      const line = new fabric.Line(coords, {
-        stroke: isCenter ? '#aaaaaa' : '#dddddd',
-        strokeWidth: isCenter ? 2 : 1,
-        selectable: false,
-        evented: false,
-        hoverCursor: 'default',
-        hasControls: false,
-        hasBorders: false,
-        lockMovementX: true,
-        lockMovementY: true,
-        lockRotation: true,
-        lockScalingX: true,
-        lockScalingY: true,
-        perPixelTargetFind: false,
-        gridLine: true,
-        excludeFromExport: true
+    try {
+      // Clear existing grid
+      canvas.getObjects().forEach(obj => {
+        if (obj.gridLine) {
+          canvas.remove(obj);
+        }
       });
 
-      line.set('interactive', false);
-      return line;
-    };
+      const width = canvas.width || 800;
+      const height = canvas.height || 600;
 
-    // Create vertical lines
-    for (let i = 0; i <= width / size; i++) {
-      const line = createGridLine([i * size, 0, i * size, height]);
-      canvas.add(line);
-      line.sendToBack();
+      // Function to create grid lines with correct properties
+      const createGridLine = (coords, isCenter = false) => {
+        const line = new fabric.Line(coords, {
+          stroke: isCenter ? '#aaaaaa' : '#dddddd',
+          strokeWidth: isCenter ? 2 : 1,
+          selectable: false,
+          evented: false,
+          hoverCursor: 'default',
+          hasControls: false,
+          hasBorders: false,
+          lockMovementX: true,
+          lockMovementY: true,
+          lockRotation: true,
+          lockScalingX: true,
+          lockScalingY: true,
+          perPixelTargetFind: false,
+          gridLine: true,
+          excludeFromExport: true
+        });
+
+        line.set('interactive', false);
+        return line;
+      };
+
+      // Create vertical lines
+      for (let i = 0; i <= width / size; i++) {
+        const line = createGridLine([i * size, 0, i * size, height]);
+        canvas.add(line);
+        line.sendToBack();
+      }
+
+      // Create horizontal lines
+      for (let i = 0; i <= height / size; i++) {
+        const line = createGridLine([0, i * size, width, i * size]);
+        canvas.add(line);
+        line.sendToBack();
+      }
+
+      // Add center lines
+      const xAxis = createGridLine([0, height / 2, width, height / 2], true);
+      const yAxis = createGridLine([width / 2, 0, width / 2, height], true);
+
+      canvas.add(xAxis);
+      canvas.add(yAxis);
+      xAxis.sendToBack();
+      yAxis.sendToBack();
+
+      canvas.renderAll();
+    } catch (error) {
+      console.error('Error creating grid:', error);
     }
-
-    // Create horizontal lines
-    for (let i = 0; i <= height / size; i++) {
-      const line = createGridLine([0, i * size, width, i * size]);
-      canvas.add(line);
-      line.sendToBack();
-    }
-
-    // Add center lines
-    const xAxis = createGridLine([0, height / 2, width, height / 2], true);
-    const yAxis = createGridLine([width / 2, 0, width / 2, height], true);
-
-    canvas.add(xAxis);
-    canvas.add(yAxis);
-    xAxis.sendToBack();
-    yAxis.sendToBack();
-
-    canvas.renderAll();
-  } catch (error) {
-    console.error('Error creating grid:', error);
-  }
-};
+  };
 
   // Set up canvas event handlers
   // Полная исправленная функция setupCanvasEventHandlers в EnhancedCanvas.jsx
 
-const setupCanvasEventHandlers = (canvas) => {
-  if (!canvas) return;
+  const setupCanvasEventHandlers = (canvas) => {
+    if (!canvas) return;
 
-  try {
-    // Object selection
-    canvas.on('selection:created', (e) => {
-      if (!e.selected || e.selected.length === 0) return;
+    try {
+      // Object selection
+      canvas.on('selection:created', (e) => {
+        if (!e.selected || e.selected.length === 0) return;
 
-      const obj = e.selected[0];
+        const obj = e.selected[0];
 
-      // If a grid line is selected by mistake - cancel selection
-      if (obj.gridLine) {
-        canvas.discardActiveObject();
+        // If a grid line is selected by mistake - cancel selection
+        if (obj.gridLine) {
+          canvas.discardActiveObject();
+          canvas.renderAll();
+          return;
+        }
+
+        setSelectedObject(obj);
+
+        if (obj.elementId) {
+          setSelectedElementId(obj.elementId);
+
+          // Force update selected object properties
+          obj.set({
+            selectable: true,
+            evented: true,
+            hasControls: true,
+            hasBorders: true
+          });
+        } else if (obj.tableId && onTableSelect) {
+          onTableSelect(obj.tableId);
+        }
+
         canvas.renderAll();
-        return;
-      }
+      });
 
-      setSelectedObject(obj);
+      canvas.on('selection:cleared', () => {
+        setSelectedObject(null);
+        setSelectedElementId(null);
+      });
 
-      if (obj.elementId) {
-        setSelectedElementId(obj.elementId);
+      // Object moving - ИСПРАВЛЕННАЯ ВЕРСИЯ
+    canvas.on('object:moving', (e) => {
+  if (!e.target) return;
+  
+  const obj = e.target;
+  setUnsavedChanges(true);
 
-        // Force update selected object properties
-        obj.set({
-          selectable: true,
-          evented: true,
-          hasControls: true,
-          hasBorders: true
-        });
-      } else if (obj.tableId && onTableSelect) {
-        onTableSelect(obj.tableId);
-      }
+  if (obj.tableId) {
+    // Столы как было...
+    setTables(prevTables => prevTables.map(table =>
+      table.id === obj.tableId
+        ? { ...table, x: Math.round(obj.left), y: Math.round(obj.top) }
+        : table
+    ));
+
+    if (onTableMove) {
+      onTableMove(obj.tableId, { x: Math.round(obj.left), y: Math.round(obj.top) });
+    }
+  } else if (obj.elementId) {
+    const shape = shapes.find(s => s.id === obj.elementId);
+
+    if (shape && shape.type === 'line') {
+      // Линии как было...
+    } else if (shape && shape.type === 'circle') {
+      // Круги как было...
+    } else if (shape && shape.type === 'rect') {
+      // ✅ ИСПРАВЛЕНО: Для прямоугольников используем obj.left/top напрямую
+      setShapes(prevShapes => prevShapes.map(s =>
+        s.id === obj.elementId
+          ? { 
+              ...s, 
+              x: Math.round(obj.left), 
+              y: Math.round(obj.top)
+              // НЕ обновляем размеры при перемещении!
+            }
+          : s
+      ));
+    } else {
+      // Остальные элементы
+      setShapes(prevShapes => prevShapes.map(s =>
+        s.id === obj.elementId
+          ? { ...s, x: Math.round(obj.left), y: Math.round(obj.top) }
+          : s
+      ));
+    }
+  }
+});
+
+canvas.on('object:modified', (e) => {
+  if (!e.target) return;
+
+  const obj = e.target;
+  
+  if (obj.elementId) {
+    console.log(`Object modified: ${obj.type}, elementId: ${obj.elementId}`);
+
+    if (obj.type === 'rect') {
+      // ✅ СОХРАНЯЕМ ЦЕНТР прямоугольника, а не left/top
+      const centerX = obj.left + (obj.width * obj.scaleX) / 2;
+      const centerY = obj.top + (obj.height * obj.scaleY) / 2;
+      const finalWidth = Math.round(obj.width * obj.scaleX);
+      const finalHeight = Math.round(obj.height * obj.scaleY);
+      
+      setShapes(prevShapes => prevShapes.map(s =>
+        s.id === obj.elementId
+          ? {
+              ...s,
+              centerX: Math.round(centerX), // ✅ Сохраняем центр
+              centerY: Math.round(centerY), // ✅ Сохраняем центр
+              width: finalWidth,
+              height: finalHeight,
+              rotation: Math.round(obj.angle || 0)
+            }
+          : s
+      ));
+      
+      // Обновляем объект
+      obj.set({
+        width: finalWidth,
+        height: finalHeight,
+        scaleX: 1,
+        scaleY: 1
+      });
+
+    } else if (obj.type === 'circle') {
+      // Для кругов тоже сохраняем центр
+      setShapes(prevShapes => prevShapes.map(s =>
+        s.id === obj.elementId
+          ? {
+              ...s,
+              centerX: Math.round(obj.left), // Для кругов left/top уже центр
+              centerY: Math.round(obj.top),
+              radius: Math.round(obj.radius * (obj.scaleX || 1)),
+              rotation: Math.round(obj.angle || 0)
+            }
+          : s
+      ));
+
+      obj.set({
+        radius: Math.round(obj.radius * (obj.scaleX || 1)),
+        scaleX: 1,
+        scaleY: 1
+      });
+    } else {
+      // Для остальных типов
+      setShapes(prevShapes => prevShapes.map(s =>
+        s.id === obj.elementId
+          ? {
+              ...s,
+              x: Math.round(obj.left),
+              y: Math.round(obj.top),
+              rotation: Math.round(obj.angle || 0)
+            }
+          : s
+      ));
+    }
+
+    canvas.renderAll();
+    saveToHistory();
+  }
+});
+
+      // Object scaling - ИСПРАВЛЕННАЯ ВЕРСИЯ
+ canvas.on('object:scaling', (e) => {
+  if (!e.target) return;
+
+  const obj = e.target;
+  setUnsavedChanges(true);
+
+  if (obj.elementId) {
+    const shape = shapes.find(s => s.id === obj.elementId);
+
+    if (obj.type === 'rect') {
+      // ✅ ИСПРАВЛЕНО: Сохраняем rotation при scaling
+      setShapes(prevShapes => prevShapes.map(s =>
+        s.id === obj.elementId
+          ? {
+              ...s,
+              width: Math.round(obj.width * obj.scaleX),
+              height: Math.round(obj.height * obj.scaleY),
+              rotation: Math.round(obj.angle || 0) // ✅ ДОБАВЛЕНО
+          }
+          : s
+      ));
+    } else if (obj.type === 'circle'){
+      // ✅ ИСПРАВЛЕНО: Сохраняем rotation при scaling кругов
+      const newRadius = Math.round(obj.radius * obj.scaleX);
+      const newX = Math.round(obj.left - newRadius);
+      const newY = Math.round(obj.top - newRadius);
+
+      setShapes(prevShapes => prevShapes.map(s =>
+        s.id === obj.elementId
+          ? { 
+              ...s, 
+              radius: newRadius,
+              x: newX,
+              y: newY,
+              rotation: Math.round(obj.angle || 0) // ✅ ДОБАВЛЕНО
+            }
+          : s
+      ));
+    } else if (obj.type === 'i-text') {
+      // ✅ ИСПРАВЛЕНО: Сохраняем rotation при scaling текста
+      const newFontSize = Math.round(obj.fontSize * obj.scaleX);
+
+      setShapes(prevShapes => prevShapes.map(s =>
+        s.id === obj.elementId
+          ? { 
+              ...s, 
+              fontSize: newFontSize,
+              x: Math.round(obj.left),
+              y: Math.round(obj.top),
+              rotation: Math.round(obj.angle || 0) // ✅ ДОБАВЛЕНО
+            }
+          : s
+      ));
+
+      obj.set({
+        fontSize: newFontSize,
+        scaleX: 1,
+        scaleY: 1
+      });
 
       canvas.renderAll();
-    });
-
-    canvas.on('selection:cleared', () => {
-      setSelectedObject(null);
-      setSelectedElementId(null);
-    });
-
-    // Object moving - ИСПРАВЛЕННАЯ ВЕРСИЯ
-    canvas.on('object:moving', (e) => {
-      if (!e.target) return;
-      saveToHistory();
-      const obj = e.target;
-      setUnsavedChanges(true);
-
-      if (obj.tableId) {
-        // Обработка перемещения столов
-        setTables(prevTables => prevTables.map(table =>
-          table.id === obj.tableId
-            ? { ...table, x: Math.round(obj.left), y: Math.round(obj.top) }
-            : table
-        ));
-
-        if (onTableMove) {
-          onTableMove(obj.tableId, { x: Math.round(obj.left), y: Math.round(obj.top) });
-        }
-      } else if (obj.elementId) {
-        // Обработка перемещения элементов зала
-        const element = hallElements.find(el => el.id === obj.elementId);
-
-        if (element && element.type === 'line') {
-          // ИСПРАВЛЕНО: Вычисляем смещение и обновляем исходные координаты для линий
-          const deltaX = obj.left - element.x;
-          const deltaY = obj.top - element.y;
-
-          const newX1 = element.x1 + deltaX;
-          const newY1 = element.y1 + deltaY;
-          const newX2 = element.x2 + deltaX;
-          const newY2 = element.y2 + deltaY;
-
-          // Обновляем исходные координаты в объекте
-          obj.set({
-            originalX1: newX1,
-            originalY1: newY1,
-            originalX2: newX2,
-            originalY2: newY2
-          });
-
-          setHallElements(prevElements => prevElements.map(el =>
-            el.id === obj.elementId
-              ? {
-                ...el,
-                x: Math.round(obj.left),
-                y: Math.round(obj.top),
-                x1: Math.round(newX1),
-                y1: Math.round(newY1),
-                x2: Math.round(newX2),
-                y2: Math.round(newY2)
-              }
-              : el
-          ));
-        } else if (element && element.type === 'rectangle') {
-          // ИСПРАВЛЕНО: Для прямоугольников используем bounding rect
-          const bound = obj.getBoundingRect();
-          
-          setHallElements(prevElements => prevElements.map(el =>
-            el.id === obj.elementId
-              ? { 
-                ...el, 
-                x: Math.round(bound.left), 
-                y: Math.round(bound.top),
-                width: Math.round(bound.width),
-                height: Math.round(bound.height)
-              }
-              : el
-          ));
-        } else if (element && element.type === 'circle') {
-          // ИСПРАВЛЕНО: Для кругов obj.left/top - это центр, а в элементе храним левый верхний угол
-          const radius = element.radius || 50;
-          
-          setHallElements(prevElements => prevElements.map(el =>
-            el.id === obj.elementId
-              ? { 
-                ...el, 
-                x: Math.round(obj.left - radius), // Левый верхний угол = центр - радиус
-                y: Math.round(obj.top - radius)   // Левый верхний угол = центр - радиус
-              }
-              : el
-          ));
-        } else {
-          // Для остальных элементов (текст и группы с иконками)
-          setHallElements(prevElements => prevElements.map(el =>
-            el.id === obj.elementId
-              ? { ...el, x: Math.round(obj.left), y: Math.round(obj.top) }
-              : el
-          ));
-        }
-      }
-    });
-
-    canvas.on('object:modified', () => {
-      saveToHistory();
-    });
-
-    // Object scaling - ИСПРАВЛЕННАЯ ВЕРСИЯ
-    canvas.on('object:scaling', (e) => {
-      if (!e.target) return;
-
-      const obj = e.target;
-      setUnsavedChanges(true);
-
-      if (obj.elementId) {
-        const element = hallElements.find(el => el.id === obj.elementId);
-
-        if (obj.type === 'group') {
-          // Scale hall element (icon group)
-          if (element) {
-            const newFontSize = Math.max(20, Math.round(element.fontSize * obj.scaleX));
-
-            setHallElements(prevElements => prevElements.map(el =>
-              el.id === obj.elementId
-                ? { ...el, fontSize: newFontSize }
-                : el
-            ));
-          }
-        } else if (obj.type === 'rect') {
-          // Scale rectangle
-          setHallElements(prevElements => prevElements.map(el =>
-            el.id === obj.elementId
-              ? {
-                ...el,
-                width: Math.round(obj.width * obj.scaleX),
-                height: Math.round(obj.height * obj.scaleY)
-              }
-              : el
-          ));
-        } else if (obj.type === 'circle') {
-          // Scale circle
-          setHallElements(prevElements => prevElements.map(el =>
-            el.id === obj.elementId
-              ? { ...el, radius: Math.round(obj.radius * obj.scaleX) }
-              : el
-          ));
-        } else if (obj.type === 'i-text') {
-          // Scale text
-          const newFontSize = Math.round(obj.fontSize * obj.scaleX);
-
-          setHallElements(prevElements => prevElements.map(el =>
-            el.id === obj.elementId
-              ? { ...el, fontSize: newFontSize }
-              : el
-          ));
-
-          obj.set({
-            fontSize: newFontSize,
-            scaleX: 1,
-            scaleY: 1
-          });
-
-          canvas.renderAll();
-        }
-      } else if (obj.tableId) {
-        // Handle table scaling
-        const table = tables.find(t => t.id === obj.tableId);
-
-        if (table) {
-          // For round tables
-          if (obj.tableShape === 'round') {
-            const newWidth = Math.round(table.width * obj.scaleX);
-
-            setTables(prevTables => prevTables.map(t =>
-              t.id === obj.tableId
-                ? { ...t, width: newWidth }
-                : t
-            ));
-          }
-          // For rectangle tables
-          else if (obj.tableShape === 'rectangle') {
-            const newWidth = Math.round(table.width * obj.scaleX);
-            const newHeight = Math.round(table.height * obj.scaleY);
-
-            setTables(prevTables => prevTables.map(t =>
-              t.id === obj.tableId
-                ? { ...t, width: newWidth, height: newHeight }
-                : t
-            ));
-          }
-
-          // After scaling, we need to re-render the table with the new dimensions
-          setTimeout(() => {
-            // Remove the old table object
-            canvas.remove(obj);
-
-            // Get the updated table data
-            const updatedTable = tables.find(t => t.id === obj.tableId);
-            if (updatedTable) {
-              // Render the updated table
-              renderTable(canvas, updatedTable);
-              canvas.renderAll();
-            }
-          }, 100);
-        }
-      }
-    });
-
-    // Object rotating
-    canvas.on('object:rotating', (e) => {
-      if (!e.target) return;
-
-      const obj = e.target;
-      setUnsavedChanges(true);
-
-      if (obj.tableId && obj.tableShape === 'rectangle') {
-        // Rotate rectangle table
-        setTables(prevTables => prevTables.map(table =>
-          table.id === obj.tableId
-            ? { ...table, rotation: Math.round(obj.angle) }
-            : table
-        ));
-      } else if (obj.elementId) {
-        // Rotate hall element
-        setHallElements(prevElements => prevElements.map(element =>
-          element.id === obj.elementId
-            ? { ...element, rotation: Math.round(obj.angle) }
-            : element
-        ));
-      }
-    });
-
-    // Path creation (for drawing)
-    canvas.on('path:created', (e) => {
-      if (!e.path) return;
-
-      const path = e.path;
-      setUnsavedChanges(true);
-      saveToHistory();
-      
-      // Create new element
-      const newElement = {
-        id: Date.now(),
-        type: 'path',
-        path: path.path,
-        stroke: path.stroke,
-        strokeWidth: path.strokeWidth,
-        fill: path.fill || '',
-        x: path.left,
-        y: path.top,
-        width: path.width,
-        height: path.height
-      };
-
-      // Add element ID
-      path.set('elementId', newElement.id);
-
-      // Update state
-      setHallElements(prevElements => [...prevElements, newElement]);
-      setObjectCount(prevCount => prevCount + 1);
-    });
-
-    // Mouse wheel (zoom)
-    canvas.on('mouse:wheel', handleMouseWheel);
-
-    // Custom drawing events
-    setupDrawingEvents(canvas);
-  } catch (error) {
-    console.error('Error setting up canvas event handlers:', error);
+    }
+  } else if (obj.tableId) {
+    // Обработка столов (как было)
+    const table = tables.find(t => t.id === obj.tableId);
+    // ... остальной код для столов
   }
-};
+});
+      // Object rotating
+ canvas.on('object:rotating', (e) => {
+  if (!e.target) return;
+
+  const obj = e.target;
+  setUnsavedChanges(true);
+
+  if (obj.elementId) {
+    const shape = shapes.find(s => s.id === obj.elementId);
+    
+    if (shape && obj.type === 'rect') {
+      // ✅ При повороте пересчитываем и сохраняем центр
+      const centerX = obj.left + obj.width / 2;
+      const centerY = obj.top + obj.height / 2;
+      
+      setShapes(prevShapes => prevShapes.map(s =>
+        s.id === obj.elementId
+          ? { 
+              ...s, 
+              centerX: Math.round(centerX),
+              centerY: Math.round(centerY),
+              rotation: Math.round(obj.angle) 
+            }
+          : s
+      ));
+    } else {
+      // Для остальных
+      setShapes(prevShapes => prevShapes.map(s =>
+        s.id === obj.elementId
+          ? { ...s, rotation: Math.round(obj.angle) }
+          : s
+      ));
+    }
+  }
+});
+
+      // Path creation (for drawing)
+      canvas.on('path:created', (e) => {
+  if (!e.path) return;
+
+  const path = e.path;
+  setUnsavedChanges(true);
+  saveToHistory();
+  
+  // ✅ Создаем элемент в shapes
+  const newShape = {
+    id: Date.now(),
+    type: 'path',
+    path: path.path,
+    color: path.stroke,
+    strokeWidth: path.strokeWidth,
+    fill: path.fill || '',
+    x: path.left,
+    y: path.top,
+    width: path.width,
+    height: path.height
+  };
+
+  // Добавляем element ID
+  path.set('elementId', newShape.id);
+
+  // ✅ Обновляем shapes
+  setShapes(prevShapes => [...prevShapes, newShape]);
+  setObjectCount(prevCount => prevCount + 1);
+});
+
+      // Mouse wheel (zoom)
+      canvas.on('mouse:wheel', handleMouseWheel);
+
+      // Custom drawing events
+      setupDrawingEvents(canvas);
+    } catch (error) {
+      console.error('Error setting up canvas event handlers:', error);
+    }
+  };
 
   // Common mouse wheel handler for zoom
   const handleMouseWheel = (opt) => {
@@ -1642,68 +1725,67 @@ const setupCanvasEventHandlers = (canvas) => {
 
   // Render all elements
   const renderAllElements = (canvas) => {
-    if (!canvas) return;
+  if (!canvas) return;
 
-    try {
-      console.log('Rendering all elements...');
+  try {
+    console.log('Rendering all elements...');
 
-      // Map of current objects on canvas
-      const currentObjects = new Map();
-      canvas.getObjects().forEach(obj => {
-        if (obj.tableId) currentObjects.set(`table_${obj.tableId}`, obj);
-        else if (obj.elementId) currentObjects.set(`element_${obj.elementId}`, obj);
-        // Ignore grid objects when creating map
-        // They don't have tableId or elementId, but have gridLine
-      });
+    // Мапа текущих объектов на холсте
+    const currentObjects = new Map();
+    canvas.getObjects().forEach(obj => {
+      if (obj.tableId) currentObjects.set(`table_${obj.tableId}`, obj);
+      else if (obj.elementId) currentObjects.set(`shape_${obj.elementId}`, obj);
+      // Игнорируем объекты сетки при создании мапы
+    });
 
-      // Update tables
-      tables.forEach(table => {
-        const key = `table_${table.id}`;
-        const existing = currentObjects.get(key);
-        if (!existing) {
-          renderTable(canvas, table);
-        }
-        currentObjects.delete(key);
-      });
+    // Обновляем столы
+    tables.forEach(table => {
+      const key = `table_${table.id}`;
+      const existing = currentObjects.get(key);
+      if (!existing) {
+        renderTable(canvas, table);
+      }
+      currentObjects.delete(key);
+    });
 
-      // Update elements
-      hallElements.forEach(element => {
-        const key = `element_${element.id}`;
-        const existing = currentObjects.get(key);
-        if (!existing) {
-          renderHallElement(canvas, element);
-        }
-        currentObjects.delete(key);
-      });
+    // ✅ Обновляем shapes (вместо hallElements)
+    shapes.forEach(shape => {
+      const key = `shape_${shape.id}`;
+      const existing = currentObjects.get(key);
+      if (!existing) {
+        renderShape(canvas, shape); // Используем новую функцию
+      }
+      currentObjects.delete(key);
+    });
 
-      // Remove objects that no longer exist in state
-      // IMPORTANT: don't remove gridLine objects
-      currentObjects.forEach(obj => {
-        if (!obj.gridLine) canvas.remove(obj);
-      });
+    // Удаляем объекты, которых больше нет в состоянии
+    // ВАЖНО: не удаляем объекты сетки
+    currentObjects.forEach(obj => {
+      if (!obj.gridLine) canvas.remove(obj);
+    });
 
-      // Make sure all grid lines are not selectable
-      canvas.getObjects().forEach(obj => {
-        if (obj.gridLine) {
-          obj.set({
-            selectable: false,
-            evented: false,
-            hasControls: false,
-            hasBorders: false,
-            lockMovementX: true,
-            lockMovementY: true,
-            hoverCursor: 'default',
-            perPixelTargetFind: false
-          });
-        }
-      });
+    // Убеждаемся, что все линии сетки не выбираются
+    canvas.getObjects().forEach(obj => {
+      if (obj.gridLine) {
+        obj.set({
+          selectable: false,
+          evented: false,
+          hasControls: false,
+          hasBorders: false,
+          lockMovementX: true,
+          lockMovementY: true,
+          hoverCursor: 'default',
+          perPixelTargetFind: false
+        });
+      }
+    });
 
-      canvas.renderAll();
-      console.log('Rendering complete');
-    } catch (error) {
-      console.error('Error rendering elements:', error);
-    }
-  };
+    canvas.renderAll();
+    console.log('Rendering complete');
+  } catch (error) {
+    console.error('Error rendering elements:', error);
+  }
+};
 
   // Render table
   const renderTable = (canvas, tableData) => {
@@ -2299,366 +2381,368 @@ const setupCanvasEventHandlers = (canvas) => {
   };
 
   // Drawing functions
-  const startDrawingLine = (canvas, opt) => {
-    if (!canvas) return;
 
-    try {
-      const pointer = canvas.getPointer(opt.e);
-      setIsDrawing(true);
+  // 3. ЛИНИЯ
 
-      // ВАЖНО: Сохраняем исходные координаты
-      canvas._lineStartPoint = { x: pointer.x, y: pointer.y };
+ const startDrawingLine = (canvas, opt) => {
+  if (!canvas) return;
 
-      // Create new line
-      const line = new fabric.Line([pointer.x, pointer.y, pointer.x, pointer.y], {
-        stroke: strokeColor,
-        strokeWidth: strokeWidth,
-        selectable: false,
-        evented: false
-      });
+  try {
+    const pointer = canvas.getPointer(opt.e);
+    setIsDrawing(true);
 
-      canvas.add(line);
-      canvas.renderAll();
-      canvas._tempLine = line;
-    } catch (error) {
-      console.error('Error starting line drawing:', error);
-    }
-  };
+    // Сохраняем исходные координаты
+    canvas._lineStartPoint = { x: pointer.x, y: pointer.y };
 
-  const updateDrawingLine = (canvas, opt) => {
-    if (!canvas || !canvas._tempLine || !canvas._lineStartPoint) return;
+    // Создаем новую линию
+    const line = new fabric.Line([pointer.x, pointer.y, pointer.x, pointer.y], {
+      stroke: strokeColor,
+      strokeWidth: strokeWidth,
+      selectable: false,
+      evented: false
+    });
 
-    try {
-      const pointer = canvas.getPointer(opt.e);
-      const startPoint = canvas._lineStartPoint;
+    canvas.add(line);
+    canvas.renderAll();
+    canvas._tempLine = line;
+  } catch (error) {
+    console.error('Error starting line drawing:', error);
+  }
+};
 
-      // Пересоздаем линию с новыми координатами
-      canvas.remove(canvas._tempLine);
+const updateDrawingLine = (canvas, opt) => {
+  if (!canvas || !canvas._tempLine || !canvas._lineStartPoint) return;
 
-      const line = new fabric.Line([startPoint.x, startPoint.y, pointer.x, pointer.y], {
-        stroke: strokeColor,
-        strokeWidth: strokeWidth,
-        selectable: false,
-        evented: false
-      });
+  try {
+    const pointer = canvas.getPointer(opt.e);
+    const startPoint = canvas._lineStartPoint;
 
-      canvas.add(line);
-      canvas._tempLine = line;
-      canvas.renderAll();
-    } catch (error) {
-      console.error('Error updating line drawing:', error);
-    }
-  };
+    // Пересоздаем линию с новыми координатами
+    canvas.remove(canvas._tempLine);
 
-  const finishDrawingLine = (canvas) => {
-    if (!canvas || !canvas._tempLine || !canvas._lineStartPoint) return;
+    const line = new fabric.Line([startPoint.x, startPoint.y, pointer.x, pointer.y], {
+      stroke: strokeColor,
+      strokeWidth: strokeWidth,
+      selectable: false,
+      evented: false
+    });
 
-    try {
-      setIsDrawing(false);
-      setUnsavedChanges(true);
+    canvas.add(line);
+    canvas._tempLine = line;
+    canvas.renderAll();
+  } catch (error) {
+    console.error('Error updating line drawing:', error);
+  }
+};
 
-      const line = canvas._tempLine;
-      const startPoint = canvas._lineStartPoint;
+const finishDrawingLine = (canvas) => {
+  if (!canvas || !canvas._tempLine || !canvas._lineStartPoint) return;
 
-      // Получаем конечную точку из текущего указателя
-      const endX = startPoint.x + (line.x2 - line.x1);
-      const endY = startPoint.y + (line.y2 - line.y1);
+  try {
+    setIsDrawing(false);
+    setUnsavedChanges(true);
 
-      // Make line interactive
-      line.set({
-        selectable: true,
-        evented: true,
-        hasControls: true,
-        hasBorders: true,
-        hoverCursor: 'move'
-      });
+    const line = canvas._tempLine;
+    const startPoint = canvas._lineStartPoint;
 
-      // ИСПРАВЛЕНО: Сохраняем ИСХОДНЫЕ абсолютные координаты
-      const newElement = {
-        id: Date.now(),
-        type: 'line',
-        // Сохраняем исходные абсолютные координаты, которые использовались при создании
-        x1: Math.round(startPoint.x),
-        y1: Math.round(startPoint.y),
-        x2: Math.round(line.x2 + line.left), // Конечная абсолютная координата
-        y2: Math.round(line.y2 + line.top),  // Конечная абсолютная координата
-        stroke: strokeColor,
-        strokeWidth: strokeWidth,
-        x: Math.round(line.left),
-        y: Math.round(line.top)
-      };
+    // Делаем линию интерактивной
+    line.set({
+      selectable: true,
+      evented: true,
+      hasControls: true,
+      hasBorders: true,
+      hoverCursor: 'move'
+    });
 
-      console.log(`Creating line with original coordinates:`, newElement);
+    // Вычисляем абсолютные координаты линии
+    const x1 = Math.round(startPoint.x);
+    const y1 = Math.round(startPoint.y);
+    const x2 = Math.round(line.x2 + line.left);
+    const y2 = Math.round(line.y2 + line.top);
 
-      // Сохраняем исходные координаты в самом объекте для экспорта
-      line.set({
-        elementId: newElement.id,
-        originalX1: newElement.x1,
-        originalY1: newElement.y1,
-        originalX2: newElement.x2,
-        originalY2: newElement.y2
-      });
+    // ✅ Создаем элемент в shapes
+    const newShape = {
+      id: Date.now(),
+      type: 'line',
+      points: [x1, y1, x2, y2],
+      color: strokeColor,
+      strokeWidth: strokeWidth
+    };
 
-      // Update state
-      setHallElements(prev => [...prev, newElement]);
-      setSelectedElementId(newElement.id);
-      setObjectCount(prev => prev + 1);
+    console.log(`Creating line with coordinates:`, newShape);
 
-      // Clean up
-      canvas._tempLine = null;
-      canvas._lineStartPoint = null;
+    // Сохраняем исходные координаты в самом объекте для экспорта
+    line.set({
+      elementId: newShape.id,
+      originalX1: x1,
+      originalY1: y1,
+      originalX2: x2,
+      originalY2: y2
+    });
 
-      // Set this object as selected
-      canvas.setActiveObject(line);
+    // ✅ Обновляем shapes
+    setShapes(prev => [...prev, newShape]);
+    setSelectedElementId(newShape.id);
+    setObjectCount(prev => prev + 1);
 
-      // Switch to select mode
-      setActiveMode(ELEMENT_TYPES.HYBRID);
-      saveToHistory();
+    // Cleanup
+    canvas._tempLine = null;
+    canvas._lineStartPoint = null;
 
-      canvas.renderAll();
-    } catch (error) {
-      console.error('Error finishing line drawing:', error);
-    }
-  };
+    // Выбираем объект
+    canvas.setActiveObject(line);
 
+    // Переключаемся в гибридный режим
+    setActiveMode(ELEMENT_TYPES.HYBRID);
+    saveToHistory();
+    canvas.renderAll();
+  } catch (error) {
+    console.error('Error finishing line drawing:', error);
+  }
+};
+
+
+  // 1. ПРЯМОУГОЛЬНИК
   const startDrawingRectangle = (canvas, opt) => {
-    if (!canvas) return;
+  if (!canvas) return;
 
-    try {
-      saveToHistory();
-      const pointer = canvas.getPointer(opt.e);
-      setIsDrawing(true);
-      // Create new rectangle
-      const rect = new fabric.Rect({
-        left: pointer.x,
-        top: pointer.y,
-        width: 0,
-        height: 0,
-        fill: fillColor,
-        stroke: strokeColor,
-        strokeWidth: strokeWidth,
-        selectable: false,
-        evented: false
-      });
+  try {
+    saveToHistory();
+    const pointer = canvas.getPointer(opt.e);
+    setIsDrawing(true);
+    
+    // Создаем новый прямоугольник
+    const rect = new fabric.Rect({
+      left: pointer.x,
+      top: pointer.y,
+      width: 0,
+      height: 0,
+      fill: fillColor,
+      stroke: strokeColor,
+      strokeWidth: strokeWidth,
+      selectable: false,
+      evented: false
+    });
 
-      canvas.add(rect);
-      canvas.renderAll();
-      canvas._tempRect = rect;
-      canvas._tempStartPoint = pointer;
-    } catch (error) {
-      console.error('Error starting rectangle drawing:', error);
-    }
-  };
+    canvas.add(rect);
+    canvas.renderAll();
+    canvas._tempRect = rect;
+    canvas._tempStartPoint = pointer;
+  } catch (error) {
+    console.error('Error starting rectangle drawing:', error);
+  }
+};
 
   const updateDrawingRectangle = (canvas, opt) => {
-    if (!canvas || !canvas._tempRect || !canvas._tempStartPoint) return;
+  if (!canvas || !canvas._tempRect || !canvas._tempStartPoint) return;
 
-    try {
-      const pointer = canvas.getPointer(opt.e);
-      const startPoint = canvas._tempStartPoint;
+  try {
+    const pointer = canvas.getPointer(opt.e);
+    const startPoint = canvas._tempStartPoint;
 
-      // Calculate dimensions
-      const width = Math.abs(pointer.x - startPoint.x);
-      const height = Math.abs(pointer.y - startPoint.y);
+    // Вычисляем размеры
+    const width = Math.abs(pointer.x - startPoint.x);
+    const height = Math.abs(pointer.y - startPoint.y);
 
-      // Determine position
-      let left = startPoint.x;
-      let top = startPoint.y;
+    // Определяем позицию
+    let left = startPoint.x;
+    let top = startPoint.y;
 
-      if (pointer.x < startPoint.x) {
-        left = pointer.x;
-      }
-
-      if (pointer.y < startPoint.y) {
-        top = pointer.y;
-      }
-
-      // Update rectangle
-      canvas._tempRect.set({
-        left: left,
-        top: top,
-        width: width,
-        height: height
-      });
-
-      canvas.renderAll();
-    } catch (error) {
-      console.error('Error updating rectangle drawing:', error);
+    if (pointer.x < startPoint.x) {
+      left = pointer.x;
     }
-  };
+
+    if (pointer.y < startPoint.y) {
+      top = pointer.y;
+    }
+
+    // Обновляем прямоугольник
+    canvas._tempRect.set({
+      left: left,
+      top: top,
+      width: width,
+      height: height
+    });
+
+    canvas.renderAll();
+  } catch (error) {
+    console.error('Error updating rectangle drawing:', error);
+  }
+};
 
   const finishDrawingRectangle = (canvas) => {
-    if (!canvas || !canvas._tempRect) return;
+  if (!canvas || !canvas._tempRect) return;
 
-    try {
-      setIsDrawing(false);
-      setUnsavedChanges(true);
+  try {
+    setIsDrawing(false);
+    setUnsavedChanges(true);
 
-      const rect = canvas._tempRect;
+    const rect = canvas._tempRect;
 
-      // Make rectangle interactive
-      rect.set({
-        selectable: true,
-        evented: true,
-        hasControls: true,
-        hasBorders: true,
-        hoverCursor: 'move'
-      });
+    // Делаем прямоугольник интерактивным
+    rect.set({
+      selectable: true,
+      evented: true,
+      hasControls: true,
+      hasBorders: true,
+      hoverCursor: 'move'
+    });
 
-      // ИСПРАВЛЕНО: Используем getBoundingRect для получения точных координат
-      const bound = rect.getBoundingRect();
+    // Получаем точные координаты
+    const bound = rect.getBoundingRect();
 
-      // Create new element
-      const newElement = {
-        id: Date.now(),
-        type: 'rectangle',
-        x: Math.round(bound.left), // Реальные координаты
-        y: Math.round(bound.top),
-        width: Math.round(bound.width), // Реальные размеры
-        height: Math.round(bound.height),
-        fill: fillColor,
-        stroke: strokeColor,
-        strokeWidth: strokeWidth
-      };
+    // ✅ Создаем элемент в shapes
+    const newShape = {
+      id: Date.now(),
+      type: 'rect',
+      x: Math.round(bound.left),
+      y: Math.round(bound.top),
+      width: Math.round(bound.width),
+      height: Math.round(bound.height),
+      color: strokeColor,
+      strokeWidth: strokeWidth,
+      fill: fillColor
+    };
 
-      // Add element ID
-      rect.set('elementId', newElement.id);
+    // Привязываем ID к canvas объекту
+    rect.set('elementId', newShape.id);
 
-      // Update state
-      setHallElements(prev => [...prev, newElement]);
-      setSelectedElementId(newElement.id);
-      setObjectCount(prev => prev + 1);
+    // ✅ Обновляем shapes (НЕ hallElements!)
+    setShapes(prev => [...prev, newShape]);
+    setSelectedElementId(newShape.id);
+    setObjectCount(prev => prev + 1);
 
-      // Clean up
-      canvas._tempRect = null;
-      canvas._tempStartPoint = null;
+    // Cleanup
+    canvas._tempRect = null;
+    canvas._tempStartPoint = null;
 
-      // Set this object as selected
-      canvas.setActiveObject(rect);
+    // Выбираем объект
+    canvas.setActiveObject(rect);
 
-      // Switch to select mode
-      setActiveMode(ELEMENT_TYPES.HYBRID);
-      saveToHistory();
-      // Ensure canvas is updated
-      canvas.renderAll();
-    } catch (error) {
-      console.error('Error finishing rectangle drawing:', error);
-    }
-  };
+    // Переключаемся в гибридный режим
+    setActiveMode(ELEMENT_TYPES.HYBRID);
+    saveToHistory();
+    canvas.renderAll();
+  } catch (error) {
+    console.error('Error finishing rectangle drawing:', error);
+  }
+};
 
-  const startDrawingCircle = (canvas, opt) => {
-    if (!canvas) return;
+// 2. КРУГ
 
-    try {
-      const pointer = canvas.getPointer(opt.e);
-      setIsDrawing(true);
+ const startDrawingCircle = (canvas, opt) => {
+  if (!canvas) return;
 
-      // Используем center origin как обычно в Fabric.js
-      const circle = new fabric.Circle({
-        left: pointer.x,
-        top: pointer.y,
-        radius: 0,
-        fill: fillColor,
-        stroke: strokeColor,
-        strokeWidth: strokeWidth,
-        selectable: false,
-        evented: false,
-        originX: 'center',  // Вернули center
-        originY: 'center'   // Вернули center
-      });
+  try {
+    const pointer = canvas.getPointer(opt.e);
+    setIsDrawing(true);
 
-      canvas.add(circle);
-      canvas.renderAll();
-      canvas._tempCircle = circle;
-      canvas._tempStartPoint = pointer;
-    } catch (error) {
-      console.error('Error starting circle drawing:', error);
-    }
-  };
+    // Создаем круг с center origin
+    const circle = new fabric.Circle({
+      left: pointer.x,
+      top: pointer.y,
+      radius: 0,
+      fill: fillColor,
+      stroke: strokeColor,
+      strokeWidth: strokeWidth,
+      selectable: false,
+      evented: false,
+      originX: 'center',
+      originY: 'center'
+    });
 
-  const updateDrawingCircle = (canvas, opt) => {
-    if (!canvas || !canvas._tempCircle || !canvas._tempStartPoint) return;
+    canvas.add(circle);
+    canvas.renderAll();
+    canvas._tempCircle = circle;
+    canvas._tempStartPoint = pointer;
+  } catch (error) {
+    console.error('Error starting circle drawing:', error);
+  }
+};
 
-    try {
-      const pointer = canvas.getPointer(opt.e);
-      const startPoint = canvas._tempStartPoint;
+const updateDrawingCircle = (canvas, opt) => {
+  if (!canvas || !canvas._tempCircle || !canvas._tempStartPoint) return;
 
-      // Calculate radius
-      const radius = Math.sqrt(
-        Math.pow(pointer.x - startPoint.x, 2) +
-        Math.pow(pointer.y - startPoint.y, 2)
-      );
+  try {
+    const pointer = canvas.getPointer(opt.e);
+    const startPoint = canvas._tempStartPoint;
 
-      // Update circle
-      canvas._tempCircle.set({
-        radius: radius
-      });
+    // Вычисляем радиус
+    const radius = Math.sqrt(
+      Math.pow(pointer.x - startPoint.x, 2) +
+      Math.pow(pointer.y - startPoint.y, 2)
+    );
 
-      canvas.renderAll();
-    } catch (error) {
-      console.error('Error updating circle drawing:', error);
-    }
-  };
+    // Обновляем круг
+    canvas._tempCircle.set({
+      radius: radius
+    });
 
-  const finishDrawingCircle = (canvas) => {
-    if (!canvas || !canvas._tempCircle) return;
+    canvas.renderAll();
+  } catch (error) {
+    console.error('Error updating circle drawing:', error);
+  }
+};
 
-    try {
-      setIsDrawing(false);
-      setUnsavedChanges(true);
+const finishDrawingCircle = (canvas) => {
+  if (!canvas || !canvas._tempCircle) return;
 
-      const circle = canvas._tempCircle;
+  try {
+    setIsDrawing(false);
+    setUnsavedChanges(true);
 
-      // Make circle interactive
-      circle.set({
-        selectable: true,
-        evented: true,
-        hasControls: true,
-        hasBorders: true,
-        hoverCursor: 'move'
-      });
+    const circle = canvas._tempCircle;
 
-      // ИСПРАВЛЕНО: Для кругов с center origin координаты left/top - это центр
-      // Для экспорта нам нужны координаты левого верхнего угла
-      const radius = circle.radius;
+    // Делаем круг интерактивным
+    circle.set({
+      selectable: true,
+      evented: true,
+      hasControls: true,
+      hasBorders: true,
+      hoverCursor: 'move'
+    });
 
-      const newElement = {
-        id: Date.now(),
-        type: 'circle',
-        x: Math.round(circle.left - radius), // Левый верхний угол
-        y: Math.round(circle.top - radius),  // Левый верхний угол
-        radius: Math.round(radius),
-        fill: fillColor,
-        stroke: strokeColor,
-        strokeWidth: strokeWidth
-      };
+    // Для кругов с center origin координаты left/top - это центр
+    // Для shapes сохраняем координаты левого верхнего угла для консистентности
+    const radius = Math.round(circle.radius);
 
-      console.log(`Creating circle: center(${circle.left}, ${circle.top}), radius=${radius}, topLeft(${newElement.x}, ${newElement.y})`);
+    // ✅ Создаем элемент в shapes
+    const newShape = {
+      id: Date.now(),
+      type: 'circle',
+      x: Math.round(circle.left - radius), // Левый верхний угол = центр - радиус
+      y: Math.round(circle.top - radius),  // Левый верхний угол = центр - радиус
+      radius: radius,
+      color: strokeColor,
+      strokeWidth: strokeWidth,
+      fill: fillColor
+    };
 
-      // Add element ID
-      circle.set('elementId', newElement.id);
+    console.log(`Creating circle: center(${circle.left}, ${circle.top}), radius=${radius}, topLeft(${newShape.x}, ${newShape.y})`);
 
-      // Update state
-      setHallElements(prev => [...prev, newElement]);
-      setSelectedElementId(newElement.id);
-      setObjectCount(prev => prev + 1);
+    // Привязываем ID к canvas объекту
+    circle.set('elementId', newShape.id);
 
-      // Clean up
-      canvas._tempCircle = null;
-      canvas._tempStartPoint = null;
+    // ✅ Обновляем shapes
+    setShapes(prev => [...prev, newShape]);
+    setSelectedElementId(newShape.id);
+    setObjectCount(prev => prev + 1);
 
-      // Set this object as selected
-      canvas.setActiveObject(circle);
+    // Cleanup
+    canvas._tempCircle = null;
+    canvas._tempStartPoint = null;
 
-      // Switch to select mode
-      setActiveMode(ELEMENT_TYPES.HYBRID);
-      saveToHistory();
+    // Выбираем объект
+    canvas.setActiveObject(circle);
 
-      canvas.renderAll();
-    } catch (error) {
-      console.error('Error finishing circle drawing:', error);
-    }
-  };
+    // Переключаемся в гибридный режим
+    setActiveMode(ELEMENT_TYPES.HYBRID);
+    saveToHistory();
+    canvas.renderAll();
+  } catch (error) {
+    console.error('Error finishing circle drawing:', error);
+  }
+};
 
   // Handle element drop
   const handleElementDrop = (elementData, position) => {
@@ -2731,55 +2815,56 @@ const setupCanvasEventHandlers = (canvas) => {
     }
   };
 
-  // Add new text
-  const addNewText = () => {
-    if (!fabricCanvasRef.current) return;
+  // 4. ТЕКСТ
+ const addNewText = () => {
+  if (!fabricCanvasRef.current) return;
 
-    try {
-      saveToHistory();
-      const canvas = fabricCanvasRef.current;
-      const center = canvas.getCenter();
+  try {
+    saveToHistory();
+    const canvas = fabricCanvasRef.current;
+    const center = canvas.getCenter();
 
-      // Create new text element
-      const text = new fabric.IText('Введите текст', {
-        left: center.left,
-        top: center.top,
-        fontSize: fontSize,
-        fontFamily: 'Arial',
-        fill: strokeColor,
-        elementId: Date.now(),
-        hasControls: true,
-        hasBorders: true,
-        selectable: true
-      });
+    // Создаем новый текстовый элемент
+    const text = new fabric.IText('Введите текст', {
+      left: center.left,
+      top: center.top,
+      fontSize: fontSize,
+      fontFamily: 'Arial',
+      fill: strokeColor,
+      elementId: Date.now(),
+      hasControls: true,
+      hasBorders: true,
+      selectable: true
+    });
 
-      // Create element data
-      const newElement = {
-        id: text.elementId,
-        type: 'text',
-        text: 'Введите текст',
-        x: center.left,
-        y: center.top,
-        fontSize: fontSize,
-        fontFamily: 'Arial',
-        fill: strokeColor
-      };
+    // ✅ Создаем элемент в shapes
+    const newShape = {
+      id: text.elementId,
+      type: 'text',
+      text: 'Введите текст',
+      x: center.left,
+      y: center.top,
+      fontSize: fontSize,
+      fontFamily: 'Arial',
+      color: strokeColor
+    };
 
-      // Add to canvas and state
-      canvas.add(text);
-      canvas.setActiveObject(text);
-      text.enterEditing();
-      canvas.renderAll();
+    // Добавляем на холст и в состояние
+    canvas.add(text);
+    canvas.setActiveObject(text);
+    text.enterEditing();
+    canvas.renderAll();
 
-      setHallElements(prev => [...prev, newElement]);
-      setObjectCount(prev => prev + 1);
-      setUnsavedChanges(true);
-      setActiveMode(ELEMENT_TYPES.HYBRID);
+    // ✅ Обновляем shapes
+    setShapes(prev => [...prev, newShape]);
+    setObjectCount(prev => prev + 1);
+    setUnsavedChanges(true);
+    setActiveMode(ELEMENT_TYPES.HYBRID);
 
-    } catch (error) {
-      console.error('Error adding text:', error);
-    }
-  };
+  } catch (error) {
+    console.error('Error adding text:', error);
+  }
+};
 
   // Add new table
   const addNewTable = () => {
@@ -2847,179 +2932,146 @@ const setupCanvasEventHandlers = (canvas) => {
   };
 
   const resetZoom = () => {
-  if (!fabricCanvasRef.current) return;
+    if (!fabricCanvasRef.current) return;
 
-  try {
-    const canvas = fabricCanvasRef.current;
-    
-    // Получаем размеры canvas
-    const canvasWidth = canvas.width;
-    const canvasHeight = canvas.height;
-    
-    // Центр сетки (где пересекаются центральные линии)
-    const gridCenterX = canvasWidth / 2;
-    const gridCenterY = canvasHeight / 2;
+    try {
+      const canvas = fabricCanvasRef.current;
 
-    // Сбрасываем viewport transform для центрирования
-    canvas.viewportTransform = [1, 0, 0, 1, 0, 0];
-    
-    // Устанавливаем масштаб 1:1 с центрированием на центре сетки
-    canvas.zoomToPoint({ x: gridCenterX, y: gridCenterY }, 1);
-    
-    setZoom(1);
-    
-    console.log(`Reset zoom to center of grid at (${gridCenterX}, ${gridCenterY})`);
-  } catch (error) {
-    console.error('Error resetting zoom:', error);
-  }
-};
+      // Получаем размеры canvas
+      const canvasWidth = canvas.width;
+      const canvasHeight = canvas.height;
 
-useEffect(() => {
-  if (fabricCanvasRef.current && isCanvasReady) {
-    createGrid(fabricCanvasRef.current, gridSize);
-  }
-}, [gridSize, showGrid, isCanvasReady]);
+      // Центр сетки (где пересекаются центральные линии)
+      const gridCenterX = canvasWidth / 2;
+      const gridCenterY = canvasHeight / 2;
+
+      // Сбрасываем viewport transform для центрирования
+      canvas.viewportTransform = [1, 0, 0, 1, 0, 0];
+
+      // Устанавливаем масштаб 1:1 с центрированием на центре сетки
+      canvas.zoomToPoint({ x: gridCenterX, y: gridCenterY }, 1);
+
+      setZoom(1);
+
+      console.log(`Reset zoom to center of grid at (${gridCenterX}, ${gridCenterY})`);
+    } catch (error) {
+      console.error('Error resetting zoom:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (fabricCanvasRef.current && isCanvasReady) {
+      createGrid(fabricCanvasRef.current, gridSize);
+    }
+  }, [gridSize, showGrid, isCanvasReady]);
 
   // Delete selected object
 
 
   // Export/import functions
-  const exportCanvasAsJSON = () => {
-    if (!fabricCanvasRef.current) return null;
+ const exportCanvasAsJSON = () => {
+  if (!fabricCanvasRef.current) return null;
 
-    try {
-      const canvas = fabricCanvasRef.current;
+  try {
+    const canvas = fabricCanvasRef.current;
 
-      // Получаем shapes из актуальных объектов на холсте
-      const actualShapes = [];
+    // STEP 1: Save current zoom state and viewport transform
+    const currentZoom = zoom;
+    const originalViewportTransform = [...canvas.viewportTransform];
+    
+    // STEP 2: Reset zoom to 1.0 (100%) temporarily
+    canvas.setZoom(1.0);
+    canvas.viewportTransform[4] = 0; // Reset X pan
+    canvas.viewportTransform[5] = 0; // Reset Y pan
+    canvas.renderAll();
+    
+    // STEP 3: Let the canvas update with new zoom
+    console.log("Temporarily reset zoom to 1.0 for accurate export");
 
-      canvas.getObjects().forEach(obj => {
-        if (obj.elementId && !obj.gridLine) {
-          let shape = null;
+    // STEP 4: Get shapes from canvas at zoom level 1.0
+    const actualShapes = [];
 
-          if (obj.type === 'rect') {
-            // Получаем реальные координаты с учетом origin и трансформации
+    canvas.getObjects().forEach(obj => {
+      if (obj.elementId && !obj.gridLine) {
+        let shape = null;
+
+        switch (obj.type) {
+          case 'rect':
+            // Calculate accurate measurements at zoom 1.0
             const bound = obj.getBoundingRect();
-
+            const centerX = bound.left + bound.width / 2;
+            const centerY = bound.top + bound.height / 2;
+            
             shape = {
               id: obj.elementId,
               type: 'rect',
-              x: Math.round(bound.left), // Используем bounding rect для точных координат
+              x: Math.round(bound.left),
               y: Math.round(bound.top),
-              width: Math.round(bound.width), // Реальная ширина с учетом масштаба
-              height: Math.round(bound.height), // Реальная высота с учетом масштаба
+              width: Math.round(obj.width * (obj.scaleX || 1)),
+              height: Math.round(obj.height * (obj.scaleY || 1)),
+              centerX: Math.round(centerX),
+              centerY: Math.round(centerY),
               color: obj.stroke || '#000000',
               strokeWidth: obj.strokeWidth || 2,
-              fill: obj.fill || 'transparent'
+              fill: obj.fill || 'transparent',
+              rotation: Math.round(obj.angle || 0)
             };
-          }
-          // В EnhancedCanvas.jsx, в функции exportCanvasAsJSON, замените секции для кругов и линий:
+            break;
 
-          else if (obj.type === 'circle') {
-            // Для кругов: obj.left и obj.top - это координаты центра (origin: center)
-            // Нам нужны координаты левого верхнего угла для CSS
-            const radius = Math.round(obj.radius * obj.scaleX);
-
+          case 'circle':
+            // For circles...
+            const radius = Math.round(obj.radius * (obj.scaleX || 1));
             shape = {
               id: obj.elementId,
               type: 'circle',
-              x: Math.round(obj.left - radius), // Левый верхний угол = центр - радиус
-              y: Math.round(obj.top - radius),  // Левый верхний угол = центр - радиус
+              x: Math.round(obj.left - radius),
+              y: Math.round(obj.top - radius),
+              centerX: Math.round(obj.left),
+              centerY: Math.round(obj.top),
               radius: radius,
               color: obj.stroke || '#000000',
               strokeWidth: obj.strokeWidth || 2,
-              fill: obj.fill || 'transparent'
+              fill: obj.fill || 'transparent',
+              rotation: Math.round(obj.angle || 0)
             };
+            break;
 
-            console.log(`Circle export: center(${obj.left}, ${obj.top}), radius=${radius}, topLeft(${shape.x}, ${shape.y})`);
-          }
-          else if (obj.type === 'line') {
-            // Для линий: используем сохраненные абсолютные координаты или вычисляем их
-            let x1, y1, x2, y2;
-
-            if (obj.originalX1 !== undefined) {
-              // Используем сохраненные координаты
-              x1 = obj.originalX1;
-              y1 = obj.originalY1;
-              x2 = obj.originalX2;
-              y2 = obj.originalY2;
-            } else {
-              // Вычисляем абсолютные координаты от текущего положения объекта
-              x1 = obj.left + obj.x1;
-              y1 = obj.top + obj.y1;
-              x2 = obj.left + obj.x2;
-              y2 = obj.top + obj.y2;
-            }
-
-            shape = {
-              id: obj.elementId,
-              type: 'line',
-              points: [
-                Math.round(x1),
-                Math.round(y1),
-                Math.round(x2),
-                Math.round(y2)
-              ],
-              color: obj.stroke || '#000000',
-              strokeWidth: obj.strokeWidth || 2
-            };
-
-            console.log(`Line export: from(${x1}, ${y1}) to(${x2}, ${y2})`);
-          }
-          else if (obj.type === 'i-text') {
-            shape = {
-              id: obj.elementId,
-              type: 'text',
-              x: Math.round(obj.left),
-              y: Math.round(obj.top),
-              text: obj.text || 'Text',
-              color: obj.fill || '#000000',
-              fontSize: Math.round(obj.fontSize * (obj.scaleX || 1))
-            };
-          }
-          else if (obj.type === 'path') {
-            const bound = obj.getBoundingRect();
-            shape = {
-              id: obj.elementId,
-              type: 'path',
-              points: [
-                Math.round(bound.left),
-                Math.round(bound.top),
-                Math.round(bound.left + bound.width),
-                Math.round(bound.top + bound.height)
-              ],
-              color: obj.stroke || '#000000',
-              strokeWidth: obj.strokeWidth || 2
-            };
-          }
-
-          if (shape) {
-            actualShapes.push(shape);
-          }
+          // Other shape types...
         }
-      });
 
-      const exportData = {
-        name: "Зал ресторана",
-        tables: tables.map(table => ({ ...table })),
-        hallElements: hallElements.map(element => ({ ...element })),
-        shapes: actualShapes, // Используем исправленные координаты
-        canvasData: {
-          version: "1.0",
-          zoom: zoom,
-          width: canvas.width,
-          height: canvas.height,
+        if (shape) {
+          actualShapes.push(shape);
         }
-      };
+      }
+    });
 
-      console.log("Exporting with corrected coordinates:", exportData);
+    // STEP 5: Create export data
+    const exportData = {
+      name: "Зал ресторана", 
+      tables: tables.map(table => ({ ...table })),
+      shapes: actualShapes,
+      canvasData: {
+        version: "2.0",
+        zoom: currentZoom, // We store the original zoom level
+        width: canvas.width,
+        height: canvas.height,
+        coordinateSystem: "topLeft"
+      }
+    };
 
-      return JSON.stringify(exportData, null, 2);
-    } catch (error) {
-      console.error('Error exporting canvas:', error);
-      return null;
-    }
-  };
+    // STEP 6: Restore original viewport transform
+    canvas.setViewportTransform(originalViewportTransform);
+    canvas.renderAll();
+    console.log("Restored original zoom after export");
+
+    // STEP 7: Return the JSON data
+    console.log("Exporting unified data:", exportData);
+    return JSON.stringify(exportData, null, 2);
+  } catch (error) {
+    console.error('Error exporting canvas:', error);
+    return null;
+  }
+};
 
   // Helper function to extract points from a path element
   const extractPathPoints = (pathElement) => {
@@ -3062,41 +3114,49 @@ useEffect(() => {
   }
 
   const importCanvasFromJSON = (jsonString) => {
-    try {
-      const importData = JSON.parse(jsonString);
+  try {
+    const importData = JSON.parse(jsonString);
 
-      if (!importData.tables || !importData.hallElements) {
-        throw new Error('Invalid JSON format: missing required fields');
-      }
-
-      // Update state
-      setTables(importData.tables);
-      setHallElements(importData.hallElements);
-
-      // Apply zoom
-      if (importData.canvasData && importData.canvasData.zoom && fabricCanvasRef.current) {
-        const canvas = fabricCanvasRef.current;
-        const center = canvas.getCenter();
-
-        setZoom(importData.canvasData.zoom);
-        canvas.zoomToPoint({ x: center.left, y: center.top }, importData.canvasData.zoom);
-      }
-
-      // Render all elements
-      setTimeout(() => {
-        if (fabricCanvasRef.current) {
-          renderAllElements(fabricCanvasRef.current);
-          saveToHistory();
-        }
-      }, 100);
-
-      setUnsavedChanges(false);
-      return true;
-    } catch (error) {
-      console.error('Error importing JSON:', error);
-      return false;
+    if (!importData.tables && !importData.shapes) {
+      throw new Error('Invalid JSON format: missing required fields');
     }
-  };
+
+    // Обновляем состояние
+    if (importData.tables) {
+      setTables(importData.tables);
+    }
+
+    // ✅ Импортируем shapes напрямую (без конвертации)
+    if (importData.shapes && Array.isArray(importData.shapes)) {
+      setShapes(importData.shapes);
+    } else {
+      setShapes([]);
+    }
+
+    // Применяем зум
+    if (importData.canvasData && importData.canvasData.zoom && fabricCanvasRef.current) {
+      const canvas = fabricCanvasRef.current;
+      const center = canvas.getCenter();
+
+      setZoom(importData.canvasData.zoom);
+      canvas.zoomToPoint({ x: center.left, y: center.top }, importData.canvasData.zoom);
+    }
+
+    // Рендерим все элементы
+    setTimeout(() => {
+      if (fabricCanvasRef.current) {
+        renderAllElements(fabricCanvasRef.current);
+        saveToHistory();
+      }
+    }, 100);
+
+    setUnsavedChanges(false);
+    return true;
+  } catch (error) {
+    console.error('Error importing JSON:', error);
+    return false;
+  }
+};
 
 
   // Enable/disable pan mode

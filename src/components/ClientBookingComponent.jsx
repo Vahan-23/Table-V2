@@ -117,73 +117,112 @@ const ClientBookingComponent = () => {
   const zoomOperationInProgress = useRef(false);
   const lastZoomUpdateTime = useRef(0);
 
+
   useEffect(() => {
-    if (hallData && hallData.tables && hallData.tables.length > 0) {
-      console.log("Processing imported hall data");
+    if (hallData && (hallData.tables?.length > 0 || shapes.length > 0)) {
+      console.log("Processing all elements for positioning");
 
-      // Calculate the bounds of all tables
-      let minX = Infinity;
-      let minY = Infinity;
-      let maxX = -Infinity;
-      let maxY = -Infinity;
-
-      hallData.tables.forEach(table => {
-        const tableX = table.x || 0;
-        const tableY = table.y || 0;
-        const tableWidth = table.width || (table.shape === 'rectangle' ? 400 : 300);
-        const tableHeight = table.height || (table.shape === 'rectangle' ? 150 : 300);
-
-        minX = Math.min(minX, tableX);
-        minY = Math.min(minY, tableY);
-        maxX = Math.max(maxX, tableX + tableWidth);
-        maxY = Math.max(maxY, tableY + tableHeight);
+      const allObjects = [];
+      
+      // Столы
+      if (hallData.tables) {
+        hallData.tables.forEach(table => {
+          allObjects.push({
+            type: 'table',
+            x: table.x || 0,
+            y: table.y || 0,
+            width: table.width || (table.shape === 'rectangle' ? 400 : 300),
+            height: table.height || (table.shape === 'rectangle' ? 150 : 300)
+          });
+        });
+      }
+      
+      // Все shapes
+      shapes.forEach(shape => {
+        let width = 100, height = 100;
+        
+        switch (shape.type) {
+          case 'rect':
+            width = shape.width || 100;
+            height = shape.height || 50;
+            break;
+          case 'circle':
+            width = height = (shape.radius || 50) * 2;
+            break;
+          case 'line':
+            if (shape.points && shape.points.length >= 4) {
+              width = Math.abs(shape.points[2] - shape.points[0]);
+              height = Math.abs(shape.points[3] - shape.points[1]);
+            }
+            break;
+          case 'text':
+            width = (shape.text?.length || 4) * (shape.fontSize || 16) * 0.6;
+            height = shape.fontSize || 16;
+            break;
+        }
+        
+        allObjects.push({
+          type: 'shape',
+          x: shape.x || 0,
+          y: shape.y || 0,
+          width: width,
+          height: height
+        });
       });
 
-      console.log("Table bounds:", { minX, minY, maxX, maxY });
+      // Вычисляем границы
+      if (allObjects.length > 0) {
+        let minX = Math.min(...allObjects.map(obj => obj.x));
+        let minY = Math.min(...allObjects.map(obj => obj.y));
+        let maxX = Math.max(...allObjects.map(obj => obj.x + obj.width));
+        let maxY = Math.max(...allObjects.map(obj => obj.y + obj.height));
 
-      // If the tables are positioned outside the visible area or with unusual coordinates
-      if (minX < -1000 || minY < -1000 || maxX > 10000 || maxY > 10000) {
-        console.log("Adjusting table positions");
+        console.log("Bounds:", { minX, minY, maxX, maxY });
 
-        // Create an adjusted copy of the hall data
-        const adjustedData = { ...hallData };
+        // Корректируем если нужно
+        if (minX < -500 || minY < -500 || maxX > 5000 || maxY > 5000) {
+          console.log("Adjusting positions");
+          
+          const offsetX = -minX + 100;
+          const offsetY = -minY + 100;
 
-        // Normalize table positions
-        adjustedData.tables = hallData.tables.map(table => ({
-          ...table,
-          x: (table.x || 0) - minX + 100, // Offset by 100 from the edge
-          y: (table.y || 0) - minY + 100  // Offset by 100 from the edge
-        }));
+          // Корректируем столы
+          if (hallData.tables) {
+            const adjustedTables = hallData.tables.map(table => ({
+              ...table,
+              x: (table.x || 0) + offsetX,
+              y: (table.y || 0) + offsetY
+            }));
+            
+            setHallData(prev => ({ ...prev, tables: adjustedTables }));
+          }
 
-        // Update hallData with adjusted positions
-        setHallData(adjustedData);
-        localStorage.setItem('hallData', JSON.stringify(adjustedData));
-      }
-
-      // Schedule a forced redraw
-      setTimeout(() => {
-        if (tablesAreaRef.current) {
-          const centerX = (minX + maxX) / 2;
-          const centerY = (minY + maxY) / 2;
-
-          // Set initial scroll position to center of tables
-          console.log("Centering view on tables");
-          setZoom(0.4); // Set an appropriate zoom level
-
-          setTimeout(() => {
-            if (tablesAreaRef.current) {
-              // Try to center the view on the tables
-              const containerWidth = tablesAreaRef.current.clientWidth;
-              const containerHeight = tablesAreaRef.current.clientHeight;
-
-              tablesAreaRef.current.scrollLeft = centerX * 0.4 - containerWidth / 2;
-              tablesAreaRef.current.scrollTop = centerY * 0.4 - containerHeight / 2;
+          // Корректируем shapes
+          const adjustedShapes = shapes.map(shape => {
+            const adjusted = {
+              ...shape,
+              x: (shape.x || 0) + offsetX,
+              y: (shape.y || 0) + offsetY
+            };
+            
+            // Для линий корректируем points
+            if (shape.type === 'line' && shape.points) {
+              adjusted.points = [
+                shape.points[0] + offsetX,
+                shape.points[1] + offsetY,
+                shape.points[2] + offsetX,
+                shape.points[3] + offsetY
+              ];
             }
-          }, 300);
+            
+            return adjusted;
+          });
+          
+          setShapes(adjustedShapes);
         }
-      }, 500);
+      }
     }
-  }, [hallData]);
+  }, [hallData, shapes]);
 
   // Add an additional fix to ensure tables render correctly when first loaded
   useEffect(() => {
@@ -208,23 +247,23 @@ const ClientBookingComponent = () => {
     }, 200)
   }, []);
 
-  useEffect(() => {
-    // Try loading saved hall data from localStorage on initial load
-    const savedHallData = localStorage.getItem('hallData');
-    if (savedHallData) {
-      try {
-        const parsedData = JSON.parse(savedHallData);
-        setHallData(parsedData);
+   useEffect(() => {
+  const savedHallData = localStorage.getItem('hallData');
+  if (savedHallData) {
+    try {
+      const parsedData = JSON.parse(savedHallData);
+      setHallData(parsedData);
 
-        // Extract and set shapes if they exist in the hall data
-        if (parsedData.shapes && Array.isArray(parsedData.shapes)) {
-          setShapes(parsedData.shapes);
-        }
-      } catch (e) {
-        console.error("Error loading saved hall data:", e);
+      if (parsedData.shapes && Array.isArray(parsedData.shapes)) {
+        console.log("Importing shapes:", parsedData.shapes); // ✅ ДОБАВЛЕНО
+        console.log("Shapes with rotation:", parsedData.shapes.filter(s => s.rotation)); // ✅ ДОБАВЛЕНО
+        setShapes(parsedData.shapes);
       }
+    } catch (e) {
+      console.error("Error loading saved hall data:", e);
     }
-  }, []);
+  }
+}, []);
 
   useEffect(() => {
     if (tablesAreaRef.current && hallData) {
@@ -293,37 +332,21 @@ const ClientBookingComponent = () => {
       try {
         const parsedData = JSON.parse(e.target.result);
 
-        // Add debugging
         console.log("Imported data:", parsedData);
         console.log("Tables:", parsedData.tables?.length);
-        console.log("Hall Elements:", parsedData.hallElements?.length);
         console.log("Shapes:", parsedData.shapes?.length);
-
-        // If no shapes array is present, create one from hallElements
-        if (!parsedData.shapes && parsedData.hallElements) {
-          console.log("No shapes found, converting hallElements to shapes");
-          parsedData.shapes = convertHallElementsToShapes(parsedData.hallElements);
-          console.log("Created shapes:", parsedData.shapes.length);
-        }
 
         setHallData(parsedData);
 
-        // Extract and set shapes if they exist in the imported data
+        // ПРОСТО используем shapes как есть
         if (parsedData.shapes && Array.isArray(parsedData.shapes)) {
           setShapes(parsedData.shapes);
-          console.log("Set shapes:", parsedData.shapes);
         } else {
           setShapes([]);
-          console.log("No shapes found in imported data");
         }
 
         localStorage.setItem('hallData', JSON.stringify(parsedData));
         setIsLoading(false);
-
-        // Force update view after small delay to ensure rendering
-        setTimeout(() => {
-          window.dispatchEvent(new Event('resize'));
-        }, 500);
 
       } catch (error) {
         console.error("Error parsing JSON:", error);
@@ -332,18 +355,11 @@ const ClientBookingComponent = () => {
       }
     };
 
-    reader.onerror = () => {
-      setError("Ошибка при чтении файла.");
-      setIsLoading(false);
-    };
-
     reader.readAsText(file);
-
-    // Reset input value to allow selecting the same file again
     event.target.value = "";
   };
 
-  const convertHallElementsToShapes = (hallElements) => {
+ const convertHallElementsToShapes = (hallElements) => {
   if (!hallElements || !Array.isArray(hallElements)) return [];
 
   console.log("Converting hallElements to shapes:", hallElements.length);
@@ -368,38 +384,44 @@ const ClientBookingComponent = () => {
 
       switch (element.type) {
         case 'rectangle':
-  return {
-    ...shapeData,
-    type: 'rect',
-    x: element.x || 0, // Используем координаты как есть
-    y: element.y || 0,
-    width: element.width || 100,
-    height: element.height || 50
-  };
+          return {
+            ...shapeData,
+            type: 'rect',
+            x: element.x || 0,
+            y: element.y || 0,
+            width: element.width || 100,
+            height: element.height || 50
+          };
 
         case 'circle':
-  const radius = element.radius || 50;
-  
-  console.log(`Converting circle element:`, {
-    originalX: element.x,
-    originalY: element.y,
-    radius: radius,
-    type: 'from hallElements'
-  });
-  
-  // ИСПРАВЛЕНО: Для элементов из hallElements координаты x,y обычно уже левый верхний угол
-  // ИЛИ это могут быть координаты центра - нужно проверить источник данных
-  
-  // Если данные приходят из экспорта shapes, то x,y уже левый верхний угол
-  // Если данные приходят из hallElements, то x,y могут быть координатами центра
-  
-  return {
-    ...shapeData,
-    type: 'circle',
-    x: element.x || 0,  // Используем как есть, без дополнительной конвертации
-    y: element.y || 0,  // Используем как есть, без дополнительной конвертации
-    radius: radius
-  };
+          const radius = element.radius || 50;
+          
+          // ИСПРАВЛЕНО: Определяем, какая система координат используется
+          // Если элемент пришел из экспорта shapes - координаты уже левый верхний угол
+          // Если элемент пришел из hallElements - координаты могут быть центром
+          
+          let circleX, circleY;
+          
+          // Проверяем, есть ли признак того, что это экспортированная shape
+          if (element.fromShapesExport || (element.x !== undefined && element.y !== undefined && element.x >= 0 && element.y >= 0)) {
+            // Координаты уже левый верхний угол
+            circleX = element.x || 0;
+            circleY = element.y || 0;
+          } else {
+            // Предполагаем, что это координаты центра - конвертируем в левый верхний угол
+            circleX = (element.x || 0) - radius;
+            circleY = (element.y || 0) - radius;
+          }
+          
+          console.log(`Circle conversion: original(${element.x}, ${element.y}), converted(${circleX}, ${circleY}), radius=${radius}`);
+          
+          return {
+            ...shapeData,
+            type: 'circle',
+            x: circleX,
+            y: circleY,
+            radius: radius
+          };
 
         case 'line':
           let points;
@@ -1722,113 +1744,191 @@ const ClientBookingComponent = () => {
                         willChange: 'transform', // Optimize for performance
                       }}
                     >
+                      {console.log("Shapes with rotation:", shapes.filter(s => s.rotation).map(s => ({id: s.id, type: s.type, rotation: s.rotation})))}
                       {/* Render shapes using Konva Stage */}
-                      <div style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        height: '100%',
-                        pointerEvents: 'none',
-                        zIndex: 1
-                      }}>
-                        {shapes.map(shape => {
-  console.log(`Rendering ${shape.type}:`, shape);
-
-  switch (shape.type) {
-    case 'rect':
-      return (
-        <div
-          key={shape.id}
-          style={{
-            position: 'absolute',
-            left: `${shape.x}px`,
-            top: `${shape.y}px`,
-            width: `${shape.width}px`,
-            height: `${shape.height}px`,
-            border: `${shape.strokeWidth || 2}px solid ${shape.color}`,
-            backgroundColor: shape.fill === 'transparent' ? 'transparent' : (shape.fill || 'transparent'),
-            pointerEvents: 'none',
-            boxSizing: 'border-box'
-          }}
-        />
-      );
-
-    case 'circle':
-      console.log(`Circle rendering: x=${shape.x}, y=${shape.y}, radius=${shape.radius}`);
-      console.log(`Calculated div size: ${shape.radius * 2}x${shape.radius * 2}`);
+                   <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 1 }}>
+  {shapes.map(shape => {
+    // ✅ ФУНКЦИЯ для корректировки позиции повернутого объекта
+    const getAdjustedPosition = (shape) => {
+      if (!shape.rotation) return { x: shape.x, y: shape.y };
       
-      return (
-        <div
-          key={shape.id}
-          style={{
-            position: 'absolute',
-            left: `${shape.x}px`,
-            top: `${shape.y}px`,
-            width: `${shape.radius * 2}px`,
-            height: `${shape.radius * 2}px`,
-            borderRadius: '50%',
-            border: `${shape.strokeWidth || 2}px solid ${shape.color}`,
-            backgroundColor: shape.fill === 'transparent' ? 'transparent' : (shape.fill || 'transparent'),
-            pointerEvents: 'none',
-            boxSizing: 'border-box'
-          }}
-        />
-      );
+      const rotation = shape.rotation * Math.PI / 180; // в радианы
+      let adjustedX = shape.x;
+      let adjustedY = shape.y;
+      
+      // Для прямоугольников и кругов корректируем позицию
+      if (shape.type === 'rect') {
+        const centerX = shape.x + shape.width / 2;
+        const centerY = shape.y + shape.height / 2;
+        
+        // Возвращаем координаты для transform-origin: center
+        adjustedX = centerX - shape.width / 2;
+        adjustedY = centerY - shape.height / 2;
+      } else if (shape.type === 'circle') {
+        const centerX = shape.x + shape.radius;
+        const centerY = shape.y + shape.radius;
+        
+        adjustedX = centerX - shape.radius;
+        adjustedY = centerY - shape.radius;
+      }
+      
+      return { x: adjustedX, y: adjustedY };
+    };
 
-    case 'line':
-    case 'path':
-      if (shape.points && shape.points.length >= 4) {
-        const [x1, y1, x2, y2] = shape.points;
-        const length = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
-        const angle = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
+    switch (shape.type) {
+      case 'rect':
+  // IMPROVED: Always use centerX/centerY if available for accurate positioning
+  let displayX, displayY;
+  
+  if (shape.centerX !== undefined && shape.centerY !== undefined) {
+    // Use center coordinates (preferred for rotated objects)
+    displayX = shape.centerX - shape.width / 2;
+    displayY = shape.centerY - shape.height / 2;
+  } else {
+    // Fall back to corner coordinates
+    displayX = shape.x || 0;
+    displayY = shape.y || 0;
+  }
+  
+  const rectTransform = `rotate(${shape.rotation || 0}deg)`;
+  
+  return (
+    <div
+      key={shape.id}
+      style={{
+        position: 'absolute',
+        left: `${displayX}px`,
+        top: `${displayY}px`,
+        width: `${shape.width}px`,
+        height: `${shape.height}px`,
+        border: `${shape.strokeWidth || 2}px solid ${shape.color}`,
+        backgroundColor: shape.fill === 'transparent' ? 'transparent' : (shape.fill || 'transparent'),
+        pointerEvents: 'none',
+        boxSizing: 'border-box',
+        transform: rectTransform,
+        transformOrigin: '50% 50%', // IMPORTANT: Always rotate around center
+        WebkitTransform: rectTransform,
+        MozTransform: rectTransform,
+        msTransform: rectTransform,
+        OTransform: rectTransform
+      }}
+      ref={(el) => {
+        if (el && shape.rotation) {
+          // Force transform to ensure it works across browsers
+          el.style.setProperty('transform', `rotate(${shape.rotation}deg)`, 'important');
+          el.style.setProperty('transform-origin', '50% 50%', 'important');
+        }
+      }}
+    />
+  );
 
-        console.log(`Line rendering: from (${x1}, ${y1}) to (${x2}, ${y2}), length: ${length}, angle: ${angle}`);
-
+      case 'circle':
+        const circlePos = getAdjustedPosition(shape);
+        const circleTransform = `rotate(${shape.rotation || 0}deg)`;
+        
         return (
           <div
             key={shape.id}
             style={{
               position: 'absolute',
-              left: `${x1}px`,
-              top: `${y1}px`,
-              width: `${length}px`,
-              height: `${shape.strokeWidth || 2}px`,
-              backgroundColor: shape.color,
-              transformOrigin: '0 50%',
-              transform: `rotate(${angle}deg)`,
-              pointerEvents: 'none'
+              left: `${circlePos.x}px`,
+              top: `${circlePos.y}px`,
+              width: `${shape.radius * 2}px`,
+              height: `${shape.radius * 2}px`,
+              borderRadius: '50%',
+              border: `${shape.strokeWidth || 2}px solid ${shape.color}`,
+              backgroundColor: shape.fill === 'transparent' ? 'transparent' : (shape.fill || 'transparent'),
+              pointerEvents: 'none',
+              boxSizing: 'border-box',
+              transform: circleTransform,
+              transformOrigin: '50% 50%',
+              WebkitTransform: circleTransform,
+              MozTransform: circleTransform,
+              msTransform: circleTransform,
+              OTransform: circleTransform
+            }}
+            ref={(el) => {
+              if (el && shape.rotation) {
+                el.style.setProperty('transform', `rotate(${shape.rotation}deg)`, 'important');
+              }
             }}
           />
         );
-      }
-      return null;
 
-    case 'text':
-      return (
-        <div
-          key={shape.id}
-          style={{
-            position: 'absolute',
-            left: `${shape.x}px`,
-            top: `${shape.y}px`,
-            color: shape.color,
-            fontSize: `${shape.fontSize || 16}px`,
-            fontFamily: 'Arial, sans-serif',
-            pointerEvents: 'none',
-            whiteSpace: 'nowrap'
-          }}
-        >
-          {shape.text}
-        </div>
-      );
+      case 'text':
+        // ✅ Для текста используем исходные координаты, так как это обычно левый верхний угол
+        const textTransform = `rotate(${shape.rotation || 0}deg)`;
+        
+        return (
+          <div
+            key={shape.id}
+            style={{
+              position: 'absolute',
+              left: `${shape.x}px`,
+              top: `${shape.y}px`,
+              color: shape.color,
+              fontSize: `${shape.fontSize || 16}px`,
+              fontFamily: 'Arial, sans-serif',
+              pointerEvents: 'none',
+              whiteSpace: 'nowrap',
+              transform: textTransform,
+              transformOrigin: '0 0', // ✅ Левый верхний угол для текста
+              WebkitTransform: textTransform,
+              MozTransform: textTransform,
+              msTransform: textTransform,
+              OTransform: textTransform
+            }}
+            ref={(el) => {
+              if (el && shape.rotation) {
+                el.style.setProperty('transform', `rotate(${shape.rotation}deg)`, 'important');
+              }
+            }}
+          >
+            {shape.text}
+          </div>
+        );
 
-    default:
-      console.warn(`Unknown shape type: ${shape.type}`);
-      return null;
-  }
-})}
-                      </div>
+      case 'line':
+        if (shape.points && shape.points.length >= 4) {
+          const [x1, y1, x2, y2] = shape.points;
+          const length = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+          const baseAngle = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
+          const totalAngle = baseAngle + (shape.rotation || 0);
+          const lineTransform = `rotate(${totalAngle}deg)`;
+
+          return (
+            <div
+              key={shape.id}
+              style={{
+                position: 'absolute',
+                left: `${x1}px`,
+                top: `${y1}px`,
+                width: `${length}px`,
+                height: `${shape.strokeWidth || 2}px`,
+                backgroundColor: shape.color,
+                transformOrigin: '0 50%', // ✅ Начало линии как точка поворота
+                transform: lineTransform,
+                pointerEvents: 'none',
+                WebkitTransform: lineTransform,
+                MozTransform: lineTransform,
+                msTransform: lineTransform,
+                OTransform: lineTransform
+              }}
+              ref={(el) => {
+                if (el) {
+                  el.style.setProperty('transform', `rotate(${totalAngle}deg)`, 'important');
+                }
+              }}
+            />
+          );
+        }
+        return null;
+
+      default:
+        return null;
+    }
+  })}
+</div>
 
                       {/* Render tables */}
                       {hallData.tables && hallData.tables.map((table) => (
