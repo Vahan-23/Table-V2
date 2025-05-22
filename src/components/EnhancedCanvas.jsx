@@ -67,7 +67,8 @@ const EnhancedCanvas = React.forwardRef((
   const [redoStack, setRedoStack] = useState([]);
   const [maxHistoryLength] = useState(50); // Ограничиваем размер истории
 
-
+const [gridSize, setGridSize] = useState(20); // Размер сетки по умолчанию
+const [showGrid, setShowGrid] = useState(true); // Показывать ли сетку
 
 
   const saveToHistory = useCallback(() => {
@@ -551,7 +552,7 @@ const EnhancedCanvas = React.forwardRef((
       setupCanvasEventHandlers(canvas);
 
       // Create grid
-      createGrid(canvas);
+      createGrid(canvas, gridSize);
 
       // Add safe check before handling resize
       const handleResize = () => {
@@ -566,7 +567,7 @@ const EnhancedCanvas = React.forwardRef((
           canvas.setWidth(newWidth);
           canvas.setHeight(newHeight);
           canvas.renderAll();
-          createGrid(canvas);
+          createGrid(canvas, gridSize);
         } catch (error) {
           console.error('Error resizing canvas:', error);
         }
@@ -595,75 +596,72 @@ const EnhancedCanvas = React.forwardRef((
   };
 
   // Create grid
-  const createGrid = (canvas) => {
-    if (!canvas) return;
+  const createGrid = (canvas, size = gridSize) => {
+  if (!canvas || !showGrid) return;
 
-    try {
-      // Clear existing grid
-      canvas.getObjects().forEach(obj => {
-        if (obj.gridLine) {
-          canvas.remove(obj);
-        }
+  try {
+    // Clear existing grid
+    canvas.getObjects().forEach(obj => {
+      if (obj.gridLine) {
+        canvas.remove(obj);
+      }
+    });
+
+    const width = canvas.width || 800;
+    const height = canvas.height || 600;
+
+    // Function to create grid lines with correct properties
+    const createGridLine = (coords, isCenter = false) => {
+      const line = new fabric.Line(coords, {
+        stroke: isCenter ? '#aaaaaa' : '#dddddd',
+        strokeWidth: isCenter ? 2 : 1,
+        selectable: false,
+        evented: false,
+        hoverCursor: 'default',
+        hasControls: false,
+        hasBorders: false,
+        lockMovementX: true,
+        lockMovementY: true,
+        lockRotation: true,
+        lockScalingX: true,
+        lockScalingY: true,
+        perPixelTargetFind: false,
+        gridLine: true,
+        excludeFromExport: true
       });
 
-      const width = canvas.width || 800;
-      const height = canvas.height || 600;
-      const gridSize = 20;
+      line.set('interactive', false);
+      return line;
+    };
 
-      // Function to create grid lines with correct properties
-      const createGridLine = (coords, isCenter = false) => {
-        const line = new fabric.Line(coords, {
-          stroke: isCenter ? '#aaaaaa' : '#dddddd',
-          strokeWidth: isCenter ? 2 : 1,
-          selectable: false,
-          evented: false,
-          hoverCursor: 'default',
-          hasControls: false,
-          hasBorders: false,
-          lockMovementX: true,
-          lockMovementY: true,
-          lockRotation: true,
-          lockScalingX: true,
-          lockScalingY: true,
-          perPixelTargetFind: false,
-          gridLine: true,
-          excludeFromExport: true
-        });
-
-        // Add explicit property to easily identify grid
-        line.set('interactive', false);
-
-        return line;
-      };
-
-      // Create vertical lines
-      for (let i = 0; i <= width / gridSize; i++) {
-        const line = createGridLine([i * gridSize, 0, i * gridSize, height]);
-        canvas.add(line);
-        line.sendToBack();
-      }
-
-      // Create horizontal lines
-      for (let i = 0; i <= height / gridSize; i++) {
-        const line = createGridLine([0, i * gridSize, width, i * gridSize]);
-        canvas.add(line);
-        line.sendToBack();
-      }
-
-      // Add center lines
-      const xAxis = createGridLine([0, height / 2, width, height / 2], true);
-      const yAxis = createGridLine([width / 2, 0, width / 2, height], true);
-
-      canvas.add(xAxis);
-      canvas.add(yAxis);
-      xAxis.sendToBack();
-      yAxis.sendToBack();
-
-      canvas.renderAll();
-    } catch (error) {
-      console.error('Error creating grid:', error);
+    // Create vertical lines
+    for (let i = 0; i <= width / size; i++) {
+      const line = createGridLine([i * size, 0, i * size, height]);
+      canvas.add(line);
+      line.sendToBack();
     }
-  };
+
+    // Create horizontal lines
+    for (let i = 0; i <= height / size; i++) {
+      const line = createGridLine([0, i * size, width, i * size]);
+      canvas.add(line);
+      line.sendToBack();
+    }
+
+    // Add center lines
+    const xAxis = createGridLine([0, height / 2, width, height / 2], true);
+    const yAxis = createGridLine([width / 2, 0, width / 2, height], true);
+
+    canvas.add(xAxis);
+    canvas.add(yAxis);
+    xAxis.sendToBack();
+    yAxis.sendToBack();
+
+    canvas.renderAll();
+  } catch (error) {
+    console.error('Error creating grid:', error);
+  }
+};
 
   // Set up canvas event handlers
   // Полная исправленная функция setupCanvasEventHandlers в EnhancedCanvas.jsx
@@ -2849,18 +2847,38 @@ const setupCanvasEventHandlers = (canvas) => {
   };
 
   const resetZoom = () => {
-    if (!fabricCanvasRef.current) return;
+  if (!fabricCanvasRef.current) return;
 
-    try {
-      const canvas = fabricCanvasRef.current;
-      const center = canvas.getCenter();
+  try {
+    const canvas = fabricCanvasRef.current;
+    
+    // Получаем размеры canvas
+    const canvasWidth = canvas.width;
+    const canvasHeight = canvas.height;
+    
+    // Центр сетки (где пересекаются центральные линии)
+    const gridCenterX = canvasWidth / 2;
+    const gridCenterY = canvasHeight / 2;
 
-      canvas.zoomToPoint({ x: center.left, y: center.top }, 1);
-      setZoom(1);
-    } catch (error) {
-      console.error('Error resetting zoom:', error);
-    }
-  };
+    // Сбрасываем viewport transform для центрирования
+    canvas.viewportTransform = [1, 0, 0, 1, 0, 0];
+    
+    // Устанавливаем масштаб 1:1 с центрированием на центре сетки
+    canvas.zoomToPoint({ x: gridCenterX, y: gridCenterY }, 1);
+    
+    setZoom(1);
+    
+    console.log(`Reset zoom to center of grid at (${gridCenterX}, ${gridCenterY})`);
+  } catch (error) {
+    console.error('Error resetting zoom:', error);
+  }
+};
+
+useEffect(() => {
+  if (fabricCanvasRef.current && isCanvasReady) {
+    createGrid(fabricCanvasRef.current, gridSize);
+  }
+}, [gridSize, showGrid, isCanvasReady]);
 
   // Delete selected object
 

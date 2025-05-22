@@ -221,3 +221,25 @@
 .canvas-wrapper.pan-mode:active {
   cursor: grabbing;
 }
+
+.grid-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-right: 10px;
+}
+
+.grid-controls label {
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.grid-controls input[type="range"] {
+  width: 80px;
+}
+
+.grid-controls span {
+  font-size: 11px;
+  min-width: 35px;
+  text-align: center;
+}
