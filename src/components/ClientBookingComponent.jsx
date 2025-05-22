@@ -104,7 +104,7 @@ const ClientBookingComponent = () => {
   const [shapes, setShapes] = useState([]);
 
   const tablesAreaRef = useRef(null);
-  const stageRef = useRef(null);
+  // const stageRef = useRef(null);
   const zoomRef = useRef(0.2); // Use ref for intermediate zoom values to prevent re-renders
 
   // View dragging state
@@ -116,6 +116,88 @@ const ClientBookingComponent = () => {
   const touchDistanceRef = useRef(null);
   const zoomOperationInProgress = useRef(false);
   const lastZoomUpdateTime = useRef(0);
+
+  useEffect(() => {
+  if (hallData && hallData.tables && hallData.tables.length > 0) {
+    console.log("Processing imported hall data");
+    
+    // Calculate the bounds of all tables
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    
+    hallData.tables.forEach(table => {
+      const tableX = table.x || 0;
+      const tableY = table.y || 0;
+      const tableWidth = table.width || (table.shape === 'rectangle' ? 400 : 300);
+      const tableHeight = table.height || (table.shape === 'rectangle' ? 150 : 300);
+      
+      minX = Math.min(minX, tableX);
+      minY = Math.min(minY, tableY);
+      maxX = Math.max(maxX, tableX + tableWidth);
+      maxY = Math.max(maxY, tableY + tableHeight);
+    });
+    
+    console.log("Table bounds:", { minX, minY, maxX, maxY });
+    
+    // If the tables are positioned outside the visible area or with unusual coordinates
+    if (minX < -1000 || minY < -1000 || maxX > 10000 || maxY > 10000) {
+      console.log("Adjusting table positions");
+      
+      // Create an adjusted copy of the hall data
+      const adjustedData = {...hallData};
+      
+      // Normalize table positions
+      adjustedData.tables = hallData.tables.map(table => ({
+        ...table,
+        x: (table.x || 0) - minX + 100, // Offset by 100 from the edge
+        y: (table.y || 0) - minY + 100  // Offset by 100 from the edge
+      }));
+      
+      // Update hallData with adjusted positions
+      setHallData(adjustedData);
+      localStorage.setItem('hallData', JSON.stringify(adjustedData));
+    }
+    
+    // Schedule a forced redraw
+    setTimeout(() => {
+      if (tablesAreaRef.current) {
+        const centerX = (minX + maxX) / 2;
+        const centerY = (minY + maxY) / 2;
+        
+        // Set initial scroll position to center of tables
+        console.log("Centering view on tables");
+        setZoom(0.4); // Set an appropriate zoom level
+        
+        setTimeout(() => {
+          if (tablesAreaRef.current) {
+            // Try to center the view on the tables
+            const containerWidth = tablesAreaRef.current.clientWidth;
+            const containerHeight = tablesAreaRef.current.clientHeight;
+            
+            tablesAreaRef.current.scrollLeft = centerX * 0.4 - containerWidth / 2;
+            tablesAreaRef.current.scrollTop = centerY * 0.4 - containerHeight / 2;
+          }
+        }, 300);
+      }
+    }, 500);
+  }
+}, [hallData]);
+
+// Add an additional fix to ensure tables render correctly when first loaded
+useEffect(() => {
+  if (hallData && hallData.tables) {
+    // This force-triggers a component update to ensure tables are rendered
+    const forceUpdateTimeout = setTimeout(() => {
+      console.log("Force update to ensure tables render");
+      setScale(prev => prev + 0.01);
+      setTimeout(() => setScale(prev => prev - 0.01), 100);
+    }, 1000);
+    
+    return () => clearTimeout(forceUpdateTimeout);
+  }
+}, [hallData]);
 
   useEffect(() => {
     setTimeout(() => {
@@ -199,46 +281,134 @@ const ClientBookingComponent = () => {
   }, [showBookingModal]);
 
   const handleFileUpload = (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
+  const file = event.target.files[0];
+  if (!file) return;
 
-    setIsLoading(true);
-    setError(null);
+  setIsLoading(true);
+  setError(null);
 
-    const reader = new FileReader();
+  const reader = new FileReader();
 
-    reader.onload = (e) => {
-      try {
-        const parsedData = JSON.parse(e.target.result);
-        setHallData(parsedData);
-        
-        // Extract and set shapes if they exist in the imported data
-        if (parsedData.shapes && Array.isArray(parsedData.shapes)) {
-          setShapes(parsedData.shapes);
-          console.log("Imported shapes:", parsedData.shapes);
-        } else {
-          setShapes([]);
-          console.log("No shapes found in imported data");
-        }
-        
-        localStorage.setItem('hallData', JSON.stringify(parsedData));
-        setIsLoading(false);
-      } catch (error) {
-        setError("Ошибка при чтении JSON файла. Проверьте формат файла.");
-        setIsLoading(false);
+  reader.onload = (e) => {
+    try {
+      const parsedData = JSON.parse(e.target.result);
+      
+      // Add debugging
+      console.log("Imported data:", parsedData);
+      console.log("Tables:", parsedData.tables?.length);
+      console.log("Hall Elements:", parsedData.hallElements?.length);
+      console.log("Shapes:", parsedData.shapes?.length);
+      
+      // If no shapes array is present, create one from hallElements
+      if (!parsedData.shapes && parsedData.hallElements) {
+        console.log("No shapes found, converting hallElements to shapes");
+        parsedData.shapes = convertHallElementsToShapes(parsedData.hallElements);
+        console.log("Created shapes:", parsedData.shapes.length);
       }
-    };
-
-    reader.onerror = () => {
-      setError("Ошибка при чтении файла.");
+      
+      setHallData(parsedData);
+      
+      // Extract and set shapes if they exist in the imported data
+      if (parsedData.shapes && Array.isArray(parsedData.shapes)) {
+        setShapes(parsedData.shapes);
+        console.log("Set shapes:", parsedData.shapes);
+      } else {
+        setShapes([]);
+        console.log("No shapes found in imported data");
+      }
+      
+      localStorage.setItem('hallData', JSON.stringify(parsedData));
       setIsLoading(false);
-    };
-
-    reader.readAsText(file);
-
-    // Reset input value to allow selecting the same file again
-    event.target.value = "";
+      
+      // Force update view after small delay to ensure rendering
+      setTimeout(() => {
+        window.dispatchEvent(new Event('resize'));
+      }, 500);
+      
+    } catch (error) {
+      console.error("Error parsing JSON:", error);
+      setError("Ошибка при чтении JSON файла. Проверьте формат файла.");
+      setIsLoading(false);
+    }
   };
+
+  reader.onerror = () => {
+    setError("Ошибка при чтении файла.");
+    setIsLoading(false);
+  };
+
+  reader.readAsText(file);
+
+  // Reset input value to allow selecting the same file again
+  event.target.value = "";
+};
+
+const convertHallElementsToShapes = (hallElements) => {
+  if (!hallElements || !Array.isArray(hallElements)) return [];
+  
+  return hallElements
+    .filter(element => ['text', 'rectangle', 'circle', 'line', 'path'].includes(element.type))
+    .map(element => {
+      // Base shape data
+      const shapeData = {
+        id: element.id,
+        color: element.stroke || '#000000',
+        strokeWidth: element.strokeWidth || 2,
+        fill: element.fill || 'transparent'
+      };
+      
+      // Add type-specific properties
+      switch (element.type) {
+        case 'rectangle':
+          return {
+            ...shapeData,
+            type: 'rect',
+            x: element.x,
+            y: element.y,
+            width: element.width || 100,
+            height: element.height || 50
+          };
+        case 'circle':
+          return {
+            ...shapeData,
+            type: 'circle',
+            x: element.x,
+            y: element.y,
+            radius: element.radius || 50
+          };
+        case 'line':
+          return {
+            ...shapeData,
+            type: 'line',
+            points: [
+              element.x1 || element.x, 
+              element.y1 || element.y, 
+              element.x2 || (element.x + 100), 
+              element.y2 || (element.y + 100)
+            ]
+          };
+        case 'path':
+          // For paths, convert to simple line with start/end points
+          return {
+            ...shapeData,
+            type: 'path',
+            points: [element.x, element.y, element.x + 50, element.y + 50]
+          };
+        case 'text':
+          return {
+            ...shapeData,
+            type: 'text',
+            x: element.x,
+            y: element.y,
+            text: element.text || "Text",
+            fontSize: element.fontSize || 18
+          };
+        default:
+          return null;
+      }
+    })
+    .filter(Boolean); // Remove any null entries
+};
 
   // Get all occupied time slots for a table
   const getOccupiedTimeSlots = (tableId, date) => {
@@ -870,111 +1040,111 @@ const ClientBookingComponent = () => {
   }, [isDraggingView]);
 
   // Function to render a shape using Konva components
-  const renderShape = (shape) => {
-    switch (shape.type) {
-      case 'rect':
-        return (
-          <Rect
-            key={shape.id}
-            x={shape.x}
-            y={shape.y}
-            width={shape.width}
-            height={shape.height}
-            stroke={shape.color}
-            strokeWidth={shape.strokeWidth}
-            fill={shape.fill || 'transparent'}
-          />
-        );
-      case 'circle':
-        return (
-          <Circle
-            key={shape.id}
-            x={shape.x}
-            y={shape.y}
-            radius={shape.radius}
-            stroke={shape.color}
-            strokeWidth={shape.strokeWidth}
-            fill={shape.fill || 'transparent'}
-          />
-        );
-      case 'line':
-        return (
-          <Line
-            key={shape.id}
-            points={shape.points}
-            stroke={shape.color}
-            strokeWidth={shape.strokeWidth}
-            lineCap="round"
-            lineJoin="round"
-          />
-        );
-      case 'arrow':
-        return (
-          <Arrow
-            key={shape.id}
-            points={shape.points}
-            stroke={shape.color}
-            strokeWidth={shape.strokeWidth}
-            fill={shape.color}
-            pointerLength={10}
-            pointerWidth={10}
-          />
-        );
-      case 'ellipse':
-        return (
-          <Ellipse
-            key={shape.id}
-            x={shape.x}
-            y={shape.y}
-            radiusX={shape.radiusX}
-            radiusY={shape.radiusY}
-            stroke={shape.color}
-            strokeWidth={shape.strokeWidth}
-            fill={shape.fill || 'transparent'}
-          />
-        );
-      case 'star':
-        return (
-          <Star
-            key={shape.id}
-            x={shape.x}
-            y={shape.y}
-            numPoints={shape.numPoints || 5}
-            innerRadius={shape.innerRadius || 20}
-            outerRadius={shape.outerRadius || 40}
-            stroke={shape.color}
-            strokeWidth={shape.strokeWidth}
-            fill={shape.fill || 'transparent'}
-          />
-        );
-      case 'path':
-        return (
-          <Line
-            key={shape.id}
-            points={shape.points}
-            stroke={shape.color}
-            strokeWidth={shape.strokeWidth}
-            tension={0.5}
-            lineCap="round"
-            lineJoin="round"
-          />
-        );
-      case 'text':
-        return (
-          <Text
-            key={shape.id}
-            x={shape.x}
-            y={shape.y}
-            text={shape.text}
-            fill={shape.color}
-            fontSize={shape.fontSize || 16}
-          />
-        );
-      default:
-        console.warn(`Unknown shape type: ${shape.type}`);
-        return null;
-    }
-  };
+  // const renderShape = (shape) => {
+  //   switch (shape.type) {
+  //     case 'rect':
+  //       return (
+  //         <Rect
+  //           key={shape.id}
+  //           x={shape.x}
+  //           y={shape.y}
+  //           width={shape.width}
+  //           height={shape.height}
+  //           stroke={shape.color}
+  //           strokeWidth={shape.strokeWidth}
+  //           fill={shape.fill || 'transparent'}
+  //         />
+  //       );
+  //     case 'circle':
+  //       return (
+  //         <Circle
+  //           key={shape.id}
+  //           x={shape.x}
+  //           y={shape.y}
+  //           radius={shape.radius}
+  //           stroke={shape.color}
+  //           strokeWidth={shape.strokeWidth}
+  //           fill={shape.fill || 'transparent'}
+  //         />
+  //       );
+  //     case 'line':
+  //       return (
+  //         <Line
+  //           key={shape.id}
+  //           points={shape.points}
+  //           stroke={shape.color}
+  //           strokeWidth={shape.strokeWidth}
+  //           lineCap="round"
+  //           lineJoin="round"
+  //         />
+  //       );
+  //     case 'arrow':
+  //       return (
+  //         <Arrow
+  //           key={shape.id}
+  //           points={shape.points}
+  //           stroke={shape.color}
+  //           strokeWidth={shape.strokeWidth}
+  //           fill={shape.color}
+  //           pointerLength={10}
+  //           pointerWidth={10}
+  //         />
+  //       );
+  //     case 'ellipse':
+  //       return (
+  //         <Ellipse
+  //           key={shape.id}
+  //           x={shape.x}
+  //           y={shape.y}
+  //           radiusX={shape.radiusX}
+  //           radiusY={shape.radiusY}
+  //           stroke={shape.color}
+  //           strokeWidth={shape.strokeWidth}
+  //           fill={shape.fill || 'transparent'}
+  //         />
+  //       );
+  //     case 'star':
+  //       return (
+  //         <Star
+  //           key={shape.id}
+  //           x={shape.x}
+  //           y={shape.y}
+  //           numPoints={shape.numPoints || 5}
+  //           innerRadius={shape.innerRadius || 20}
+  //           outerRadius={shape.outerRadius || 40}
+  //           stroke={shape.color}
+  //           strokeWidth={shape.strokeWidth}
+  //           fill={shape.fill || 'transparent'}
+  //         />
+  //       );
+  //     case 'path':
+  //       return (
+  //         <Line
+  //           key={shape.id}
+  //           points={shape.points}
+  //           stroke={shape.color}
+  //           strokeWidth={shape.strokeWidth}
+  //           tension={0.5}
+  //           lineCap="round"
+  //           lineJoin="round"
+  //         />
+  //       );
+  //     case 'text':
+  //       return (
+  //         <Text
+  //           key={shape.id}
+  //           x={shape.x}
+  //           y={shape.y}
+  //           text={shape.text}
+  //           fill={shape.color}
+  //           fontSize={shape.fontSize || 16}
+  //         />
+  //       );
+  //     default:
+  //       console.warn(`Unknown shape type: ${shape.type}`);
+  //       return null;
+  //   }
+  // };
 
   // Render table component
   const TableComponent = ({ table }) => {
@@ -1619,25 +1789,106 @@ const ClientBookingComponent = () => {
                       }}
                     >
                       {/* Render shapes using Konva Stage */}
-                      <div style={{ 
-                        position: 'absolute', 
-                        top: 0, 
-                        left: 0, 
-                        width: '100%', 
-                        height: '100%', 
-                        pointerEvents: 'none',
-                        zIndex: 1
-                      }}>
-                        <Stage 
-                          ref={stageRef} 
-                          width={5000} 
-                          height={5000}
-                        >
-                          <Layer>
-                            {shapes.map(shape => renderShape(shape))}
-                          </Layer>
-                        </Stage>
-                      </div>
+                   <div style={{ 
+  position: 'absolute', 
+  top: 0, 
+  left: 0, 
+  width: '100%', 
+  height: '100%', 
+  pointerEvents: 'none',
+  zIndex: 1
+}}>
+  {shapes.map(shape => {
+    switch (shape.type) {
+      case 'rect':
+        return (
+          <div
+            key={shape.id}
+            style={{
+              position: 'absolute',
+              left: `${shape.x}px`,
+              top: `${shape.y}px`,
+              width: `${shape.width}px`,
+              height: `${shape.height}px`,
+              border: `${shape.strokeWidth || 2}px solid ${shape.color}`,
+              backgroundColor: shape.fill || 'transparent',
+              pointerEvents: 'none',
+              boxSizing: 'border-box'
+            }}
+          />
+        );
+      
+      case 'circle':
+        return (
+          <div
+            key={shape.id}
+            style={{
+              position: 'absolute',
+              left: `${shape.x - shape.radius}px`,
+              top: `${shape.y - shape.radius}px`,
+              width: `${shape.radius * 2}px`,
+              height: `${shape.radius * 2}px`,
+              borderRadius: '50%',
+              border: `${shape.strokeWidth || 2}px solid ${shape.color}`,
+              backgroundColor: shape.fill || 'transparent',
+              pointerEvents: 'none',
+              boxSizing: 'border-box'
+            }}
+          />
+        );
+      
+      case 'line':
+      case 'path':
+        // Для линий используем SVG внутри div
+        if (shape.points && shape.points.length >= 4) {
+          const [x1, y1, x2, y2] = shape.points;
+          const length = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+          const angle = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
+          
+          return (
+            <div
+              key={shape.id}
+              style={{
+                position: 'absolute',
+                left: `${x1}px`,
+                top: `${y1}px`,
+                width: `${length}px`,
+                height: `${shape.strokeWidth || 2}px`,
+                backgroundColor: shape.color,
+                transformOrigin: '0 50%',
+                transform: `rotate(${angle}deg)`,
+                pointerEvents: 'none'
+              }}
+            />
+          );
+        }
+        return null;
+      
+      case 'text':
+        return (
+          <div
+            key={shape.id}
+            style={{
+              position: 'absolute',
+              left: `${shape.x}px`,
+              top: `${shape.y}px`,
+              color: shape.color,
+              fontSize: `${shape.fontSize || 16}px`,
+              fontFamily: 'Arial, sans-serif',
+              pointerEvents: 'none',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            {shape.text}
+          </div>
+        );
+      
+      default:
+        console.warn(`Unknown shape type: ${shape.type}`);
+        return null;
+    }
+  })}
+</div>
 
                       {/* Render tables */}
                       {hallData.tables && hallData.tables.map((table) => (

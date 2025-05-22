@@ -2891,29 +2891,172 @@ useEffect(() => {
 
 
   // Export/import functions
-  const exportCanvasAsJSON = () => {
-    if (!fabricCanvasRef.current) return null;
+ const exportCanvasAsJSON = () => {
+  if (!fabricCanvasRef.current) return null;
 
-    try {
-      const canvas = fabricCanvasRef.current;
+  try {
+    const canvas = fabricCanvasRef.current;
+    
+    // Convert hall elements to shapes array for ClientBookingComponent
+    const shapes = [];
+    
+    // Process hall elements to create shapes
+    hallElements.forEach(element => {
+      let shape = null;
+      
+      switch (element.type) {
+        case 'rectangle':
+          shape = {
+            id: element.id,
+            type: 'rect',
+            x: element.x,
+            y: element.y,
+            width: element.width || 100,
+            height: element.height || 50,
+            color: element.stroke || strokeColor,
+            strokeWidth: element.strokeWidth || strokeWidth,
+            fill: element.fill || fillColor
+          };
+          break;
+          
+        case 'circle':
+          shape = {
+            id: element.id,
+            type: 'circle',
+            x: element.x,
+            y: element.y,
+            radius: element.radius || 50,
+            color: element.stroke || strokeColor,
+            strokeWidth: element.strokeWidth || strokeWidth,
+            fill: element.fill || fillColor
+          };
+          break;
+          
+        case 'line':
+          shape = {
+            id: element.id,
+            type: 'line',
+            points: [
+              element.x1 || 0,
+              element.y1 || 0,
+              element.x2 || 100,
+              element.y2 || 100
+            ],
+            color: element.stroke || strokeColor,
+            strokeWidth: element.strokeWidth || strokeWidth
+          };
+          break;
+          
+        case 'path':
+          // For path elements we need to extract points
+          const points = [];
+          
+          // Simple approach: use position and width/height to create a path
+          if (element.x !== undefined && element.y !== undefined) {
+            points.push(element.x, element.y);
+            
+            if (element.width && element.height) {
+              points.push(element.x + element.width, element.y + element.height);
+            } else {
+              // Default path if no dimensions
+              points.push(element.x + 100, element.y + 100);
+            }
+          }
+          
+          shape = {
+            id: element.id,
+            type: 'path',
+            points: points,
+            color: element.stroke || strokeColor,
+            strokeWidth: element.strokeWidth || strokeWidth
+          };
+          break;
+          
+        case 'text':
+          shape = {
+            id: element.id,
+            type: 'text',
+            x: element.x,
+            y: element.y,
+            text: element.text || "Text",
+            color: element.fill || strokeColor,
+            fontSize: element.fontSize || fontSize
+          };
+          break;
+      }
+      
+      if (shape) {
+        shapes.push(shape);
+      }
+    });
 
-      const exportData = {
-        tables: tables.map(table => ({ ...table })),
-        hallElements: hallElements.map(element => ({ ...element })),
-        canvasData: {
-          version: "1.0",
-          zoom: zoom,
-          width: canvas.width,
-          height: canvas.height,
-        }
-      };
+    // Create export data object with all necessary components
+    const exportData = {
+      name: "Зал ресторана", // Add a default name
+      tables: tables.map(table => ({ ...table })),
+      hallElements: hallElements.map(element => ({ ...element })),
+      shapes: shapes, // Add the shapes array for ClientBookingComponent
+      canvasData: {
+        version: "1.0",
+        zoom: zoom,
+        width: canvas.width,
+        height: canvas.height,
+      }
+    };
 
-      return JSON.stringify(exportData, null, 2);
-    } catch (error) {
-      console.error('Error exporting canvas:', error);
-      return null;
+    console.log("Exporting data:", exportData);
+    
+    // Create a date-stamped filename
+    const today = new Date();
+    const dateStr = `${today.getFullYear()}-${(today.getMonth()+1).toString().padStart(2, '0')}-${today.getDate().toString().padStart(2, '0')}`;
+    const filename = `hall_layout_${dateStr}.json`;
+    
+    return JSON.stringify(exportData, null, 2);
+  } catch (error) {
+    console.error('Error exporting canvas:', error);
+    return null;
+  }
+};
+
+// Helper function to extract points from a path element
+const extractPathPoints = (pathElement) => {
+  try {
+    if (!pathElement.path) {
+      return [pathElement.x || 0, pathElement.y || 0];
     }
-  };
+    
+    // For fabric.js Path objects with path data
+    if (typeof pathElement.path === 'string') {
+      // Simplified SVG path parsing - extract points from M and L commands
+      let points = [];
+      const regex = /[ML]\s*(-?\d+(?:\.\d+)?)[,\s](-?\d+(?:\.\d+)?)/g;
+      let match;
+      
+      while ((match = regex.exec(pathElement.path)) !== null) {
+        points.push(parseFloat(match[1]), parseFloat(match[2]));
+      }
+      
+      return points.length ? points : [pathElement.x || 0, pathElement.y || 0];
+    } 
+    else if (Array.isArray(pathElement.path)) {
+      // Handle array path format (Fabric.js internal format)
+      let points = [];
+      
+      pathElement.path.forEach(cmd => {
+        if (cmd[0] === 'M' || cmd[0] === 'L') {
+          points.push(cmd[1], cmd[2]);
+        }
+      });
+      
+      return points.length ? points : [pathElement.x || 0, pathElement.y || 0];
+    }
+  } catch (e) {
+    console.error("Error extracting points from path:", e);
+  }
+  
+  // Fallback: return element position if we can't extract path
+  return [pathElement.x || 0, pathElement.y || 0];
+}
 
   const importCanvasFromJSON = (jsonString) => {
     try {
