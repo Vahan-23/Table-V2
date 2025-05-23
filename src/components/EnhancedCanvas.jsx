@@ -316,7 +316,7 @@ const EnhancedCanvas = React.forwardRef((
     }
   }, []);
 
- const duplicateSelectedObject = useCallback(() => {
+const duplicateSelectedObject = useCallback(() => {
   const canvas = fabricCanvasRef.current;
   if (!canvas) return;
 
@@ -357,29 +357,57 @@ const EnhancedCanvas = React.forwardRef((
             }, 10);
           }
         } else if (obj.elementId) {
-          // ✅ Дублирование shape элемента
+          // ✅ ИСПРАВЛЕНО: Дублирование shape элемента в группе
           const originalShape = shapes.find(shape => shape.id === obj.elementId);
           if (originalShape) {
             const newShapeId = Date.now() + Math.floor(Math.random() * 1000);
 
-            const newShape = {
-              ...JSON.parse(JSON.stringify(originalShape)),
-              id: newShapeId,
-              x: objLeft + 10,
-              y: objTop + 10
-            };
+            let newShape;
 
-            // Для линий обновляем координаты точек
-            if (originalShape.type === 'line' && originalShape.points) {
+            // ✅ Для прямоугольников берем актуальные размеры
+            if (originalShape.type === 'rect') {
+              newShape = {
+                ...JSON.parse(JSON.stringify(originalShape)),
+                id: newShapeId,
+                x: objLeft + 10,
+                y: objTop + 10,
+                width: Math.round(obj.width * (obj.scaleX || 1)), // ✅ Актуальная ширина
+                height: Math.round(obj.height * (obj.scaleY || 1)), // ✅ Актуальная высота  
+                rotation: Math.round(obj.angle || 0)
+              };
+            } else if (originalShape.type === 'circle') {
+              newShape = {
+                ...JSON.parse(JSON.stringify(originalShape)),
+                id: newShapeId,
+                x: objLeft + 10,
+                y: objTop + 10,
+                radius: Math.round(obj.radius * (obj.scaleX || 1)), // ✅ Актуальный радиус
+                rotation: Math.round(obj.angle || 0)
+              };
+            } else if (originalShape.type === 'line') {
+              // Для линий обновляем координаты точек
               const deltaX = objLeft - originalShape.x;
               const deltaY = objTop - originalShape.y;
 
-              newShape.points = [
-                originalShape.points[0] + deltaX + 10,
-                originalShape.points[1] + deltaY + 10,
-                originalShape.points[2] + deltaX + 10,
-                originalShape.points[3] + deltaY + 10
-              ];
+              newShape = {
+                ...JSON.parse(JSON.stringify(originalShape)),
+                id: newShapeId,
+                points: [
+                  originalShape.points[0] + deltaX + 10,
+                  originalShape.points[1] + deltaY + 10,
+                  originalShape.points[2] + deltaX + 10,
+                  originalShape.points[3] + deltaY + 10
+                ]
+              };
+            } else {
+              // Для остальных элементов
+              newShape = {
+                ...JSON.parse(JSON.stringify(originalShape)),
+                id: newShapeId,
+                x: objLeft + 10,
+                y: objTop + 10,
+                rotation: Math.round(obj.angle || 0)
+              };
             }
 
             // ✅ Добавляем новый shape
@@ -435,31 +463,68 @@ const EnhancedCanvas = React.forwardRef((
         }, 50);
 
       } else if (activeObject.elementId) {
-        // ✅ Дублирование shape элемента
+        // ✅ ИСПРАВЛЕНО: Дублирование shape элемента
         const originalShape = shapes.find(shape => shape.id === activeObject.elementId);
         if (!originalShape) return;
 
         const currentLeft = activeObject.left;
         const currentTop = activeObject.top;
 
-        const newShape = {
-          ...JSON.parse(JSON.stringify(originalShape)),
-          id: Date.now(),
-          x: currentLeft + 10,
-          y: currentTop + 10
-        };
+        let newShape;
 
-        // Для линий обновляем координаты точек
-        if (originalShape.type === 'line') {
+        // ✅ Для прямоугольников берем актуальные размеры
+        if (originalShape.type === 'rect') {
+          newShape = {
+            ...JSON.parse(JSON.stringify(originalShape)),
+            id: Date.now(),
+            x: currentLeft + 10,
+            y: currentTop + 10,
+            width: Math.round(activeObject.width * (activeObject.scaleX || 1)), // ✅ Актуальная ширина
+            height: Math.round(activeObject.height * (activeObject.scaleY || 1)), // ✅ Актуальная высота
+            rotation: Math.round(activeObject.angle || 0) // ✅ Актуальный поворот
+          };
+        } else if (originalShape.type === 'circle') {
+          newShape = {
+            ...JSON.parse(JSON.stringify(originalShape)),
+            id: Date.now(),
+            x: currentLeft + 10,
+            y: currentTop + 10,
+            radius: Math.round(activeObject.radius * (activeObject.scaleX || 1)), // ✅ Актуальный радиус
+            rotation: Math.round(activeObject.angle || 0)
+          };
+        } else if (originalShape.type === 'line') {
+          // Для линий обновляем координаты точек
           const deltaX = currentLeft - originalShape.x;
           const deltaY = currentTop - originalShape.y;
 
-          newShape.points = [
-            originalShape.points[0] + deltaX + 10,
-            originalShape.points[1] + deltaY + 10,
-            originalShape.points[2] + deltaX + 10,
-            originalShape.points[3] + deltaY + 10
-          ];
+          newShape = {
+            ...JSON.parse(JSON.stringify(originalShape)),
+            id: Date.now(),
+            points: [
+              originalShape.points[0] + deltaX + 10,
+              originalShape.points[1] + deltaY + 10,
+              originalShape.points[2] + deltaX + 10,
+              originalShape.points[3] + deltaY + 10
+            ]
+          };
+        } else if (originalShape.type === 'text') {
+          newShape = {
+            ...JSON.parse(JSON.stringify(originalShape)),
+            id: Date.now(),
+            x: currentLeft + 10,
+            y: currentTop + 10,
+            fontSize: Math.round(activeObject.fontSize * (activeObject.scaleX || 1)), // ✅ Актуальный размер шрифта
+            rotation: Math.round(activeObject.angle || 0)
+          };
+        } else {
+          // Для остальных элементов
+          newShape = {
+            ...JSON.parse(JSON.stringify(originalShape)),
+            id: Date.now(),
+            x: currentLeft + 10,
+            y: currentTop + 10,
+            rotation: Math.round(activeObject.angle || 0)
+          };
         }
 
         // ✅ Добавляем новый shape
@@ -3036,7 +3101,56 @@ const finishDrawingCircle = (canvas) => {
             };
             break;
 
-          // Other shape types...
+          // ✅ ДОБАВЛЕНО: обработка линий
+          case 'line':
+            shape = {
+              id: obj.elementId,
+              type: 'line',
+              points: [
+                obj.originalX1 || obj.x1,
+                obj.originalY1 || obj.y1,
+                obj.originalX2 || obj.x2,
+                obj.originalY2 || obj.y2
+              ],
+              color: obj.stroke || '#000000',
+              strokeWidth: obj.strokeWidth || 2,
+              rotation: Math.round(obj.angle || 0)
+            };
+            break;
+
+          // ✅ ДОБАВЛЕНО: обработка текста
+          case 'i-text':
+            shape = {
+              id: obj.elementId,
+              type: 'text',
+              text: obj.text || 'Text',
+              x: Math.round(obj.left),
+              y: Math.round(obj.top),
+              fontSize: obj.fontSize || 18,
+              fontFamily: obj.fontFamily || 'Arial',
+              color: obj.fill || '#000000',
+              rotation: Math.round(obj.angle || 0)
+            };
+            break;
+
+          // ✅ ДОБАВЛЕНО: обработка path
+          case 'path':
+            shape = {
+              id: obj.elementId,
+              type: 'path',
+              path: obj.path,
+              x: Math.round(obj.left),
+              y: Math.round(obj.top),
+              color: obj.stroke || '#000000',
+              strokeWidth: obj.strokeWidth || 2,
+              fill: obj.fill || '',
+              rotation: Math.round(obj.angle || 0)
+            };
+            break;
+
+          default:
+            console.warn(`Unknown object type: ${obj.type}`);
+            break;
         }
 
         if (shape) {
