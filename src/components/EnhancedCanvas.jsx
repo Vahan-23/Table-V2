@@ -142,20 +142,21 @@ const EnhancedCanvas = React.forwardRef((
         break;
 
       case 'text':
-        // ❌ ПРОБЛЕМА ЗДЕСЬ - возможно неправильный origin
-        fabricObj = new fabric.IText(shape.text || 'Text', {
-          left: shape.x || 0,
-          top: shape.y || 0,
-          fontSize: shape.fontSize || 18,
-          fontFamily: shape.fontFamily || 'Arial',
-          fill: shape.color || strokeColor,
-          angle: shape.rotation || 0,
-          elementId: shape.id,
-          hasControls: true,
-          hasBorders: true,
-          selectable: true
-        });
-        break;
+  fabricObj = new fabric.IText(shape.text || 'Text', {
+    left: shape.x || 0,
+    top: shape.y || 0,
+    fontSize: shape.fontSize || 18,
+    fontFamily: shape.fontFamily || 'Arial',
+    fill: shape.color || strokeColor,
+    angle: shape.rotation || 0,
+    elementId: shape.id,
+    hasControls: true,
+    hasBorders: true,
+    selectable: true,
+    originX: 'left',
+    originY: 'top'
+  });
+  break;
 
       case 'path':
         if (shape.path) {
@@ -514,15 +515,16 @@ const duplicateSelectedObject = useCallback(() => {
             ]
           };
         } else if (originalShape.type === 'text') {
-          newShape = {
-            ...JSON.parse(JSON.stringify(originalShape)),
-            id: Date.now(),
-            x: currentLeft + 10,
-            y: currentTop + 10,
-            fontSize: Math.round(activeObject.fontSize * (activeObject.scaleX || 1)), // ✅ Актуальный размер шрифта
-            rotation: Math.round(activeObject.angle || 0)
-          };
-        } else {
+  newShape = {
+    ...JSON.parse(JSON.stringify(originalShape)),
+    id: Date.now(),
+    x: currentLeft + 10,
+    y: currentTop + 10,
+    fontSize: Math.round(activeObject.fontSize * (activeObject.scaleX || 1)), // ✅ Актуальный размер шрифта
+    text: activeObject.text || originalShape.text, // ✅ Актуальный текст
+    rotation: Math.round(activeObject.angle || 0)
+  };
+} else {
           // Для остальных элементов
           newShape = {
             ...JSON.parse(JSON.stringify(originalShape)),
@@ -815,444 +817,492 @@ const duplicateSelectedObject = useCallback(() => {
   // Полная исправленная функция setupCanvasEventHandlers в EnhancedCanvas.jsx
 
   const setupCanvasEventHandlers = (canvas) => {
-    if (!canvas) return;
+  if (!canvas) return;
 
-    try {
-      // Object selection
-      canvas.on('selection:created', (e) => {
-        if (!e.selected || e.selected.length === 0) return;
+  try {
+    // Object selection
+    canvas.on('selection:created', (e) => {
+      if (!e.selected || e.selected.length === 0) return;
 
-        const obj = e.selected[0];
+      const obj = e.selected[0];
 
-        // If a grid line is selected by mistake - cancel selection
-        if (obj.gridLine) {
-          canvas.discardActiveObject();
-          canvas.renderAll();
-          return;
+      // If a grid line is selected by mistake - cancel selection
+      if (obj.gridLine) {
+        canvas.discardActiveObject();
+        canvas.renderAll();
+        return;
+      }
+
+      setSelectedObject(obj);
+
+      if (obj.elementId) {
+        setSelectedElementId(obj.elementId);
+
+        // Force update selected object properties
+        obj.set({
+          selectable: true,
+          evented: true,
+          hasControls: true,
+          hasBorders: true
+        });
+      } else if (obj.tableId && onTableSelect) {
+        onTableSelect(obj.tableId);
+      }
+
+      canvas.renderAll();
+    });
+
+    canvas.on('selection:cleared', () => {
+      setSelectedObject(null);
+      setSelectedElementId(null);
+    });
+
+    // Object moving - ПОЛНАЯ ВЕРСИЯ
+    canvas.on('object:moving', (e) => {
+      if (!e.target) return;
+      
+      const obj = e.target;
+      setUnsavedChanges(true);
+
+      if (obj.tableId) {
+        // Обработка столов
+        setTables(prevTables => prevTables.map(table =>
+          table.id === obj.tableId
+            ? { ...table, x: Math.round(obj.left), y: Math.round(obj.top) }
+            : table
+        ));
+
+        if (onTableMove) {
+          onTableMove(obj.tableId, { x: Math.round(obj.left), y: Math.round(obj.top) });
         }
+      } else if (obj.elementId) {
+        const shape = shapes.find(s => s.id === obj.elementId);
 
-        setSelectedObject(obj);
+        if (shape && shape.type === 'line') {
+          // ✅ ИСПРАВЛЕНО: Правильное движение линий
+          const originalPoints = [
+            obj.originalX1 !== undefined ? obj.originalX1 : shape.points[0],
+            obj.originalY1 !== undefined ? obj.originalY1 : shape.points[1],
+            obj.originalX2 !== undefined ? obj.originalX2 : shape.points[2],
+            obj.originalY2 !== undefined ? obj.originalY2 : shape.points[3]
+          ];
 
-        if (obj.elementId) {
-          setSelectedElementId(obj.elementId);
+          // Вычисляем смещение от исходной позиции
+          const deltaX = obj.left - originalPoints[0];
+          const deltaY = obj.top - originalPoints[1];
 
-          // Force update selected object properties
+          // Новые абсолютные координаты всех точек линии
+          const newPoints = [
+            originalPoints[0] + deltaX,
+            originalPoints[1] + deltaY,
+            originalPoints[2] + deltaX,
+            originalPoints[3] + deltaY
+          ];
+
+          setShapes(prevShapes => prevShapes.map(s =>
+            s.id === obj.elementId
+              ? { ...s, points: newPoints.map(p => Math.round(p)) }
+              : s
+          ));
+
+          // Обновляем сохраненные координаты в объекте
+          obj.originalX1 = newPoints[0];
+          obj.originalY1 = newPoints[1];
+          obj.originalX2 = newPoints[2];
+          obj.originalY2 = newPoints[3];
+
+        } else if (shape && shape.type === 'circle') {
+          // Обработка кругов (left/top для кругов это центр)
+          const radius = shape.radius || 50;
+          const newX = Math.round(obj.left - radius);
+          const newY = Math.round(obj.top - radius);
+
+          setShapes(prevShapes => prevShapes.map(s =>
+            s.id === obj.elementId
+              ? { 
+                  ...s, 
+                  x: newX, 
+                  y: newY,
+                  centerX: Math.round(obj.left),
+                  centerY: Math.round(obj.top)
+                }
+              : s
+          ));
+
+        } else if (shape && shape.type === 'rect') {
+          // ✅ ИСПРАВЛЕНО: Для прямоугольников используем obj.left/top напрямую
+          setShapes(prevShapes => prevShapes.map(s =>
+            s.id === obj.elementId
+              ? { 
+                  ...s, 
+                  x: Math.round(obj.left), 
+                  y: Math.round(obj.top)
+                  // НЕ обновляем размеры при перемещении!
+                }
+              : s
+          ));
+
+        } else if (shape && shape.type === 'text') {
+          // ✅ ИСПРАВЛЕНО: Правильное движение текста
+          console.log('Moving text to:', obj.left, obj.top); // Для отладки
+          
+          setShapes(prevShapes => prevShapes.map(s =>
+            s.id === obj.elementId
+              ? { 
+                  ...s, 
+                  x: Math.round(obj.left), 
+                  y: Math.round(obj.top)
+                }
+              : s
+          ));
+
+        } else if (shape && shape.type === 'path') {
+          // Обработка path объектов
+          setShapes(prevShapes => prevShapes.map(s =>
+            s.id === obj.elementId
+              ? { 
+                  ...s, 
+                  x: Math.round(obj.left), 
+                  y: Math.round(obj.top)
+                }
+              : s
+          ));
+
+        } else {
+          // Остальные элементы (общий случай)
+          setShapes(prevShapes => prevShapes.map(s =>
+            s.id === obj.elementId
+              ? { ...s, x: Math.round(obj.left), y: Math.round(obj.top) }
+              : s
+          ));
+        }
+      }
+    });
+
+    canvas.on('object:modified', (e) => {
+      if (!e.target) return;
+
+      const obj = e.target;
+      
+      if (obj.elementId) {
+        console.log(`Object modified: ${obj.type}, elementId: ${obj.elementId}`);
+
+        if (obj.type === 'rect') {
+          // ✅ СОХРАНЯЕМ ЦЕНТР прямоугольника, а не left/top
+          const centerX = obj.left + (obj.width * obj.scaleX) / 2;
+          const centerY = obj.top + (obj.height * obj.scaleY) / 2;
+          const finalWidth = Math.round(obj.width * obj.scaleX);
+          const finalHeight = Math.round(obj.height * obj.scaleY);
+          
+          setShapes(prevShapes => prevShapes.map(s =>
+            s.id === obj.elementId
+              ? {
+                  ...s,
+                  centerX: Math.round(centerX), // ✅ Сохраняем центр
+                  centerY: Math.round(centerY), // ✅ Сохраняем центр
+                  width: finalWidth,
+                  height: finalHeight,
+                  rotation: Math.round(obj.angle || 0)
+                }
+              : s
+          ));
+          
+          // Обновляем объект
           obj.set({
-            selectable: true,
-            evented: true,
-            hasControls: true,
-            hasBorders: true
+            width: finalWidth,
+            height: finalHeight,
+            scaleX: 1,
+            scaleY: 1
           });
-        } else if (obj.tableId && onTableSelect) {
-          onTableSelect(obj.tableId);
+
+        } else if (obj.type === 'circle') {
+          // Для кругов тоже сохраняем центр
+          setShapes(prevShapes => prevShapes.map(s =>
+            s.id === obj.elementId
+              ? {
+                  ...s,
+                  centerX: Math.round(obj.left), // Для кругов left/top уже центр
+                  centerY: Math.round(obj.top),
+                  radius: Math.round(obj.radius * (obj.scaleX || 1)),
+                  rotation: Math.round(obj.angle || 0)
+                }
+              : s
+          ));
+
+          obj.set({
+            radius: Math.round(obj.radius * (obj.scaleX || 1)),
+            scaleX: 1,
+            scaleY: 1
+          });
+
+        } else if (obj.type === 'line') {
+          // ✅ ИСПРАВЛЕНО: Обработка изменения линий
+          const currentPoints = [
+            obj.originalX1 !== undefined ? obj.originalX1 : obj.x1,
+            obj.originalY1 !== undefined ? obj.originalY1 : obj.y1, 
+            obj.originalX2 !== undefined ? obj.originalX2 : obj.x2,
+            obj.originalY2 !== undefined ? obj.originalY2 : obj.y2
+          ];
+
+          setShapes(prevShapes => prevShapes.map(s =>
+            s.id === obj.elementId
+              ? {
+                  ...s,
+                  points: currentPoints.map(p => Math.round(p)),
+                  rotation: Math.round(obj.angle || 0)
+                }
+              : s
+          ));
+
+          // Обновляем сохраненную позицию
+          obj.originalLeft = obj.left;
+          obj.originalTop = obj.top;
+
+        } else if (obj.type === 'i-text') {
+          // ✅ ИСПРАВЛЕНО: Правильная обработка изменения текста
+          const newFontSize = Math.round(obj.fontSize * (obj.scaleX || 1));
+
+          setShapes(prevShapes => prevShapes.map(s =>
+            s.id === obj.elementId
+              ? { 
+                  ...s, 
+                  fontSize: newFontSize,
+                  x: Math.round(obj.left),
+                  y: Math.round(obj.top),
+                  text: obj.text || s.text,
+                  rotation: Math.round(obj.angle || 0)
+                }
+              : s
+          ));
+
+          // ✅ Сбрасываем масштаб после применения к размеру шрифта
+          obj.set({
+            fontSize: newFontSize,
+            scaleX: 1,
+            scaleY: 1
+          });
+
+        } else if (obj.type === 'path') {
+          // ✅ Обработка path объектов
+          setShapes(prevShapes => prevShapes.map(s =>
+            s.id === obj.elementId
+              ? {
+                  ...s,
+                  x: Math.round(obj.left),
+                  y: Math.round(obj.top),
+                  rotation: Math.round(obj.angle || 0)
+                }
+              : s
+          ));
+
+        } else {
+          // Для остальных типов
+          setShapes(prevShapes => prevShapes.map(s =>
+            s.id === obj.elementId
+              ? {
+                  ...s,
+                  x: Math.round(obj.left),
+                  y: Math.round(obj.top),
+                  rotation: Math.round(obj.angle || 0)
+                }
+              : s
+          ));
         }
 
         canvas.renderAll();
-      });
+        saveToHistory();
+      }
+    });
 
-      canvas.on('selection:cleared', () => {
-        setSelectedObject(null);
-        setSelectedElementId(null);
-      });
+    // Object scaling
+    canvas.on('object:scaling', (e) => {
+      if (!e.target) return;
 
-      // Object moving - ИСПРАВЛЕННАЯ ВЕРСИЯ
-   canvas.on('object:moving', (e) => {
-  if (!e.target) return;
-  
-  const obj = e.target;
-  setUnsavedChanges(true);
+      const obj = e.target;
+      setUnsavedChanges(true);
 
-  if (obj.tableId) {
-    // Обработка столов
-    setTables(prevTables => prevTables.map(table =>
-      table.id === obj.tableId
-        ? { ...table, x: Math.round(obj.left), y: Math.round(obj.top) }
-        : table
-    ));
+      if (obj.elementId) {
+        const shape = shapes.find(s => s.id === obj.elementId);
 
-    if (onTableMove) {
-      onTableMove(obj.tableId, { x: Math.round(obj.left), y: Math.round(obj.top) });
-    }
-  } else if (obj.elementId) {
-    const shape = shapes.find(s => s.id === obj.elementId);
+        if (obj.type === 'rect') {
+          // ✅ ИСПРАВЛЕНО: Сохраняем rotation при scaling
+          setShapes(prevShapes => prevShapes.map(s =>
+            s.id === obj.elementId
+              ? {
+                  ...s,
+                  width: Math.round(obj.width * obj.scaleX),
+                  height: Math.round(obj.height * obj.scaleY),
+                  rotation: Math.round(obj.angle || 0) // ✅ ДОБАВЛЕНО
+              }
+              : s
+          ));
+        } else if (obj.type === 'circle'){
+          // ✅ ИСПРАВЛЕНО: Сохраняем rotation при scaling кругов
+          const newRadius = Math.round(obj.radius * obj.scaleX);
+          const newX = Math.round(obj.left - newRadius);
+          const newY = Math.round(obj.top - newRadius);
 
-    if (shape && shape.type === 'line') {
-      // ✅ ИСПРАВЛЕНО: Правильное движение линий
-      const originalPoints = [
-        obj.originalX1 !== undefined ? obj.originalX1 : shape.points[0],
-        obj.originalY1 !== undefined ? obj.originalY1 : shape.points[1],
-        obj.originalX2 !== undefined ? obj.originalX2 : shape.points[2],
-        obj.originalY2 !== undefined ? obj.originalY2 : shape.points[3]
-      ];
+          setShapes(prevShapes => prevShapes.map(s =>
+            s.id === obj.elementId
+              ? { 
+                  ...s, 
+                  radius: newRadius,
+                  x: newX,
+                  y: newY,
+                  rotation: Math.round(obj.angle || 0) // ✅ ДОБАВЛЕНО
+                }
+              : s
+          ));
+        } else if (obj.type === 'i-text') {
+          // ✅ ИСПРАВЛЕНО: Сохраняем rotation при scaling текста
+          const newFontSize = Math.round(obj.fontSize * obj.scaleX);
 
-      // Вычисляем смещение от исходной позиции
-      const deltaX = obj.left - originalPoints[0];
-      const deltaY = obj.top - originalPoints[1];
+          setShapes(prevShapes => prevShapes.map(s =>
+            s.id === obj.elementId
+              ? { 
+                  ...s, 
+                  fontSize: newFontSize,
+                  x: Math.round(obj.left),
+                  y: Math.round(obj.top),
+                  text: obj.text || s.text, // ✅ Обновляем текст
+                  rotation: Math.round(obj.angle || 0) // ✅ ДОБАВЛЕНО
+                }
+              : s
+          ));
 
-      // Новые абсолютные координаты всех точек линии
-      const newPoints = [
-        originalPoints[0] + deltaX,
-        originalPoints[1] + deltaY,
-        originalPoints[2] + deltaX,
-        originalPoints[3] + deltaY
-      ];
+          obj.set({
+            fontSize: newFontSize,
+            scaleX: 1,
+            scaleY: 1
+          });
 
-      setShapes(prevShapes => prevShapes.map(s =>
-        s.id === obj.elementId
-          ? { ...s, points: newPoints.map(p => Math.round(p)) }
-          : s
-      ));
+          canvas.renderAll();
+        }
+      } else if (obj.tableId) {
+        // Обработка столов (как было)
+        const table = tables.find(t => t.id === obj.tableId);
+        // ... остальной код для столов
+      }
+    });
 
-      // Обновляем сохраненные координаты в объекте
-      obj.originalX1 = newPoints[0];
-      obj.originalY1 = newPoints[1];
-      obj.originalX2 = newPoints[2];
-      obj.originalY2 = newPoints[3];
+    // Object rotating
+    canvas.on('object:rotating', (e) => {
+      if (!e.target) return;
 
-    } else if (shape && shape.type === 'circle') {
-      // Обработка кругов (left/top для кругов это центр)
-      const radius = shape.radius || 50;
-      const newX = Math.round(obj.left - radius);
-      const newY = Math.round(obj.top - radius);
+      const obj = e.target;
+      setUnsavedChanges(true);
 
-      setShapes(prevShapes => prevShapes.map(s =>
-        s.id === obj.elementId
-          ? { 
-              ...s, 
-              x: newX, 
-              y: newY,
-              centerX: Math.round(obj.left),
-              centerY: Math.round(obj.top)
-            }
-          : s
-      ));
+      if (obj.elementId) {
+        const shape = shapes.find(s => s.id === obj.elementId);
+        
+        if (shape && obj.type === 'rect') {
+          // ✅ При повороте пересчитываем и сохраняем центр
+          const centerX = obj.left + obj.width / 2;
+          const centerY = obj.top + obj.height / 2;
+          
+          setShapes(prevShapes => prevShapes.map(s =>
+            s.id === obj.elementId
+              ? { 
+                  ...s, 
+                  centerX: Math.round(centerX),
+                  centerY: Math.round(centerY),
+                  rotation: Math.round(obj.angle) 
+                }
+              : s
+          ));
+        } else {
+          // Для остальных
+          setShapes(prevShapes => prevShapes.map(s =>
+            s.id === obj.elementId
+              ? { ...s, rotation: Math.round(obj.angle) }
+              : s
+          ));
+        }
+      }
+    });
 
-    } else if (shape && shape.type === 'rect') {
-      // ✅ ИСПРАВЛЕНО: Для прямоугольников используем obj.left/top напрямую
-      setShapes(prevShapes => prevShapes.map(s =>
-        s.id === obj.elementId
-          ? { 
-              ...s, 
-              x: Math.round(obj.left), 
-              y: Math.round(obj.top)
-              // НЕ обновляем размеры при перемещении!
-            }
-          : s
-      ));
+    // ✅ ДОБАВЛЕНО: Обработчик изменения текста
+    canvas.on('text:changed', (e) => {
+      if (!e.target || !e.target.elementId) return;
 
-    } else if (shape && shape.type === 'text') {
-      // ✅ ИСПРАВЛЕНО: Правильное движение текста
-      setShapes(prevShapes => prevShapes.map(s =>
-        s.id === obj.elementId
-          ? { 
-              ...s, 
-              x: Math.round(obj.left), 
-              y: Math.round(obj.top)
-            }
-          : s
-      ));
-
-    } else if (shape && shape.type === 'path') {
-      // Обработка path объектов
-      setShapes(prevShapes => prevShapes.map(s =>
-        s.id === obj.elementId
-          ? { 
-              ...s, 
-              x: Math.round(obj.left), 
-              y: Math.round(obj.top)
-            }
-          : s
-      ));
-
-    } else {
-      // Остальные элементы (общий случай)
-      setShapes(prevShapes => prevShapes.map(s =>
-        s.id === obj.elementId
-          ? { ...s, x: Math.round(obj.left), y: Math.round(obj.top) }
-          : s
-      ));
-    }
-  }
-});
-
-canvas.on('object:modified', (e) => {
-  if (!e.target) return;
-
-  const obj = e.target;
-  
-  if (obj.elementId) {
-    console.log(`Object modified: ${obj.type}, elementId: ${obj.elementId}`);
-
-    if (obj.type === 'rect') {
-      // ✅ СОХРАНЯЕМ ЦЕНТР прямоугольника, а не left/top
-      const centerX = obj.left + (obj.width * obj.scaleX) / 2;
-      const centerY = obj.top + (obj.height * obj.scaleY) / 2;
-      const finalWidth = Math.round(obj.width * obj.scaleX);
-      const finalHeight = Math.round(obj.height * obj.scaleY);
-      
-      setShapes(prevShapes => prevShapes.map(s =>
-        s.id === obj.elementId
-          ? {
-              ...s,
-              centerX: Math.round(centerX), // ✅ Сохраняем центр
-              centerY: Math.round(centerY), // ✅ Сохраняем центр
-              width: finalWidth,
-              height: finalHeight,
-              rotation: Math.round(obj.angle || 0)
-            }
-          : s
-      ));
-      
-      // Обновляем объект
-      obj.set({
-        width: finalWidth,
-        height: finalHeight,
-        scaleX: 1,
-        scaleY: 1
-      });
-
-    } else if (obj.type === 'circle') {
-      // Для кругов тоже сохраняем центр
-      setShapes(prevShapes => prevShapes.map(s =>
-        s.id === obj.elementId
-          ? {
-              ...s,
-              centerX: Math.round(obj.left), // Для кругов left/top уже центр
-              centerY: Math.round(obj.top),
-              radius: Math.round(obj.radius * (obj.scaleX || 1)),
-              rotation: Math.round(obj.angle || 0)
-            }
-          : s
-      ));
-
-      obj.set({
-        radius: Math.round(obj.radius * (obj.scaleX || 1)),
-        scaleX: 1,
-        scaleY: 1
-      });
-
-    } else if (obj.type === 'line') {
-      // ✅ ИСПРАВЛЕНО: Обработка изменения линий
-      const currentPoints = [
-        obj.originalX1 !== undefined ? obj.originalX1 : obj.x1,
-        obj.originalY1 !== undefined ? obj.originalY1 : obj.y1, 
-        obj.originalX2 !== undefined ? obj.originalX2 : obj.x2,
-        obj.originalY2 !== undefined ? obj.originalY2 : obj.y2
-      ];
-
-      setShapes(prevShapes => prevShapes.map(s =>
-        s.id === obj.elementId
-          ? {
-              ...s,
-              points: currentPoints.map(p => Math.round(p)),
-              rotation: Math.round(obj.angle || 0)
-            }
-          : s
-      ));
-
-      // Обновляем сохраненную позицию
-      obj.originalLeft = obj.left;
-      obj.originalTop = obj.top;
-
-    } else if (obj.type === 'i-text') {
-      // ✅ ИСПРАВЛЕНО: Сохраняем rotation при scaling текста
-      const newFontSize = Math.round(obj.fontSize * obj.scaleX);
-
-      setShapes(prevShapes => prevShapes.map(s =>
-        s.id === obj.elementId
-          ? { 
-              ...s, 
-              fontSize: newFontSize,
-              x: Math.round(obj.left),
-              y: Math.round(obj.top),
-              text: obj.text || s.text, // ✅ Обновляем текст если изменился
-              rotation: Math.round(obj.angle || 0)
-            }
-          : s
-      ));
-
-      obj.set({
-        fontSize: newFontSize,
-        scaleX: 1,
-        scaleY: 1
-      });
-
-    } else if (obj.type === 'path') {
-      // ✅ Обработка path объектов
-      setShapes(prevShapes => prevShapes.map(s =>
-        s.id === obj.elementId
-          ? {
-              ...s,
-              x: Math.round(obj.left),
-              y: Math.round(obj.top),
-              rotation: Math.round(obj.angle || 0)
-            }
-          : s
-      ));
-
-    } else {
-      // Для остальных типов
-      setShapes(prevShapes => prevShapes.map(s =>
-        s.id === obj.elementId
-          ? {
-              ...s,
-              x: Math.round(obj.left),
-              y: Math.round(obj.top),
-              rotation: Math.round(obj.angle || 0)
-            }
-          : s
-      ));
-    }
-
-    canvas.renderAll();
-    saveToHistory();
-  }
-});
-
-      // Object scaling - ИСПРАВЛЕННАЯ ВЕРСИЯ
- canvas.on('object:scaling', (e) => {
-  if (!e.target) return;
-
-  const obj = e.target;
-  setUnsavedChanges(true);
-
-  if (obj.elementId) {
-    const shape = shapes.find(s => s.id === obj.elementId);
-
-    if (obj.type === 'rect') {
-      // ✅ ИСПРАВЛЕНО: Сохраняем rotation при scaling
-      setShapes(prevShapes => prevShapes.map(s =>
-        s.id === obj.elementId
-          ? {
-              ...s,
-              width: Math.round(obj.width * obj.scaleX),
-              height: Math.round(obj.height * obj.scaleY),
-              rotation: Math.round(obj.angle || 0) // ✅ ДОБАВЛЕНО
-          }
-          : s
-      ));
-    } else if (obj.type === 'circle'){
-      // ✅ ИСПРАВЛЕНО: Сохраняем rotation при scaling кругов
-      const newRadius = Math.round(obj.radius * obj.scaleX);
-      const newX = Math.round(obj.left - newRadius);
-      const newY = Math.round(obj.top - newRadius);
-
-      setShapes(prevShapes => prevShapes.map(s =>
-        s.id === obj.elementId
-          ? { 
-              ...s, 
-              radius: newRadius,
-              x: newX,
-              y: newY,
-              rotation: Math.round(obj.angle || 0) // ✅ ДОБАВЛЕНО
-            }
-          : s
-      ));
-    } else if (obj.type === 'i-text') {
-      // ✅ ИСПРАВЛЕНО: Сохраняем rotation при scaling текста
-      const newFontSize = Math.round(obj.fontSize * obj.scaleX);
-
-      setShapes(prevShapes => prevShapes.map(s =>
-        s.id === obj.elementId
-          ? { 
-              ...s, 
-              fontSize: newFontSize,
-              x: Math.round(obj.left),
-              y: Math.round(obj.top),
-              rotation: Math.round(obj.angle || 0) // ✅ ДОБАВЛЕНО
-            }
-          : s
-      ));
-
-      obj.set({
-        fontSize: newFontSize,
-        scaleX: 1,
-        scaleY: 1
-      });
-
-      canvas.renderAll();
-    }
-  } else if (obj.tableId) {
-    // Обработка столов (как было)
-    const table = tables.find(t => t.id === obj.tableId);
-    // ... остальной код для столов
-  }
-});
-      // Object rotating
- canvas.on('object:rotating', (e) => {
-  if (!e.target) return;
-
-  const obj = e.target;
-  setUnsavedChanges(true);
-
-  if (obj.elementId) {
-    const shape = shapes.find(s => s.id === obj.elementId);
-    
-    if (shape && obj.type === 'rect') {
-      // ✅ При повороте пересчитываем и сохраняем центр
-      const centerX = obj.left + obj.width / 2;
-      const centerY = obj.top + obj.height / 2;
+      const obj = e.target;
+      console.log('Text changed:', obj.text, 'at position:', obj.left, obj.top);
       
       setShapes(prevShapes => prevShapes.map(s =>
         s.id === obj.elementId
           ? { 
               ...s, 
-              centerX: Math.round(centerX),
-              centerY: Math.round(centerY),
-              rotation: Math.round(obj.angle) 
+              text: obj.text,
+              x: Math.round(obj.left),
+              y: Math.round(obj.top)
             }
           : s
       ));
-    } else {
-      // Для остальных
+
+      setUnsavedChanges(true);
+    });
+
+    // ✅ ДОБАВЛЕНО: Обработчик окончания редактирования текста
+    canvas.on('text:editing:exited', (e) => {
+      if (!e.target || !e.target.elementId) return;
+
+      const obj = e.target;
+      console.log('Text editing exited:', obj.text);
+      
       setShapes(prevShapes => prevShapes.map(s =>
         s.id === obj.elementId
-          ? { ...s, rotation: Math.round(obj.angle) }
+          ? { 
+              ...s, 
+              text: obj.text,
+              x: Math.round(obj.left),
+              y: Math.round(obj.top)
+            }
           : s
       ));
-    }
+
+      setUnsavedChanges(true);
+      saveToHistory();
+    });
+
+    // Path creation (for drawing)
+    canvas.on('path:created', (e) => {
+      if (!e.path) return;
+
+      const path = e.path;
+      setUnsavedChanges(true);
+      saveToHistory();
+      
+      // ✅ Создаем элемент в shapes
+      const newShape = {
+        id: Date.now(),
+        type: 'path',
+        path: path.path,
+        color: path.stroke,
+        strokeWidth: path.strokeWidth,
+        fill: path.fill || '',
+        x: path.left,
+        y: path.top,
+        width: path.width,
+        height: path.height
+      };
+
+      // Добавляем element ID
+      path.set('elementId', newShape.id);
+
+      // ✅ Обновляем shapes
+      setShapes(prevShapes => [...prevShapes, newShape]);
+      setObjectCount(prevCount => prevCount + 1);
+    });
+
+    // Mouse wheel (zoom)
+    canvas.on('mouse:wheel', handleMouseWheel);
+
+    // Custom drawing events
+    setupDrawingEvents(canvas);
+  } catch (error) {
+    console.error('Error setting up canvas event handlers:', error);
   }
-});
-
-      // Path creation (for drawing)
-      canvas.on('path:created', (e) => {
-  if (!e.path) return;
-
-  const path = e.path;
-  setUnsavedChanges(true);
-  saveToHistory();
-  
-  // ✅ Создаем элемент в shapes
-  const newShape = {
-    id: Date.now(),
-    type: 'path',
-    path: path.path,
-    color: path.stroke,
-    strokeWidth: path.strokeWidth,
-    fill: path.fill || '',
-    x: path.left,
-    y: path.top,
-    width: path.width,
-    height: path.height
-  };
-
-  // Добавляем element ID
-  path.set('elementId', newShape.id);
-
-  // ✅ Обновляем shapes
-  setShapes(prevShapes => [...prevShapes, newShape]);
-  setObjectCount(prevCount => prevCount + 1);
-});
-
-      // Mouse wheel (zoom)
-      canvas.on('mouse:wheel', handleMouseWheel);
-
-      // Custom drawing events
-      setupDrawingEvents(canvas);
-    } catch (error) {
-      console.error('Error setting up canvas event handlers:', error);
-    }
-  };
+};
 
   // Common mouse wheel handler for zoom
   const handleMouseWheel = (opt) => {
@@ -1653,137 +1703,223 @@ canvas.on('object:modified', (e) => {
   }, [activeMode]);
 
   // Set up hybrid mode
-  const setupHybridMode = (canvas) => {
-    console.log('Setting up hybrid mode...');
-    canvas.isDrawingMode = false;
-    setIsDrawing(false);
-    // Clear previous handlers
-    canvas.off('mouse:down');
-    canvas.off('mouse:move');
-    canvas.off('mouse:up');
-    canvas.off('mouse:wheel');
-    canvas.off('selection:created');
-    canvas.off('selection:cleared');
-    canvas.off('contextmenu');
+ const setupHybridMode = (canvas) => {
+  console.log('Setting up hybrid mode...');
+  canvas.isDrawingMode = false;
+  setIsDrawing(false);
+  
+  // Clear previous handlers
+  canvas.off('mouse:down');
+  canvas.off('mouse:move');
+  canvas.off('mouse:up');
+  canvas.off('mouse:wheel');
+  canvas.off('selection:created');
+  canvas.off('selection:cleared');
+  canvas.off('contextmenu');
 
-    if (canvas._hybridHandlers) {
-      window.removeEventListener('keydown', canvas._hybridHandlers.keyDown);
-      window.removeEventListener('keyup', canvas._hybridHandlers.keyUp);
-    }
+  if (canvas._hybridHandlers) {
+    window.removeEventListener('keydown', canvas._hybridHandlers.keyDown);
+    window.removeEventListener('keyup', canvas._hybridHandlers.keyUp);
+  }
 
-    // Make sure object selection is enabled
-    canvas.selection = true;
+  // Make sure object selection is enabled
+  canvas.selection = true;
 
-    // Set up objects for selection
-    canvas.forEachObject(obj => {
-      // Grid lines should never be selectable
-      if (obj.gridLine) {
+  // Set up objects for selection
+  canvas.forEachObject(obj => {
+    // Grid lines should never be selectable
+    if (obj.gridLine) {
+      obj.set({
+        selectable: false,
+        evented: false,
+        hasControls: false,
+        hasBorders: false,
+        hoverCursor: 'default'
+      });
+    } else {
+      // Restore interactivity for objects
+      if (obj._previousSelectable !== undefined) {
         obj.set({
-          selectable: false,
-          evented: false,
-          hasControls: false,
-          hasBorders: false,
-          hoverCursor: 'default'
+          selectable: obj._previousSelectable,
+          evented: obj._previousEvented,
+          hasControls: true,
+          hasBorders: true
         });
+
+        delete obj._previousSelectable;
+        delete obj._previousEvented;
       } else {
-        // Restore interactivity for objects
-        if (obj._previousSelectable !== undefined) {
-          obj.set({
-            selectable: obj._previousSelectable,
-            evented: obj._previousEvented,
-            hasControls: true,
-            hasBorders: true
-          });
-
-          delete obj._previousSelectable;
-          delete obj._previousEvented;
-        } else {
-          obj.set({
-            selectable: true,
-            evented: true,
-            hasControls: true,
-            hasBorders: true
-          });
-        }
-      }
-    });
-
-    // Object selection handlers
-    canvas.on('selection:created', (e) => {
-      if (!e.selected || e.selected.length === 0) return;
-
-      const obj = e.selected[0];
-
-      // If grid line is selected - cancel selection
-      if (obj.gridLine) {
-        canvas.discardActiveObject();
-        canvas.renderAll();
-        return;
-      }
-
-      setSelectedObject(obj);
-
-      if (obj.elementId) {
-        setSelectedElementId(obj.elementId);
-
         obj.set({
           selectable: true,
           evented: true,
           hasControls: true,
           hasBorders: true
         });
-      } else if (obj.tableId && onTableSelect) {
-        onTableSelect(obj.tableId);
       }
+    }
+  });
 
-      // IMPORTANT: Don't change activeMode here
+  // Object selection handlers
+  canvas.on('selection:created', (e) => {
+    if (!e.selected || e.selected.length === 0) return;
+
+    const obj = e.selected[0];
+
+    // If grid line is selected - cancel selection
+    if (obj.gridLine) {
+      canvas.discardActiveObject();
+      canvas.renderAll();
+      return;
+    }
+
+    setSelectedObject(obj);
+
+    if (obj.elementId) {
+      setSelectedElementId(obj.elementId);
+
+      obj.set({
+        selectable: true,
+        evented: true,
+        hasControls: true,
+        hasBorders: true
+      });
+    } else if (obj.tableId && onTableSelect) {
+      onTableSelect(obj.tableId);
+    }
+
+    canvas.renderAll();
+  });
+
+  canvas.on('selection:cleared', () => {
+    setSelectedObject(null);
+    setSelectedElementId(null);
+  });
+
+  // Hybrid mode: panning with space or right mouse button
+  let isSpacePressed = false;
+  let isDraggingCanvas = false;
+
+  const handleKeyDown = (e) => {
+    // ✅ ИСПРАВЛЕНО: Проверяем, редактируется ли текст
+    const activeObject = canvas.getActiveObject();
+    const isEditingText = activeObject && 
+                         activeObject.type === 'i-text' && 
+                         activeObject.isEditing;
+
+    // ✅ Если редактируется текст - не обрабатываем пробел для панорамирования
+    if (isEditingText) {
+      return; // Позволяем тексту обработать пробел
+    }
+
+    // ✅ Также проверяем фокус на input элементах
+    if (e.target.tagName === 'INPUT' || 
+        e.target.tagName === 'TEXTAREA' || 
+        e.target.contentEditable === 'true') {
+      return;
+    }
+
+    if (e.key === ' ' && !isSpacePressed) {
+      isSpacePressed = true;
+      isDraggingCanvas = false;
+      canvas.defaultCursor = 'grab';
+
+      // Temporarily disable object selection
+      canvas.forEachObject(obj => {
+        if (!obj.gridLine) {
+          obj._previousSelectable = obj.selectable;
+          obj._previousEvented = obj.evented;
+          obj.set({
+            selectable: false,
+            evented: false
+          });
+        }
+      });
+
+      canvas.discardActiveObject();
+      canvas.renderAll();
+
+      e.preventDefault();
+    }
+  };
+
+  const handleKeyUp = (e) => {
+    // ✅ ИСПРАВЛЕНО: Также проверяем редактирование текста при отпускании
+    const activeObject = canvas.getActiveObject();
+    const isEditingText = activeObject && 
+                         activeObject.type === 'i-text' && 
+                         activeObject.isEditing;
+
+    if (isEditingText) {
+      return;
+    }
+
+    if (e.key === ' ' && isSpacePressed) {
+      isSpacePressed = false;
+      isDraggingCanvas = false;
+      canvas.defaultCursor = 'default';
+
+      // Restore object selection
+      canvas.forEachObject(obj => {
+        if (!obj.gridLine && obj._previousSelectable !== undefined) {
+          obj.set({
+            selectable: obj._previousSelectable,
+            evented: obj._previousEvented
+          });
+
+          delete obj._previousSelectable;
+          delete obj._previousEvented;
+        }
+      });
 
       canvas.renderAll();
-    });
+    }
+  };
 
-    canvas.on('selection:cleared', () => {
-      setSelectedObject(null);
-      setSelectedElementId(null);
-    });
+  const handleMouseDown = (opt) => {
+    const evt = opt.e;
 
-    // Hybrid mode: panning with space or right mouse button
-    let isSpacePressed = false;
-    let isDraggingCanvas = false;
+    // Panning with space or right mouse button
+    if (isSpacePressed || evt.buttons === 2) {
+      isDraggingCanvas = true;
+      canvas.lastPosX = evt.clientX;
+      canvas.lastPosY = evt.clientY;
+      canvas.isDragging = true;
+      canvas.defaultCursor = 'grabbing';
 
-    const handleKeyDown = (e) => {
-
-      if (e.key === ' ' && !isSpacePressed) {
-        isSpacePressed = true;
-        isDraggingCanvas = false;
-        canvas.defaultCursor = 'grab';
-
-        // Temporarily disable object selection
-        canvas.forEachObject(obj => {
-          if (!obj.gridLine) {
-            obj._previousSelectable = obj.selectable;
-            obj._previousEvented = obj.evented;
-            obj.set({
-              selectable: false,
-              evented: false
-            });
-          }
-        });
-
-        canvas.discardActiveObject();
-        canvas.renderAll();
-
-        e.preventDefault();
+      // Prevent context menu for right button
+      if (evt.buttons === 2) {
+        evt.preventDefault();
+        return false;
       }
-    };
+    }
+  };
 
+  const handleMouseMove = (opt) => {
+    const evt = opt.e;
 
-    const handleKeyUp = (e) => {
-      if (e.key === ' ' && isSpacePressed) {
-        isSpacePressed = false;
-        isDraggingCanvas = false;
-        canvas.defaultCursor = 'default';
+    if (canvas.isDragging && (isSpacePressed || isDraggingCanvas)) {
+      const vpt = canvas.viewportTransform;
 
-        // Restore object selection
+      vpt[4] += evt.clientX - canvas.lastPosX;
+      vpt[5] += evt.clientY - canvas.lastPosY;
+
+      canvas.lastPosX = evt.clientX;
+      canvas.lastPosY = evt.clientY;
+      canvas.renderAll();
+
+      evt.preventDefault();
+      evt.stopPropagation();
+    }
+  };
+
+  const handleMouseUp = () => {
+    if (canvas.isDragging) {
+      canvas.isDragging = false;
+      isDraggingCanvas = false;
+      canvas.defaultCursor = isSpacePressed ? 'grab' : 'default';
+
+      // Restore objects if space is not pressed
+      if (!isSpacePressed) {
         canvas.forEachObject(obj => {
           if (!obj.gridLine && obj._previousSelectable !== undefined) {
             obj.set({
@@ -1795,100 +1931,39 @@ canvas.on('object:modified', (e) => {
             delete obj._previousEvented;
           }
         });
-
-        canvas.renderAll();
       }
-    };
 
-    const handleMouseDown = (opt) => {
-      const evt = opt.e;
-
-      // Panning with space or right mouse button
-      if (isSpacePressed || evt.buttons === 2) {
-        isDraggingCanvas = true;
-        canvas.lastPosX = evt.clientX;
-        canvas.lastPosY = evt.clientY;
-        canvas.isDragging = true;
-        canvas.defaultCursor = 'grabbing';
-
-        // Prevent context menu for right button
-        if (evt.buttons === 2) {
-          evt.preventDefault();
-          return false;
-        }
-      }
-    };
-
-    const handleMouseMove = (opt) => {
-      const evt = opt.e;
-
-      if (canvas.isDragging && (isSpacePressed || isDraggingCanvas)) {
-        const vpt = canvas.viewportTransform;
-
-        vpt[4] += evt.clientX - canvas.lastPosX;
-        vpt[5] += evt.clientY - canvas.lastPosY;
-
-        canvas.lastPosX = evt.clientX;
-        canvas.lastPosY = evt.clientY;
-        canvas.renderAll();
-
-        evt.preventDefault();
-        evt.stopPropagation();
-      }
-    };
-
-    const handleMouseUp = () => {
-      if (canvas.isDragging) {
-        canvas.isDragging = false;
-        isDraggingCanvas = false;
-        canvas.defaultCursor = isSpacePressed ? 'grab' : 'default';
-
-        // Restore objects if space is not pressed
-        if (!isSpacePressed) {
-          canvas.forEachObject(obj => {
-            if (!obj.gridLine && obj._previousSelectable !== undefined) {
-              obj.set({
-                selectable: obj._previousSelectable,
-                evented: obj._previousEvented
-              });
-
-              delete obj._previousSelectable;
-              delete obj._previousEvented;
-            }
-          });
-        }
-
-        canvas.renderAll();
-      }
-    };
-
-    // Prevent context menu
-    const preventContextMenu = (evt) => {
-      if (evt.e && (isDraggingCanvas || evt.e.buttons === 2)) {
-        evt.e.preventDefault();
-        return false;
-      }
-    };
-
-    // Add handlers
-    canvas.on('mouse:down', handleMouseDown);
-    canvas.on('mouse:move', handleMouseMove);
-    canvas.on('mouse:up', handleMouseUp);
-    canvas.on('mouse:wheel', handleMouseWheel);
-    canvas.on('contextmenu', preventContextMenu);
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
-
-    // Save references for cleanup
-    canvas._hybridHandlers = {
-      mouseDown: handleMouseDown,
-      mouseMove: handleMouseMove,
-      mouseUp: handleMouseUp,
-      keyDown: handleKeyDown,
-      keyUp: handleKeyUp,
-      contextMenu: preventContextMenu
-    };
+      canvas.renderAll();
+    }
   };
+
+  // Prevent context menu
+  const preventContextMenu = (evt) => {
+    if (evt.e && (isDraggingCanvas || evt.e.buttons === 2)) {
+      evt.e.preventDefault();
+      return false;
+    }
+  };
+
+  // Add handlers
+  canvas.on('mouse:down', handleMouseDown);
+  canvas.on('mouse:move', handleMouseMove);
+  canvas.on('mouse:up', handleMouseUp);
+  canvas.on('mouse:wheel', handleMouseWheel);
+  canvas.on('contextmenu', preventContextMenu);
+  window.addEventListener('keydown', handleKeyDown);
+  window.addEventListener('keyup', handleKeyUp);
+
+  // Save references for cleanup
+  canvas._hybridHandlers = {
+    mouseDown: handleMouseDown,
+    mouseMove: handleMouseMove,
+    mouseUp: handleMouseUp,
+    keyDown: handleKeyDown,
+    keyUp: handleKeyUp,
+    contextMenu: preventContextMenu
+  };
+};
 
   // Set up default event handlers
   const setupDefaultEventHandlers = (canvas) => {
@@ -3026,12 +3101,21 @@ const addNewText = () => {
   try {
     saveToHistory();
     const canvas = fabricCanvasRef.current;
-    const center = canvas.getCenter();
+    
+    // ✅ ИСПРАВЛЕНО: Получаем правильные координаты центра с учетом зума и панорамирования
+    const viewportTransform = canvas.viewportTransform;
+    const zoom = canvas.getZoom();
+    
+    // Вычисляем центр видимой области
+    const centerX = (-viewportTransform[4] + canvas.width / 2) / zoom;
+    const centerY = (-viewportTransform[5] + canvas.height / 2) / zoom;
 
-    // ✅ ИСПРАВЛЕНО: Создаем текст с правильным origin
+    console.log('Adding text at:', { centerX, centerY }); // Для отладки
+
+    // ✅ Создаем текстовый элемент с правильными координатами
     const text = new fabric.IText('Введите текст', {
-      left: center.left,
-      top: center.top,
+      left: centerX,
+      top: centerY,
       fontSize: fontSize,
       fontFamily: 'Arial',
       fill: strokeColor,
@@ -3039,17 +3123,17 @@ const addNewText = () => {
       hasControls: true,
       hasBorders: true,
       selectable: true,
-      originX: 'left',  // ✅ Используем left origin
-      originY: 'top'    // ✅ Используем top origin
+      originX: 'left',
+      originY: 'top'
     });
 
-    // ✅ Создаем элемент в shapes с правильными координатами
+    // ✅ Создаем элемент в shapes с теми же координатами
     const newShape = {
       id: text.elementId,
       type: 'text',
       text: 'Введите текст',
-      x: center.left,
-      y: center.top,
+      x: centerX,
+      y: centerY,
       fontSize: fontSize,
       fontFamily: 'Arial',
       color: strokeColor,
