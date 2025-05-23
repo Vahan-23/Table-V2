@@ -2002,11 +2002,20 @@ const duplicateSelectedObject = useCallback(() => {
   };
 
   // Render all elements
-  const renderAllElements = (canvas) => {
+  const renderAllElements = useCallback((canvas, forceTables = null, forceShapes = null) => {
   if (!canvas) return;
 
   try {
     console.log('Rendering all elements...');
+
+    // Используем переданные данные или текущее состояние
+    const tablesToRender = forceTables || tables;
+    const shapesToRender = forceShapes || shapes;
+
+    console.log('Data to render:', { 
+      tables: tablesToRender?.length || 0, 
+      shapes: shapesToRender?.length || 0 
+    });
 
     // Мапа текущих объектов на холсте
     const currentObjects = new Map();
@@ -2017,29 +2026,46 @@ const duplicateSelectedObject = useCallback(() => {
     });
 
     // Обновляем столы
-    tables.forEach(table => {
-      const key = `table_${table.id}`;
-      const existing = currentObjects.get(key);
-      if (!existing) {
-        renderTable(canvas, table);
-      }
-      currentObjects.delete(key);
-    });
+    if (tablesToRender && Array.isArray(tablesToRender)) {
+      tablesToRender.forEach(table => {
+        const key = `table_${table.id}`;
+        const existing = currentObjects.get(key);
+        if (!existing) {
+          try {
+            renderTable(canvas, table);
+            console.log(`Rendered table ${table.id}`);
+          } catch (error) {
+            console.error(`Error rendering table ${table.id}:`, error);
+          }
+        }
+        currentObjects.delete(key);
+      });
+    }
 
-    // ✅ Обновляем shapes (вместо hallElements)
-    shapes.forEach(shape => {
-      const key = `shape_${shape.id}`;
-      const existing = currentObjects.get(key);
-      if (!existing) {
-        renderShape(canvas, shape); // Используем новую функцию
-      }
-      currentObjects.delete(key);
-    });
+    // Обновляем shapes
+    if (shapesToRender && Array.isArray(shapesToRender)) {
+      shapesToRender.forEach(shape => {
+        const key = `shape_${shape.id}`;
+        const existing = currentObjects.get(key);
+        if (!existing) {
+          try {
+            renderShape(canvas, shape);
+            console.log(`Rendered shape ${shape.id} (${shape.type})`);
+          } catch (error) {
+            console.error(`Error rendering shape ${shape.id}:`, error);
+          }
+        }
+        currentObjects.delete(key);
+      });
+    }
 
     // Удаляем объекты, которых больше нет в состоянии
     // ВАЖНО: не удаляем объекты сетки
     currentObjects.forEach(obj => {
-      if (!obj.gridLine) canvas.remove(obj);
+      if (!obj.gridLine) {
+        console.log(`Removing orphaned object:`, obj.type, obj.tableId || obj.elementId);
+        canvas.remove(obj);
+      }
     });
 
     // Убеждаемся, что все линии сетки не выбираются
@@ -2059,11 +2085,15 @@ const duplicateSelectedObject = useCallback(() => {
     });
 
     canvas.renderAll();
-    console.log('Rendering complete');
+    
+    // Подсчитываем объекты для проверки
+    const renderedObjects = canvas.getObjects().filter(obj => !obj.gridLine);
+    console.log(`Rendering complete. Objects on canvas: ${renderedObjects.length}`);
+    
   } catch (error) {
     console.error('Error rendering elements:', error);
   }
-};
+}, [tables, shapes]);
 
   // Render table
   const renderTable = (canvas, tableData) => {
@@ -3462,43 +3492,272 @@ const addNewText = () => {
       throw new Error('Invalid JSON format: missing required fields');
     }
 
-    // Обновляем состояние
-    if (importData.tables) {
-      setTables(importData.tables);
+    console.log('Importing data:', importData);
+
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) {
+      console.error('Canvas not ready for import');
+      return false;
     }
 
-    // ✅ Импортируем shapes напрямую (без конвертации)
-    if (importData.shapes && Array.isArray(importData.shapes)) {
-      setShapes(importData.shapes);
-    } else {
-      setShapes([]);
-    }
+    // ✅ ИСПРАВЛЕНО: Сначала очищаем холст (кроме сетки)
+    const objectsToRemove = [];
+    canvas.getObjects().forEach(obj => {
+      if (!obj.gridLine) {
+        objectsToRemove.push(obj);
+      }
+    });
+    
+    objectsToRemove.forEach(obj => {
+      canvas.remove(obj);
+    });
+    canvas.discardActiveObject();
+    canvas.renderAll();
 
-    // Применяем зум
-    if (importData.canvasData && importData.canvasData.zoom && fabricCanvasRef.current) {
-      const canvas = fabricCanvasRef.current;
+    // ✅ ИСПРАВЛЕНО: Создаем функции рендеринга с переданными данными
+    const renderImportedElements = (importedTables, importedShapes) => {
+      console.log('Rendering imported elements:', { tables: importedTables?.length, shapes: importedShapes?.length });
+
+      // Рендерим столы
+      if (importedTables && Array.isArray(importedTables)) {
+        importedTables.forEach(table => {
+          try {
+            renderTable(canvas, table);
+          } catch (error) {
+            console.error('Error rendering imported table:', error, table);
+          }
+        });
+      }
+
+      // Рендерим shapes
+      if (importedShapes && Array.isArray(importedShapes)) {
+        importedShapes.forEach(shape => {
+          try {
+            renderImportedShape(canvas, shape);
+          } catch (error) {
+            console.error('Error rendering imported shape:', error, shape);
+          }
+        });
+      }
+
+      canvas.renderAll();
+      console.log('Import rendering complete');
+    };
+
+    // ✅ ИСПРАВЛЕНО: Функция рендеринга shape с безопасными значениями по умолчанию
+    const renderImportedShape = (canvas, shape) => {
+      if (!canvas || !shape) return null;
+
+      try {
+        let fabricObj;
+
+        switch (shape.type) {
+          case 'rect':
+            fabricObj = new fabric.Rect({
+              left: shape.x || 0,
+              top: shape.y || 0,
+              width: shape.width || 100,
+              height: shape.height || 50,
+              fill: shape.fill || 'rgba(0, 0, 0, 0.1)',
+              stroke: shape.color || '#000000',
+              strokeWidth: shape.strokeWidth || 2,
+              angle: shape.rotation || 0,
+              elementId: shape.id,
+              hasControls: true,
+              hasBorders: true,
+              selectable: true
+            });
+            break;
+
+          case 'circle':
+            const radius = shape.radius || 50;
+            const centerX = (shape.centerX !== undefined) ? shape.centerX : (shape.x || 0) + radius;
+            const centerY = (shape.centerY !== undefined) ? shape.centerY : (shape.y || 0) + radius;
+            
+            fabricObj = new fabric.Circle({
+              left: centerX,
+              top: centerY,
+              radius: radius,
+              fill: shape.fill || 'rgba(0, 0, 0, 0.1)',
+              stroke: shape.color || '#000000',
+              strokeWidth: shape.strokeWidth || 2,
+              angle: shape.rotation || 0,
+              elementId: shape.id,
+              hasControls: true,
+              hasBorders: true,
+              selectable: true,
+              originX: 'center',
+              originY: 'center'
+            });
+            break;
+
+          case 'line':
+            if (shape.points && shape.points.length >= 4) {
+              const [x1, y1, x2, y2] = shape.points;
+              
+              fabricObj = new fabric.Line([x1, y1, x2, y2], {
+                stroke: shape.color || '#000000',
+                strokeWidth: shape.strokeWidth || 2,
+                angle: shape.rotation || 0,
+                elementId: shape.id,
+                hasControls: true,
+                hasBorders: true,
+                selectable: true,
+                originalX1: x1,
+                originalY1: y1,
+                originalX2: x2,
+                originalY2: y2
+              });
+            }
+            break;
+
+          case 'text':
+            fabricObj = new fabric.IText(shape.text || 'Text', {
+              left: shape.x || 0,
+              top: shape.y || 0,
+              fontSize: shape.fontSize || 18,
+              fontFamily: shape.fontFamily || 'Arial',
+              fill: shape.color || '#000000',
+              angle: shape.rotation || 0,
+              elementId: shape.id,
+              hasControls: true,
+              hasBorders: true,
+              selectable: true,
+              originX: 'left',
+              originY: 'top'
+            });
+            break;
+
+          case 'path':
+            if (shape.path) {
+              fabricObj = new fabric.Path(shape.path, {
+                left: shape.x || 0,
+                top: shape.y || 0,
+                stroke: shape.color || '#000000',
+                strokeWidth: shape.strokeWidth || 2,
+                fill: shape.fill || '',
+                angle: shape.rotation || 0,
+                elementId: shape.id,
+                hasControls: true,
+                hasBorders: true,
+                selectable: true
+              });
+            }
+            break;
+
+          default:
+            console.warn(`Unknown shape type: ${shape.type}`);
+            return null;
+        }
+
+        if (fabricObj) {
+          canvas.add(fabricObj);
+          return fabricObj;
+        }
+
+        return null;
+      } catch (error) {
+        console.error('Error rendering imported shape:', error);
+        return null;
+      }
+    };
+
+    // ✅ ИСПРАВЛЕНО: Сначала рендерим с текущими данными, потом обновляем состояние
+    renderImportedElements(importData.tables, importData.shapes);
+
+    // Применяем зум если есть
+    if (importData.canvasData && importData.canvasData.zoom) {
       const center = canvas.getCenter();
-
       setZoom(importData.canvasData.zoom);
       canvas.zoomToPoint({ x: center.left, y: center.top }, importData.canvasData.zoom);
     }
 
-    // Рендерим все элементы
+    // ✅ ИСПРАВЛЕНО: Обновляем состояние после рендеринга
+    if (importData.tables) {
+      setTables([...importData.tables]);
+    }
+
+    if (importData.shapes && Array.isArray(importData.shapes)) {
+      setShapes([...importData.shapes]);
+    } else {
+      setShapes([]);
+    }
+
+    // ✅ ИСПРАВЛЕНО: Дополнительная проверка через большую задержку
     setTimeout(() => {
       if (fabricCanvasRef.current) {
-        renderAllElements(fabricCanvasRef.current);
+        // Проверим количество объектов на холсте
+        const objectsCount = fabricCanvasRef.current.getObjects().filter(obj => !obj.gridLine).length;
+        const expectedCount = (importData.tables?.length || 0) + (importData.shapes?.length || 0);
+        
+        console.log(`Import verification: ${objectsCount} objects on canvas, expected ${expectedCount}`);
+        
+        if (objectsCount < expectedCount) {
+          console.log('Re-rendering missing objects...');
+          renderImportedElements(importData.tables, importData.shapes);
+        }
+        
+        // Сохраняем в историю только после успешного импорта
         saveToHistory();
       }
-    }, 100);
+    }, 500);
 
     setUnsavedChanges(false);
+    setSelectedObject(null);
+    setSelectedElementId(null);
+    
+    console.log('Import completed successfully');
     return true;
+
   } catch (error) {
     console.error('Error importing JSON:', error);
+    alert(`Ошибка импорта: ${error.message}`);
     return false;
   }
 };
 
+const forceRerenderAfterImport = useCallback(() => {
+  const canvas = fabricCanvasRef.current;
+  if (!canvas) return;
+
+  console.log('Force re-rendering all elements...');
+  
+  // Очищаем все объекты кроме сетки
+  const objectsToRemove = [];
+  canvas.getObjects().forEach(obj => {
+    if (!obj.gridLine) {
+      objectsToRemove.push(obj);
+    }
+  });
+  
+  objectsToRemove.forEach(obj => {
+    canvas.remove(obj);
+  });
+
+  // Перерендериваем все из текущего состояния
+  setTimeout(() => {
+    // Рендерим столы
+    tables.forEach(table => {
+      try {
+        renderTable(canvas, table);
+      } catch (error) {
+        console.error('Error re-rendering table:', error);
+      }
+    });
+
+    // Рендерим shapes
+    shapes.forEach(shape => {
+      try {
+        renderShape(canvas, shape);
+      } catch (error) {
+        console.error('Error re-rendering shape:', error);
+      }
+    });
+
+    canvas.renderAll();
+    console.log('Force re-render complete');
+  }, 100);
+}, [tables, shapes]);
 
   // Enable/disable pan mode
   const enablePanMode = () => {
@@ -3793,6 +4052,13 @@ const addNewText = () => {
             >
               <i className="fas fa-file-import">🗂️</i>
             </button>
+            <button
+  className="tool-btn"
+  onClick={forceRerenderAfterImport}
+  title="Принудительно перерендерить все объекты"
+>
+  🔄
+</button>
           </div>
         </div>
 
