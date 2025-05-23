@@ -80,6 +80,7 @@ const EnhancedCanvas = React.forwardRef((
 
     switch (shape.type) {
       case 'rect':
+        // ✅ Прямоугольники работают правильно
         fabricObj = new fabric.Rect({
           left: shape.x || 0,
           top: shape.y || 0,
@@ -88,7 +89,7 @@ const EnhancedCanvas = React.forwardRef((
           fill: shape.fill || fillColor,
           stroke: shape.color || strokeColor,
           strokeWidth: shape.strokeWidth || strokeWidth,
-          angle: shape.rotation || 0, // ✅ УЖЕ ЕСТЬ
+          angle: shape.rotation || 0,
           elementId: shape.id,
           hasControls: true,
           hasBorders: true,
@@ -97,6 +98,7 @@ const EnhancedCanvas = React.forwardRef((
         break;
 
       case 'circle':
+        // ✅ Круги работают правильно  
         const radius = shape.radius || 50;
         const centerX = (shape.x || 0) + radius;
         const centerY = (shape.y || 0) + radius;
@@ -108,7 +110,7 @@ const EnhancedCanvas = React.forwardRef((
           fill: shape.fill || fillColor,
           stroke: shape.color || strokeColor,
           strokeWidth: shape.strokeWidth || strokeWidth,
-          angle: shape.rotation || 0, // ✅ УЖЕ ЕСТЬ
+          angle: shape.rotation || 0,
           elementId: shape.id,
           hasControls: true,
           hasBorders: true,
@@ -119,31 +121,35 @@ const EnhancedCanvas = React.forwardRef((
         break;
 
       case 'line':
+        // ❌ ПРОБЛЕМА ЗДЕСЬ - неправильное создание линий
         if (shape.points && shape.points.length >= 4) {
-          fabricObj = new fabric.Line(shape.points, {
+          const [x1, y1, x2, y2] = shape.points;
+          
+          fabricObj = new fabric.Line([x1, y1, x2, y2], {
             stroke: shape.color || strokeColor,
             strokeWidth: shape.strokeWidth || strokeWidth,
-            angle: shape.rotation || 0, // ✅ ДОБАВЛЕНО для линий
+            angle: shape.rotation || 0,
             elementId: shape.id,
             hasControls: true,
             hasBorders: true,
             selectable: true,
-            originalX1: shape.points[0],
-            originalY1: shape.points[1],
-            originalX2: shape.points[2],
-            originalY2: shape.points[3]
+            originalX1: x1,
+            originalY1: y1,
+            originalX2: x2,
+            originalY2: y2
           });
         }
         break;
 
       case 'text':
+        // ❌ ПРОБЛЕМА ЗДЕСЬ - возможно неправильный origin
         fabricObj = new fabric.IText(shape.text || 'Text', {
           left: shape.x || 0,
           top: shape.y || 0,
           fontSize: shape.fontSize || 18,
           fontFamily: shape.fontFamily || 'Arial',
           fill: shape.color || strokeColor,
-          angle: shape.rotation || 0, // ✅ УЖЕ ЕСТЬ
+          angle: shape.rotation || 0,
           elementId: shape.id,
           hasControls: true,
           hasBorders: true,
@@ -159,7 +165,7 @@ const EnhancedCanvas = React.forwardRef((
             stroke: shape.color || strokeColor,
             strokeWidth: shape.strokeWidth || strokeWidth,
             fill: shape.fill || '',
-            angle: shape.rotation || 0, // ✅ ДОБАВЛЕНО для path
+            angle: shape.rotation || 0,
             elementId: shape.id,
             hasControls: true,
             hasBorders: true,
@@ -850,14 +856,14 @@ const duplicateSelectedObject = useCallback(() => {
       });
 
       // Object moving - ИСПРАВЛЕННАЯ ВЕРСИЯ
-    canvas.on('object:moving', (e) => {
+   canvas.on('object:moving', (e) => {
   if (!e.target) return;
   
   const obj = e.target;
   setUnsavedChanges(true);
 
   if (obj.tableId) {
-    // Столы как было...
+    // Обработка столов
     setTables(prevTables => prevTables.map(table =>
       table.id === obj.tableId
         ? { ...table, x: Math.round(obj.left), y: Math.round(obj.top) }
@@ -871,9 +877,56 @@ const duplicateSelectedObject = useCallback(() => {
     const shape = shapes.find(s => s.id === obj.elementId);
 
     if (shape && shape.type === 'line') {
-      // Линии как было...
+      // ✅ ИСПРАВЛЕНО: Правильное движение линий
+      const originalPoints = [
+        obj.originalX1 !== undefined ? obj.originalX1 : shape.points[0],
+        obj.originalY1 !== undefined ? obj.originalY1 : shape.points[1],
+        obj.originalX2 !== undefined ? obj.originalX2 : shape.points[2],
+        obj.originalY2 !== undefined ? obj.originalY2 : shape.points[3]
+      ];
+
+      // Вычисляем смещение от исходной позиции
+      const deltaX = obj.left - originalPoints[0];
+      const deltaY = obj.top - originalPoints[1];
+
+      // Новые абсолютные координаты всех точек линии
+      const newPoints = [
+        originalPoints[0] + deltaX,
+        originalPoints[1] + deltaY,
+        originalPoints[2] + deltaX,
+        originalPoints[3] + deltaY
+      ];
+
+      setShapes(prevShapes => prevShapes.map(s =>
+        s.id === obj.elementId
+          ? { ...s, points: newPoints.map(p => Math.round(p)) }
+          : s
+      ));
+
+      // Обновляем сохраненные координаты в объекте
+      obj.originalX1 = newPoints[0];
+      obj.originalY1 = newPoints[1];
+      obj.originalX2 = newPoints[2];
+      obj.originalY2 = newPoints[3];
+
     } else if (shape && shape.type === 'circle') {
-      // Круги как было...
+      // Обработка кругов (left/top для кругов это центр)
+      const radius = shape.radius || 50;
+      const newX = Math.round(obj.left - radius);
+      const newY = Math.round(obj.top - radius);
+
+      setShapes(prevShapes => prevShapes.map(s =>
+        s.id === obj.elementId
+          ? { 
+              ...s, 
+              x: newX, 
+              y: newY,
+              centerX: Math.round(obj.left),
+              centerY: Math.round(obj.top)
+            }
+          : s
+      ));
+
     } else if (shape && shape.type === 'rect') {
       // ✅ ИСПРАВЛЕНО: Для прямоугольников используем obj.left/top напрямую
       setShapes(prevShapes => prevShapes.map(s =>
@@ -886,8 +939,33 @@ const duplicateSelectedObject = useCallback(() => {
             }
           : s
       ));
+
+    } else if (shape && shape.type === 'text') {
+      // ✅ ИСПРАВЛЕНО: Правильное движение текста
+      setShapes(prevShapes => prevShapes.map(s =>
+        s.id === obj.elementId
+          ? { 
+              ...s, 
+              x: Math.round(obj.left), 
+              y: Math.round(obj.top)
+            }
+          : s
+      ));
+
+    } else if (shape && shape.type === 'path') {
+      // Обработка path объектов
+      setShapes(prevShapes => prevShapes.map(s =>
+        s.id === obj.elementId
+          ? { 
+              ...s, 
+              x: Math.round(obj.left), 
+              y: Math.round(obj.top)
+            }
+          : s
+      ));
+
     } else {
-      // Остальные элементы
+      // Остальные элементы (общий случай)
       setShapes(prevShapes => prevShapes.map(s =>
         s.id === obj.elementId
           ? { ...s, x: Math.round(obj.left), y: Math.round(obj.top) }
@@ -952,6 +1030,66 @@ canvas.on('object:modified', (e) => {
         scaleX: 1,
         scaleY: 1
       });
+
+    } else if (obj.type === 'line') {
+      // ✅ ИСПРАВЛЕНО: Обработка изменения линий
+      const currentPoints = [
+        obj.originalX1 !== undefined ? obj.originalX1 : obj.x1,
+        obj.originalY1 !== undefined ? obj.originalY1 : obj.y1, 
+        obj.originalX2 !== undefined ? obj.originalX2 : obj.x2,
+        obj.originalY2 !== undefined ? obj.originalY2 : obj.y2
+      ];
+
+      setShapes(prevShapes => prevShapes.map(s =>
+        s.id === obj.elementId
+          ? {
+              ...s,
+              points: currentPoints.map(p => Math.round(p)),
+              rotation: Math.round(obj.angle || 0)
+            }
+          : s
+      ));
+
+      // Обновляем сохраненную позицию
+      obj.originalLeft = obj.left;
+      obj.originalTop = obj.top;
+
+    } else if (obj.type === 'i-text') {
+      // ✅ ИСПРАВЛЕНО: Сохраняем rotation при scaling текста
+      const newFontSize = Math.round(obj.fontSize * obj.scaleX);
+
+      setShapes(prevShapes => prevShapes.map(s =>
+        s.id === obj.elementId
+          ? { 
+              ...s, 
+              fontSize: newFontSize,
+              x: Math.round(obj.left),
+              y: Math.round(obj.top),
+              text: obj.text || s.text, // ✅ Обновляем текст если изменился
+              rotation: Math.round(obj.angle || 0)
+            }
+          : s
+      ));
+
+      obj.set({
+        fontSize: newFontSize,
+        scaleX: 1,
+        scaleY: 1
+      });
+
+    } else if (obj.type === 'path') {
+      // ✅ Обработка path объектов
+      setShapes(prevShapes => prevShapes.map(s =>
+        s.id === obj.elementId
+          ? {
+              ...s,
+              x: Math.round(obj.left),
+              y: Math.round(obj.top),
+              rotation: Math.round(obj.angle || 0)
+            }
+          : s
+      ));
+
     } else {
       // Для остальных типов
       setShapes(prevShapes => prevShapes.map(s =>
@@ -1147,59 +1285,59 @@ canvas.on('object:modified', (e) => {
   };
 
   // Set up drawing events
-  const setupDrawingEvents = useCallback((canvas) => {
-    if (!canvas) return;
+ const setupDrawingEvents = useCallback((canvas) => {
+  if (!canvas) return;
 
-    try {
-      // Clear any existing event handlers first to avoid duplicates
-      canvas.off('mouse:down');
-      canvas.off('mouse:move');
-      canvas.off('mouse:up');
+  try {
+    // Очищаем существующие обработчики
+    canvas.off('mouse:down');
+    canvas.off('mouse:move'); 
+    canvas.off('mouse:up');
 
-      // Mouse down
-      canvas.on('mouse:down', (opt) => {
-        if (activeMode === ELEMENT_TYPES.LINE) {
-          startDrawingLine(canvas, opt);
-          saveToHistory();
-        } else if (activeMode === ELEMENT_TYPES.RECTANGLE) {
-          startDrawingRectangle(canvas, opt);
-        } else if (activeMode === ELEMENT_TYPES.CIRCLE) {
-          startDrawingCircle(canvas, opt);
-        }
-      });
+    // ✅ ИСПРАВЛЕНО: Правильная привязка событий
+    canvas.on('mouse:down', (opt) => {
+      console.log('Mouse down at:', canvas.getPointer(opt.e)); // Для отладки
+      
+      if (activeMode === ELEMENT_TYPES.LINE) {
+        startDrawingLine(canvas, opt);
+        saveToHistory();
+      } else if (activeMode === ELEMENT_TYPES.RECTANGLE) {
+        startDrawingRectangle(canvas, opt);
+      } else if (activeMode === ELEMENT_TYPES.CIRCLE) {
+        startDrawingCircle(canvas, opt);
+      }
+    });
 
-      // Mouse move
-      canvas.on('mouse:move', (opt) => {
-        if (!isDrawing) return;
+    canvas.on('mouse:move', (opt) => {
+      if (!isDrawing) return;
 
-        if (activeMode === ELEMENT_TYPES.LINE) {
-          updateDrawingLine(canvas, opt);
-        } else if (activeMode === ELEMENT_TYPES.RECTANGLE) {
-          updateDrawingRectangle(canvas, opt);
-        } else if (activeMode === ELEMENT_TYPES.CIRCLE) {
-          updateDrawingCircle(canvas, opt);
-        }
-      });
+      if (activeMode === ELEMENT_TYPES.LINE) {
+        updateDrawingLine(canvas, opt);
+      } else if (activeMode === ELEMENT_TYPES.RECTANGLE) {
+        updateDrawingRectangle(canvas, opt);
+      } else if (activeMode === ELEMENT_TYPES.CIRCLE) {
+        updateDrawingCircle(canvas, opt);
+      }
+    });
 
-      // Mouse up
-      canvas.on('mouse:up', () => {
-        if (!isDrawing) return;
+    canvas.on('mouse:up', () => {
+      if (!isDrawing) return;
 
-        if (activeMode === ELEMENT_TYPES.LINE) {
-          finishDrawingLine(canvas);
-        } else if (activeMode === ELEMENT_TYPES.RECTANGLE) {
-          finishDrawingRectangle(canvas);
-        } else if (activeMode === ELEMENT_TYPES.CIRCLE) {
-          finishDrawingCircle(canvas);
-        }
+      if (activeMode === ELEMENT_TYPES.LINE) {
+        finishDrawingLine(canvas);
+      } else if (activeMode === ELEMENT_TYPES.RECTANGLE) {
+        finishDrawingRectangle(canvas);
+      } else if (activeMode === ELEMENT_TYPES.CIRCLE) {
+        finishDrawingCircle(canvas);
+      }
 
-        // После завершения рисования переключаемся в гибридный режим
-        setActiveMode(ELEMENT_TYPES.HYBRID);
-      });
-    } catch (error) {
-      console.error('Error setting up drawing events:', error);
-    }
-  }, [activeMode, isDrawing]);
+      // После завершения рисования переключаемся в гибридный режим
+      setActiveMode(ELEMENT_TYPES.HYBRID);
+    });
+  } catch (error) {
+    console.error('Error setting up drawing events:', error);
+  }
+}, [activeMode, isDrawing]);
 
   // Handle different canvas modes
   useEffect(() => {
@@ -2449,17 +2587,21 @@ canvas.on('object:modified', (e) => {
 
   // 3. ЛИНИЯ
 
+
  const startDrawingLine = (canvas, opt) => {
   if (!canvas) return;
 
   try {
+    // ✅ ИСПРАВЛЕНО: Правильное получение координат клика
     const pointer = canvas.getPointer(opt.e);
+    console.log('Start drawing line at:', pointer); // Для отладки
+    
     setIsDrawing(true);
 
     // Сохраняем исходные координаты
     canvas._lineStartPoint = { x: pointer.x, y: pointer.y };
 
-    // Создаем новую линию
+    // ✅ ИСПРАВЛЕНО: Создаем линию точно в месте клика
     const line = new fabric.Line([pointer.x, pointer.y, pointer.x, pointer.y], {
       stroke: strokeColor,
       strokeWidth: strokeWidth,
@@ -2479,21 +2621,18 @@ const updateDrawingLine = (canvas, opt) => {
   if (!canvas || !canvas._tempLine || !canvas._lineStartPoint) return;
 
   try {
+    // ✅ ИСПРАВЛЕНО: Правильное получение координат движения
     const pointer = canvas.getPointer(opt.e);
     const startPoint = canvas._lineStartPoint;
 
-    // Пересоздаем линию с новыми координатами
-    canvas.remove(canvas._tempLine);
-
-    const line = new fabric.Line([startPoint.x, startPoint.y, pointer.x, pointer.y], {
-      stroke: strokeColor,
-      strokeWidth: strokeWidth,
-      selectable: false,
-      evented: false
+    // ✅ ИСПРАВЛЕНО: Обновляем конечную точку линии
+    canvas._tempLine.set({
+      x2: pointer.x,
+      y2: pointer.y,
+      x1: startPoint.x,
+      y1: startPoint.y
     });
 
-    canvas.add(line);
-    canvas._tempLine = line;
     canvas.renderAll();
   } catch (error) {
     console.error('Error updating line drawing:', error);
@@ -2510,6 +2649,14 @@ const finishDrawingLine = (canvas) => {
     const line = canvas._tempLine;
     const startPoint = canvas._lineStartPoint;
 
+    // ✅ ИСПРАВЛЕНО: Получаем правильные координаты
+    const x1 = Math.round(startPoint.x);
+    const y1 = Math.round(startPoint.y);
+    const x2 = Math.round(line.x2);
+    const y2 = Math.round(line.y2);
+
+    console.log(`Line coordinates: (${x1}, ${y1}) to (${x2}, ${y2})`); // Для отладки
+
     // Делаем линию интерактивной
     line.set({
       selectable: true,
@@ -2519,22 +2666,15 @@ const finishDrawingLine = (canvas) => {
       hoverCursor: 'move'
     });
 
-    // Вычисляем абсолютные координаты линии
-    const x1 = Math.round(startPoint.x);
-    const y1 = Math.round(startPoint.y);
-    const x2 = Math.round(line.x2 + line.left);
-    const y2 = Math.round(line.y2 + line.top);
-
-    // ✅ Создаем элемент в shapes
+    // ✅ Создаем элемент в shapes с правильными координатами
     const newShape = {
       id: Date.now(),
       type: 'line',
       points: [x1, y1, x2, y2],
       color: strokeColor,
-      strokeWidth: strokeWidth
+      strokeWidth: strokeWidth,
+      rotation: 0
     };
-
-    console.log(`Creating line with coordinates:`, newShape);
 
     // Сохраняем исходные координаты в самом объекте для экспорта
     line.set({
@@ -2565,7 +2705,6 @@ const finishDrawingLine = (canvas) => {
     console.error('Error finishing line drawing:', error);
   }
 };
-
 
   // 1. ПРЯМОУГОЛЬНИК
   const startDrawingRectangle = (canvas, opt) => {
@@ -2881,7 +3020,7 @@ const finishDrawingCircle = (canvas) => {
   };
 
   // 4. ТЕКСТ
- const addNewText = () => {
+const addNewText = () => {
   if (!fabricCanvasRef.current) return;
 
   try {
@@ -2889,7 +3028,7 @@ const finishDrawingCircle = (canvas) => {
     const canvas = fabricCanvasRef.current;
     const center = canvas.getCenter();
 
-    // Создаем новый текстовый элемент
+    // ✅ ИСПРАВЛЕНО: Создаем текст с правильным origin
     const text = new fabric.IText('Введите текст', {
       left: center.left,
       top: center.top,
@@ -2899,10 +3038,12 @@ const finishDrawingCircle = (canvas) => {
       elementId: Date.now(),
       hasControls: true,
       hasBorders: true,
-      selectable: true
+      selectable: true,
+      originX: 'left',  // ✅ Используем left origin
+      originY: 'top'    // ✅ Используем top origin
     });
 
-    // ✅ Создаем элемент в shapes
+    // ✅ Создаем элемент в shapes с правильными координатами
     const newShape = {
       id: text.elementId,
       type: 'text',
@@ -2911,16 +3052,15 @@ const finishDrawingCircle = (canvas) => {
       y: center.top,
       fontSize: fontSize,
       fontFamily: 'Arial',
-      color: strokeColor
+      color: strokeColor,
+      rotation: 0
     };
 
-    // Добавляем на холст и в состояние
     canvas.add(text);
     canvas.setActiveObject(text);
     text.enterEditing();
     canvas.renderAll();
 
-    // ✅ Обновляем shapes
     setShapes(prev => [...prev, newShape]);
     setObjectCount(prev => prev + 1);
     setUnsavedChanges(true);
@@ -3103,20 +3243,23 @@ const finishDrawingCircle = (canvas) => {
 
           // ✅ ДОБАВЛЕНО: обработка линий
           case 'line':
-            shape = {
-              id: obj.elementId,
-              type: 'line',
-              points: [
-                obj.originalX1 || obj.x1,
-                obj.originalY1 || obj.y1,
-                obj.originalX2 || obj.x2,
-                obj.originalY2 || obj.y2
-              ],
-              color: obj.stroke || '#000000',
-              strokeWidth: obj.strokeWidth || 2,
-              rotation: Math.round(obj.angle || 0)
-            };
-            break;
+  // Используем сохраненные оригинальные координаты если они есть
+  const linePoints = [
+    obj.originalX1 !== undefined ? obj.originalX1 : obj.x1,
+    obj.originalY1 !== undefined ? obj.originalY1 : obj.y1,
+    obj.originalX2 !== undefined ? obj.originalX2 : obj.x2,
+    obj.originalY2 !== undefined ? obj.originalY2 : obj.y2
+  ];
+
+  shape = {
+    id: obj.elementId,
+    type: 'line',
+    points: linePoints.map(p => Math.round(p)),
+    color: obj.stroke || '#000000',
+    strokeWidth: obj.strokeWidth || 2,
+    rotation: Math.round(obj.angle || 0)
+  };
+  break;
 
           // ✅ ДОБАВЛЕНО: обработка текста
           case 'i-text':

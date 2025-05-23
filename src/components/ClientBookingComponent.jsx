@@ -1888,41 +1888,32 @@ const ClientBookingComponent = () => {
           </div>
         );
 
-      case 'line':
-        if (shape.points && shape.points.length >= 4) {
-          const [x1, y1, x2, y2] = shape.points;
-          const length = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
-          const baseAngle = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
-          const totalAngle = baseAngle + (shape.rotation || 0);
-          const lineTransform = `rotate(${totalAngle}deg)`;
+     case 'line':
+  if (shape.points && shape.points.length >= 4) {
+    const [x1, y1, x2, y2] = shape.points;
+    const length = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+    const baseAngle = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
+    const totalAngle = baseAngle + (shape.rotation || 0);
+    const lineTransform = `rotate(${totalAngle}deg)`;
 
-          return (
-            <div
-              key={shape.id}
-              style={{
-                position: 'absolute',
-                left: `${x1}px`,
-                top: `${y1}px`,
-                width: `${length}px`,
-                height: `${shape.strokeWidth || 2}px`,
-                backgroundColor: shape.color,
-                transformOrigin: '0 50%', // ✅ Начало линии как точка поворота
-                transform: lineTransform,
-                pointerEvents: 'none',
-                WebkitTransform: lineTransform,
-                MozTransform: lineTransform,
-                msTransform: lineTransform,
-                OTransform: lineTransform
-              }}
-              ref={(el) => {
-                if (el) {
-                  el.style.setProperty('transform', `rotate(${totalAngle}deg)`, 'important');
-                }
-              }}
-            />
-          );
-        }
-        return null;
+    return (
+      <div
+        key={shape.id}
+        style={{
+          position: 'absolute',
+          left: `${x1}px`,
+          top: `${y1}px`,
+          width: `${length}px`,
+          height: `${shape.strokeWidth || 2}px`,
+          backgroundColor: shape.color,
+          transformOrigin: '0 50%',
+          transform: lineTransform,
+          pointerEvents: 'none'
+        }}
+      />
+    );
+  }
+  return null;
 
       default:
         return null;
