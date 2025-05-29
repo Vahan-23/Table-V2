@@ -1686,7 +1686,7 @@ const ClientBookingComponent = () => {
         <div className="zoom-container">
           <TransformWrapper
             initialScale={1}
-            minScale={0.5}
+            minScale={0.2}
             maxScale={4}
             limitToBounds={false}
             doubleClick={{ disabled: true }} // Prevents accidental double-click zooms
