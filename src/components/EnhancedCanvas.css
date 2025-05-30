@@ -243,3 +243,22 @@
   min-width: 35px;
   text-align: center;
 }
+
+.transfer-notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: rgba(0,0,0,0.8);
+  color: white;
+  padding: 12px 20px;
+  border-radius: 4px;
+  z-index: 10000;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  font-size: 14px;
+  max-width: 300px;
+}
+
+.transfer-notification.show {
+  opacity: 1;
+}

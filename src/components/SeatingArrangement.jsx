@@ -1965,22 +1965,33 @@ const SeatingArrangement = () => {
 
 
                         </div> */}
-                        <EnhancedCanvas
-                            ref={enhancedCanvasRef}
-                            tables={tables}
-                            setTables={setTables}
-                            hallElements={hallElements}
-                            setHallElements={setHallElements}
-                            selectedElementId={selectedElementId}
-                            setSelectedElementId={setSelectedElementId}
-                            canvasMode={activeMode}  // Changed from activeMode to canvasMode to match the prop name in EnhancedCanvas
-                            onChairClick={handleChairClick}
-                            onTableSelect={handleShowTableDetails}
-                            onTableMove={(tableId, x, y) => {
-                                // Handle table movement
-                            }}
-                            initialZoom={0.2}
-                        />
+                       <EnhancedCanvas
+  ref={enhancedCanvasRef}
+  tables={tables}
+  setTables={setTables}
+  hallElements={hallElements}
+  setHallElements={setHallElements}
+  selectedElementId={selectedElementId}
+  setSelectedElementId={setSelectedElementId}
+  canvasMode={activeMode}
+  onChairClick={handleChairClick}
+  onTableSelect={handleShowTableDetails}
+  onTableMove={(tableId, x, y) => {}}
+  initialZoom={0.2}
+  people={people}
+  setPeople={setPeople}
+  draggingGroup={draggingGroup}
+  setDraggingGroup={setDraggingGroup}
+  chairCount={chairCount}
+  // ← ДОБАВИТЬ
+  PeopleSelector={PeopleSelector}
+  onShowPeopleSelector={(groupData) => {
+    setGroupToPlace(groupData.groupToPlace);
+    setTargetTableId(groupData.targetTableId);
+    setAvailableSeats(groupData.availableSeats);
+    setGroupSelectionActive(true);
+  }}
+/>
 
 
 
