@@ -12,7 +12,7 @@
 .app-header {
   padding: 10px 15px;
   background-color: #0a0a1d;
-  color: white;
+  /* color: white; */
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
   z-index: 100;
   display: flex;

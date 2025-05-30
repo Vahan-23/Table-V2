@@ -21,7 +21,7 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 10px;
-  z-index: 100;
+  /* z-index: 100; */
 }
 
 .tool-group {
