@@ -25,22 +25,24 @@ const DND_ITEM_TYPES = {
   GROUP: 'GROUP' // ← ДОБАВИТЬ
 };
 
-const TableDropOverlay = ({ 
-  table, 
+const TableDropOverlay = ({
+  table,
   fabricTable,
-  style, 
-  onDropGroup, 
-  people, 
-  setPeople, 
-  tables, 
+  style,
+  people,
+  setPeople,
+  tables,
   setTables,
-  canvas
+  canvas,
+  onShowPeopleSelector,
+  // ✅ ДОБАВЬТЕ ЭТОТ НОВЫЙ ПРОП
+  onTableUpdate
 }) => {
   const [{ isOver, canDrop }, drop] = useDrop({
     accept: 'GROUP',
     drop: (item, monitor) => {
       console.log('Group dropped on table:', table.id, item);
-      
+
       // Убираем подсветку при drop
       if (fabricTable && canvas) {
         fabricTable.set({
@@ -48,17 +50,82 @@ const TableDropOverlay = ({
         });
         canvas.renderAll();
       }
-      
+
       if (!item.group || !Array.isArray(item.group)) {
         console.error('Invalid group data:', item);
         return { success: false };
       }
 
-      onDropGroup(item.group);
+      // Вычисляем количество свободных мест
+      const occupiedSeats = table.people?.filter(Boolean).length || 0;
+      const freeSeats = table.chairCount - occupiedSeats;
+
+      if (freeSeats >= item.group.length) {
+        // ДОСТАТОЧНО МЕСТ - РАЗМЕЩАЕМ ВСЮ ГРУППУ
+        console.log('Placing full group on table:', table.id);
+
+        // Создаем обновленные данные стола
+        const newPeople = [...table.people];
+        let groupIndex = 0;
+
+        // Заполняем пустые места
+        for (let i = 0; i < newPeople.length && groupIndex < item.group.length; i++) {
+          if (!newPeople[i]) {
+            newPeople[i] = item.group[groupIndex];
+            groupIndex++;
+          }
+        }
+
+        // Если остались люди, добавляем в конец
+        while (groupIndex < item.group.length && newPeople.length < table.chairCount) {
+          newPeople.push(item.group[groupIndex]);
+          groupIndex++;
+        }
+
+        const updatedTable = { ...table, people: newPeople };
+
+        // ✅ СНАЧАЛА ОБНОВЛЯЕМ ВИЗУАЛИЗАЦИЮ
+        if (onTableUpdate) {
+          onTableUpdate(table.id, updatedTable);
+        }
+
+        // ✅ ПОТОМ ОБНОВЛЯЕМ СОСТОЯНИЕ
+        setTables(prevTables => {
+          return prevTables.map(t =>
+            t.id === table.id ? updatedTable : t
+          );
+        });
+
+        // Удаляем людей из общего списка
+        setPeople(prevPeople => {
+          return prevPeople.filter(person =>
+            !item.group.some(groupPerson => groupPerson.name === person.name)
+          );
+        });
+
+        showTableTransferNotification(item.group[0]?.group || 'группа', table.id, item.group.length);
+
+      } else if (freeSeats > 0) {
+        // МАЛО МЕСТ - ПОКАЗЫВАЕМ СЕЛЕКТОР ЛЮДЕЙ
+        if (onShowPeopleSelector) {
+          onShowPeopleSelector({
+            groupToPlace: {
+              groupName: item.group[0]?.group || 'группа',
+              people: item.group,
+              sourceTableId: null
+            },
+            targetTableId: table.id,
+            availableSeats: freeSeats
+          });
+        }
+      } else {
+        // НЕТ МЕСТ
+        alert(`На столе ${table.id} нет свободных мест!`);
+      }
+
       return { success: true, tableId: table.id };
     },
     hover: (item, monitor) => {
-      // ✅ ДОБАВИТЬ подсветку при hover
       if (fabricTable && canvas && monitor.isOver()) {
         fabricTable.set({
           shadow: {
@@ -77,7 +144,7 @@ const TableDropOverlay = ({
     })
   });
 
-  // ✅ УБИРАЕМ подсветку когда hover заканчивается
+  // Убираем подсветку когда hover заканчивается
   React.useEffect(() => {
     if (!isOver && fabricTable && canvas) {
       fabricTable.set({
@@ -86,6 +153,39 @@ const TableDropOverlay = ({
       canvas.renderAll();
     }
   }, [isOver, fabricTable, canvas]);
+
+  // Функция для показа уведомлений
+  const showTableTransferNotification = (groupName, tableId, count) => {
+    const notification = document.createElement('div');
+    notification.className = 'transfer-notification';
+    notification.textContent = `Группа ${groupName} (${count} чел.) размещена за столом ${tableId}`;
+    notification.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: rgba(33, 150, 243, 0.9);
+      color: white;
+      padding: 12px 20px;
+      border-radius: 4px;
+      z-index: 10000;
+      opacity: 0;
+      transition: opacity 0.3s;
+    `;
+
+    document.body.appendChild(notification);
+
+    setTimeout(() => {
+      notification.style.opacity = '1';
+      setTimeout(() => {
+        notification.style.opacity = '0';
+        setTimeout(() => {
+          if (notification.parentNode) {
+            document.body.removeChild(notification);
+          }
+        }, 300);
+      }, 2000);
+    }, 100);
+  };
 
   // Вычисляем количество свободных мест
   const occupiedSeats = table.people?.filter(Boolean).length || 0;
@@ -101,12 +201,10 @@ const TableDropOverlay = ({
         borderRadius: table.shape === 'round' ? '50%' : '8px',
         cursor: canDrop ? 'copy' : 'default',
         transition: 'all 0.2s ease',
-        // ✅ ДОБАВИТЬ лучшую видимость
         boxShadow: isOver && canDrop ? '0 0 20px rgba(33, 150, 243, 0.5)' : 'none'
       }}
       title={`Стол ${table.id} - ${occupiedSeats}/${table.chairCount} мест (свободно: ${freeSeats})`}
     >
-      {/* ✅ ДОБАВИТЬ индикатор свободных мест при hover */}
       {isOver && canDrop && (
         <div style={{
           position: 'absolute',
@@ -144,13 +242,13 @@ const EnhancedCanvas = React.forwardRef((
     setSelectedElementId = () => { },
     canvasMode = 'tables',
     people = [],
-    setPeople = () => {},
+    setPeople = () => { },
     draggingGroup = null,
-    setDraggingGroup = () => {},
+    setDraggingGroup = () => { },
     chairCount = 12,
     // ← ДОБАВИТЬ НОВЫЕ ПРОПСЫ
     PeopleSelector = null,
-    onShowPeopleSelector = () => {}
+    onShowPeopleSelector = () => { }
   },
   ref
 ) => {
@@ -184,11 +282,12 @@ const EnhancedCanvas = React.forwardRef((
   const [gridSize, setGridSize] = useState(20); // Размер сетки по умолчанию
   const [showGrid, setShowGrid] = useState(true); // Показывать ли сетку
 
-
+  const [isTablesRendered, setIsTablesRendered] = useState(false);
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [groupToPlace, setGroupToPlace] = useState(null);
-const [targetTableId, setTargetTableId] = useState(null);
-const [availableSeats, setAvailableSeats] = useState(0);
-const [groupSelectionActive, setGroupSelectionActive] = useState(false);
+  const [targetTableId, setTargetTableId] = useState(null);
+  const [availableSeats, setAvailableSeats] = useState(0);
+  const [groupSelectionActive, setGroupSelectionActive] = useState(false);
 
 
   const renderShape = (canvas, shape) => {
@@ -2356,6 +2455,78 @@ const [groupSelectionActive, setGroupSelectionActive] = useState(false);
     }
   };
 
+  const forceUpdateSpecificTable = (tableId, updatedTable) => {
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return;
+
+    console.log('Force updating table:', tableId);
+
+    // Находим Fabric.js группу, соответствующую столу
+    const tableGroup = canvas.getObjects().find(obj => obj.tableId === tableId);
+    if (tableGroup) {
+      // Сохраняем текущую позицию и поворот
+      const currentLeft = tableGroup.left;
+      const currentTop = tableGroup.top;
+      const currentAngle = tableGroup.angle || 0;
+
+      // Удаляем старую группу
+      canvas.remove(tableGroup);
+
+      // Рендерим обновленный стол с сохранением позиции
+      const newTableObj = renderTable(canvas, updatedTable);
+      if (newTableObj) {
+        newTableObj.set({
+          left: currentLeft,
+          top: currentTop,
+          angle: currentAngle
+        });
+        newTableObj.setCoords();
+      }
+
+      // Перерисовываем холст
+      canvas.renderAll();
+    }
+  };
+
+  const updateTableVisual = useCallback((tableData) => {
+    const canvas = fabricCanvasRef.current;
+    if (!canvas || !tableData) return;
+
+    // Находим объект стола на canvas
+    const fabricTable = canvas.getObjects().find(obj => obj.tableId === tableData.id);
+    if (!fabricTable) return;
+
+    console.log('Updating table visual for:', tableData.id, 'with people:', tableData.people);
+
+    // Сохраняем текущую позицию и поворот
+    const currentLeft = fabricTable.left;
+    const currentTop = fabricTable.top;
+    const currentAngle = fabricTable.angle || 0;
+
+    // Удаляем старый стол
+    canvas.remove(fabricTable);
+
+    // Создаем обновленный стол с новыми данными
+    const newTableObj = renderTable(canvas, {
+      ...tableData,
+      x: currentLeft,
+      y: currentTop,
+      rotation: currentAngle
+    });
+
+    if (newTableObj) {
+      // Устанавливаем точную позицию
+      newTableObj.set({
+        left: currentLeft,
+        top: currentTop,
+        angle: currentAngle
+      });
+      newTableObj.setCoords();
+    }
+
+    canvas.renderAll();
+  }, [renderTable]);
+
   // Add chairs to round table
   const addChairsToRoundTable = (canvas, tableGroup, tableData) => {
     if (!canvas || !tableGroup || !tableData) return;
@@ -3338,27 +3509,143 @@ const [groupSelectionActive, setGroupSelectionActive] = useState(false);
     }
   };
 
-  const createTableFromGroup = useCallback((group, position) => {
-  if (!group || !Array.isArray(group) || group.length === 0) return null;
-
-  try {
-    console.log('Creating table from group at position:', position);
-
-    // Создаем новый стол
+const createTableFromGroup = useCallback((group, position) => {
     const newTable = {
-      id: Date.now(),
-      x: Math.max(0, position.x - 150),
-      y: Math.max(0, position.y - 150),
-      width: 300,
-      height: 300,
-      people: [...group],
-      chairCount: Math.max(chairCount, group.length),
-      shape: 'round',
-      name: `Стол для группы ${group[0]?.group || ''}`
+        id: Date.now(),
+        x: Math.max(0, position.x - 150),
+        y: Math.max(0, position.y - 150),
+        width: 300,
+        height: 300,
+        people: [...group],
+        chairCount: Math.max(chairCount, group.length),
+        shape: 'round',
+        name: `Стол для группы ${group[0]?.group || ''}`
     };
+    setTables(prev => {
+        const updatedTables = [...prev, newTable];
+        const canvas = fabricCanvasRef.current;
+        if (canvas) {
+            renderTable(canvas, newTable); // Рендерим немедленно
+            saveToHistory();
+        }
+        return updatedTables;
+    });
+    return newTable;
+}, [chairCount, setTables, saveToHistory]);
 
-    // Добавляем стол
-    setTables(prev => [...prev, newTable]);
+  const handleGroupDropOnTable = useCallback((group, tableId) => {
+    console.log('Processing group drop on table:', tableId, group);
+
+    const targetTable = tables.find(t => t.id === tableId);
+    if (!targetTable) {
+      console.error('Target table not found:', tableId);
+      return;
+    }
+
+    const occupiedSeats = targetTable.people?.filter(Boolean).length || 0;
+    const freeSeats = targetTable.chairCount - occupiedSeats;
+
+    if (freeSeats >= group.length) {
+      // Достаточно мест - размещаем всю группу
+      placeGroupOnTable(group, tableId);
+    } else if (freeSeats > 0) {
+      // ✅ ВЫЗЫВАЕМ CALLBACK ДЛЯ ПОКАЗА СЕЛЕКТОРА
+      if (onShowPeopleSelector) {
+        onShowPeopleSelector({
+          groupToPlace: {
+            groupName: group[0]?.group || 'группа',
+            people: group,
+            sourceTableId: null
+          },
+          targetTableId: tableId,
+          availableSeats: freeSeats
+        });
+      }
+    } else {
+      alert(`На столе ${tableId} нет свободных мест!`);
+    }
+  }, [tables, onShowPeopleSelector]);
+
+  // Функция размещения группы на стол
+  const placeGroupOnTable = useCallback((group, tableId) => {
+    console.log('Placing group on table:', tableId, group);
+
+    setTables(prevTables => {
+      const updatedTables = prevTables.map(table => {
+        if (table.id === tableId) {
+          const newPeople = [...(table.people || [])];
+
+          // Заполняем пустые места
+          let groupIndex = 0;
+          for (let i = 0; i < newPeople.length && groupIndex < group.length; i++) {
+            if (!newPeople[i]) {
+              newPeople[i] = group[groupIndex];
+              groupIndex++;
+            }
+          }
+
+          // Если остались люди, добавляем в конец
+          while (groupIndex < group.length && newPeople.length < table.chairCount) {
+            newPeople.push(group[groupIndex]);
+            groupIndex++;
+          }
+
+          console.log('Updated table people:', newPeople);
+
+          // ✅ СОХРАНЯЕМ ПОЗИЦИЮ И ПЕРЕРЕНДЕРИВАЕМ ТОЛЬКО ЭТОТ СТОЛ
+          setTimeout(() => {
+            const canvas = fabricCanvasRef.current;
+            if (canvas) {
+              const fabricTable = canvas.getObjects().find(obj => obj.tableId === tableId);
+              if (fabricTable) {
+                // Сохраняем текущую позицию и поворот
+                const currentLeft = fabricTable.left;
+                const currentTop = fabricTable.top;
+                const currentAngle = fabricTable.angle || 0;
+
+                console.log('Preserving table position:', {
+                  left: currentLeft,
+                  top: currentTop,
+                  angle: currentAngle
+                });
+
+                // Удаляем старый стол
+                canvas.remove(fabricTable);
+
+                // Создаем обновленные данные стола с сохраненной позицией
+                const updatedTable = {
+                  ...table,
+                  people: newPeople,
+                  x: currentLeft,
+                  y: currentTop,
+                  rotation: currentAngle
+                };
+
+                // Рендерим новый стол с сохраненной позицией
+                const newTableObj = renderTable(canvas, updatedTable);
+
+                if (newTableObj) {
+                  // Устанавливаем точную позицию
+                  newTableObj.set({
+                    left: currentLeft,
+                    top: currentTop,
+                    angle: currentAngle
+                  });
+                  newTableObj.setCoords();
+                }
+
+                canvas.renderAll();
+              }
+            }
+          }, 10);
+
+          return { ...table, people: newPeople };
+        }
+        return table;
+      });
+
+      return updatedTables;
+    });
 
     // Удаляем людей из общего списка
     setPeople(prevPeople =>
@@ -3367,244 +3654,107 @@ const [groupSelectionActive, setGroupSelectionActive] = useState(false);
       )
     );
 
-    // Рендерим стол на canvas
-    setTimeout(() => {
-      const canvas = fabricCanvasRef.current;
-      if (canvas) {
-        renderTable(canvas, newTable);
-        saveToHistory();
-      }
-    }, 100);
+    saveToHistory();
+  }, [setTables, setPeople, saveToHistory]);
 
-    return newTable;
-  } catch (error) {
-    console.error('Error creating table from group:', error);
-    return null;
-  }
-}, [chairCount, setTables, setPeople, saveToHistory]);
+  const updateTableChairs = (fabricTableGroup, tableData) => {
+    if (!fabricTableGroup || !tableData) return;
 
-const handleGroupDropOnTable = useCallback((group, tableId) => {
-  console.log('Processing group drop on table:', tableId, group);
+    try {
+      console.log('Updating table chairs for table:', tableData.id);
 
-  const targetTable = tables.find(t => t.id === tableId);
-  if (!targetTable) {
-    console.error('Target table not found:', tableId);
-    return;
-  }
+      // Получаем все объекты в группе стола
+      const groupObjects = fabricTableGroup.getObjects();
 
-  // Проверяем свободные места
-  const occupiedSeats = targetTable.people?.filter(Boolean).length || 0;
-  const freeSeats = targetTable.chairCount - occupiedSeats;
+      // Обновляем стулья и удаляем старые подписи
+      groupObjects.forEach(obj => {
+        if (obj.chairIndex !== undefined) {
+          const chairIndex = obj.chairIndex;
+          const person = tableData.people[chairIndex];
 
-  if (freeSeats >= group.length) {
-    // Достаточно мест - размещаем всю группу
-    placeGroupOnTable(group, tableId);
-    showTableTransferNotification(group[0]?.group || 'группа', tableId, group.length);
-  } else if (freeSeats > 0) {
-    // Мало мест - показываем селектор людей
-    setGroupToPlace({
-      groupName: group[0]?.group || 'группа',
-      people: group,
-      sourceTableId: null // Не с другого стола
-    });
-    setTargetTableId(tableId);
-    setAvailableSeats(freeSeats);
-    setGroupSelectionActive(true);
-  } else {
-    // Нет мест
-    alert(`На столе ${tableId} нет свободных мест!`);
-  }
-}, [tables]);
-
-// Функция размещения группы на стол
-const placeGroupOnTable = useCallback((group, tableId) => {
-  console.log('Placing group on table:', tableId, group);
-
-  setTables(prevTables => {
-    const updatedTables = prevTables.map(table => {
-      if (table.id === tableId) {
-        const newPeople = [...(table.people || [])];
-        
-        // Заполняем пустые места
-        let groupIndex = 0;
-        for (let i = 0; i < newPeople.length && groupIndex < group.length; i++) {
-          if (!newPeople[i]) {
-            newPeople[i] = group[groupIndex];
-            groupIndex++;
-          }
+          // Обновляем цвет стула
+          obj.set({
+            fill: person ? '#ff6b6b' : '#6bff6b'
+          });
         }
 
-        // Если остались люди, добавляем в конец
-        while (groupIndex < group.length && newPeople.length < table.chairCount) {
-          newPeople.push(group[groupIndex]);
-          groupIndex++;
+        // Удаляем все старые подписи имен
+        if (obj.isNameLabel) {
+          fabricTableGroup.removeWithUpdate(obj);
         }
+      });
 
-        console.log('Updated table people:', newPeople);
-        
-        // ✅ СОХРАНЯЕМ ПОЗИЦИЮ И ПЕРЕРЕНДЕРИВАЕМ ТОЛЬКО ЭТОТ СТОЛ
-        setTimeout(() => {
-          const canvas = fabricCanvasRef.current;
-          if (canvas) {
-            const fabricTable = canvas.getObjects().find(obj => obj.tableId === tableId);
-            if (fabricTable) {
-              // Сохраняем текущую позицию и поворот
-              const currentLeft = fabricTable.left;
-              const currentTop = fabricTable.top;
-              const currentAngle = fabricTable.angle || 0;
-              
-              console.log('Preserving table position:', { 
-                left: currentLeft, 
-                top: currentTop, 
-                angle: currentAngle 
-              });
+      // Добавляем новые подписи имен
+      const updatedObjects = fabricTableGroup.getObjects();
+      updatedObjects.forEach(obj => {
+        if (obj.chairIndex !== undefined) {
+          const chairIndex = obj.chairIndex;
+          const person = tableData.people[chairIndex];
 
-              // Удаляем старый стол
-              canvas.remove(fabricTable);
-              
-              // Создаем обновленные данные стола с сохраненной позицией
-              const updatedTable = {
-                ...table, 
-                people: newPeople,
-                x: currentLeft,
-                y: currentTop,
-                rotation: currentAngle
-              };
-              
-              // Рендерим новый стол с сохраненной позицией
-              const newTableObj = renderTable(canvas, updatedTable);
-              
-              if (newTableObj) {
-                // Устанавливаем точную позицию
-                newTableObj.set({
-                  left: currentLeft,
-                  top: currentTop,
-                  angle: currentAngle
-                });
-                newTableObj.setCoords();
+          if (person && person.name) {
+            // ✅ ПРАВИЛЬНЫЕ ОТНОСИТЕЛЬНЫЕ КООРДИНАТЫ
+            let nameX = obj.left;
+            let nameY = obj.top;
+
+            // Корректируем позицию в зависимости от формы стола
+            if (tableData.shape === 'round') {
+              nameY += 5; // Немного ниже стула
+            } else if (tableData.shape === 'rectangle') {
+              // Для прямоугольных столов определяем сторону
+              const tableCenter = { x: 0, y: 0 }; // Центр группы
+
+              if (obj.top < tableCenter.y) {
+                // Верхняя сторона
+                nameY -= 30;
+              } else {
+                // Нижняя сторона  
+                nameY += 30;
               }
-              
-              canvas.renderAll();
             }
+
+            // Создаем подпись имени с правильными координатами
+            const nameLabel = new fabric.Text(person.name, {
+              fontSize: 10,
+              fontFamily: 'Arial',
+              fill: '#211812',
+              backgroundColor: 'rgba(255, 255, 255, 0.8)',
+              textAlign: 'center',
+              originX: 'center',
+              originY: 'center',
+              left: nameX,
+              top: nameY,
+              width: 55,
+              padding: 3,
+              isNameLabel: true,
+              chairIndex: chairIndex,
+              selectable: false,
+              evented: false
+            });
+
+            console.log(`Adding name label for ${person.name} at chair ${chairIndex}:`, {
+              x: nameX,
+              y: nameY
+            });
+
+            fabricTableGroup.addWithUpdate(nameLabel);
           }
-        }, 10);
-        
-        return { ...table, people: newPeople };
-      }
-      return table;
-    });
-
-    return updatedTables;
-  });
-
-  // Удаляем людей из общего списка
-  setPeople(prevPeople =>
-    prevPeople.filter(person =>
-      !group.some(groupPerson => groupPerson.name === person.name)
-    )
-  );
-
-  saveToHistory();
-}, [setTables, setPeople, saveToHistory]);
-
-const updateTableChairs = (fabricTableGroup, tableData) => {
-  if (!fabricTableGroup || !tableData) return;
-
-  try {
-    console.log('Updating table chairs for table:', tableData.id);
-
-    // Получаем все объекты в группе стола
-    const groupObjects = fabricTableGroup.getObjects();
-
-    // Обновляем стулья и удаляем старые подписи
-    groupObjects.forEach(obj => {
-      if (obj.chairIndex !== undefined) {
-        const chairIndex = obj.chairIndex;
-        const person = tableData.people[chairIndex];
-
-        // Обновляем цвет стула
-        obj.set({
-          fill: person ? '#ff6b6b' : '#6bff6b'
-        });
-      }
-
-      // Удаляем все старые подписи имен
-      if (obj.isNameLabel) {
-        fabricTableGroup.removeWithUpdate(obj);
-      }
-    });
-
-    // Добавляем новые подписи имен
-    const updatedObjects = fabricTableGroup.getObjects();
-    updatedObjects.forEach(obj => {
-      if (obj.chairIndex !== undefined) {
-        const chairIndex = obj.chairIndex;
-        const person = tableData.people[chairIndex];
-
-        if (person && person.name) {
-          // ✅ ПРАВИЛЬНЫЕ ОТНОСИТЕЛЬНЫЕ КООРДИНАТЫ
-          let nameX = obj.left;
-          let nameY = obj.top;
-
-          // Корректируем позицию в зависимости от формы стола
-          if (tableData.shape === 'round') {
-            nameY += 5; // Немного ниже стула
-          } else if (tableData.shape === 'rectangle') {
-            // Для прямоугольных столов определяем сторону
-            const tableCenter = { x: 0, y: 0 }; // Центр группы
-            
-            if (obj.top < tableCenter.y) {
-              // Верхняя сторона
-              nameY -= 30;
-            } else {
-              // Нижняя сторона  
-              nameY += 30;
-            }
-          }
-
-          // Создаем подпись имени с правильными координатами
-          const nameLabel = new fabric.Text(person.name, {
-            fontSize: 10,
-            fontFamily: 'Arial',
-            fill: '#211812',
-            backgroundColor: 'rgba(255, 255, 255, 0.8)',
-            textAlign: 'center',
-            originX: 'center',
-            originY: 'center',
-            left: nameX,
-            top: nameY,
-            width: 55,
-            padding: 3,
-            isNameLabel: true,
-            chairIndex: chairIndex,
-            selectable: false,
-            evented: false
-          });
-
-          console.log(`Adding name label for ${person.name} at chair ${chairIndex}:`, {
-            x: nameX,
-            y: nameY
-          });
-
-          fabricTableGroup.addWithUpdate(nameLabel);
         }
-      }
-    });
+      });
 
-    // Принудительно обновляем группу
-    fabricTableGroup.setCoords();
+      // Принудительно обновляем группу
+      fabricTableGroup.setCoords();
 
-  } catch (error) {
-    console.error('Error updating table chairs:', error);
-  }
-};
+    } catch (error) {
+      console.error('Error updating table chairs:', error);
+    }
+  };
 
-// Уведомление о размещении
-const showTableTransferNotification = (groupName, tableId, count) => {
-  const notification = document.createElement('div');
-  notification.className = 'transfer-notification';
-  notification.textContent = `Группа ${groupName} (${count} чел.) размещена за столом ${tableId}`;
-  notification.style.cssText = `
+  // Уведомление о размещении
+  const showTableTransferNotification = (groupName, tableId, count) => {
+    const notification = document.createElement('div');
+    notification.className = 'transfer-notification';
+    notification.textContent = `Группа ${groupName} (${count} чел.) размещена за столом ${tableId}`;
+    notification.style.cssText = `
     position: fixed;
     top: 20px;
     right: 20px;
@@ -3616,62 +3766,61 @@ const showTableTransferNotification = (groupName, tableId, count) => {
     opacity: 0;
     transition: opacity 0.3s;
   `;
-  
-  document.body.appendChild(notification);
 
-  setTimeout(() => {
-    notification.style.opacity = '1';
+    document.body.appendChild(notification);
+
     setTimeout(() => {
-      notification.style.opacity = '0';
+      notification.style.opacity = '1';
       setTimeout(() => {
-        if (notification.parentNode) {
-          document.body.removeChild(notification);
-        }
-      }, 300);
-    }, 2000);
-  }, 100);
-};
+        notification.style.opacity = '0';
+        setTimeout(() => {
+          if (notification.parentNode) {
+            document.body.removeChild(notification);
+          }
+        }, 300);
+      }, 2000);
+    }, 100);
+  };
 
-const renderTableDropOverlays = () => {
-  // ✅ ПОКАЗЫВАЕМ ОВЕРЛЕИ ТОЛЬКО КОГДА АКТИВНО ПЕРЕТАСКИВАНИЕ
-  if (!draggingGroup || !fabricCanvasRef.current || !isCanvasReady || !canvasContainerRef.current) {
-    return null;
-  }
+  const renderTableDropOverlays = () => {
+    // ✅ ПОКАЗЫВАЕМ ОВЕРЛЕИ ТОЛЬКО КОГДА АКТИВНО ПЕРЕТАСКИВАНИЕ
+    if (!draggingGroup || !fabricCanvasRef.current || !isCanvasReady || !canvasContainerRef.current) {
+      return null; // ✅ Важно! Когда нет перетаскивания, overlay'и не должны блокировать клики
+    }
 
-  const canvas = fabricCanvasRef.current;
-  
-  return tables.map(table => {
-    // Находим fabric объект стола на canvas
-    const fabricTable = canvas.getObjects().find(obj => obj.tableId === table.id);
-    if (!fabricTable) return null;
+    const canvas = fabricCanvasRef.current;
 
-    // Получаем реальные координаты и размеры из fabric объекта
-    const boundingRect = fabricTable.getBoundingRect();
-    
-    return (
-      <TableDropOverlay
-        key={`table-overlay-${table.id}`}
-        table={table}
-        fabricTable={fabricTable}
-        style={{
-          position: 'absolute',
-          left: `${boundingRect.left}px`,
-          top: `${boundingRect.top}px`,
-          width: `${boundingRect.width}px`,
-          height: `${boundingRect.height}px`,
-          zIndex: 10,
-          pointerEvents: 'auto' // Только когда dragging активен
-        }}
-        onDropGroup={(group) => handleGroupDropOnTable(group, table.id)}
-        people={people}
-        setPeople={setPeople}
-        tables={tables}
-        setTables={setTables}
-        canvas={canvas}
-      />
-    );
-  });
-};
+    return tables.map(table => {
+      const fabricTable = canvas.getObjects().find(obj => obj.tableId === table.id);
+      if (!fabricTable) return null;
+
+      const boundingRect = fabricTable.getBoundingRect();
+
+      return (
+        <TableDropOverlay
+          key={`table-overlay-${table.id}`}
+          table={table}
+          fabricTable={fabricTable}
+          style={{
+            position: 'absolute',
+            left: `${boundingRect.left}px`,
+            top: `${boundingRect.top}px`,
+            width: `${boundingRect.width}px`,
+            height: `${boundingRect.height}px`,
+            zIndex: 10,
+            pointerEvents: 'auto' // ✅ Только когда dragging активен
+          }}
+          people={people}
+          setPeople={setPeople}
+          tables={tables}
+          setTables={setTables}
+          canvas={canvas}
+          onShowPeopleSelector={onShowPeopleSelector}
+          onTableUpdate={forceUpdateSpecificTable}
+        />
+      );
+    });
+  };
   // Функция для показа уведомления
   const showTransferNotification = (groupName, tableId) => {
     const notification = document.createElement('div');
@@ -3705,43 +3854,43 @@ const renderTableDropOverlays = () => {
     }, 100);
   };
 
- const [{ isOver, canDrop }, drop] = useDrop({
-  accept: 'GROUP',
-  drop: (item, monitor) => {
-    console.log('Group dropped on canvas:', item);
-    
-    if (!item.group || !Array.isArray(item.group)) {
-      console.error('Invalid group data:', item);
-      return { success: false };
-    }
+  const [{ isOver, canDrop }, drop] = useDrop({
+    accept: 'GROUP',
+    drop: (item, monitor) => {
+      console.log('Group dropped on canvas:', item);
 
-    // Получаем позицию drop
-    const dropOffset = monitor.getClientOffset();
-    if (!dropOffset || !canvasContainerRef.current) {
-      return { success: false };
-    }
+      if (!item.group || !Array.isArray(item.group)) {
+        console.error('Invalid group data:', item);
+        return { success: false };
+      }
 
-    // Простой расчет координат
-    const canvasRect = canvasContainerRef.current.getBoundingClientRect();
-    const canvas = fabricCanvasRef.current;
-    
-    if (!canvas) return { success: false };
+      // Получаем позицию drop
+      const dropOffset = monitor.getClientOffset();
+      if (!dropOffset || !canvasContainerRef.current) {
+        return { success: false };
+      }
 
-    const x = dropOffset.x - canvasRect.left;
-    const y = dropOffset.y - canvasRect.top;
+      // Простой расчет координат
+      const canvasRect = canvasContainerRef.current.getBoundingClientRect();
+      const canvas = fabricCanvasRef.current;
 
-    console.log('Drop coordinates:', { x, y });
+      if (!canvas) return { success: false };
 
-    // Создаем стол
-    const newTable = createTableFromGroup(item.group, { x, y });
-    
-    return { success: true, tableId: newTable?.id };
-  },
-  collect: (monitor) => ({
-    isOver: !!monitor.isOver(),
-    canDrop: !!monitor.canDrop()
-  })
-});
+      const x = dropOffset.x - canvasRect.left;
+      const y = dropOffset.y - canvasRect.top;
+
+      console.log('Drop coordinates:', { x, y });
+
+      // Создаем стол
+      const newTable = createTableFromGroup(item.group, { x, y });
+
+      return { success: true, tableId: newTable?.id };
+    },
+    collect: (monitor) => ({
+      isOver: !!monitor.isOver(),
+      canDrop: !!monitor.canDrop()
+    })
+  });
 
   // Zoom functions
   const zoomIn = () => {
@@ -4283,6 +4432,7 @@ const renderTableDropOverlays = () => {
     }, 100);
   }, [tables, shapes]);
 
+
   // Enable/disable pan mode
   const enablePanMode = () => {
     setActiveMode(ELEMENT_TYPES.PAN);
@@ -4292,48 +4442,49 @@ const renderTableDropOverlays = () => {
     setActiveMode(ELEMENT_TYPES.SELECT);
   };
 
-//   useEffect(() => {
-//   // Обновляем позиции оверлеев при zoom/pan/resize
-//   const updateOverlays = () => {
-//     if (fabricCanvasRef.current && tables.length > 0) {
-//       // Принудительно обновляем компонент
-//       setObjectCount(prev => prev);
-//     }
-//   };
+  
+  //   useEffect(() => {
+  //   // Обновляем позиции оверлеев при zoom/pan/resize
+  //   const updateOverlays = () => {
+  //     if (fabricCanvasRef.current && tables.length > 0) {
+  //       // Принудительно обновляем компонент
+  //       setObjectCount(prev => prev);
+  //     }
+  //   };
 
-//   const canvas = fabricCanvasRef.current;
-//   if (canvas) {
-//     // Слушаем события zoom и pan
-//     canvas.on('after:render', updateOverlays);
-//     canvas.on('mouse:wheel', updateOverlays);
-//     canvas.on('mouse:up', updateOverlays);
-    
-//     return () => {
-//       canvas.off('after:render', updateOverlays);
-//       canvas.off('mouse:wheel', updateOverlays);
-//       canvas.off('mouse:up', updateOverlays);
-//     };
-//   }
-// }, [tables.length]);
+  //   const canvas = fabricCanvasRef.current;
+  //   if (canvas) {
+  //     // Слушаем события zoom и pan
+  //     canvas.on('after:render', updateOverlays);
+  //     canvas.on('mouse:wheel', updateOverlays);
+  //     canvas.on('mouse:up', updateOverlays);
 
-// useEffect(() => {
-//   // Когда tables изменяются, принудительно обновляем оверлеи
-//   const timer = setTimeout(() => {
-//     setObjectCount(prev => prev + 1); // Принудительный rerender
-//   }, 100);
+  //     return () => {
+  //       canvas.off('after:render', updateOverlays);
+  //       canvas.off('mouse:wheel', updateOverlays);
+  //       canvas.off('mouse:up', updateOverlays);
+  //     };
+  //   }
+  // }, [tables.length]);
 
-//   return () => clearTimeout(timer);
-// }, [tables]);
+  // useEffect(() => {
+  //   // Когда tables изменяются, принудительно обновляем оверлеи
+  //   const timer = setTimeout(() => {
+  //     setObjectCount(prev => prev + 1); // Принудительный rerender
+  //   }, 100);
 
-useEffect(() => {
-  // Принудительно обновляем оверлеи только когда активно перетаскивание
-  if (draggingGroup && tables.length > 0) {
-    const timer = setTimeout(() => {
-      setObjectCount(prev => prev + 1);
-    }, 50);
-    return () => clearTimeout(timer);
-  }
-}, [draggingGroup, tables.length]);
+  //   return () => clearTimeout(timer);
+  // }, [tables]);
+
+  useEffect(() => {
+    // Принудительно обновляем оверлеи только когда активно перетаскивание
+    if (draggingGroup && tables.length > 0) {
+      const timer = setTimeout(() => {
+        setObjectCount(prev => prev + 1);
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [draggingGroup, tables.length]);
   useEffect(() => {
     // После инициализации холста и рендеринга всех элементов
     if (isCanvasReady && fabricCanvasRef.current) {
@@ -4360,6 +4511,7 @@ useEffect(() => {
     duplicateSelectedObject,
     selectAllObjects,
     getCanvas: () => fabricCanvasRef.current,
+    updateTableVisual: forceUpdateSpecificTable,
   }));
 
   return (
@@ -4553,15 +4705,15 @@ useEffect(() => {
             </>
           )}
 
-           <button
+          <button
             className="tool-btn"
             onClick={async () => {
               // First reset zoom to ensure clean export
               resetZoom();
-              
+
               // Wait for zoom reset to complete
               await new Promise(resolve => setTimeout(resolve, 300));
-              
+
               // Then proceed with export
               const jsonData = exportCanvasAsJSON();
               if (jsonData) {
@@ -4619,52 +4771,52 @@ useEffect(() => {
 
       <div className="canvas-content-area">
         <div className="canvas-and-sidebar-container" style={{ display: 'flex', width: '100%' }}>
-       <div
-  className="canvas-wrapper"
-  ref={drop}
-  style={{
-    width: '100%',
-    position: 'relative',
-    border: '1px solid #ddd',
-    overflow: 'hidden',
-    backgroundColor: isOver && canDrop ? 'rgba(76, 175, 80, 0.1)' : 'transparent',
-    borderColor: isOver && canDrop ? '#4CAF50' : '#ddd'
-  }}
->
-  <div
-    ref={canvasContainerRef}
-    style={{
-      width: '100%',
-      height: '100%',
-      position: 'relative'
-    }}
-  >
-    <canvas
-      ref={canvasRef}
-      style={{
-        display: 'block',
-        touchAction: 'none'
-      }}
-    />
-    {renderTableDropOverlays()}
-    {!initialized && (
-      <div style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'rgba(255,255,255,0.7)',
-        zIndex: 1000
-      }}>
-        <div>Initializing canvas...</div>
-      </div>
-    )}
-  </div>
-</div>
+          <div
+            className="canvas-wrapper"
+            ref={drop}
+            style={{
+              width: '100%',
+              position: 'relative',
+              border: '1px solid #ddd',
+              overflow: 'hidden',
+              backgroundColor: isOver && canDrop ? 'rgba(76, 175, 80, 0.1)' : 'transparent',
+              borderColor: isOver && canDrop ? '#4CAF50' : '#ddd'
+            }}
+          >
+            <div
+              ref={canvasContainerRef}
+              style={{
+                width: '100%',
+                height: '100%',
+                position: 'relative'
+              }}
+            >
+              <canvas
+                ref={canvasRef}
+                style={{
+                  display: 'block',
+                  touchAction: 'none'
+                }}
+              />
+              {renderTableDropOverlays()}
+              {!initialized && (
+                <div style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: 'rgba(255,255,255,0.7)',
+                  zIndex: 1000
+                }}>
+                  <div>Initializing canvas...</div>
+                </div>
+              )}
+            </div>
+          </div>
 
           {canvasMode === 'elements' && (
             <div className="elements-sidebar" style={{ width: '250px', padding: '10px', background: '#f5f5f5', borderLeft: '1px solid #ddd' }}>
@@ -4732,7 +4884,7 @@ useEffect(() => {
         )}
       </div>
     </div>
-);
+  );
 });
 
 export default EnhancedCanvas;

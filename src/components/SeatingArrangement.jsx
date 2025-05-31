@@ -69,6 +69,7 @@ const SeatingArrangement = () => {
 
 
     const enhancedCanvasRef = useRef(null);
+
     const exportHallData = () => {
         if (!currentHall) {
             alert('Խնդրում ենք նախ ընտրել դահլիճը');
@@ -345,8 +346,10 @@ const SeatingArrangement = () => {
     const handlePlaceSelectedPeople = (selectedPeople) => {
         if (!groupToPlace || !targetTableId) return;
 
+        console.log('Placing selected people:', selectedPeople, 'on table:', targetTableId);
+
         setTables((prevTables) => {
-            return prevTables.map(table => {
+            const updatedTables = prevTables.map(table => {
                 // Обрабатываем исходный стол (если это перемещение между столами)
                 if (groupToPlace.sourceTableId && table.id === groupToPlace.sourceTableId) {
                     // Удаляем только выбранных людей из исходного стола
@@ -379,10 +382,22 @@ const SeatingArrangement = () => {
                         seatsUsed++;
                     }
 
-                    return { ...table, people: updatedPeople };
+                    const updatedTable = { ...table, people: updatedPeople };
+
+                    // ✅ ОБНОВЛЯЕМ ВИЗУАЛИЗАЦИЮ СТОЛА
+                    setTimeout(() => {
+                        if (enhancedCanvasRef.current?.updateTableVisual) {
+                            console.log('Updating table visual after people selection');
+                            enhancedCanvasRef.current.updateTableVisual(targetTableId, updatedTable);
+                        }
+                    }, 100);
+
+                    return updatedTable;
                 }
                 return table;
             });
+
+            return updatedTables;
         });
 
         // Если это не перемещение между столами, удаляем выбранных людей из общего списка
@@ -1596,45 +1611,55 @@ const SeatingArrangement = () => {
     };
 
     const handleChairClick = (tableId, chairIndex) => {
-        const table = tables.find(t => t.id === tableId);
-        const person = table?.people[chairIndex];
-
-        if (person) {
-            // If there's a person in the chair, show removal popup
-            setSelectedTableId(tableId);
-            setSelectedChairIndex(chairIndex);
-            setPersonToRemove(person);
-            setIsRemoveMode(true);
-            setIsPopupVisible(true);
-        } else {
-            // If chair is empty, show popup to add a person
-            setSelectedTableId(tableId);
-            setSelectedChairIndex(chairIndex);
-            setIsRemoveMode(false);
-            setIsPopupVisible(true);
-        }
-    };
+    const table = tables.find(t => t.id === tableId);
+    const person = table?.people[chairIndex];
+    if (person && person.name) {
+        // Показываем модальное окно для удаления
+        setSelectedTableId(tableId);
+        setSelectedChairIndex(chairIndex);
+        setPersonToRemove(person);
+        setIsRemoveMode(true);
+        setIsPopupVisible(true);
+    } else {
+        // Показываем модальное окно для добавления
+        setSelectedTableId(tableId);
+        setSelectedChairIndex(chairIndex);
+        setIsRemoveMode(false);
+        setIsPopupVisible(true);
+    }
+};
 
     const handleRemovePerson = () => {
         if (selectedTableId !== null && selectedChairIndex !== null && personToRemove) {
+            console.log('Removing person from table:', selectedTableId, 'chair:', selectedChairIndex);
+
             setTables(prevTables => {
-                const tableIndex = prevTables.findIndex(t => t.id === selectedTableId);
-                if (tableIndex === -1) return prevTables;
+                const updatedTables = prevTables.map(table => {
+                    if (table.id === selectedTableId) {
+                        const updatedTable = { ...table };
+                        const updatedPeople = [...updatedTable.people];
 
-                const updatedTable = { ...prevTables[tableIndex] };
-                const updatedPeople = [...updatedTable.people];
+                        // Удаляем человека со стула
+                        updatedPeople[selectedChairIndex] = null;
+                        updatedTable.people = updatedPeople;
 
-                // Remove the person from the chair
-                updatedPeople[selectedChairIndex] = null;
-                updatedTable.people = updatedPeople;
+                        // ✅ ОБНОВЛЯЕМ ВИЗУАЛИЗАЦИЮ СТОЛА
+                        setTimeout(() => {
+                            if (enhancedCanvasRef.current?.updateTableVisual) {
+                                console.log('Updating table visual after removing person');
+                                enhancedCanvasRef.current.updateTableVisual(selectedTableId, updatedTable);
+                            }
+                        }, 100);
 
-                // Update tables
-                const newTables = [...prevTables];
-                newTables[tableIndex] = updatedTable;
-                return newTables;
+                        return updatedTable;
+                    }
+                    return table;
+                });
+
+                return updatedTables;
             });
 
-            // Only add the person back to the people list if they don't already exist there
+            // Добавляем человека обратно в общий список (если его там нет)
             setPeople(prev => {
                 if (!prev.some(p => p.name === personToRemove.name)) {
                     return [...prev, personToRemove];
@@ -1642,6 +1667,7 @@ const SeatingArrangement = () => {
                 return prev;
             });
 
+            // Сбрасываем состояние
             setIsPopupVisible(false);
             setSelectedTableId(null);
             setSelectedChairIndex(null);
@@ -1651,36 +1677,38 @@ const SeatingArrangement = () => {
     };
 
     const handleSelectPerson = (person) => {
-        if (selectedTableId !== null && selectedChairIndex !== null) {
-            setTables((prevTables) => {
-                // Find the current table
-                const currentTableIndex = prevTables.findIndex(t => t.id === selectedTableId);
-                if (currentTableIndex === -1) return prevTables;
+  if (selectedTableId !== null && selectedChairIndex !== null) {
+    setTables((prevTables) => {
+      const updatedTables = prevTables.map((table) => {
+        if (table.id === selectedTableId) {
+          const updatedPeople = [...table.people];
+          updatedPeople[selectedChairIndex] = person;
+          const updatedTable = { ...table, people: updatedPeople };
 
-                // Create a copy of the table's people array
-                const updatedPeople = [...prevTables[currentTableIndex].people];
-                updatedPeople[selectedChairIndex] = person;
+          // Немедленно обновляем визуализацию стола через ref
+          setTimeout(() => {
+            if (enhancedCanvasRef.current?.updateTableVisual) {
+              console.log('Updating table visual after adding person');
+              enhancedCanvasRef.current.updateTableVisual(selectedTableId, updatedTable);
+            }
+          }, 0);
 
-                // Create a new table with updated people
-                const updatedTable = {
-                    ...prevTables[currentTableIndex],
-                    people: updatedPeople
-                };
-
-                const newTables = [...prevTables];
-                newTables.splice(currentTableIndex, 1, updatedTable);
-                return newTables;
-            });
-
-            setPeople((prevPeople) =>
-                prevPeople.filter((p) => p.name !== person.name)
-            );
-
-            setIsPopupVisible(false);
-            setSelectedTableId(null);
-            setSelectedChairIndex(null);
+          return updatedTable;
         }
-    };
+        return table;
+      });
+      return updatedTables;
+    });
+
+    // Удаляем человека из списка доступных людей
+    setPeople((prevPeople) => prevPeople.filter((p) => p.name !== person.name));
+
+    // Закрываем popup и сбрасываем выбор
+    setIsPopupVisible(false);
+    setSelectedTableId(null);
+    setSelectedChairIndex(null);
+  }
+};
 
     const closePopup = () => {
         setIsPopupVisible(false);
@@ -1923,7 +1951,7 @@ const SeatingArrangement = () => {
                         isOpen={isDetailsOpen}
                         onClose={handleCloseTableDetails}
                         setPeople={setPeople}
-
+                        enhancedCanvasRef={enhancedCanvasRef}
                     />
                     <div className="figmaContainer">
                         <SidebarLayout position='right' >
@@ -1965,33 +1993,33 @@ const SeatingArrangement = () => {
 
 
                         </div> */}
-                       <EnhancedCanvas
-  ref={enhancedCanvasRef}
-  tables={tables}
-  setTables={setTables}
-  hallElements={hallElements}
-  setHallElements={setHallElements}
-  selectedElementId={selectedElementId}
-  setSelectedElementId={setSelectedElementId}
-  canvasMode={activeMode}
-  onChairClick={handleChairClick}
-  onTableSelect={handleShowTableDetails}
-  onTableMove={(tableId, x, y) => {}}
-  initialZoom={0.2}
-  people={people}
-  setPeople={setPeople}
-  draggingGroup={draggingGroup}
-  setDraggingGroup={setDraggingGroup}
-  chairCount={chairCount}
-  // ← ДОБАВИТЬ
-  PeopleSelector={PeopleSelector}
-  onShowPeopleSelector={(groupData) => {
-    setGroupToPlace(groupData.groupToPlace);
-    setTargetTableId(groupData.targetTableId);
-    setAvailableSeats(groupData.availableSeats);
-    setGroupSelectionActive(true);
-  }}
-/>
+                        <EnhancedCanvas
+                            ref={enhancedCanvasRef}
+                            tables={tables}
+                            setTables={setTables}
+                            hallElements={hallElements}
+                            setHallElements={setHallElements}
+                            selectedElementId={selectedElementId}
+                            setSelectedElementId={setSelectedElementId}
+                            canvasMode={activeMode}
+                            onChairClick={handleChairClick}
+                            onTableSelect={handleShowTableDetails}
+                            onTableMove={(tableId, x, y) => { }}
+                            initialZoom={0.2}
+                            people={people}
+                            setPeople={setPeople}
+                            draggingGroup={draggingGroup}
+                            setDraggingGroup={setDraggingGroup}
+                            chairCount={chairCount}
+                            PeopleSelector={PeopleSelector}
+                            // ✅ ДОБАВИТЬ CALLBACK
+                            onShowPeopleSelector={(groupData) => {
+                                setGroupToPlace(groupData.groupToPlace);
+                                setTargetTableId(groupData.targetTableId);
+                                setAvailableSeats(groupData.availableSeats);
+                                setGroupSelectionActive(true);
+                            }}
+                        />
 
 
 
@@ -2490,7 +2518,9 @@ const Table = ({
         setIsResizing(true);
         e.stopPropagation();
     };
-
+    useEffect(() => {
+        console.log('Table component updated:', table.id, 'people:', table.people);
+    }, [table.people]);
 
 
     // Enhanced drop target to handle both regular group drops and seated group transfers
@@ -2579,7 +2609,7 @@ const Table = ({
             const angle = angleStep * i;
             const xPosition = radius * Math.cos((angle * Math.PI) / 180);
             const yPosition = radius * Math.sin((angle * Math.PI) / 180);
-
+            const person = peopleOnTable[i];
             const chairStyle = {
                 position: 'absolute',
                 transformOrigin: 'center',
@@ -2597,7 +2627,10 @@ const Table = ({
                 textAlign: 'center',
                 left: `calc(50% + ${xPosition}px)`,
                 top: `calc(50% + ${yPosition}px)`,
-                cursor: 'pointer'
+                cursor: 'pointer',
+                // ✅ ДОБАВЬТЕ ЭТИ СТРОКИ
+                zIndex: 20, // Выше чем у overlay
+                pointerEvents: 'auto' // Убеждаемся что клики обрабатываются
             };
 
             const nameOverlayStyle = {
@@ -2633,10 +2666,10 @@ const Table = ({
                 <div
                     key={i}
                     className="chair"
-                    style={chairStyle}
                     onClick={(e) => {
                         e.stopPropagation();
-                        onChairClick(i);
+                        console.log('Chair onclick - index:', i, 'person:', person); // ✅ Добавьте отладку
+                        onChairClick(table.id, i); // ✅ Убедитесь что передается правильный индекс
                     }}
                     title={peopleOnTable[i] ? `Нажмите на стул, чтобы удалить ${peopleOnTable[i].name}` : "Нажмите на стул, чтобы добавить человека"}
                 >
@@ -3045,6 +3078,7 @@ const Table = ({
             )}
         </div>
     );
+
 };
 
 // Модифицированный компонент DraggableGroup
@@ -3117,7 +3151,7 @@ const DraggableGroup = ({ group, tableId, onRemoveGroup, onRemovePerson, onDragS
     );
 };
 
-const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeople }) => {
+const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeople, enhancedCanvasRef }) => {
     const [tableShape, setTableShape] = useState(table ? (table.shape || 'round') : 'round');
     const [tableName, setTableName] = useState(table ? (table.name || `Стол ${table.id}`) : '');
     // Добавляем состояние для отслеживания угла поворота
@@ -3319,12 +3353,22 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
             setTables(prevTables =>
                 prevTables.map(t => {
                     if (t.id === table.id) {
-                        return {
+                        const updatedTable = {
                             ...t,
                             people: t.people.map(person =>
                                 (person && person.group === groupName) ? null : person
                             )
                         };
+
+                        // ✅ ОБНОВЛЯЕМ ВИЗУАЛИЗАЦИЮ
+                        setTimeout(() => {
+                            if (enhancedCanvasRef?.current?.updateTableVisual) {
+                                console.log('Updating table visual after removing group');
+                                enhancedCanvasRef.current.updateTableVisual(table.id, updatedTable);
+                            }
+                        }, 100);
+
+                        return updatedTable;
                     }
                     return t;
                 })
@@ -3342,12 +3386,22 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
             setTables(prevTables =>
                 prevTables.map(t => {
                     if (t.id === table.id) {
-                        return {
+                        const updatedTable = {
                             ...t,
                             people: t.people.map(person =>
                                 (person && person.name === personName) ? null : person
                             )
                         };
+
+                        // ✅ ТЕПЕРЬ ИСПОЛЬЗУЕМ ПЕРЕДАННЫЙ REF
+                        setTimeout(() => {
+                            if (enhancedCanvasRef?.current?.updateTableVisual) {
+                                console.log('Updating table visual after removing person from details');
+                                enhancedCanvasRef.current.updateTableVisual(table.id, updatedTable);
+                            }
+                        }, 100);
+
+                        return updatedTable;
                     }
                     return t;
                 })
@@ -3357,7 +3411,6 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
             const personToReturn = table.people.find(p => p && p.name === personName);
             if (personToReturn) {
                 setPeople(prevPeople => {
-                    // Проверяем, что человека еще нет в списке
                     if (!prevPeople.some(p => p.name === personName)) {
                         return [...prevPeople, personToReturn];
                     }
