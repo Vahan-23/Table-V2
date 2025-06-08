@@ -3087,32 +3087,30 @@ const addChairsToRoundTable = (canvas, tableGroup, tableData, currentViewMode, c
           originY: 'center',
           chairIndex: i,
           tableId: tableData.id,
-          hoverCursor: 'pointer',
+          hoverCursor: currentViewMode === 'seating' ? 'pointer' : 'move',
           selectable: false
         });
 
         chair.set('angle', (angle * 180 / Math.PI) + 90);
 
-      // ✅ ИСПРАВЛЕНО: Настройки стула для обеспечения кликабельности
-chair.set({
-  selectable: false,
-  evented: true,  // ✅ Важно: стул должен получать события
-  hoverCursor: 'pointer'
-});
+        // ✅ ИСПРАВЛЕНО: Убираем клики по стульям в режиме дизайна
+        chair.set({
+          selectable: false,
+          evented: currentViewMode === 'seating', // ✅ События только в режиме рассадки
+          hoverCursor: currentViewMode === 'seating' ? 'pointer' : 'default'
+        });
 
-chair.on('mousedown', (e) => {
-  if (e.e) e.e.stopPropagation();
-  
-  // ✅ ИСПРАВЛЕНО: Используем переданный currentViewMode
-  console.log('Chair clicked:', tableData.id, i, 'currentViewMode:', currentViewMode, 'GLOBAL viewMode:', viewMode);
-  
-  if (currentViewMode === 'seating' && chairClickHandler) {
-    console.log('Chair clicked in SEATING mode:', tableData.id, i);
-    chairClickHandler(tableData.id, i);
-  } else {
-    console.log('Chair click ignored - mode:', currentViewMode);
-  }
-});
+        // Добавляем обработчик только для режима рассадки
+        if (currentViewMode === 'seating') {
+          chair.on('mousedown', (e) => {
+            if (e.e) e.e.stopPropagation();
+            
+            console.log('Chair clicked in SEATING mode:', tableData.id, i);
+            if (chairClickHandler) {
+              chairClickHandler(tableData.id, i);
+            }
+          });
+        }
 
         tableGroup.addWithUpdate(chair);
 
@@ -3128,7 +3126,9 @@ chair.on('mousedown', (e) => {
             left: x,
             top: y + 5,
             width: 55,
-            padding: 3
+            padding: 3,
+            selectable: false,
+            evented: false
           });
 
           tableGroup.addWithUpdate(nameLabel);
@@ -3172,30 +3172,28 @@ const addChairsToRectangleTable = (canvas, tableGroup, tableData, currentViewMod
           originY: 'center',
           chairIndex: currentChairIndex,
           tableId: tableData.id,
-          hoverCursor: 'pointer',
+          hoverCursor: currentViewMode === 'seating' ? 'pointer' : 'default',
           selectable: false
         });
 
-     // ✅ ИСПРАВЛЕНО: Настройки стула для обеспечения кликабельности
-chair.set({
-  selectable: false,
-  evented: true,  // ✅ Важно: стул должен получать события
-  hoverCursor: 'pointer'
-});
+        // ✅ ИСПРАВЛЕНО: Убираем клики по стульям в режиме дизайна
+        chair.set({
+          selectable: false,
+          evented: currentViewMode === 'seating', // ✅ События только в режиме рассадки
+          hoverCursor: currentViewMode === 'seating' ? 'pointer' : 'default'
+        });
 
-chair.on('mousedown', (e) => {
-  if (e.e) e.e.stopPropagation();
-  
-  // ✅ ИСПРАВЛЕНО: Используем переданный currentViewMode
-  console.log('Chair clicked:', tableData.id, currentChairIndex, 'currentViewMode:', currentViewMode, 'GLOBAL viewMode:', viewMode);
-  
-  if (currentViewMode === 'seating' && chairClickHandler) {
-    console.log('Chair clicked in SEATING mode:', tableData.id, currentChairIndex);
-    chairClickHandler(tableData.id, currentChairIndex);
-  } else {
-    console.log('Chair click ignored - mode:', currentViewMode);
-  }
-});
+        // Добавляем обработчик только для режима рассадки
+        if (currentViewMode === 'seating') {
+          chair.on('mousedown', (e) => {
+            if (e.e) e.e.stopPropagation();
+            
+            console.log('Chair clicked in SEATING mode:', tableData.id, currentChairIndex);
+            if (chairClickHandler) {
+              chairClickHandler(tableData.id, currentChairIndex);
+            }
+          });
+        }
 
         tableGroup.addWithUpdate(chair);
 
@@ -3211,7 +3209,9 @@ chair.on('mousedown', (e) => {
             left: x,
             top: y - 30,
             width: 55,
-            padding: 3
+            padding: 3,
+            selectable: false,
+            evented: false
           });
 
           tableGroup.addWithUpdate(nameLabel);
@@ -3238,33 +3238,29 @@ chair.on('mousedown', (e) => {
           originY: 'center',
           chairIndex: currentChairIndex,
           tableId: tableData.id,
-          hoverCursor: 'pointer',
+          hoverCursor: currentViewMode === 'seating' ? 'pointer' : 'default',
           selectable: false
         });
 
-       // ✅ ИСПРАВЛЕНО: Настройки стула для обеспечения кликабельности
-chair.set({
-  angle: 180,
-  selectable: false,
-  evented: true,  // ✅ Важно: стул должен получать события
-  hoverCursor: 'pointer'
-});
+        // ✅ ИСПРАВЛЕНО: Убираем клики по стульям в режиме дизайна
+        chair.set({
+          angle: 180,
+          selectable: false,
+          evented: currentViewMode === 'seating', // ✅ События только в режиме рассадки
+          hoverCursor: currentViewMode === 'seating' ? 'pointer' : 'default'
+        });
 
-chair.on('mousedown', (e) => {
-  if (e.e) e.e.stopPropagation();
-  
-  console.log('Chair clicked:', tableData.id, currentChairIndex, 'viewMode:', currentViewMode); // Для отладки
-  
-  if (currentViewMode === 'seating') {
-    // Режим рассадки - обрабатываем клик по стулу для размещения гостей
-    if (chairClickHandler) {
-      chairClickHandler(tableData.id, currentChairIndex);
-    }
-  } else if (currentViewMode === 'design') {
-    // Режим дизайна - стулья не кликабельны для рассадки
-    console.log('Chair clicked in design mode - no action');
-  }
-});
+        // Добавляем обработчик только для режима рассадки
+        if (currentViewMode === 'seating') {
+          chair.on('mousedown', (e) => {
+            if (e.e) e.e.stopPropagation();
+            
+            console.log('Chair clicked in SEATING mode:', tableData.id, currentChairIndex);
+            if (chairClickHandler) {
+              chairClickHandler(tableData.id, currentChairIndex);
+            }
+          });
+        }
 
         tableGroup.addWithUpdate(chair);
 
@@ -3280,7 +3276,9 @@ chair.on('mousedown', (e) => {
             left: x,
             top: y + 30,
             width: 55,
-            padding: 3
+            padding: 3,
+            selectable: false,
+            evented: false
           });
 
           tableGroup.addWithUpdate(nameLabel);
