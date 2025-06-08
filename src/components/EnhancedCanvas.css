@@ -262,3 +262,41 @@
 .transfer-notification.show {
   opacity: 1;
 }
+
+
+.mode-switcher {
+  display: flex;
+  margin-bottom: 10px;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 10px;
+}
+
+.mode-btn {
+  padding: 8px 16px;
+  background: #f5f5f5;
+  border: 1px solid #ddd;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.mode-btn.active {
+  background: #2196F3;
+  color: white;
+  border-color: #2196F3;
+}
+
+.mode-btn:first-child {
+  border-radius: 4px 0 0 4px;
+}
+
+.mode-btn:last-child {
+  border-radius: 0 4px 4px 0;
+  border-left: none;
+}
+
+.seating-tools {
+  background: #e8f5e8;
+  padding: 5px;
+  border-radius: 4px;
+}

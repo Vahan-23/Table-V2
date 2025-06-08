@@ -66,7 +66,12 @@ const SeatingArrangement = () => {
     const [selectedElementId, setSelectedElementId] = useState(null);
     // Добавляем новые состояния для отслеживания позиции перетаскивания
     const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
+const [viewMode, setViewMode] = useState('design');
 
+const handleViewModeChange = (newMode) => {
+  console.log('Changing view mode to:', newMode);
+  setViewMode(newMode);
+};
 
     const enhancedCanvasRef = useRef(null);
 
@@ -2011,6 +2016,8 @@ const SeatingArrangement = () => {
                             draggingGroup={draggingGroup}
                             setDraggingGroup={setDraggingGroup}
                             chairCount={chairCount}
+                             viewMode={viewMode}
+  onViewModeChange={handleViewModeChange}
                             PeopleSelector={PeopleSelector}
                             // ✅ ДОБАВИТЬ CALLBACK
                             onShowPeopleSelector={(groupData) => {

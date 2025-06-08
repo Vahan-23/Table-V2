@@ -246,9 +246,11 @@ const EnhancedCanvas = React.forwardRef((
     draggingGroup = null,
     setDraggingGroup = () => { },
     chairCount = 12,
-    // ← ДОБАВИТЬ НОВЫЕ ПРОПСЫ
     PeopleSelector = null,
-    onShowPeopleSelector = () => { }
+    onShowPeopleSelector = () => { },
+    // ← ДОБАВИТЬ ЭТИ НОВЫЕ ПРОПСЫ
+    viewMode = 'design', // ← НОВЫЙ ПРОПС: 'design' | 'seating'
+    onViewModeChange = () => { }, // ← НОВЫЙ ПРОПС
   },
   ref
 ) => {
@@ -1919,164 +1921,592 @@ const EnhancedCanvas = React.forwardRef((
     console.log(`Mode changed to: ${activeMode}`);
 
   }, [activeMode]);
+  
 
-  // Set up hybrid mode
-  const setupHybridMode = (canvas) => {
-    console.log('Setting up hybrid mode...');
-    canvas.isDrawingMode = false;
-    setIsDrawing(false);
+ // Set up hybrid mode
+// Set up hybrid mode
 
-    // Clear previous handlers
-    canvas.off('mouse:down');
-    canvas.off('mouse:move');
-    canvas.off('mouse:up');
-    canvas.off('mouse:wheel');
-    canvas.off('selection:created');
-    canvas.off('selection:cleared');
-    canvas.off('contextmenu');
+const applyModeSettings = (targetMode) => {
+  const canvas = fabricCanvasRef.current;
+  if (!canvas) return;
 
-    if (canvas._hybridHandlers) {
-      window.removeEventListener('keydown', canvas._hybridHandlers.keyDown);
-      window.removeEventListener('keyup', canvas._hybridHandlers.keyUp);
+  console.log(`🔄 Applying ${targetMode} mode settings`);
+  
+  // 1. Принудительно снимаем выделение
+  canvas.discardActiveObject();
+  setSelectedObject(null);
+  setSelectedElementId(null);
+  
+  // 2. Настраиваем обработчики для нового режима
+  setupHybridMode(canvas);
+  
+  // 3. Применяем настройки ко всем объектам
+  applyObjectSettings(canvas, targetMode);
+  
+  // 4. Обновляем столы для нового режима  
+  forceUpdateAllTablesForMode(targetMode);
+  
+  // 5. Финальное применение настроек после обновления столов
+  setTimeout(() => {
+    // Повторно применяем настройки объектов после обновления столов
+    applyObjectSettings(canvas, targetMode);
+    canvas.renderAll();
+    
+    // ✅ НОВОЕ РЕШЕНИЕ: Принудительно переустанавливаем обработчики выделения для дизайна
+    if (targetMode === 'design') {
+      console.log('🔧 Force reinstalling selection handlers for design mode...');
+      
+      // Убеждаемся что selection включен
+      canvas.selection = true;
+      canvas.defaultCursor = 'default';
+      
+      // Принудительно удаляем и переустанавливаем обработчики выделения
+      canvas.off('selection:created');
+      canvas.off('selection:cleared');
+      
+      // Переустанавливаем обработчики выделения
+      canvas.on('selection:created', (e) => {
+        console.log('🎯 FORCED Selection created:', e.selected?.length || 0);
+        
+        if (!e.selected || e.selected.length === 0) return;
+        const obj = e.selected[0];
+        
+        if (obj.gridLine) {
+          canvas.discardActiveObject();
+          canvas.renderAll();
+          return;
+        }
+        
+        setSelectedObject(obj);
+        
+        if (obj.elementId) {
+          console.log(`✅ FORCED Setting selectedElementId to: ${obj.elementId}`);
+          setSelectedElementId(obj.elementId);
+        } else if (obj.tableId && onTableSelect) {
+          onTableSelect(obj.tableId, 'design-select');
+        }
+        
+        canvas.renderAll();
+      });
+
+      canvas.on('selection:cleared', () => {
+        console.log('🔄 FORCED Selection cleared');
+        setSelectedObject(null);
+        setSelectedElementId(null);
+      });
+      
+      // Дополнительно: принудительно обновляем target finding
+      canvas._setupCurrentTransform = fabric.Canvas.prototype._setupCurrentTransform;
+      canvas.findTarget = fabric.Canvas.prototype.findTarget;
+      
+      console.log('✅ Selection handlers forcefully reinstalled!');
     }
+  }, 100);
+  
+  console.log(`✅ ${targetMode} mode applied successfully`);
+};
 
-    // Make sure object selection is enabled
-    canvas.selection = true;
+const forceCanvasReload = () => {
+  if (viewMode === 'design') {
+    console.log('🔄 Force reloading canvas for design mode...');
+    
+    // Сохраняем данные
+    const currentTables = [...tables];
+    const currentShapes = [...shapes];
+    
+    // Пересоздаем canvas
+    setTimeout(() => {
+      initializeCanvas();
+      
+      // Восстанавливаем данные
+      setTimeout(() => {
+        renderAllElements(fabricCanvasRef.current, currentTables, currentShapes);
+        applyObjectSettings(fabricCanvasRef.current, 'design');
+      }, 200);
+    }, 100);
+  }
+};
 
-    // Set up objects for selection
-    canvas.forEachObject(obj => {
-      // Grid lines should never be selectable
+const applyObjectSettings = (canvas, targetMode) => {
+  if (!canvas) return;
+
+  console.log(`🔧 Applying ${targetMode} object settings to all objects...`);
+  
+  // Получаем все объекты на холсте
+  const allObjects = canvas.getObjects();
+  console.log(`Found ${allObjects.length} total objects on canvas`);
+  
+  if (targetMode === 'seating') {
+    console.log('🔒 Applying SEATING restrictions to objects');
+    
+    // Принудительно снимаем выделение
+    canvas.discardActiveObject();
+    canvas.selection = false;
+    
+    // Настраиваем все объекты для режима рассадки
+    allObjects.forEach((obj, index) => {
       if (obj.gridLine) {
+        // Сетка остается неинтерактивной
+        return;
+      } else if (obj.tableId) {
+        // ✅ СТОЛЫ: Блокируем редактирование, разрешаем клики
+        console.log(`🔒 Setting table ${obj.tableId} for seating mode`);
+        obj.set({
+          selectable: false,
+          evented: true,
+          hasControls: false,
+          hasBorders: false,
+          lockMovementX: true,
+          lockMovementY: true,
+          lockScalingX: true,
+          lockScalingY: true,
+          lockRotation: true,
+          hoverCursor: 'pointer'
+        });
+        
+        // ✅ ВАЖНО: Блокируем объекты внутри группы столов
+        if (obj.getObjects) {
+          obj.getObjects().forEach(groupObj => {
+            if (groupObj.chairIndex !== undefined) {
+              // Стулья остаются кликабельными
+              groupObj.set({
+                selectable: false,
+                evented: true,
+                hoverCursor: 'pointer'
+              });
+            } else {
+              // Остальные части стола не интерактивны
+              groupObj.set({
+                selectable: false,
+                evented: false
+              });
+            }
+          });
+        }
+      } else if (obj.elementId) {
+        // ✅ SHAPES: Полностью блокируем
+        console.log(`🔒 Blocking shape ${obj.elementId} (${obj.type}) for seating mode`);
         obj.set({
           selectable: false,
           evented: false,
           hasControls: false,
           hasBorders: false,
-          hoverCursor: 'default'
+          lockMovementX: true,
+          lockMovementY: true,
+          lockScalingX: true,
+          lockScalingY: true,
+          lockRotation: true
         });
       } else {
-        // Restore interactivity for objects
-        if (obj._previousSelectable !== undefined) {
-          obj.set({
-            selectable: obj._previousSelectable,
-            evented: obj._previousEvented,
-            hasControls: true,
-            hasBorders: true
-          });
-
-          delete obj._previousSelectable;
-          delete obj._previousEvented;
-        } else {
-          obj.set({
-            selectable: true,
-            evented: true,
-            hasControls: true,
-            hasBorders: true
-          });
-        }
+        // ✅ Остальные объекты
+        console.log(`🔒 Blocking other object (${obj.type}) for seating mode`);
+        obj.set({
+          selectable: false,
+          evented: false,
+          hasControls: false,
+          hasBorders: false,
+          lockMovementX: true,
+          lockMovementY: true,
+          lockScalingX: true,
+          lockScalingY: true,
+          lockRotation: true
+        });
       }
     });
-
-    // Object selection handlers
-    canvas.on('selection:created', (e) => {
-      if (!e.selected || e.selected.length === 0) return;
-
-      const obj = e.selected[0];
-
-      // If grid line is selected - cancel selection
+    
+  } else if (targetMode === 'design') {
+    console.log('🔓 Applying DESIGN permissions to objects');
+    
+    canvas.selection = true;
+    
+    // ✅ ПРИНУДИТЕЛЬНО разблокируем все объекты для редактирования
+    allObjects.forEach((obj, index) => {
       if (obj.gridLine) {
-        canvas.discardActiveObject();
-        canvas.renderAll();
+        // Сетка остается неинтерактивной
+        obj.set({
+          selectable: false,
+          evented: false,
+          hasControls: false,
+          hasBorders: false
+        });
         return;
-      }
-
-      setSelectedObject(obj);
-
-      if (obj.elementId) {
-        setSelectedElementId(obj.elementId);
-
+      } else {
+        // ✅ ВСЕ ОСТАЛЬНЫЕ ОБЪЕКТЫ: Полное редактирование
+        const objType = obj.tableId ? `table-${obj.tableId}` : 
+                       obj.elementId ? `shape-${obj.elementId}` : 
+                       `other-${obj.type}`;
+        
+        console.log(`🔓 Unlocking object [${index}]: ${objType} (${obj.type})`);
+        
         obj.set({
           selectable: true,
           evented: true,
           hasControls: true,
-          hasBorders: true
+          hasBorders: true,
+          lockMovementX: false,
+          lockMovementY: false,
+          lockScalingX: false,
+          lockScalingY: false,
+          lockRotation: false,
+          hoverCursor: 'move'
         });
-      } else if (obj.tableId && onTableSelect) {
-        onTableSelect(obj.tableId);
+        
+        // ✅ ПРИНУДИТЕЛЬНО разблокируем объекты внутри групп
+        if (obj.getObjects) {
+          const groupObjects = obj.getObjects();
+          console.log(`🔓 Unlocking ${groupObjects.length} objects inside group ${objType}`);
+          groupObjects.forEach((groupObj, groupIndex) => {
+            groupObj.set({
+              selectable: true,
+              evented: true,
+              hasControls: true,
+              hasBorders: true,
+              lockMovementX: false,
+              lockMovementY: false,
+              lockScalingX: false,
+              lockScalingY: false,
+              lockRotation: false,
+              hoverCursor: 'move'
+            });
+          });
+        }
       }
+    });
+  }
+  
+  canvas.renderAll();
+  console.log(`✅ ${targetMode} object settings applied to ${allObjects.length} objects successfully`);
+};
+const setupHybridMode = (canvas) => {
+  console.log('Setting up hybrid mode for viewMode:', viewMode);
+  canvas.isDrawingMode = false;
+  setIsDrawing(false);
+
+  // ✅ УПРОЩЕНО: Только основная очистка
+  canvas.discardActiveObject();
+  setSelectedObject(null);
+  setSelectedElementId(null);
+
+  // Clear previous handlers
+  canvas.off('mouse:down');
+  canvas.off('mouse:move');
+  canvas.off('mouse:up');
+  canvas.off('mouse:wheel');
+  canvas.off('selection:created');
+  canvas.off('selection:cleared');
+  canvas.off('contextmenu');
+
+  if (canvas._hybridHandlers) {
+    window.removeEventListener('keydown', canvas._hybridHandlers.keyDown);
+    window.removeEventListener('keyup', canvas._hybridHandlers.keyUp);
+    canvas._hybridHandlers = null;
+  }
+
+  // ✅ УПРОЩЕНО: Убираем специфичные настройки объектов отсюда
+  // Настройки объектов теперь применяются в applyModeSettings
+  
+  if (viewMode === 'seating') {
+    setupSeatingModeHandlers(canvas);
+  } else {
+    setupDesignModeHandlers(canvas);
+  }
+};
+
+// ✅ НОВАЯ ФУНКЦИЯ: Обработчики для режима рассадки
+const setupSeatingModeHandlers = (canvas) => {
+  console.log('Setting up SEATING mode handlers');
+  
+  canvas.selection = false;
+  canvas.defaultCursor = 'default';
+  
+  // Панорамирование
+  let isSpacePressed = false;
+  let isDraggingCanvas = false;
+
+  const handleKeyDown = (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.contentEditable === 'true') {
+      return;
+    }
+    if (e.key === ' ' && !isSpacePressed) {
+      isSpacePressed = true;
+      canvas.defaultCursor = 'grab';
+      e.preventDefault();
+    }
+  };
+
+  const handleKeyUp = (e) => {
+    if (e.key === ' ' && isSpacePressed) {
+      isSpacePressed = false;
+      canvas.defaultCursor = 'default';
+    }
+  };
+
+  const handleMouseDown = (opt) => {
+    const evt = opt.e;
+    if (isSpacePressed || evt.buttons === 2) {
+      isDraggingCanvas = true;
+      canvas.lastPosX = evt.clientX;
+      canvas.lastPosY = evt.clientY;
+      canvas.isDragging = true;
+      canvas.defaultCursor = 'grabbing';
+      if (evt.buttons === 2) {
+        evt.preventDefault();
+        return false;
+      }
+    }
+  };
+
+  const handleMouseMove = (opt) => {
+    const evt = opt.e;
+    if (canvas.isDragging && (isSpacePressed || isDraggingCanvas)) {
+      const vpt = canvas.viewportTransform;
+      vpt[4] += evt.clientX - canvas.lastPosX;
+      vpt[5] += evt.clientY - canvas.lastPosY;
+      canvas.lastPosX = evt.clientX;
+      canvas.lastPosY = evt.clientY;
+      canvas.renderAll();
+      evt.preventDefault();
+      evt.stopPropagation();
+    }
+  };
+
+  const handleMouseUp = () => {
+    if (canvas.isDragging) {
+      canvas.isDragging = false;
+      isDraggingCanvas = false;
+      canvas.defaultCursor = isSpacePressed ? 'grab' : 'default';
+    }
+  };
+
+  const preventContextMenu = (evt) => {
+    if (evt.e && (isDraggingCanvas || evt.e.buttons === 2)) {
+      evt.e.preventDefault();
+      return false;
+    }
+  };
+
+  // ✅ БЛОКИРОВКА ВЫДЕЛЕНИЯ в режиме рассадки
+  const blockSelection = () => {
+    console.log('Blocking selection in seating mode');
+    canvas.discardActiveObject();
+    canvas.renderAll();
+  };
+
+  // Добавляем обработчики
+  canvas.on('mouse:down', handleMouseDown);
+  canvas.on('mouse:move', handleMouseMove);
+  canvas.on('mouse:up', handleMouseUp);
+  canvas.on('contextmenu', preventContextMenu);
+  canvas.on('mouse:wheel', handleMouseWheel);
+  canvas.on('selection:created', blockSelection);
+  canvas.on('selection:updated', blockSelection);
+  window.addEventListener('keydown', handleKeyDown);
+  window.addEventListener('keyup', handleKeyUp);
+
+  canvas._hybridHandlers = {
+    mouseDown: handleMouseDown,
+    mouseMove: handleMouseMove,
+    mouseUp: handleMouseUp,
+    keyDown: handleKeyDown,
+    keyUp: handleKeyUp,
+    contextMenu: preventContextMenu,
+    blockSelection: blockSelection
+  };
+};
+
+// ✅ НОВАЯ ФУНКЦИЯ: Обработчики для режима дизайна  
+const setupDesignModeHandlers = (canvas) => {
+  console.log('🎨 Setting up DESIGN mode handlers');
+  
+  canvas.selection = true;
+  canvas.defaultCursor = 'default';
+
+  // ✅ Обработчики выделения объектов (только для дизайна)
+  canvas.on('selection:created', (e) => {
+    console.log('🎯 Selection created in design mode:', e.selected?.length || 0, 'objects');
+    
+    if (!e.selected || e.selected.length === 0) return;
+    const obj = e.selected[0];
+    
+    console.log('🎯 Selected object:', {
+      type: obj.type,
+      tableId: obj.tableId,
+      elementId: obj.elementId,
+      gridLine: obj.gridLine,
+      selectable: obj.selectable,
+      evented: obj.evented
+    });
+    
+    if (obj.gridLine) {
+      console.log('🚫 Grid line selected, discarding...');
+      canvas.discardActiveObject();
+      canvas.renderAll();
+      return;
+    }
+    
+    setSelectedObject(obj);
+    
+    if (obj.elementId) {
+      console.log(`✅ Setting selectedElementId to: ${obj.elementId}`);
+      setSelectedElementId(obj.elementId);
+      
+      // Убеждаемся что объект интерактивный
+      obj.set({
+        selectable: true,
+        evented: true,
+        hasControls: true,
+        hasBorders: true
+      });
+    } else if (obj.tableId && onTableSelect) {
+      console.log(`🏠 Table selected: ${obj.tableId}`);
+      onTableSelect(obj.tableId, 'design-select');
+    }
+    
+    canvas.renderAll();
+  });
+
+  canvas.on('selection:cleared', () => {
+    console.log('🔄 Selection cleared in design mode');
+    setSelectedObject(null);
+    setSelectedElementId(null);
+  });
+
+  // Проверяем что объекты доступны для выделения
+  setTimeout(() => {
+    const selectableObjects = canvas.getObjects().filter(obj => 
+      !obj.gridLine && obj.selectable
+    );
+    console.log(`🎯 ${selectableObjects.length} objects are selectable in design mode`);
+    
+    if (selectableObjects.length === 0) {
+      console.log('⚠️ No selectable objects found! Forcing object settings update...');
+      applyObjectSettings(canvas, 'design');
+    }
+  }, 200);
+
+  // Панорамирование с пробелом (код аналогичен режиму рассадки, но с выделением)
+  let isSpacePressed = false;
+  let isDraggingCanvas = false;
+
+  const handleKeyDown = (e) => {
+    // ✅ Проверяем, редактируется ли текст
+    const activeObject = canvas.getActiveObject();
+    const isEditingText = activeObject && 
+      activeObject.type === 'i-text' && 
+      activeObject.isEditing;
+
+    if (isEditingText) {
+      return; // Позволяем тексту обработать пробел
+    }
+
+    // ✅ Также проверяем фокус на input элементах
+    if (e.target.tagName === 'INPUT' ||
+      e.target.tagName === 'TEXTAREA' ||
+      e.target.contentEditable === 'true') {
+      return;
+    }
+
+    if (e.key === ' ' && !isSpacePressed) {
+      isSpacePressed = true;
+      isDraggingCanvas = false;
+      canvas.defaultCursor = 'grab';
+
+      // Temporarily disable object selection
+      canvas.forEachObject(obj => {
+        if (!obj.gridLine) {
+          obj._previousSelectable = obj.selectable;
+          obj._previousEvented = obj.evented;
+          obj.set({
+            selectable: false,
+            evented: false
+          });
+        }
+      });
+
+      canvas.discardActiveObject();
+      canvas.renderAll();
+      e.preventDefault();
+    }
+  };
+
+  const handleKeyUp = (e) => {
+    // ✅ Также проверяем редактирование текста при отпускании
+    const activeObject = canvas.getActiveObject();
+    const isEditingText = activeObject &&
+      activeObject.type === 'i-text' &&
+      activeObject.isEditing;
+
+    if (isEditingText) {
+      return;
+    }
+
+    if (e.key === ' ' && isSpacePressed) {
+      isSpacePressed = false;
+      isDraggingCanvas = false;
+      canvas.defaultCursor = 'default';
+
+      // Restore object selection
+      canvas.forEachObject(obj => {
+        if (!obj.gridLine && obj._previousSelectable !== undefined) {
+          obj.set({
+            selectable: obj._previousSelectable,
+            evented: obj._previousEvented
+          });
+
+          delete obj._previousSelectable;
+          delete obj._previousEvented;
+        }
+      });
 
       canvas.renderAll();
-    });
+    }
+  };
 
-    canvas.on('selection:cleared', () => {
-      setSelectedObject(null);
-      setSelectedElementId(null);
-    });
+  const handleMouseDown = (opt) => {
+    const evt = opt.e;
 
-    // Hybrid mode: panning with space or right mouse button
-    let isSpacePressed = false;
-    let isDraggingCanvas = false;
+    // Panning with space or right mouse button
+    if (isSpacePressed || evt.buttons === 2) {
+      isDraggingCanvas = true;
+      canvas.lastPosX = evt.clientX;
+      canvas.lastPosY = evt.clientY;
+      canvas.isDragging = true;
+      canvas.defaultCursor = 'grabbing';
 
-    const handleKeyDown = (e) => {
-      // ✅ ИСПРАВЛЕНО: Проверяем, редактируется ли текст
-      const activeObject = canvas.getActiveObject();
-      const isEditingText = activeObject &&
-        activeObject.type === 'i-text' &&
-        activeObject.isEditing;
-
-      // ✅ Если редактируется текст - не обрабатываем пробел для панорамирования
-      if (isEditingText) {
-        return; // Позволяем тексту обработать пробел
+      // Prevent context menu for right button
+      if (evt.buttons === 2) {
+        evt.preventDefault();
+        return false;
       }
+    }
+  };
 
-      // ✅ Также проверяем фокус на input элементах
-      if (e.target.tagName === 'INPUT' ||
-        e.target.tagName === 'TEXTAREA' ||
-        e.target.contentEditable === 'true') {
-        return;
-      }
+  const handleMouseMove = (opt) => {
+    const evt = opt.e;
 
-      if (e.key === ' ' && !isSpacePressed) {
-        isSpacePressed = true;
-        isDraggingCanvas = false;
-        canvas.defaultCursor = 'grab';
+    if (canvas.isDragging && (isSpacePressed || isDraggingCanvas)) {
+      const vpt = canvas.viewportTransform;
 
-        // Temporarily disable object selection
-        canvas.forEachObject(obj => {
-          if (!obj.gridLine) {
-            obj._previousSelectable = obj.selectable;
-            obj._previousEvented = obj.evented;
-            obj.set({
-              selectable: false,
-              evented: false
-            });
-          }
-        });
+      vpt[4] += evt.clientX - canvas.lastPosX;
+      vpt[5] += evt.clientY - canvas.lastPosY;
 
-        canvas.discardActiveObject();
-        canvas.renderAll();
+      canvas.lastPosX = evt.clientX;
+      canvas.lastPosY = evt.clientY;
+      canvas.renderAll();
 
-        e.preventDefault();
-      }
-    };
+      evt.preventDefault();
+      evt.stopPropagation();
+    }
+  };
 
-    const handleKeyUp = (e) => {
-      // ✅ ИСПРАВЛЕНО: Также проверяем редактирование текста при отпускании
-      const activeObject = canvas.getActiveObject();
-      const isEditingText = activeObject &&
-        activeObject.type === 'i-text' &&
-        activeObject.isEditing;
+  const handleMouseUp = () => {
+    if (canvas.isDragging) {
+      canvas.isDragging = false;
+      isDraggingCanvas = false;
+      canvas.defaultCursor = isSpacePressed ? 'grab' : 'default';
 
-      if (isEditingText) {
-        return;
-      }
-
-      if (e.key === ' ' && isSpacePressed) {
-        isSpacePressed = false;
-        isDraggingCanvas = false;
-        canvas.defaultCursor = 'default';
-
-        // Restore object selection
+      // Restore objects if space is not pressed
+      if (!isSpacePressed) {
         canvas.forEachObject(obj => {
           if (!obj.gridLine && obj._previousSelectable !== undefined) {
             obj.set({
@@ -2088,100 +2518,78 @@ const EnhancedCanvas = React.forwardRef((
             delete obj._previousEvented;
           }
         });
-
-        canvas.renderAll();
       }
-    };
 
-    const handleMouseDown = (opt) => {
-      const evt = opt.e;
-
-      // Panning with space or right mouse button
-      if (isSpacePressed || evt.buttons === 2) {
-        isDraggingCanvas = true;
-        canvas.lastPosX = evt.clientX;
-        canvas.lastPosY = evt.clientY;
-        canvas.isDragging = true;
-        canvas.defaultCursor = 'grabbing';
-
-        // Prevent context menu for right button
-        if (evt.buttons === 2) {
-          evt.preventDefault();
-          return false;
-        }
-      }
-    };
-
-    const handleMouseMove = (opt) => {
-      const evt = opt.e;
-
-      if (canvas.isDragging && (isSpacePressed || isDraggingCanvas)) {
-        const vpt = canvas.viewportTransform;
-
-        vpt[4] += evt.clientX - canvas.lastPosX;
-        vpt[5] += evt.clientY - canvas.lastPosY;
-
-        canvas.lastPosX = evt.clientX;
-        canvas.lastPosY = evt.clientY;
-        canvas.renderAll();
-
-        evt.preventDefault();
-        evt.stopPropagation();
-      }
-    };
-
-    const handleMouseUp = () => {
-      if (canvas.isDragging) {
-        canvas.isDragging = false;
-        isDraggingCanvas = false;
-        canvas.defaultCursor = isSpacePressed ? 'grab' : 'default';
-
-        // Restore objects if space is not pressed
-        if (!isSpacePressed) {
-          canvas.forEachObject(obj => {
-            if (!obj.gridLine && obj._previousSelectable !== undefined) {
-              obj.set({
-                selectable: obj._previousSelectable,
-                evented: obj._previousEvented
-              });
-
-              delete obj._previousSelectable;
-              delete obj._previousEvented;
-            }
-          });
-        }
-
-        canvas.renderAll();
-      }
-    };
-
-    // Prevent context menu
-    const preventContextMenu = (evt) => {
-      if (evt.e && (isDraggingCanvas || evt.e.buttons === 2)) {
-        evt.e.preventDefault();
-        return false;
-      }
-    };
-
-    // Add handlers
-    canvas.on('mouse:down', handleMouseDown);
-    canvas.on('mouse:move', handleMouseMove);
-    canvas.on('mouse:up', handleMouseUp);
-    canvas.on('mouse:wheel', handleMouseWheel);
-    canvas.on('contextmenu', preventContextMenu);
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
-
-    // Save references for cleanup
-    canvas._hybridHandlers = {
-      mouseDown: handleMouseDown,
-      mouseMove: handleMouseMove,
-      mouseUp: handleMouseUp,
-      keyDown: handleKeyDown,
-      keyUp: handleKeyUp,
-      contextMenu: preventContextMenu
-    };
+      canvas.renderAll();
+    }
   };
+
+  // Prevent context menu
+  const preventContextMenu = (evt) => {
+    if (evt.e && (isDraggingCanvas || evt.e.buttons === 2)) {
+      evt.e.preventDefault();
+      return false;
+    }
+  };
+
+  // Add handlers for design mode
+  canvas.on('mouse:down', handleMouseDown);
+  canvas.on('mouse:move', handleMouseMove);
+  canvas.on('mouse:up', handleMouseUp);
+  canvas.on('contextmenu', preventContextMenu);
+  canvas.on('mouse:wheel', handleMouseWheel);
+  window.addEventListener('keydown', handleKeyDown);
+  window.addEventListener('keyup', handleKeyUp);
+
+  // Save references for cleanup
+  canvas._hybridHandlers = {
+    mouseDown: handleMouseDown,
+    mouseMove: handleMouseMove,
+    mouseUp: handleMouseUp,
+    keyDown: handleKeyDown,
+    keyUp: handleKeyUp,
+    contextMenu: preventContextMenu
+  };
+};
+
+const debugObjectStates = () => {
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return;
+
+    console.log('🔍 DEBUGGING OBJECT STATES:');
+    console.log(`Canvas selection enabled: ${canvas.selection}`);
+    console.log(`Current viewMode: ${viewMode}`);
+    console.log(`Current activeMode: ${activeMode}`);
+    
+    const objects = canvas.getObjects();
+    console.log(`Total objects on canvas: ${objects.length}`);
+    
+    objects.forEach((obj, index) => {
+      if (obj.gridLine) return;
+      
+      const info = {
+        index,
+        type: obj.type,
+        tableId: obj.tableId || 'none',
+        elementId: obj.elementId || 'none',
+        selectable: obj.selectable,
+        evented: obj.evented,
+        hasControls: obj.hasControls,
+        hasBorders: obj.hasBorders,
+        lockMovementX: obj.lockMovementX,
+        lockMovementY: obj.lockMovementY
+      };
+      
+      console.log(`Object [${index}]:`, info);
+    });
+  };
+
+  // ✅ ВРЕМЕННАЯ КНОПКА ДЛЯ ОТЛАДКИ - можно удалить позже
+  if (process.env.NODE_ENV === 'development') {
+    window.debugObjectStates = debugObjectStates;
+    window.applyDesignMode = () => applyObjectSettings(fabricCanvasRef.current, 'design');
+    window.applySeatingMode = () => applyObjectSettings(fabricCanvasRef.current, 'seating');
+  }
 
   // Set up default event handlers
   const setupDefaultEventHandlers = (canvas) => {
@@ -2311,29 +2719,32 @@ const EnhancedCanvas = React.forwardRef((
     } catch (error) {
       console.error('Error rendering elements:', error);
     }
-  }, [tables, shapes]);
+}, [tables, shapes, viewMode]);
 
   // Render table
-  const renderTable = (canvas, tableData) => {
+ const renderTable = (canvas, tableData, currentViewMode = viewMode, chairClickHandler = onChairClick) => {
     if (!canvas || !tableData) return null;
+
+    console.log(`🏠 Rendering table ${tableData.id} for mode: ${currentViewMode}`);
 
     try {
       const isRound = tableData.shape !== 'rectangle';
 
       // Create table group
       const tableGroup = new fabric.Group([], {
-        left: tableData.x || 0,
-        top: tableData.y || 0,
-        tableId: tableData.id,
-        tableShape: tableData.shape || 'round',
-        hasControls: true,
-        hasBorders: true,
-        selectable: true,
-        hoverCursor: 'move',
-        subTargetCheck: true,
-        originX: 'center',
-        originY: 'center',
-      });
+  left: tableData.x || 0,
+  top: tableData.y || 0,
+  tableId: tableData.id,
+  tableShape: tableData.shape || 'round',
+  hasControls: true,
+  hasBorders: true,
+  selectable: true,
+  hoverCursor: 'move',
+  subTargetCheck: true,  // ✅ ВАЖНО: позволяет кликать по объектам внутри группы
+  interactive: true,     // ✅ ВАЖНО: группа интерактивна
+  originX: 'center',
+  originY: 'center',
+});
 
       if (isRound) {
         // Round table
@@ -2368,7 +2779,7 @@ const EnhancedCanvas = React.forwardRef((
         tableGroup.addWithUpdate(woodTexture);
 
         // Add chairs
-        addChairsToRoundTable(canvas, tableGroup, tableData);
+       addChairsToRoundTable(canvas, tableGroup, tableData, currentViewMode, onChairClick);
       } else {
         // Rectangle table
         const tableBase = new fabric.Rect({
@@ -2411,7 +2822,7 @@ const EnhancedCanvas = React.forwardRef((
         tableGroup.addWithUpdate(woodTexture);
 
         // Add chairs
-        addChairsToRectangleTable(canvas, tableGroup, tableData);
+       addChairsToRectangleTable(canvas, tableGroup, tableData, currentViewMode, onChairClick);
 
         // Apply rotation
         if (tableData.rotation) {
@@ -2436,19 +2847,83 @@ const EnhancedCanvas = React.forwardRef((
       tableGroup.addWithUpdate(tableLabel);
 
       // Add control buttons
-      addTableControlButtons(canvas, tableGroup, tableData, isRound);
+    addTableControlButtons(canvas, tableGroup, tableData, isRound, currentViewMode);
 
       // Add event handlers
       tableGroup.on('selected', () => {
-        if (onTableSelect) {
-          onTableSelect(tableData.id);
-        }
+  if (currentViewMode === 'seating') {
+    // В режиме рассадки - показываем детали стола для работы с рассадкой
+    if (onTableSelect) {
+      onTableSelect(tableData.id, 'seating-details', {
+        tableData: tableData,
+        occupiedSeats: tableData.people?.filter(Boolean).length || 0,
+        freeSeats: tableData.chairCount - (tableData.people?.filter(Boolean).length || 0),
+        people: tableData.people || []
       });
+    }
+ } else if (currentViewMode === 'design') {
+    // В режиме дизайна - обычное выделение для редактирования свойств стола
+    if (onTableSelect) {
+      onTableSelect(tableData.id, 'design-edit', {
+        tableData: tableData
+      });
+    }
+  }
+});
+tableGroup.on('mousedblclick', () => {
+  if (currentViewMode === 'seating') {
+    // Двойной клик в режиме рассадки - быстрое открытие деталей
+    if (onTableSelect) {
+      onTableSelect(tableData.id, 'seating-quick-edit', {
+        tableData: tableData,
+        occupiedSeats: tableData.people?.filter(Boolean).length || 0,
+        freeSeats: tableData.chairCount - (tableData.people?.filter(Boolean).length || 0),
+        people: tableData.people || []
+      });
+    }
+  } else if (currentViewMode === 'design') {
+    // Двойной клик в режиме дизайна - быстрое редактирование свойств
+    if (onTableSelect) {
+      onTableSelect(tableData.id, 'design-quick-edit', {
+        tableData: tableData
+      });
+    }
+  }
+});
 
-      // Add to canvas
-      canvas.add(tableGroup);
+    canvas.add(tableGroup);
 
-      return tableGroup;
+// ✅ ИСПРАВЛЕНО: Применяем настройки в зависимости от текущего режима
+if (viewMode === 'seating') {
+  // В режиме рассадки настраиваем стол для кликабельности без редактирования
+  tableGroup.set({
+    selectable: false,      // Не выделяется для редактирования
+    evented: true,          // ✅ Остается интерактивным для кликов
+    hasControls: false,     // Нет контролов изменения размера
+    hasBorders: false,      // Нет рамок выделения  
+    lockMovementX: true,    // Заблокировано перемещение
+    lockMovementY: true,
+    lockScalingX: true,     // Заблокировано изменение размера
+    lockScalingY: true,
+    lockRotation: true,     // Заблокирован поворот
+    hoverCursor: 'pointer', // ✅ Указатель при наведении
+    subTargetCheck: true,   // ✅ ВАЖНО: позволяет кликать по стульям внутри
+    interactive: true       // ✅ ВАЖНО: группа остается интерактивной
+  });
+
+  // ✅ Настраиваем стулья для кликабельности
+  tableGroup.forEachObject && tableGroup.forEachObject(obj => {
+    if (obj.chairIndex !== undefined) {
+      obj.set({
+        selectable: false,
+        evented: true,  // ✅ Стулья кликабельны
+        hoverCursor: 'pointer'
+      });
+    }
+  });
+}
+
+return tableGroup;
     } catch (error) {
       console.error('Error rendering table:', error);
       return null;
@@ -2480,21 +2955,67 @@ const EnhancedCanvas = React.forwardRef((
 
       // Рендерим обновленный стол с сохранением позиции
       const newTableObj = renderTable(canvas, updatedTable);
-      console.log("newTab" ,newTableObj);
-      if (newTableObj) {
-        newTableObj.set({
-          left: currentLeft,
-          top: currentTop,
-          angle: currentAngle,
-          height: currentHeight,
-          width: currentWidth,
-          scaleX: currentScaleX,
-          scaleY: currentScaleY,
-          zoomX: currentZoomX,
-          zoomY: currentZoomY,
+      console.log("newTab", newTableObj);
+     if (newTableObj) {
+  newTableObj.set({
+    left: currentLeft,
+    top: currentTop,
+    angle: currentAngle,
+    height: currentHeight,
+    width: currentWidth,
+    scaleX: currentScaleX,
+    scaleY: currentScaleY,
+    zoomX: currentZoomX,
+    zoomY: currentZoomY,
+  });
+  newTableObj.setCoords();
+
+  // ✅ ИСПРАВЛЕНО: Восстанавливаем настройки для текущего режима
+   if (viewMode === 'seating') {
+    // Применяем настройки режима рассадки к обновленному столу
+    newTableObj.set({
+      selectable: false,      // Не выделяется для редактирования
+      evented: true,          // ✅ Остается интерактивным для кликов
+      hasControls: false,     // Нет контролов изменения размера
+      hasBorders: false,      // Нет рамок выделения  
+      lockMovementX: true,    // Заблокировано перемещение
+      lockMovementY: true,
+      lockScalingX: true,     // Заблокировано изменение размера
+      lockScalingY: true,
+      lockRotation: true,     // Заблокирован поворот
+      hoverCursor: 'pointer', // ✅ Указатель при наведении
+      subTargetCheck: true,   // ✅ ВАЖНО: позволяет кликать по стульям
+      interactive: true       // ✅ ВАЖНО: группа интерактивна
+    });
+
+    // ✅ Также применяем настройки к стульям внутри группы
+      newTableObj.forEachObject && newTableObj.forEachObject(obj => {
+      if (obj.chairIndex !== undefined) {
+        obj.set({
+          selectable: false,
+          evented: true,  // ✅ Стулья тоже должны быть кликабельными
+          hoverCursor: 'pointer'
         });
-        newTableObj.setCoords();
       }
+    });
+  } else if (viewMode === 'design') {
+    // В режиме дизайна столы должны быть редактируемыми
+    newTableObj.set({
+      selectable: true,
+      evented: true,
+      hasControls: true,
+      hasBorders: true,
+      lockMovementX: false,
+      lockMovementY: false,
+      lockScalingX: false,
+      lockScalingY: false,
+      lockRotation: false,
+      hoverCursor: 'move',
+      subTargetCheck: true,
+      interactive: true
+    });
+  }
+}
 
       // Перерисовываем холст
       canvas.renderAll();
@@ -2541,7 +3062,7 @@ const EnhancedCanvas = React.forwardRef((
   };
 
   // Add chairs to round table
-  const addChairsToRoundTable = (canvas, tableGroup, tableData) => {
+const addChairsToRoundTable = (canvas, tableGroup, tableData, currentViewMode, chairClickHandler) => {
     if (!canvas || !tableGroup || !tableData) return;
 
     try {
@@ -2572,10 +3093,26 @@ const EnhancedCanvas = React.forwardRef((
 
         chair.set('angle', (angle * 180 / Math.PI) + 90);
 
-        chair.on('mousedown', (e) => {
-          if (e.e) e.e.stopPropagation();
-          if (onChairClick) onChairClick(tableData.id, i);
-        });
+      // ✅ ИСПРАВЛЕНО: Настройки стула для обеспечения кликабельности
+chair.set({
+  selectable: false,
+  evented: true,  // ✅ Важно: стул должен получать события
+  hoverCursor: 'pointer'
+});
+
+chair.on('mousedown', (e) => {
+  if (e.e) e.e.stopPropagation();
+  
+  // ✅ ИСПРАВЛЕНО: Используем переданный currentViewMode
+  console.log('Chair clicked:', tableData.id, i, 'currentViewMode:', currentViewMode, 'GLOBAL viewMode:', viewMode);
+  
+  if (currentViewMode === 'seating' && chairClickHandler) {
+    console.log('Chair clicked in SEATING mode:', tableData.id, i);
+    chairClickHandler(tableData.id, i);
+  } else {
+    console.log('Chair click ignored - mode:', currentViewMode);
+  }
+});
 
         tableGroup.addWithUpdate(chair);
 
@@ -2603,7 +3140,7 @@ const EnhancedCanvas = React.forwardRef((
   };
 
   // Add chairs to rectangle table
-  const addChairsToRectangleTable = (canvas, tableGroup, tableData) => {
+const addChairsToRectangleTable = (canvas, tableGroup, tableData, currentViewMode, chairClickHandler) => {
     if (!canvas || !tableGroup || !tableData) return;
 
     try {
@@ -2639,10 +3176,26 @@ const EnhancedCanvas = React.forwardRef((
           selectable: false
         });
 
-        chair.on('mousedown', (e) => {
-          if (e.e) e.e.stopPropagation();
-          if (onChairClick) onChairClick(tableData.id, currentChairIndex);
-        });
+     // ✅ ИСПРАВЛЕНО: Настройки стула для обеспечения кликабельности
+chair.set({
+  selectable: false,
+  evented: true,  // ✅ Важно: стул должен получать события
+  hoverCursor: 'pointer'
+});
+
+chair.on('mousedown', (e) => {
+  if (e.e) e.e.stopPropagation();
+  
+  // ✅ ИСПРАВЛЕНО: Используем переданный currentViewMode
+  console.log('Chair clicked:', tableData.id, currentChairIndex, 'currentViewMode:', currentViewMode, 'GLOBAL viewMode:', viewMode);
+  
+  if (currentViewMode === 'seating' && chairClickHandler) {
+    console.log('Chair clicked in SEATING mode:', tableData.id, currentChairIndex);
+    chairClickHandler(tableData.id, currentChairIndex);
+  } else {
+    console.log('Chair click ignored - mode:', currentViewMode);
+  }
+});
 
         tableGroup.addWithUpdate(chair);
 
@@ -2689,12 +3242,29 @@ const EnhancedCanvas = React.forwardRef((
           selectable: false
         });
 
-        chair.set('angle', 180);
+       // ✅ ИСПРАВЛЕНО: Настройки стула для обеспечения кликабельности
+chair.set({
+  angle: 180,
+  selectable: false,
+  evented: true,  // ✅ Важно: стул должен получать события
+  hoverCursor: 'pointer'
+});
 
-        chair.on('mousedown', (e) => {
-          if (e.e) e.e.stopPropagation();
-          if (onChairClick) onChairClick(tableData.id, currentChairIndex);
-        });
+chair.on('mousedown', (e) => {
+  if (e.e) e.e.stopPropagation();
+  
+  console.log('Chair clicked:', tableData.id, currentChairIndex, 'viewMode:', currentViewMode); // Для отладки
+  
+  if (currentViewMode === 'seating') {
+    // Режим рассадки - обрабатываем клик по стулу для размещения гостей
+    if (chairClickHandler) {
+      chairClickHandler(tableData.id, currentChairIndex);
+    }
+  } else if (currentViewMode === 'design') {
+    // Режим дизайна - стулья не кликабельны для рассадки
+    console.log('Chair clicked in design mode - no action');
+  }
+});
 
         tableGroup.addWithUpdate(chair);
 
@@ -2724,7 +3294,7 @@ const EnhancedCanvas = React.forwardRef((
   };
 
   // Add control buttons to table
-  const addTableControlButtons = (canvas, tableGroup, tableData, isRound) => {
+ const addTableControlButtons = (canvas, tableGroup, tableData, isRound, currentViewMode = viewMode) => {
     if (!canvas || !tableGroup || !tableData) return;
 
     try {
@@ -2751,15 +3321,21 @@ const EnhancedCanvas = React.forwardRef((
         selectable: false
       });
 
-      deleteBtn.on('mousedown', (e) => {
-        if (e.e) e.e.stopPropagation();
-
-        setDeleteConfirmation({
-          tableId: tableData.id,
-          tableName: tableData.name || `Стол ${tableData.id}`,
-          tableGroup
-        });
-      });
+    deleteBtn.on('mousedown', (e) => {
+  if (e.e) e.e.stopPropagation();
+  
+  if (currentViewMode === 'design') {
+    // Удаление разрешено только в режиме дизайна
+    setDeleteConfirmation({
+      tableId: tableData.id,
+      tableName: tableData.name || `Стол ${tableData.id}`,
+      tableGroup
+    });
+  } else {
+    // В режиме рассадки показываем предупреждение
+    alert('Удаление столов доступно только в режиме дизайна');
+  }
+});
 
       tableGroup.addWithUpdate(deleteBtn);
       tableGroup.addWithUpdate(deleteIcon);
@@ -2788,10 +3364,29 @@ const EnhancedCanvas = React.forwardRef((
         selectable: false
       });
 
-      infoBtn.on('mousedown', (e) => {
-        if (e.e) e.e.stopPropagation();
-        if (onTableSelect) onTableSelect(tableData.id);
+     infoBtn.on('mousedown', (e) => {
+  if (e.e) e.e.stopPropagation();
+  
+  if (currentViewMode === 'seating') {
+    // В режиме рассадки - показываем информацию о рассадке
+    if (onTableSelect) {
+      onTableSelect(tableData.id, 'seating-info', {
+        tableData: tableData,
+        occupiedSeats: tableData.people?.filter(Boolean).length || 0,
+        freeSeats: tableData.chairCount - (tableData.people?.filter(Boolean).length || 0),
+        people: tableData.people || []
       });
+    }
+  } else if (currentViewMode === 'design') {
+    // В режиме дизайна - показываем свойства стола для редактирования
+    if (onTableSelect) {
+      onTableSelect(tableData.id, 'design-properties', {
+        tableData: tableData
+      });
+    }
+  }
+});
+
 
       tableGroup.addWithUpdate(infoBtn);
       tableGroup.addWithUpdate(infoIcon);
@@ -3522,29 +4117,29 @@ const EnhancedCanvas = React.forwardRef((
     }
   };
 
-const createTableFromGroup = useCallback((group, position) => {
+  const createTableFromGroup = useCallback((group, position) => {
     const newTable = {
-        id: Date.now(),
-        x: Math.max(0, position.x - 150),
-        y: Math.max(0, position.y - 150),
-        width: 300,
-        height: 300,
-        people: [...group],
-        chairCount: Math.max(chairCount, group.length),
-        shape: 'round',
-        name: `Стол для группы ${group[0]?.group || ''}`
+      id: Date.now(),
+      x: Math.max(0, position.x - 150),
+      y: Math.max(0, position.y - 150),
+      width: 300,
+      height: 300,
+      people: [...group],
+      chairCount: Math.max(chairCount, group.length),
+      shape: 'round',
+      name: `Стол для группы ${group[0]?.group || ''}`
     };
     setTables(prev => {
-        const updatedTables = [...prev, newTable];
-        const canvas = fabricCanvasRef.current;
-        if (canvas) {
-            renderTable(canvas, newTable); // Рендерим немедленно
-            saveToHistory();
-        }
-        return updatedTables;
+      const updatedTables = [...prev, newTable];
+      const canvas = fabricCanvasRef.current;
+      if (canvas) {
+        renderTable(canvas, newTable); // Рендерим немедленно
+        saveToHistory();
+      }
+      return updatedTables;
     });
     return newTable;
-}, [chairCount, setTables, saveToHistory]);
+  }, [chairCount, setTables, saveToHistory]);
 
   const handleGroupDropOnTable = useCallback((group, tableId) => {
     console.log('Processing group drop on table:', tableId, group);
@@ -3796,44 +4391,44 @@ const createTableFromGroup = useCallback((group, position) => {
   };
 
   const renderTableDropOverlays = () => {
-    // ✅ ПОКАЗЫВАЕМ ОВЕРЛЕИ ТОЛЬКО КОГДА АКТИВНО ПЕРЕТАСКИВАНИЕ
-    if (!draggingGroup || !fabricCanvasRef.current || !isCanvasReady || !canvasContainerRef.current) {
-      return null; // ✅ Важно! Когда нет перетаскивания, overlay'и не должны блокировать клики
-    }
+  // ✅ Показываем оверлеи только в режиме рассадки И при активном перетаскивании
+  if (viewMode !== 'seating' || !draggingGroup || !fabricCanvasRef.current || !isCanvasReady || !canvasContainerRef.current) {
+    return null;
+  }
 
-    const canvas = fabricCanvasRef.current;
+  const canvas = fabricCanvasRef.current;
 
-    return tables.map(table => {
-      const fabricTable = canvas.getObjects().find(obj => obj.tableId === table.id);
-      if (!fabricTable) return null;
+  return tables.map(table => {
+    const fabricTable = canvas.getObjects().find(obj => obj.tableId === table.id);
+    if (!fabricTable) return null;
 
-      const boundingRect = fabricTable.getBoundingRect();
+    const boundingRect = fabricTable.getBoundingRect();
 
-      return (
-        <TableDropOverlay
-          key={`table-overlay-${table.id}`}
-          table={table}
-          fabricTable={fabricTable}
-          style={{
-            position: 'absolute',
-            left: `${boundingRect.left}px`,
-            top: `${boundingRect.top}px`,
-            width: `${boundingRect.width}px`,
-            height: `${boundingRect.height}px`,
-            zIndex: 10,
-            pointerEvents: 'auto' // ✅ Только когда dragging активен
-          }}
-          people={people}
-          setPeople={setPeople}
-          tables={tables}
-          setTables={setTables}
-          canvas={canvas}
-          onShowPeopleSelector={onShowPeopleSelector}
-          onTableUpdate={forceUpdateSpecificTable}
-        />
-      );
-    });
-  };
+    return (
+      <TableDropOverlay
+        key={`table-overlay-${table.id}`}
+        table={table}
+        fabricTable={fabricTable}
+        style={{
+          position: 'absolute',
+          left: `${boundingRect.left}px`,
+          top: `${boundingRect.top}px`,
+          width: `${boundingRect.width}px`,
+          height: `${boundingRect.height}px`,
+          zIndex: 10,
+          pointerEvents: 'auto'
+        }}
+        people={people}
+        setPeople={setPeople}
+        tables={tables}
+        setTables={setTables}
+        canvas={canvas}
+        onShowPeopleSelector={onShowPeopleSelector}
+        onTableUpdate={forceUpdateSpecificTable}
+      />
+    );
+  });
+};
   // Функция для показа уведомления
   const showTransferNotification = (groupName, tableId) => {
     const notification = document.createElement('div');
@@ -3975,195 +4570,195 @@ const createTableFromGroup = useCallback((group, position) => {
 
   // Export/import functions
   const exportCanvasAsJSON = () => {
-  if (!fabricCanvasRef.current) return null;
+    if (!fabricCanvasRef.current) return null;
 
-  try {
-    const canvas = fabricCanvasRef.current;
+    try {
+      const canvas = fabricCanvasRef.current;
 
-    // Сохраняем текущее состояние viewport
-    const currentZoom = zoom;
-    const originalViewportTransform = [...canvas.viewportTransform];
+      // Сохраняем текущее состояние viewport
+      const currentZoom = zoom;
+      const originalViewportTransform = [...canvas.viewportTransform];
 
-    // Временно сбрасываем зум для точного экспорта
-    canvas.setZoom(1.0);
-    canvas.viewportTransform[4] = 0;
-    canvas.viewportTransform[5] = 0;
-    canvas.renderAll();
+      // Временно сбрасываем зум для точного экспорта
+      canvas.setZoom(1.0);
+      canvas.viewportTransform[4] = 0;
+      canvas.viewportTransform[5] = 0;
+      canvas.renderAll();
 
-    console.log("Temporarily reset zoom to 1.0 for accurate export");
+      console.log("Temporarily reset zoom to 1.0 for accurate export");
 
-    // Получаем актуальные shapes с canvas
-    const actualShapes = [];
+      // Получаем актуальные shapes с canvas
+      const actualShapes = [];
 
-    canvas.getObjects().forEach(obj => {
-      if (obj.elementId && !obj.gridLine) {
-        let shape = null;
+      canvas.getObjects().forEach(obj => {
+        if (obj.elementId && !obj.gridLine) {
+          let shape = null;
 
-        switch (obj.type) {
-          case 'rect':
-            const rectBounds = obj.getBoundingRect();
-            shape = {
-              id: obj.elementId,
-              type: 'rect',
-              x: Math.round(rectBounds.left),
-              y: Math.round(rectBounds.top),
-              width: Math.round(obj.width * (obj.scaleX || 1)),
-              height: Math.round(obj.height * (obj.scaleY || 1)),
-              centerX: Math.round(rectBounds.left + rectBounds.width / 2),
-              centerY: Math.round(rectBounds.top + rectBounds.height / 2),
-              color: obj.stroke || '#000000',
-              strokeWidth: obj.strokeWidth || 2,
-              fill: obj.fill || 'transparent',
-              rotation: Math.round(obj.angle || 0)
-            };
-            break;
+          switch (obj.type) {
+            case 'rect':
+              const rectBounds = obj.getBoundingRect();
+              shape = {
+                id: obj.elementId,
+                type: 'rect',
+                x: Math.round(rectBounds.left),
+                y: Math.round(rectBounds.top),
+                width: Math.round(obj.width * (obj.scaleX || 1)),
+                height: Math.round(obj.height * (obj.scaleY || 1)),
+                centerX: Math.round(rectBounds.left + rectBounds.width / 2),
+                centerY: Math.round(rectBounds.top + rectBounds.height / 2),
+                color: obj.stroke || '#000000',
+                strokeWidth: obj.strokeWidth || 2,
+                fill: obj.fill || 'transparent',
+                rotation: Math.round(obj.angle || 0)
+              };
+              break;
 
-          case 'circle':
-            const radius = Math.round(obj.radius * (obj.scaleX || 1));
-            shape = {
-              id: obj.elementId,
-              type: 'circle',
-              x: Math.round(obj.left - radius),
-              y: Math.round(obj.top - radius),
-              centerX: Math.round(obj.left),
-              centerY: Math.round(obj.top),
-              radius: radius,
-              color: obj.stroke || '#000000',
-              strokeWidth: obj.strokeWidth || 2,
-              fill: obj.fill || 'transparent',
-              rotation: Math.round(obj.angle || 0)
-            };
-            break;
+            case 'circle':
+              const radius = Math.round(obj.radius * (obj.scaleX || 1));
+              shape = {
+                id: obj.elementId,
+                type: 'circle',
+                x: Math.round(obj.left - radius),
+                y: Math.round(obj.top - radius),
+                centerX: Math.round(obj.left),
+                centerY: Math.round(obj.top),
+                radius: radius,
+                color: obj.stroke || '#000000',
+                strokeWidth: obj.strokeWidth || 2,
+                fill: obj.fill || 'transparent',
+                rotation: Math.round(obj.angle || 0)
+              };
+              break;
 
-          case 'line':
-            const linePoints = [
-              obj.originalX1 !== undefined ? obj.originalX1 : obj.x1,
-              obj.originalY1 !== undefined ? obj.originalY1 : obj.y1,
-              obj.originalX2 !== undefined ? obj.originalX2 : obj.x2,
-              obj.originalY2 !== undefined ? obj.originalY2 : obj.y2
-            ];
+            case 'line':
+              const linePoints = [
+                obj.originalX1 !== undefined ? obj.originalX1 : obj.x1,
+                obj.originalY1 !== undefined ? obj.originalY1 : obj.y1,
+                obj.originalX2 !== undefined ? obj.originalX2 : obj.x2,
+                obj.originalY2 !== undefined ? obj.originalY2 : obj.y2
+              ];
 
-            shape = {
-              id: obj.elementId,
-              type: 'line',
-              points: linePoints.map(p => Math.round(p)),
-              color: obj.stroke || '#000000',
-              strokeWidth: obj.strokeWidth || 2,
-              rotation: Math.round(obj.angle || 0)
-            };
-            break;
+              shape = {
+                id: obj.elementId,
+                type: 'line',
+                points: linePoints.map(p => Math.round(p)),
+                color: obj.stroke || '#000000',
+                strokeWidth: obj.strokeWidth || 2,
+                rotation: Math.round(obj.angle || 0)
+              };
+              break;
 
-          case 'i-text':
-            shape = {
-              id: obj.elementId,
-              type: 'text',
-              text: obj.text || 'Text',
-              x: Math.round(obj.left),
-              y: Math.round(obj.top),
-              fontSize: Math.round(obj.fontSize * (obj.scaleX || 1)),
-              fontFamily: obj.fontFamily || 'Arial',
-              color: obj.fill || '#000000',
-              rotation: Math.round(obj.angle || 0)
-            };
-            break;
+            case 'i-text':
+              shape = {
+                id: obj.elementId,
+                type: 'text',
+                text: obj.text || 'Text',
+                x: Math.round(obj.left),
+                y: Math.round(obj.top),
+                fontSize: Math.round(obj.fontSize * (obj.scaleX || 1)),
+                fontFamily: obj.fontFamily || 'Arial',
+                color: obj.fill || '#000000',
+                rotation: Math.round(obj.angle || 0)
+              };
+              break;
 
-          case 'path':
-            shape = {
-              id: obj.elementId,
-              type: 'path',
-              path: obj.path,
-              x: Math.round(obj.left),
-              y: Math.round(obj.top),
-              color: obj.stroke || '#000000',
-              strokeWidth: obj.strokeWidth || 2,
-              fill: obj.fill || '',
-              rotation: Math.round(obj.angle || 0)
-            };
-            break;
+            case 'path':
+              shape = {
+                id: obj.elementId,
+                type: 'path',
+                path: obj.path,
+                x: Math.round(obj.left),
+                y: Math.round(obj.top),
+                color: obj.stroke || '#000000',
+                strokeWidth: obj.strokeWidth || 2,
+                fill: obj.fill || '',
+                rotation: Math.round(obj.angle || 0)
+              };
+              break;
 
-          default:
-            console.warn(`Unknown object type for export: ${obj.type}`);
-            break;
+            default:
+              console.warn(`Unknown object type for export: ${obj.type}`);
+              break;
+          }
+
+          if (shape) {
+            actualShapes.push(shape);
+          }
+        }
+      });
+
+      // ✅ NEW: Collect renderingOptions for tables from fabric objects
+      const tablesWithRenderingOptions = tables.map(table => {
+        // Find corresponding fabric table object
+        const fabricTableObj = canvas.getObjects().find(obj => obj.tableId === table.id);
+
+        let renderingOptions = {};
+
+        if (fabricTableObj) {
+          renderingOptions = {
+            left: Math.round(fabricTableObj.left || 0),
+            top: Math.round(fabricTableObj.top || 0),
+            angle: Math.round(fabricTableObj.angle || 0),
+            height: Math.round(fabricTableObj.height || table.height || 300),
+            width: Math.round(fabricTableObj.width || table.width || 300),
+            zoomX: fabricTableObj.zoomX || 1,
+            zoomY: fabricTableObj.zoomY || 1,
+            scaleX: fabricTableObj.scaleX || 1,
+            scaleY: fabricTableObj.scaleY || 1
+          };
+
+          console.log(`Table ${table.id} renderingOptions:`, renderingOptions);
+        } else {
+          // Fallback to table data if fabric object not found
+          renderingOptions = {
+            left: Math.round(table.x || 0),
+            top: Math.round(table.y || 0),
+            angle: Math.round(table.rotation || 0),
+            height: Math.round(table.height || 300),
+            width: Math.round(table.width || 300),
+            zoomX: 1,
+            zoomY: 1,
+            scaleX: 1,
+            scaleY: 1
+          };
+
+          console.warn(`Fabric object not found for table ${table.id}, using fallback renderingOptions`);
         }
 
-        if (shape) {
-          actualShapes.push(shape);
+        return {
+          ...table,
+          renderingOptions: renderingOptions
+        };
+      });
+
+      // Формируем данные для экспорта
+      const exportData = {
+        name: "Зал ресторана",
+        version: "2.1", // Increased version for renderingOptions support
+        timestamp: new Date().toISOString(),
+        tables: tablesWithRenderingOptions, // ✅ Use tables with renderingOptions
+        shapes: actualShapes,
+        canvasData: {
+          zoom: currentZoom,
+          width: canvas.width,
+          height: canvas.height,
+          gridSize: gridSize,
+          showGrid: showGrid
         }
-      }
-    });
-
-    // ✅ NEW: Collect renderingOptions for tables from fabric objects
-    const tablesWithRenderingOptions = tables.map(table => {
-      // Find corresponding fabric table object
-      const fabricTableObj = canvas.getObjects().find(obj => obj.tableId === table.id);
-      
-      let renderingOptions = {};
-      
-      if (fabricTableObj) {
-        renderingOptions = {
-          left: Math.round(fabricTableObj.left || 0),
-          top: Math.round(fabricTableObj.top || 0),
-          angle: Math.round(fabricTableObj.angle || 0),
-          height: Math.round(fabricTableObj.height || table.height || 300),
-          width: Math.round(fabricTableObj.width || table.width || 300),
-          zoomX: fabricTableObj.zoomX || 1,
-          zoomY: fabricTableObj.zoomY || 1,
-          scaleX: fabricTableObj.scaleX || 1,
-          scaleY: fabricTableObj.scaleY || 1
-        };
-        
-        console.log(`Table ${table.id} renderingOptions:`, renderingOptions);
-      } else {
-        // Fallback to table data if fabric object not found
-        renderingOptions = {
-          left: Math.round(table.x || 0),
-          top: Math.round(table.y || 0),
-          angle: Math.round(table.rotation || 0),
-          height: Math.round(table.height || 300),
-          width: Math.round(table.width || 300),
-          zoomX: 1,
-          zoomY: 1,
-          scaleX: 1,
-          scaleY: 1
-        };
-        
-        console.warn(`Fabric object not found for table ${table.id}, using fallback renderingOptions`);
-      }
-
-      return {
-        ...table,
-        renderingOptions: renderingOptions
       };
-    });
 
-    // Формируем данные для экспорта
-    const exportData = {
-      name: "Зал ресторана",
-      version: "2.1", // Increased version for renderingOptions support
-      timestamp: new Date().toISOString(),
-      tables: tablesWithRenderingOptions, // ✅ Use tables with renderingOptions
-      shapes: actualShapes,
-      canvasData: {
-        zoom: currentZoom,
-        width: canvas.width,
-        height: canvas.height,
-        gridSize: gridSize,
-        showGrid: showGrid
-      }
-    };
+      // Восстанавливаем исходное состояние viewport
+      canvas.setViewportTransform(originalViewportTransform);
+      canvas.renderAll();
+      console.log("Restored original zoom after export");
 
-    // Восстанавливаем исходное состояние viewport
-    canvas.setViewportTransform(originalViewportTransform);
-    canvas.renderAll();
-    console.log("Restored original zoom after export");
-
-    console.log("Export data with renderingOptions:", exportData);
-    return JSON.stringify(exportData, null, 2);
-  } catch (error) {
-    console.error('Error exporting canvas:', error);
-    return null;
-  }
-};
+      console.log("Export data with renderingOptions:", exportData);
+      return JSON.stringify(exportData, null, 2);
+    } catch (error) {
+      console.error('Error exporting canvas:', error);
+      return null;
+    }
+  };
 
   // Helper function to extract points from a path element
   const extractPathPoints = (pathElement) => {
@@ -4205,158 +4800,142 @@ const createTableFromGroup = useCallback((group, position) => {
     return [pathElement.x || 0, pathElement.y || 0];
   }
 
-const importCanvasFromJSON = (jsonString) => {
-  try {
-    const importData = JSON.parse(jsonString);
-    console.log('Starting import with data:', importData);
+  const importCanvasFromJSON = (jsonString) => {
+    try {
+      const importData = JSON.parse(jsonString);
+      console.log('Starting import with data:', importData);
 
-    if (!importData.tables && !importData.shapes) {
-      throw new Error('Invalid JSON format: missing required data');
-    }
+      if (!importData.tables && !importData.shapes) {
+        throw new Error('Invalid JSON format: missing required data');
+      }
 
-    const canvas = fabricCanvasRef.current;
-    if (!canvas) {
-      throw new Error('Canvas not ready for import');
-    }
+      const canvas = fabricCanvasRef.current;
+      if (!canvas) {
+        throw new Error('Canvas not ready for import');
+      }
 
-    // Очищаем выделение
-    canvas.discardActiveObject();
-    setSelectedObject(null);
-    setSelectedElementId(null);
+      // Очищаем выделение
+      canvas.discardActiveObject();
+      setSelectedObject(null);
+      setSelectedElementId(null);
 
-    // Очищаем холст от всех объектов кроме сетки
-    const objectsToRemove = canvas.getObjects().filter(obj => !obj.gridLine);
-    objectsToRemove.forEach(obj => canvas.remove(obj));
-    canvas.renderAll();
+      // Очищаем холст от всех объектов кроме сетки
+      const objectsToRemove = canvas.getObjects().filter(obj => !obj.gridLine);
+      objectsToRemove.forEach(obj => canvas.remove(obj));
+      canvas.renderAll();
 
-    // Очищаем состояние
-    setTables([]);
-    setShapes([]);
-    setHallElements([]);
+      // Очищаем состояние
+      setTables([]);
+      setShapes([]);
+      setHallElements([]);
 
-    // Подготавливаем данные для импорта
-    const importedTables = importData.tables || [];
-    const importedShapes = importData.shapes || [];
+      // Подготавливаем данные для импорта
+      const importedTables = importData.tables || [];
+      const importedShapes = importData.shapes || [];
 
-    console.log(`Importing ${importedTables.length} tables and ${importedShapes.length} shapes`);
+      console.log(`Importing ${importedTables.length} tables and ${importedShapes.length} shapes`);
 
-    // ✅ NEW: Enhanced renderTable function that applies renderingOptions
-    const renderTableWithOptions = (tableData) => {
-      if (!canvas || !tableData) return null;
+      // ✅ NEW: Enhanced renderTable function that applies renderingOptions
+      const renderTableWithOptions = (tableData) => {
+        if (!canvas || !tableData) return null;
 
-      try {
-        // First render the table normally
-        const tableGroup = renderTable(canvas, tableData);
-        
-        if (!tableGroup) {
-          console.error('Failed to render table:', tableData.id);
+        try {
+          // First render the table normally
+          const tableGroup = renderTable(canvas, tableData);
+
+          if (!tableGroup) {
+            console.error('Failed to render table:', tableData.id);
+            return null;
+          }
+
+          // ✅ Apply renderingOptions if available
+          if (tableData.renderingOptions) {
+            const options = tableData.renderingOptions;
+
+            console.log(`Applying renderingOptions to table ${tableData.id}:`, options);
+
+            // Apply all rendering properties
+            tableGroup.set({
+              left: options.left || tableData.x || 0,
+              top: options.top || tableData.y || 0,
+              angle: options.angle || tableData.rotation || 0,
+              height: options.height || tableData.height || 300,
+              width: options.width || tableData.width || 300,
+              scaleX: options.scaleX || 1,
+              scaleY: options.scaleY || 1
+            });
+
+            // Apply zoom properties if they exist
+            if (options.zoomX !== undefined) {
+              tableGroup.zoomX = options.zoomX;
+            }
+            if (options.zoomY !== undefined) {
+              tableGroup.zoomY = options.zoomY;
+            }
+
+            // Update coordinates after applying transformations
+            tableGroup.setCoords();
+
+            console.log(`Applied renderingOptions to table ${tableData.id}:`, {
+              left: tableGroup.left,
+              top: tableGroup.top,
+              angle: tableGroup.angle,
+              scaleX: tableGroup.scaleX,
+              scaleY: tableGroup.scaleY
+            });
+          } else {
+            // Fallback to original table data
+            console.log(`No renderingOptions for table ${tableData.id}, using original data`);
+            tableGroup.set({
+              left: tableData.x || 0,
+              top: tableData.y || 0,
+              angle: tableData.rotation || 0
+            });
+            tableGroup.setCoords();
+          }
+
+          return tableGroup;
+        } catch (error) {
+          console.error('Error rendering table with options:', tableData, error);
           return null;
         }
+      };
 
-        // ✅ Apply renderingOptions if available
-        if (tableData.renderingOptions) {
-          const options = tableData.renderingOptions;
-          
-          console.log(`Applying renderingOptions to table ${tableData.id}:`, options);
-          
-          // Apply all rendering properties
-          tableGroup.set({
-            left: options.left || tableData.x || 0,
-            top: options.top || tableData.y || 0,
-            angle: options.angle || tableData.rotation || 0,
-            height: options.height || tableData.height || 300,
-            width: options.width || tableData.width || 300,
-            scaleX: options.scaleX || 1,
-            scaleY: options.scaleY || 1
-          });
+      // Функция для рендеринга импортированного shape (unchanged)
+      const renderImportedShape = (shape) => {
+        if (!shape || !shape.type) return null;
 
-          // Apply zoom properties if they exist
-          if (options.zoomX !== undefined) {
-            tableGroup.zoomX = options.zoomX;
-          }
-          if (options.zoomY !== undefined) {
-            tableGroup.zoomY = options.zoomY;
-          }
+        try {
+          let fabricObj;
 
-          // Update coordinates after applying transformations
-          tableGroup.setCoords();
-          
-          console.log(`Applied renderingOptions to table ${tableData.id}:`, {
-            left: tableGroup.left,
-            top: tableGroup.top,
-            angle: tableGroup.angle,
-            scaleX: tableGroup.scaleX,
-            scaleY: tableGroup.scaleY
-          });
-        } else {
-          // Fallback to original table data
-          console.log(`No renderingOptions for table ${tableData.id}, using original data`);
-          tableGroup.set({
-            left: tableData.x || 0,
-            top: tableData.y || 0,
-            angle: tableData.rotation || 0
-          });
-          tableGroup.setCoords();
-        }
+          switch (shape.type) {
+            case 'rect':
+              fabricObj = new fabric.Rect({
+                left: shape.x || 0,
+                top: shape.y || 0,
+                width: shape.width || 100,
+                height: shape.height || 50,
+                fill: shape.fill || 'rgba(0, 0, 0, 0.1)',
+                stroke: shape.color || '#000000',
+                strokeWidth: shape.strokeWidth || 2,
+                angle: shape.rotation || 0,
+                elementId: shape.id,
+                hasControls: true,
+                hasBorders: true,
+                selectable: true
+              });
+              break;
 
-        return tableGroup;
-      } catch (error) {
-        console.error('Error rendering table with options:', tableData, error);
-        return null;
-      }
-    };
+            case 'circle':
+              const radius = shape.radius || 50;
+              const centerX = shape.centerX || (shape.x + radius);
+              const centerY = shape.centerY || (shape.y + radius);
 
-    // Функция для рендеринга импортированного shape (unchanged)
-    const renderImportedShape = (shape) => {
-      if (!shape || !shape.type) return null;
-
-      try {
-        let fabricObj;
-
-        switch (shape.type) {
-          case 'rect':
-            fabricObj = new fabric.Rect({
-              left: shape.x || 0,
-              top: shape.y || 0,
-              width: shape.width || 100,
-              height: shape.height || 50,
-              fill: shape.fill || 'rgba(0, 0, 0, 0.1)',
-              stroke: shape.color || '#000000',
-              strokeWidth: shape.strokeWidth || 2,
-              angle: shape.rotation || 0,
-              elementId: shape.id,
-              hasControls: true,
-              hasBorders: true,
-              selectable: true
-            });
-            break;
-
-          case 'circle':
-            const radius = shape.radius || 50;
-            const centerX = shape.centerX || (shape.x + radius);
-            const centerY = shape.centerY || (shape.y + radius);
-
-            fabricObj = new fabric.Circle({
-              left: centerX,
-              top: centerY,
-              radius: radius,
-              fill: shape.fill || 'rgba(0, 0, 0, 0.1)',
-              stroke: shape.color || '#000000',
-              strokeWidth: shape.strokeWidth || 2,
-              angle: shape.rotation || 0,
-              elementId: shape.id,
-              hasControls: true,
-              hasBorders: true,
-              selectable: true,
-              originX: 'center',
-              originY: 'center'
-            });
-            break;
-
-          case 'line':
-            if (shape.points && shape.points.length >= 4) {
-              const [x1, y1, x2, y2] = shape.points;
-              fabricObj = new fabric.Line([x1, y1, x2, y2], {
+              fabricObj = new fabric.Circle({
+                left: centerX,
+                top: centerY,
+                radius: radius,
+                fill: shape.fill || 'rgba(0, 0, 0, 0.1)',
                 stroke: shape.color || '#000000',
                 strokeWidth: shape.strokeWidth || 2,
                 angle: shape.rotation || 0,
@@ -4364,151 +4943,167 @@ const importCanvasFromJSON = (jsonString) => {
                 hasControls: true,
                 hasBorders: true,
                 selectable: true,
-                originalX1: x1,
-                originalY1: y1,
-                originalX2: x2,
-                originalY2: y2
+                originX: 'center',
+                originY: 'center'
               });
-            }
-            break;
+              break;
 
-          case 'text':
-            fabricObj = new fabric.IText(shape.text || 'Text', {
-              left: shape.x || 0,
-              top: shape.y || 0,
-              fontSize: shape.fontSize || 18,
-              fontFamily: shape.fontFamily || 'Arial',
-              fill: shape.color || '#000000',
-              angle: shape.rotation || 0,
-              elementId: shape.id,
-              hasControls: true,
-              hasBorders: true,
-              selectable: true,
-              originX: 'left',
-              originY: 'top'
-            });
-            break;
+            case 'line':
+              if (shape.points && shape.points.length >= 4) {
+                const [x1, y1, x2, y2] = shape.points;
+                fabricObj = new fabric.Line([x1, y1, x2, y2], {
+                  stroke: shape.color || '#000000',
+                  strokeWidth: shape.strokeWidth || 2,
+                  angle: shape.rotation || 0,
+                  elementId: shape.id,
+                  hasControls: true,
+                  hasBorders: true,
+                  selectable: true,
+                  originalX1: x1,
+                  originalY1: y1,
+                  originalX2: x2,
+                  originalY2: y2
+                });
+              }
+              break;
 
-          case 'path':
-            if (shape.path) {
-              fabricObj = new fabric.Path(shape.path, {
+            case 'text':
+              fabricObj = new fabric.IText(shape.text || 'Text', {
                 left: shape.x || 0,
                 top: shape.y || 0,
-                stroke: shape.color || '#000000',
-                strokeWidth: shape.strokeWidth || 2,
-                fill: shape.fill || '',
+                fontSize: shape.fontSize || 18,
+                fontFamily: shape.fontFamily || 'Arial',
+                fill: shape.color || '#000000',
                 angle: shape.rotation || 0,
                 elementId: shape.id,
                 hasControls: true,
                 hasBorders: true,
-                selectable: true
+                selectable: true,
+                originX: 'left',
+                originY: 'top'
               });
-            }
-            break;
+              break;
 
-          default:
-            console.warn(`Unknown shape type: ${shape.type}`);
-            return null;
+            case 'path':
+              if (shape.path) {
+                fabricObj = new fabric.Path(shape.path, {
+                  left: shape.x || 0,
+                  top: shape.y || 0,
+                  stroke: shape.color || '#000000',
+                  strokeWidth: shape.strokeWidth || 2,
+                  fill: shape.fill || '',
+                  angle: shape.rotation || 0,
+                  elementId: shape.id,
+                  hasControls: true,
+                  hasBorders: true,
+                  selectable: true
+                });
+              }
+              break;
+
+            default:
+              console.warn(`Unknown shape type: ${shape.type}`);
+              return null;
+          }
+
+          if (fabricObj) {
+            canvas.add(fabricObj);
+            return fabricObj;
+          }
+
+          return null;
+        } catch (error) {
+          console.error('Error rendering imported shape:', shape, error);
+          return null;
+        }
+      };
+
+      // Рендерим shapes (unchanged)
+      importedShapes.forEach((shape, index) => {
+        try {
+          console.log(`Rendering shape ${index + 1}/${importedShapes.length}:`, shape.type, shape.id);
+          renderImportedShape(shape);
+        } catch (error) {
+          console.error('Error rendering imported shape:', shape, error);
+        }
+      });
+
+      // ✅ Render tables with renderingOptions
+      importedTables.forEach((table, index) => {
+        try {
+          console.log(`Rendering table ${index + 1}/${importedTables.length}:`, table.id);
+          renderTableWithOptions(table);
+        } catch (error) {
+          console.error('Error rendering imported table:', table, error);
+        }
+      });
+
+      // Применяем настройки холста
+      if (importData.canvasData) {
+        const canvasData = importData.canvasData;
+
+        // Применяем зум
+        if (canvasData.zoom && canvasData.zoom !== zoom) {
+          const center = canvas.getCenter();
+          canvas.zoomToPoint({ x: center.left, y: center.top }, canvasData.zoom);
+          setZoom(canvasData.zoom);
         }
 
-        if (fabricObj) {
-          canvas.add(fabricObj);
-          return fabricObj;
+        // Применяем настройки сетки
+        if (canvasData.gridSize && canvasData.gridSize !== gridSize) {
+          setGridSize(canvasData.gridSize);
         }
 
-        return null;
-      } catch (error) {
-        console.error('Error rendering imported shape:', shape, error);
-        return null;
-      }
-    };
-
-    // Рендерим shapes (unchanged)
-    importedShapes.forEach((shape, index) => {
-      try {
-        console.log(`Rendering shape ${index + 1}/${importedShapes.length}:`, shape.type, shape.id);
-        renderImportedShape(shape);
-      } catch (error) {
-        console.error('Error rendering imported shape:', shape, error);
-      }
-    });
-
-    // ✅ Render tables with renderingOptions
-    importedTables.forEach((table, index) => {
-      try {
-        console.log(`Rendering table ${index + 1}/${importedTables.length}:`, table.id);
-        renderTableWithOptions(table);
-      } catch (error) {
-        console.error('Error rendering imported table:', table, error);
-      }
-    });
-
-    // Применяем настройки холста
-    if (importData.canvasData) {
-      const canvasData = importData.canvasData;
-      
-      // Применяем зум
-      if (canvasData.zoom && canvasData.zoom !== zoom) {
-        const center = canvas.getCenter();
-        canvas.zoomToPoint({ x: center.left, y: center.top }, canvasData.zoom);
-        setZoom(canvasData.zoom);
+        if (canvasData.showGrid !== undefined && canvasData.showGrid !== showGrid) {
+          setShowGrid(canvasData.showGrid);
+        }
       }
 
-      // Применяем настройки сетки
-      if (canvasData.gridSize && canvasData.gridSize !== gridSize) {
-        setGridSize(canvasData.gridSize);
-      }
-      
-      if (canvasData.showGrid !== undefined && canvasData.showGrid !== showGrid) {
-        setShowGrid(canvasData.showGrid);
-      }
+      // ✅ Update state with clean table data (without renderingOptions for state)
+      const cleanTables = importedTables.map(table => {
+        const { renderingOptions, ...cleanTable } = table;
+        return cleanTable;
+      });
+
+      setTables(cleanTables);
+      setShapes([...importedShapes]);
+
+      // Принудительный рендер
+      canvas.renderAll();
+
+      // Финальная проверка через задержку
+      setTimeout(() => {
+        const renderedObjects = canvas.getObjects().filter(obj => !obj.gridLine);
+        const expectedCount = importedTables.length + importedShapes.length;
+
+        console.log(`Import verification: ${renderedObjects.length} objects rendered, expected ${expectedCount}`);
+
+        if (renderedObjects.length !== expectedCount) {
+          console.warn('Object count mismatch after import, forcing re-render...');
+
+          // Повторный рендер при несовпадении
+          importedTables.forEach(table => renderTableWithOptions(table));
+          importedShapes.forEach(shape => renderImportedShape(shape));
+          canvas.renderAll();
+        }
+
+        // Сохраняем в историю после успешного импорта
+        saveToHistory();
+      }, 500);
+
+      // Сбрасываем флаги
+      setUnsavedChanges(false);
+      setObjectCount(importedTables.length + importedShapes.length);
+
+      console.log('Import completed successfully with renderingOptions applied');
+      return true;
+
+    } catch (error) {
+      console.error('Error importing JSON:', error);
+      alert(`Ошибка импорта: ${error.message}`);
+      return false;
     }
-
-    // ✅ Update state with clean table data (without renderingOptions for state)
-    const cleanTables = importedTables.map(table => {
-      const { renderingOptions, ...cleanTable } = table;
-      return cleanTable;
-    });
-    
-    setTables(cleanTables);
-    setShapes([...importedShapes]);
-
-    // Принудительный рендер
-    canvas.renderAll();
-
-    // Финальная проверка через задержку
-    setTimeout(() => {
-      const renderedObjects = canvas.getObjects().filter(obj => !obj.gridLine);
-      const expectedCount = importedTables.length + importedShapes.length;
-      
-      console.log(`Import verification: ${renderedObjects.length} objects rendered, expected ${expectedCount}`);
-      
-      if (renderedObjects.length !== expectedCount) {
-        console.warn('Object count mismatch after import, forcing re-render...');
-        
-        // Повторный рендер при несовпадении
-        importedTables.forEach(table => renderTableWithOptions(table));
-        importedShapes.forEach(shape => renderImportedShape(shape));
-        canvas.renderAll();
-      }
-
-      // Сохраняем в историю после успешного импорта
-      saveToHistory();
-    }, 500);
-
-    // Сбрасываем флаги
-    setUnsavedChanges(false);
-    setObjectCount(importedTables.length + importedShapes.length);
-
-    console.log('Import completed successfully with renderingOptions applied');
-    return true;
-
-  } catch (error) {
-    console.error('Error importing JSON:', error);
-    alert(`Ошибка импорта: ${error.message}`);
-    return false;
-  }
-};
+  };
 
   const forceRerenderAfterImport = useCallback(() => {
     const canvas = fabricCanvasRef.current;
@@ -4563,7 +5158,7 @@ const importCanvasFromJSON = (jsonString) => {
     setActiveMode(ELEMENT_TYPES.SELECT);
   };
 
-  
+
   //   useEffect(() => {
   //   // Обновляем позиции оверлеев при zoom/pan/resize
   //   const updateOverlays = () => {
@@ -4616,8 +5211,142 @@ const importCanvasFromJSON = (jsonString) => {
     }
   }, [isCanvasReady]);
 
+useEffect(() => {
+  // Ограничения для режима рассадки
+  if (viewMode === 'seating') {
+    // В режиме рассадки разрешены только навигационные режимы
+    const allowedModes = [ELEMENT_TYPES.HYBRID, ELEMENT_TYPES.PAN, ELEMENT_TYPES.SELECT];
+    if (!allowedModes.includes(activeMode)) {
+      setActiveMode(ELEMENT_TYPES.HYBRID);
+    }
+  }
+}, [viewMode, activeMode]);
+
+// Добавить этот useEffect после существующих
+useEffect(() => {
+  const canvas = fabricCanvasRef.current;
+  if (!canvas || !isCanvasReady) return;
+  
+  console.log(`📋 ViewMode changed to: ${viewMode}, activeMode: ${activeMode}`);
+  
+  // Ограничения для режима рассадки
+  if (viewMode === 'seating') {
+    if (activeMode !== ELEMENT_TYPES.HYBRID) {
+      console.log('🚫 Blocking mode change in seating view, forcing HYBRID');
+      setActiveMode(ELEMENT_TYPES.HYBRID);
+      return;
+    }
+    
+    // Принудительно применяем настройки режима рассадки
+    setTimeout(() => {
+      console.log('🔒 Enforcing seating mode settings...');
+      applyObjectSettings(canvas, 'seating');
+    }, 100);
+    
+    // Вызываем только setupHybridMode для режима рассадки
+    setupHybridMode(canvas);
+    return;
+  }
+  
+  // Для режима дизайна принудительно разблокируем все объекты
+  if (viewMode === 'design') {
+    setTimeout(() => {
+      console.log('🔓 Enforcing design mode settings...');
+      applyObjectSettings(canvas, 'design');
+      
+      // Убедимся что selection включен
+      canvas.selection = true;
+      
+      // Принудительно настраиваем обработчики
+      setupHybridMode(canvas);
+    }, 100);
+  }
+}, [viewMode, activeMode, isCanvasReady]);
 
 
+// ✅ Функция для принудительного обновления всех столов
+const forceUpdateAllTablesForMode = (newViewMode) => {
+  const canvas = fabricCanvasRef.current;
+  if (!canvas || tables.length === 0) return;
+
+  console.log(`🔄 Force updating all tables for ${newViewMode} mode...`);
+  
+  // Получаем все столы на canvas
+  const tableObjects = canvas.getObjects().filter(obj => obj.tableId);
+  
+  tableObjects.forEach(obj => {
+    const tableData = tables.find(t => t.id === obj.tableId);
+    if (tableData) {
+      console.log(`📝 Force updating table ${obj.tableId} for ${newViewMode} mode`);
+      
+      // Сохраняем ВСЕ свойства трансформации
+      const currentLeft = obj.left;
+      const currentTop = obj.top;
+      const currentAngle = obj.angle || 0;
+      const currentScaleX = obj.scaleX || 1;
+      const currentScaleY = obj.scaleY || 1;
+      const currentWidth = obj.width;
+      const currentHeight = obj.height;
+
+      // Удаляем старый
+      canvas.remove(obj);
+
+      // ✅ ИСПРАВЛЕНО: Создаем новый с правильным режимом
+      const newTableObj = renderTable(canvas, {
+        ...tableData,
+        x: currentLeft,
+        y: currentTop,
+        rotation: currentAngle
+      }, newViewMode, onChairClick); // ✅ Передаем newViewMode
+
+      if (newTableObj) {
+        // Восстанавливаем ВСЕ свойства трансформации
+        newTableObj.set({
+          left: currentLeft,
+          top: currentTop,
+          angle: currentAngle,
+          scaleX: currentScaleX,
+          scaleY: currentScaleY,
+          width: currentWidth,
+          height: currentHeight
+        });
+        newTableObj.setCoords();
+        
+        // ✅ ДОБАВЛЕНО: Применяем настройки режима к новому столу
+        // if (newViewMode === 'seating') {
+        //   newTableObj.set({
+        //     selectable: false,
+        //     evented: true,
+        //     hasControls: false,
+        //     hasBorders: false,
+        //     lockMovementX: true,
+        //     lockMovementY: true,
+        //     lockScalingX: true,
+        //     lockScalingY: true,
+        //     lockRotation: true,
+        //     hoverCursor: 'pointer'
+        //   });
+        // } else if (newViewMode === 'design') {
+        //   newTableObj.set({
+        //     selectable: true,
+        //     evented: true,
+        //     hasControls: true,
+        //     hasBorders: true,
+        //     lockMovementX: false,
+        //     lockMovementY: false,
+        //     lockScalingX: false,
+        //     lockScalingY: false,
+        //     lockRotation: false,
+        //     hoverCursor: 'move'
+        //   });
+        // }
+      }
+    }
+  });
+
+  canvas.renderAll();
+  console.log(`✅ All tables updated for ${newViewMode} mode`);
+};
 
   // Export methods via ref
   React.useImperativeHandle(ref, () => ({
@@ -4633,155 +5362,229 @@ const importCanvasFromJSON = (jsonString) => {
     selectAllObjects,
     getCanvas: () => fabricCanvasRef.current,
     updateTableVisual: forceUpdateSpecificTable,
+    debugObjectStates, // ✅ Добавляем отладочную функцию
   }));
 
-  return (
-    <div className="enhanced-canvas-container">
-      <div className="canvas-toolbar">
-        <div className="tool-group">
-          <button
-            className={`tool-btn ${activeMode === ELEMENT_TYPES.HYBRID ? 'active' : ''}`}
-            onClick={() => setActiveMode(ELEMENT_TYPES.HYBRID)}
-            title="Гибридный режим: выбор и панорамирование. Используйте ПРОБЕЛ или правую кнопку мыши для панорамирования."
-          >
-            <i className="fas fa-hand-paper"></i> ✋ + 🖱️ <i className="fas fa-mouse-pointer"></i>
-          </button>
-          <button
-            className={`tool-btn ${activeMode === ELEMENT_TYPES.PAN ? 'active' : ''}`}
-            onClick={() => setActiveMode(ELEMENT_TYPES.PAN)}
-            title="Только панорамирование"
-          >
-            <i className="fas fa-hand-paper">✋</i>
-          </button>
-          <button
-            className={`tool-btn ${activeMode === ELEMENT_TYPES.SELECT ? 'active' : ''}`}
-            onClick={() => setActiveMode(ELEMENT_TYPES.SELECT)}
-            title="Выбор объектов"
-          >
-            <i className="fas fa-mouse-pointer">🖱️</i>
-          </button>
-          <button
-            className={`tool-btn ${activeMode === ELEMENT_TYPES.DRAW ? 'active' : ''}`}
-            onClick={() => setActiveMode(ELEMENT_TYPES.DRAW)}
-            title="Свободное рисование"
-          >
-            <i className="fas fa-pencil-alt">✏️</i>
-          </button>
-          <button
-            className={`tool-btn ${activeMode === ELEMENT_TYPES.LINE ? 'active' : ''}`}
-            onClick={() => setActiveMode(ELEMENT_TYPES.LINE)}
-            title="Прямая линия"
-          >
-            <i className="fas fa-minus">➖</i>
-          </button>
-          <button
-            className={`tool-btn ${activeMode === ELEMENT_TYPES.RECTANGLE ? 'active' : ''}`}
-            onClick={() => setActiveMode(ELEMENT_TYPES.RECTANGLE)}
-            title="Прямоугольник"
-          >
-            <i className="far fa-square">⬛</i>
-          </button>
-          <button
-            className={`tool-btn ${activeMode === ELEMENT_TYPES.CIRCLE ? 'active' : ''}`}
-            onClick={() => setActiveMode(ELEMENT_TYPES.CIRCLE)}
-            title="Круг"
-          >
-            <i className="far fa-circle">⚪</i>
-          </button>
-          <button
-            className={`tool-btn ${activeMode === ELEMENT_TYPES.TEXT ? 'active' : ''}`}
-            onClick={() => {
-              setActiveMode(ELEMENT_TYPES.TEXT);
-              addNewText();
-            }}
-            title="Добавить текст"
-          >
-            <i className="fas fa-font">A</i>
-          </button>
-          <button
-            className={`tool-btn ${activeMode === ELEMENT_TYPES.TABLE ? 'active' : ''}`}
-            onClick={() => {
-              setActiveMode(ELEMENT_TYPES.TABLE);
-              addNewTable();
-            }}
-            title="Добавить стол"
-          >
-            <i className="fas fa-table">T</i>
-          </button>
-        </div>
+ return (
+  <div className="enhanced-canvas-container">
+    {/* ← НОВЫЙ БЛОК: Переключатель режимов */}
+<button 
+  className={`mode-btn ${viewMode === 'seating' ? 'active' : ''}`}
+  onClick={() => {
+    console.log('🔘 Switching to SEATING mode...');
+    
+    // ✅ Принудительно очищаем состояние выделения
+    const canvas = fabricCanvasRef.current;
+    if (canvas) {
+      canvas.discardActiveObject();
+      setSelectedObject(null);
+      setSelectedElementId(null);
+    }
+    
+    onViewModeChange('seating');
+    
+    // ✅ УВЕЛИЧЕНА ЗАДЕРЖКА для обновления состояния
+    setTimeout(() => {
+      applyModeSettings('seating');
+    }, 200); // было 100, стало 200
+  }}
+  title="Режим рассадки - работа с размещением гостей"
+>
+  👥 Рассадка
+</button>
 
-        <div className="tool-group">
-          <div className="color-picker">
-            <label htmlFor="stroke-color">Цвет линии:</label>
-            <input
-              type="color"
-              id="stroke-color"
-              value={strokeColor}
-              onChange={(e) => setStrokeColor(e.target.value)}
-            />
+<button 
+  className={`mode-btn ${viewMode === 'design' ? 'active' : ''}`}
+  onClick={() => {
+    console.log('🔘 Switching to DESIGN mode...');
+    
+    const canvas = fabricCanvasRef.current;
+    if (canvas) {
+      canvas.discardActiveObject();
+      setSelectedObject(null);
+      setSelectedElementId(null);
+    }
+    
+    onViewModeChange('design');
+    
+    setTimeout(() => {
+      applyModeSettings('design');
+      // ✅ Если ничего не помогает - перезагружаем canvas
+      // forceCanvasReload();
+    }, 200);
+  }}
+  title="Режим дизайна - создание и редактирование планировки"
+>
+  🎨 Дизайн
+</button>
+
+    {/* ← ИЗМЕНЕНО: Условный рендеринг toolbar */}
+    <div className="canvas-toolbar">
+      {viewMode === 'design' ? (
+        // Существующий toolbar для дизайна
+        <>
+          <div className="tool-group">
+            <button
+              className={`tool-btn ${activeMode === ELEMENT_TYPES.HYBRID ? 'active' : ''}`}
+              onClick={() => setActiveMode(ELEMENT_TYPES.HYBRID)}
+              title="Гибридный режим: выбор и панорамирование. Используйте ПРОБЕЛ или правую кнопку мыши для панорамирования."
+            >
+              <i className="fas fa-hand-paper"></i> ✋ + 🖱️ <i className="fas fa-mouse-pointer"></i>
+            </button>
+            <button
+              className={`tool-btn ${activeMode === ELEMENT_TYPES.PAN ? 'active' : ''}`}
+              onClick={() => setActiveMode(ELEMENT_TYPES.PAN)}
+              title="Только панорамирование"
+            >
+              <i className="fas fa-hand-paper">✋</i>
+            </button>
+            <button
+              className={`tool-btn ${activeMode === ELEMENT_TYPES.SELECT ? 'active' : ''}`}
+              onClick={() => setActiveMode(ELEMENT_TYPES.SELECT)}
+              title="Выбор объектов"
+            >
+              <i className="fas fa-mouse-pointer">🖱️</i>
+            </button>
+            <button
+              className={`tool-btn ${activeMode === ELEMENT_TYPES.DRAW ? 'active' : ''}`}
+              onClick={() => setActiveMode(ELEMENT_TYPES.DRAW)}
+              title="Свободное рисование"
+            >
+              <i className="fas fa-pencil-alt">✏️</i>
+            </button>
+            <button
+              className={`tool-btn ${activeMode === ELEMENT_TYPES.LINE ? 'active' : ''}`}
+              onClick={() => setActiveMode(ELEMENT_TYPES.LINE)}
+              title="Прямая линия"
+            >
+              <i className="fas fa-minus">➖</i>
+            </button>
+            <button
+              className={`tool-btn ${activeMode === ELEMENT_TYPES.RECTANGLE ? 'active' : ''}`}
+              onClick={() => setActiveMode(ELEMENT_TYPES.RECTANGLE)}
+              title="Прямоугольник"
+            >
+              <i className="far fa-square">⬛</i>
+            </button>
+            <button
+              className={`tool-btn ${activeMode === ELEMENT_TYPES.CIRCLE ? 'active' : ''}`}
+              onClick={() => setActiveMode(ELEMENT_TYPES.CIRCLE)}
+              title="Круг"
+            >
+              <i className="far fa-circle">⚪</i>
+            </button>
+            <button
+              className={`tool-btn ${activeMode === ELEMENT_TYPES.TEXT ? 'active' : ''}`}
+              onClick={() => {
+                setActiveMode(ELEMENT_TYPES.TEXT);
+                addNewText();
+              }}
+              title="Добавить текст"
+            >
+              <i className="fas fa-font">A</i>
+            </button>
+            <button
+              className={`tool-btn ${activeMode === ELEMENT_TYPES.TABLE ? 'active' : ''}`}
+              onClick={() => {
+                setActiveMode(ELEMENT_TYPES.TABLE);
+                addNewTable();
+              }}
+              title="Добавить стол"
+            >
+              <i className="fas fa-table">T</i>
+            </button>
           </div>
 
-          <div className="color-picker">
-            <label htmlFor="fill-color">Цвет заливки:</label>
-            <input
-              type="color"
-              id="fill-color"
-              value={fillColor}
-              onChange={(e) => setFillColor(e.target.value)}
-            />
-          </div>
+          <div className="tool-group">
+            <div className="color-picker">
+              <label htmlFor="stroke-color">Цвет линии:</label>
+              <input
+                type="color"
+                id="stroke-color"
+                value={strokeColor}
+                onChange={(e) => setStrokeColor(e.target.value)}
+              />
+            </div>
 
-          <div className="stroke-width">
-            <label htmlFor="stroke-width">Толщина:</label>
-            <input
-              type="range"
-              id="stroke-width"
-              min="1"
-              max="20"
-              value={strokeWidth}
-              onChange={(e) => setStrokeWidth(parseInt(e.target.value))}
-            />
-            <span>{strokeWidth}px</span>
-          </div>
+            <div className="color-picker">
+              <label htmlFor="fill-color">Цвет заливки:</label>
+              <input
+                type="color"
+                id="fill-color"
+                value={fillColor}
+                onChange={(e) => setFillColor(e.target.value)}
+              />
+            </div>
 
-          <div className="font-size">
-            <label htmlFor="font-size">Размер шрифта:</label>
-            <input
-              type="range"
-              id="font-size"
-              min="8"
-              max="72"
-              value={fontSize}
-              onChange={(e) => setFontSize(parseInt(e.target.value))}
-            />
-            <span>{fontSize}px</span>
-          </div>
-        </div>
+            <div className="stroke-width">
+              <label htmlFor="stroke-width">Толщина:</label>
+              <input
+                type="range"
+                id="stroke-width"
+                min="1"
+                max="20"
+                value={strokeWidth}
+                onChange={(e) => setStrokeWidth(parseInt(e.target.value))}
+              />
+              <span>{strokeWidth}px</span>
+            </div>
 
-        <div className="tool-group">
-          <button
-            className="tool-btn"
-            onClick={zoomIn}
-            title="Увеличить"
-          >
-            <i className="fas fa-search-plus">➕</i>
-          </button>
-          <span className="zoom-level">{Math.round(zoom * 100)}%</span>
-          <button
-            className="tool-btn"
-            onClick={zoomOut}
-            title="Уменьшить"
-          >
-            <i className="fas fa-search-minus">➖</i>
-          </button>
-          <button
-            className="tool-btn"
-            onClick={resetZoom}
-            title="Сбросить масштаб"
-          >
-            <i className="fas fa-compress-arrows-alt">↔️</i>
-          </button>
-        </div>
+            <div className="font-size">
+              <label htmlFor="font-size">Размер шрифта:</label>
+              <input
+                type="range"
+                id="font-size"
+                min="8"
+                max="72"
+                value={fontSize}
+                onChange={(e) => setFontSize(parseInt(e.target.value))}
+              />
+              <span>{fontSize}px</span>
+            </div>
+          </div>
+        </>
+      ) : (
+        // Новый toolbar для режима рассадки
+       <div className="tool-group seating-tools">
+    <div className="seating-info">
+      <span>👥 Режим рассадки: кликайте по стульям и столам, перетаскивайте группы на столы</span>
+    </div>
+    <button
+      className="tool-btn"
+      onClick={addNewTable}
+      title="Добавить новый стол"
+    >
+      <i className="fas fa-table">+ Стол</i>
+    </button>
+  </div>
+)}
+      <div className="tool-group">
+        <button
+          className="tool-btn"
+          onClick={zoomIn}
+          title="Увеличить"
+        >
+          <i className="fas fa-search-plus">➕</i>
+        </button>
+        <span className="zoom-level">{Math.round(zoom * 100)}%</span>
+        <button
+          className="tool-btn"
+          onClick={zoomOut}
+          title="Уменьшить"
+        >
+          <i className="fas fa-search-minus">➖</i>
+        </button>
+        <button
+          className="tool-btn"
+          onClick={resetZoom}
+          title="Сбросить масштаб"
+        >
+          <i className="fas fa-compress-arrows-alt">↔️</i>
+        </button>
+      </div>
+
+      {/* ← ИЗМЕНЕНО: Условный рендеринг инструментов редактирования */}
+      {viewMode === 'design' && (
         <div className="tool-group">
           {selectedObject && (
             <>
@@ -4888,124 +5691,129 @@ const importCanvasFromJSON = (jsonString) => {
             🔄
           </button>
         </div>
-      </div>
+      )}
+    </div>
 
-      <div className="canvas-content-area">
-        <div className="canvas-and-sidebar-container" style={{ display: 'flex', width: '100%' }}>
+    <div className="canvas-content-area">
+      <div className="canvas-and-sidebar-container" style={{ display: 'flex', width: '100%' }}>
+        <div
+          className="canvas-wrapper"
+          ref={drop}
+          style={{
+            width: '100%',
+            position: 'relative',
+            border: '1px solid #ddd',
+            overflow: 'hidden',
+            backgroundColor: isOver && canDrop ? 'rgba(76, 175, 80, 0.1)' : 'transparent',
+            borderColor: isOver && canDrop ? '#4CAF50' : '#ddd'
+          }}
+        >
           <div
-            className="canvas-wrapper"
-            ref={drop}
+            ref={canvasContainerRef}
             style={{
               width: '100%',
-              position: 'relative',
-              border: '1px solid #ddd',
-              overflow: 'hidden',
-              backgroundColor: isOver && canDrop ? 'rgba(76, 175, 80, 0.1)' : 'transparent',
-              borderColor: isOver && canDrop ? '#4CAF50' : '#ddd'
+              height: '100%',
+              position: 'relative'
             }}
           >
-            <div
-              ref={canvasContainerRef}
+            <canvas
+              ref={canvasRef}
               style={{
-                width: '100%',
-                height: '100%',
-                position: 'relative'
+                display: 'block',
+                touchAction: 'none'
               }}
-            >
-              <canvas
-                ref={canvasRef}
-                style={{
-                  display: 'block',
-                  touchAction: 'none'
-                }}
-              />
-              {renderTableDropOverlays()}
-              {!initialized && (
-                <div style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  background: 'rgba(255,255,255,0.7)',
-                  zIndex: 1000
-                }}>
-                  <div>Initializing canvas...</div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {canvasMode === 'elements' && (
-            <div className="elements-sidebar" style={{ width: '250px', padding: '10px', background: '#f5f5f5', borderLeft: '1px solid #ddd' }}>
-              <HallElementsCatalog onAddElement={handleElementDrop} />
-            </div>
-          )}
-        </div>
-
-        {initialized && canvasMode === 'elements' && (
-          <HallElementsManager
-            tablesAreaRef={canvasContainerRef}
-            zoom={zoom}
-            elements={hallElements}
-            setElements={setHallElements}
-            selectedElementId={selectedElementId}
-            setSelectedElementId={setSelectedElementId}
-            activeMode={canvasMode}
-            onDrop={handleDrop}
-          />
-        )}
-      </div>
-
-      <div className="canvas-status">
-        <div className="stats">
-          <span>Объектов: {objectCount}</span>
-          <span>Столов: {tables.length}</span>
-          <span>Элементов: {hallElements.length}</span>
-        </div>
-        {deleteConfirmation && (
-          <div className="delete-confirmation-overlay">
-            <div className="delete-confirmation-dialog">
-              <h3>Подтверждение удаления</h3>
-              <p>Вы уверены, что хотите удалить стол "{deleteConfirmation.tableName}"?</p>
-              <div className="dialog-buttons">
-                <button
-                  className="confirm-btn"
-                  onClick={() => {
-                    const updatedTables = tables.filter(t => t.id !== deleteConfirmation.tableId);
-                    setTables(updatedTables);
-
-                    if (fabricCanvasRef.current && deleteConfirmation.tableGroup) {
-                      fabricCanvasRef.current.remove(deleteConfirmation.tableGroup);
-                      fabricCanvasRef.current.renderAll();
-                    }
-
-                    setDeleteConfirmation(null);
-                  }}
-                >
-                  Удалить
-                </button>
-                <button
-                  className="cancel-btn"
-                  onClick={() => setDeleteConfirmation(null)}
-                >
-                  Отмена
-                </button>
+            />
+            {renderTableDropOverlays()}
+            {!initialized && (
+              <div style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'rgba(255,255,255,0.7)',
+                zIndex: 1000
+              }}>
+                <div>Initializing canvas...</div>
               </div>
-            </div>
+            )}
           </div>
-        )}
-        {unsavedChanges && (
-          <div className="unsaved-changes">
-            Есть несохраненные изменения
+        </div>
+
+        {canvasMode === 'elements' && (
+          <div className="elements-sidebar" style={{ width: '250px', padding: '10px', background: '#f5f5f5', borderLeft: '1px solid #ddd' }}>
+            <HallElementsCatalog onAddElement={handleElementDrop} />
           </div>
         )}
       </div>
+
+      {initialized && canvasMode === 'elements' && (
+        <HallElementsManager
+          tablesAreaRef={canvasContainerRef}
+          zoom={zoom}
+          elements={hallElements}
+          setElements={setHallElements}
+          selectedElementId={selectedElementId}
+          setSelectedElementId={setSelectedElementId}
+          activeMode={canvasMode}
+          onDrop={handleDrop}
+        />
+      )}
     </div>
-  );
+
+    <div className="canvas-status">
+      <div className="stats">
+        <span>Объектов: {objectCount}</span>
+        <span>Столов: {tables.length}</span>
+        <span>Элементов: {hallElements.length}</span>
+        {/* ← НОВОЕ: Показываем текущий режим */}
+        <span className={`current-mode ${viewMode}`}>
+          Режим: {viewMode === 'design' ? '🎨 Дизайн' : '👥 Рассадка'}
+        </span>
+      </div>
+      {deleteConfirmation && (
+        <div className="delete-confirmation-overlay">
+          <div className="delete-confirmation-dialog">
+            <h3>Подтверждение удаления</h3>
+            <p>Вы уверены, что хотите удалить стол "{deleteConfirmation.tableName}"?</p>
+            <div className="dialog-buttons">
+              <button
+                className="confirm-btn"
+                onClick={() => {
+                  const updatedTables = tables.filter(t => t.id !== deleteConfirmation.tableId);
+                  setTables(updatedTables);
+
+                  if (fabricCanvasRef.current && deleteConfirmation.tableGroup) {
+                    fabricCanvasRef.current.remove(deleteConfirmation.tableGroup);
+                    fabricCanvasRef.current.renderAll();
+                  }
+
+                  setDeleteConfirmation(null);
+                }}
+              >
+                Удалить
+              </button>
+              <button
+                className="cancel-btn"
+                onClick={() => setDeleteConfirmation(null)}
+              >
+                Отмена
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {unsavedChanges && (
+        <div className="unsaved-changes">
+          Есть несохраненные изменения
+        </div>
+      )}
+    </div>
+  </div>
+);
 });
 
 export default EnhancedCanvas;
