@@ -144,6 +144,8 @@ const TableDropOverlay = ({
     })
   });
 
+
+
   // Убираем подсветку когда hover заканчивается
   React.useEffect(() => {
     if (!isOver && fabricTable && canvas) {
@@ -291,6 +293,20 @@ const EnhancedCanvas = React.forwardRef((
   const [availableSeats, setAvailableSeats] = useState(0);
   const [groupSelectionActive, setGroupSelectionActive] = useState(false);
 
+
+    const generateNextTableId = useCallback(() => {
+  if (tables.length === 0) {
+    return 1;
+  }
+  
+  // Находим максимальный числовой ID среди существующих столов
+  const maxId = Math.max(...tables.map(table => {
+    const id = parseInt(table.id);
+    return isNaN(id) ? 0 : id;
+  }));
+  
+  return maxId + 1;
+}, [tables]);
 
   const renderShape = (canvas, shape) => {
     if (!canvas || !shape) return null;
@@ -566,7 +582,7 @@ const EnhancedCanvas = React.forwardRef((
             // Дублирование стола (как было)
             const originalTable = tables.find(table => table.id === obj.tableId);
             if (originalTable) {
-              const newTableId = Date.now() + Math.floor(Math.random() * 1000);
+              const newTableId = generateNextTableId();
               const newTable = {
                 ...JSON.parse(JSON.stringify(originalTable)),
                 id: newTableId,
@@ -674,7 +690,7 @@ const EnhancedCanvas = React.forwardRef((
 
           const newTable = {
             ...JSON.parse(JSON.stringify(originalTable)),
-            id: Date.now(),
+            id: generateNextTableId(),
             x: currentLeft + 10,
             y: currentTop + 10
           };
@@ -2800,14 +2816,14 @@ const EnhancedCanvas = React.forwardRef((
     };
 
     setTimeout(() => {
-  // Восстанавливаем нормальную прозрачность для всех объектов
-  canvas.getObjects().forEach(obj => {
-    if (obj.elementId && !obj.gridLine) {
-      obj.set('opacity', 1.0); // Полная непрозрачность в режиме дизайна
-    }
-  });
-  canvas.renderAll();
-}, 100);
+      // Восстанавливаем нормальную прозрачность для всех объектов
+      canvas.getObjects().forEach(obj => {
+        if (obj.elementId && !obj.gridLine) {
+          obj.set('opacity', 1.0); // Полная непрозрачность в режиме дизайна
+        }
+      });
+      canvas.renderAll();
+    }, 100);
     console.log('✅ DESIGN mode handlers setup complete with full object interaction');
   };
 
@@ -3005,41 +3021,42 @@ const EnhancedCanvas = React.forwardRef((
         originY: 'center',
       });
 
-      if (isRound) {
-        // Round table
-        const tableBase = new fabric.Circle({
-          radius: (tableData.width || 300) / 2,
-          fill: '#e7d8c7',
-          stroke: '#7b5c3e',
-          strokeWidth: 30,
-          originX: 'center',
-          originY: 'center'
-        });
+    if (isRound) {
+  const tableRadius = (tableData.width || 300) / 2;
 
-        tableGroup.addWithUpdate(tableBase);
+  const tableBase = new fabric.Circle({
+    radius: tableRadius,
+    fill: '#f2ebe9', // новая основа стола
+    stroke: '#a67c52', // новая обводка
+    strokeWidth: 30,
+    originX: 'center',
+    originY: 'center'
+  });
 
-        const tableTop = new fabric.Circle({
-          radius: (tableData.width || 300) / 2 - 30,
-          fill: '#ffffff',
-          originX: 'center',
-          originY: 'center',
-          opacity: 0.7
-        });
+  tableGroup.addWithUpdate(tableBase);
 
-        tableGroup.addWithUpdate(tableTop);
+  const tableTop = new fabric.Circle({
+    radius: tableRadius - 30,
+    fill: '#ffffff',
+    originX: 'center',
+    originY: 'center',
+    opacity: 0.8 // слегка уменьшено, чтобы текст читался лучше
+  });
 
-        const woodTexture = new fabric.Circle({
-          radius: (tableData.width || 300) / 2 - 35,
-          fill: '#e7d8c7',
-          originX: 'center',
-          originY: 'center'
-        });
+  tableGroup.addWithUpdate(tableTop);
 
-        tableGroup.addWithUpdate(woodTexture);
+  const woodTexture = new fabric.Circle({
+    radius: tableRadius - 35,
+    fill: '#e0d6cc', // текстура ближе к центру
+    originX: 'center',
+    originY: 'center'
+  });
 
-        // Add chairs
-        addChairsToRoundTable(canvas, tableGroup, tableData, currentViewMode, onChairClick);
-      } else {
+  tableGroup.addWithUpdate(woodTexture);
+
+  // Добавление стульев
+  addChairsToRoundTable(canvas, tableGroup, tableData, currentViewMode, onChairClick);
+} else {
         // Rectangle table
         const tableBase = new fabric.Rect({
           width: tableData.width || 400,
@@ -3090,23 +3107,26 @@ const EnhancedCanvas = React.forwardRef((
       }
 
       // Add label
-      const tableName = tableData.name || `Стол ${tableData.id}`;
-      const tableInfo = `(Места: ${tableData.chairCount || 12})`;
+     const tableName = tableData.name || `Стол ${tableData.id}`;
+const tableInfo = `${tableData.chairCount || 12} мест`;
 
-      const tableLabel = new fabric.Text(`${tableName} ${tableInfo}`, {
-        fontSize: 16,
-        fontFamily: 'Arial',
-        fill: '#374151',
-        textAlign: 'center',
-        originX: 'center',
-        originY: 'center',
-        top: isRound ? -((tableData.width || 300) / 2) - 40 : -((tableData.height || 150) / 2) - 40
-      });
+const tableLabel = new fabric.Text(`${tableName}\n${tableInfo}`, {
+  fontSize: 28,
+  fontFamily: 'Arial',
+  fill: '#374151',
+  textAlign: 'center',
+  originX: 'center',
+  originY: 'center',
+  top: 0,
+  backgroundColor: 'rgba(255, 255, 255, 0.85)',
+  padding: 6,
+  lineHeight: 1.2
+});
 
       tableGroup.addWithUpdate(tableLabel);
 
       // Add control buttons
-      addTableControlButtons(canvas, tableGroup, tableData, isRound, currentViewMode);
+      // addTableControlButtons(canvas, tableGroup, tableData, isRound, currentViewMode);
 
       // Add event handlers
       tableGroup.on('selected', () => {
@@ -3337,18 +3357,18 @@ const EnhancedCanvas = React.forwardRef((
         const isOccupied = Boolean(people[i]);
         const person = people[i] || null;
 
-        const chair = new fabric.Circle({
-          left: x,
-          top: y,
-          radius: 20,
-          fill: isOccupied ? '#ff6b6b' : '#6bff6b',
-          originX: 'center',
-          originY: 'center',
-          chairIndex: i,
-          tableId: tableData.id,
-          hoverCursor: currentViewMode === 'seating' ? 'pointer' : 'move',
-          selectable: false
-        });
+      const chair = new fabric.Circle({
+  left: x,
+  top: y,
+  radius: 20,
+  fill: isOccupied ? '#e57373' : '#a3d9a5', // более приятные цвета
+  originX: 'center',
+  originY: 'center',
+  chairIndex: i,
+  tableId: tableData.id,
+  hoverCursor: currentViewMode === 'seating' ? 'pointer' : 'move',
+  selectable: false
+});
 
         chair.set('angle', (angle * 180 / Math.PI) + 90);
 
@@ -3426,7 +3446,7 @@ const EnhancedCanvas = React.forwardRef((
           left: x,
           top: y,
           radius: 20,
-          fill: isOccupied ? '#ff6b6b' : '#6bff6b',
+          fill: isOccupied ? '#e57373' : '#a3d9a5',
           originX: 'center',
           originY: 'center',
           chairIndex: currentChairIndex,
@@ -3492,7 +3512,7 @@ const EnhancedCanvas = React.forwardRef((
           left: x,
           top: y,
           radius: 20,
-          fill: isOccupied ? '#ff6b6b' : '#6bff6b',
+          fill: isOccupied ? '#e57373' : '#a3d9a5',
           originX: 'center',
           originY: 'center',
           chairIndex: currentChairIndex,
@@ -3551,106 +3571,106 @@ const EnhancedCanvas = React.forwardRef((
   };
 
   // Add control buttons to table
-  const addTableControlButtons = (canvas, tableGroup, tableData, isRound, currentViewMode = viewMode) => {
-    if (!canvas || !tableGroup || !tableData) return;
+  // const addTableControlButtons = (canvas, tableGroup, tableData, isRound, currentViewMode = viewMode) => {
+  //   if (!canvas || !tableGroup || !tableData) return;
 
-    try {
-      // Delete button
-      const deleteBtn = new fabric.Circle({
-        radius: 15,
-        fill: '#e74c3c',
-        left: 0,
-        top: isRound ? -((tableData.width || 300) / 2) - 15 : -((tableData.height || 150) / 2) - 15,
-        originX: 'center',
-        originY: 'center',
-        hoverCursor: 'pointer',
-        selectable: false
-      });
+  //   try {
+  //     // Delete button
+  //     const deleteBtn = new fabric.Circle({
+  //       radius: 15,
+  //       fill: '#e74c3c',
+  //       left: 0,
+  //       top: isRound ? -((tableData.width || 300) / 2) - 15 : -((tableData.height || 150) / 2) - 15,
+  //       originX: 'center',
+  //       originY: 'center',
+  //       hoverCursor: 'pointer',
+  //       selectable: false
+  //     });
 
-      const deleteIcon = new fabric.Text('×', {
-        left: 0,
-        top: isRound ? -((tableData.width || 300) / 2) - 15 : -((tableData.height || 150) / 2) - 15,
-        fontSize: 24,
-        fontFamily: 'Arial',
-        fill: 'white',
-        originX: 'center',
-        originY: 'center',
-        selectable: false
-      });
+  //     const deleteIcon = new fabric.Text('×', {
+  //       left: 0,
+  //       top: isRound ? -((tableData.width || 300) / 2) - 15 : -((tableData.height || 150) / 2) - 15,
+  //       fontSize: 24,
+  //       fontFamily: 'Arial',
+  //       fill: 'white',
+  //       originX: 'center',
+  //       originY: 'center',
+  //       selectable: false
+  //     });
 
-      deleteBtn.on('mousedown', (e) => {
-        if (e.e) e.e.stopPropagation();
+  //     deleteBtn.on('mousedown', (e) => {
+  //       if (e.e) e.e.stopPropagation();
 
-        if (currentViewMode === 'design') {
-          // Удаление разрешено только в режиме дизайна
-          setDeleteConfirmation({
-            tableId: tableData.id,
-            tableName: tableData.name || `Стол ${tableData.id}`,
-            tableGroup
-          });
-        } else {
-          // В режиме рассадки показываем предупреждение
-          alert('Удаление столов доступно только в режиме дизайна');
-        }
-      });
+  //       if (currentViewMode === 'design') {
+  //         // Удаление разрешено только в режиме дизайна
+  //         setDeleteConfirmation({
+  //           tableId: tableData.id,
+  //           tableName: tableData.name || `Стол ${tableData.id}`,
+  //           tableGroup
+  //         });
+  //       } else {
+  //         // В режиме рассадки показываем предупреждение
+  //         alert('Удаление столов доступно только в режиме дизайна');
+  //       }
+  //     });
 
-      tableGroup.addWithUpdate(deleteBtn);
-      tableGroup.addWithUpdate(deleteIcon);
+  //     tableGroup.addWithUpdate(deleteBtn);
+  //     tableGroup.addWithUpdate(deleteIcon);
 
-      // Info button
-      const infoBtn = new fabric.Circle({
-        radius: 15,
-        fill: '#3498db',
-        left: 35,
-        top: isRound ? -((tableData.width || 300) / 2) - 15 : -((tableData.height || 150) / 2) - 15,
-        originX: 'center',
-        originY: 'center',
-        hoverCursor: 'pointer',
-        selectable: false
-      });
+  //     // Info button
+  //     const infoBtn = new fabric.Circle({
+  //       radius: 15,
+  //       fill: '#3498db',
+  //       left: 35,
+  //       top: isRound ? -((tableData.width || 300) / 2) - 15 : -((tableData.height || 150) / 2) - 15,
+  //       originX: 'center',
+  //       originY: 'center',
+  //       hoverCursor: 'pointer',
+  //       selectable: false
+  //     });
 
-      const infoIcon = new fabric.Text('i', {
-        left: 35,
-        top: isRound ? -((tableData.width || 300) / 2) - 15 : -((tableData.height || 150) / 2) - 15,
-        fontSize: 18,
-        fontFamily: 'Arial',
-        fontWeight: 'bold',
-        fill: 'white',
-        originX: 'center',
-        originY: 'center',
-        selectable: false
-      });
+  //     const infoIcon = new fabric.Text('i', {
+  //       left: 35,
+  //       top: isRound ? -((tableData.width || 300) / 2) - 15 : -((tableData.height || 150) / 2) - 15,
+  //       fontSize: 18,
+  //       fontFamily: 'Arial',
+  //       fontWeight: 'bold',
+  //       fill: 'white',
+  //       originX: 'center',
+  //       originY: 'center',
+  //       selectable: false
+  //     });
 
-      infoBtn.on('mousedown', (e) => {
-        if (e.e) e.e.stopPropagation();
+  //     infoBtn.on('mousedown', (e) => {
+  //       if (e.e) e.e.stopPropagation();
 
-        if (currentViewMode === 'seating') {
-          // В режиме рассадки - показываем информацию о рассадке
-          if (onTableSelect) {
-            onTableSelect(tableData.id, 'seating-info', {
-              tableData: tableData,
-              occupiedSeats: tableData.people?.filter(Boolean).length || 0,
-              freeSeats: tableData.chairCount - (tableData.people?.filter(Boolean).length || 0),
-              people: tableData.people || []
-            });
-          }
-        } else if (currentViewMode === 'design') {
-          // В режиме дизайна - показываем свойства стола для редактирования
-          if (onTableSelect) {
-            onTableSelect(tableData.id, 'design-properties', {
-              tableData: tableData
-            });
-          }
-        }
-      });
+  //       if (currentViewMode === 'seating') {
+  //         // В режиме рассадки - показываем информацию о рассадке
+  //         if (onTableSelect) {
+  //           onTableSelect(tableData.id, 'seating-info', {
+  //             tableData: tableData,
+  //             occupiedSeats: tableData.people?.filter(Boolean).length || 0,
+  //             freeSeats: tableData.chairCount - (tableData.people?.filter(Boolean).length || 0),
+  //             people: tableData.people || []
+  //           });
+  //         }
+  //       } else if (currentViewMode === 'design') {
+  //         // В режиме дизайна - показываем свойства стола для редактирования
+  //         if (onTableSelect) {
+  //           onTableSelect(tableData.id, 'design-properties', {
+  //             tableData: tableData
+  //           });
+  //         }
+  //       }
+  //     });
 
 
-      tableGroup.addWithUpdate(infoBtn);
-      tableGroup.addWithUpdate(infoIcon);
-    } catch (error) {
-      console.error('Error adding table control buttons:', error);
-    }
-  };
+  //     tableGroup.addWithUpdate(infoBtn);
+  //     tableGroup.addWithUpdate(infoIcon);
+  //   } catch (error) {
+  //     console.error('Error adding table control buttons:', error);
+  //   }
+  // };
 
   // Render hall element
   const renderHallElement = (canvas, element) => {
@@ -4315,7 +4335,7 @@ const EnhancedCanvas = React.forwardRef((
       const center = canvas.getCenter();
 
       const newTable = {
-        id: Date.now(),
+        id: generateNextTableId(),
         x: center.left,
         y: center.top,
         width: 300,
@@ -4341,7 +4361,7 @@ const EnhancedCanvas = React.forwardRef((
 
   const createTableFromGroup = useCallback((group, position) => {
     const newTable = {
-      id: Date.now(),
+      id: generateNextTableId(),
       x: Math.max(0, position.x - 150),
       y: Math.max(0, position.y - 150),
       width: 300,
@@ -4504,7 +4524,7 @@ const EnhancedCanvas = React.forwardRef((
 
           // Обновляем цвет стула
           obj.set({
-            fill: person ? '#ff6b6b' : '#6bff6b'
+            fill: person ? '#e57373' : '#a3d9a5'
           });
         }
 
@@ -4579,61 +4599,61 @@ const EnhancedCanvas = React.forwardRef((
     }
   };
 
-const applyModeSettingsToObject = (obj, currentViewMode = viewMode) => {
-  if (!obj) return;
+  const applyModeSettingsToObject = (obj, currentViewMode = viewMode) => {
+    if (!obj) return;
 
-  if (currentViewMode === 'seating') {
-    if (obj.tableId) {
-      // Столы остаются кликабельными для рассадки
-      obj.set({
-        selectable: false,
-        evented: true,
-        hasControls: false,
-        hasBorders: false,
-        lockMovementX: true,
-        lockMovementY: true,
-        lockScalingX: true,
-        lockScalingY: true,
-        lockRotation: true,
-        hoverCursor: 'pointer',
-        visible: true,
-        opacity: 1.0
-      });
+    if (currentViewMode === 'seating') {
+      if (obj.tableId) {
+        // Столы остаются кликабельными для рассадки
+        obj.set({
+          selectable: false,
+          evented: true,
+          hasControls: false,
+          hasBorders: false,
+          lockMovementX: true,
+          lockMovementY: true,
+          lockScalingX: true,
+          lockScalingY: true,
+          lockRotation: true,
+          hoverCursor: 'pointer',
+          visible: true,
+          opacity: 1.0
+        });
+      } else {
+        // ✅ SHAPES: Блокируем взаимодействие, но оставляем видимыми
+        obj.set({
+          selectable: false,
+          evented: false,
+          hasControls: false,
+          hasBorders: false,
+          lockMovementX: true,
+          lockMovementY: true,
+          lockScalingX: true,
+          lockScalingY: true,
+          lockRotation: true,
+          hoverCursor: 'default',
+          visible: true,              // ✅ ОСТАЕТСЯ ВИДИМЫМ
+          opacity: 0.7               // ✅ Полупрозрачный чтобы показать что заблокирован
+        });
+      }
     } else {
-      // ✅ SHAPES: Блокируем взаимодействие, но оставляем видимыми
+      // В режиме дизайна разрешаем редактирование
       obj.set({
-        selectable: false,
-        evented: false,
-        hasControls: false,
-        hasBorders: false,
-        lockMovementX: true,
-        lockMovementY: true,
-        lockScalingX: true,
-        lockScalingY: true,
-        lockRotation: true,
-        hoverCursor: 'default',
-        visible: true,              // ✅ ОСТАЕТСЯ ВИДИМЫМ
-        opacity: 0.7               // ✅ Полупрозрачный чтобы показать что заблокирован
+        selectable: true,
+        evented: true,
+        hasControls: true,
+        hasBorders: true,
+        lockMovementX: false,
+        lockMovementY: false,
+        lockScalingX: false,
+        lockScalingY: false,
+        lockRotation: false,
+        hoverCursor: 'move',
+        visible: true,
+        opacity: 1.0                // ✅ Полная непрозрачность
       });
     }
-  } else {
-    // В режиме дизайна разрешаем редактирование
-    obj.set({
-      selectable: true,
-      evented: true,
-      hasControls: true,
-      hasBorders: true,
-      lockMovementX: false,
-      lockMovementY: false,
-      lockScalingX: false,
-      lockScalingY: false,
-      lockRotation: false,
-      hoverCursor: 'move',
-      visible: true,
-      opacity: 1.0                // ✅ Полная непрозрачность
-    });
-  }
-};
+  };
 
   // Уведомление о размещении
   const showTableTransferNotification = (groupName, tableId, count) => {
@@ -5831,17 +5851,8 @@ const applyModeSettingsToObject = (obj, currentViewMode = viewMode) => {
           </>
         ) : (
           // Новый toolbar для режима рассадки
-          <div className="tool-group seating-tools">
-            <div className="seating-info">
-              <span>👥 Режим рассадки: кликайте по стульям и столам, перетаскивайте группы на столы</span>
-            </div>
-            <button
-              className="tool-btn"
-              onClick={addNewTable}
-              title="Добавить новый стол"
-            >
-              <i className="fas fa-table">+ Стол</i>
-            </button>
+          <div>
+
           </div>
         )}
         <div className="tool-group">
