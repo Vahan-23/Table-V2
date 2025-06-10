@@ -5227,6 +5227,19 @@ useEffect(() => {
   
   console.log(`📋 ViewMode changed to: ${viewMode}, activeMode: ${activeMode}`);
   
+  // ✅ ИСПРАВЛЕНИЕ: Не перезаписываем обработчики для режимов рисования
+  const drawingModes = [
+    ELEMENT_TYPES.LINE, 
+    ELEMENT_TYPES.RECTANGLE, 
+    ELEMENT_TYPES.CIRCLE, 
+    ELEMENT_TYPES.DRAW
+  ];
+  
+  if (drawingModes.includes(activeMode)) {
+    console.log('🎨 Drawing mode active, skipping mode override');
+    return; // ← НЕ ТРОГАЕМ РЕЖИМЫ РИСОВАНИЯ!
+  }
+  
   // Ограничения для режима рассадки
   if (viewMode === 'seating') {
     if (activeMode !== ELEMENT_TYPES.HYBRID) {
@@ -5235,27 +5248,22 @@ useEffect(() => {
       return;
     }
     
-    // Принудительно применяем настройки режима рассадки
     setTimeout(() => {
       console.log('🔒 Enforcing seating mode settings...');
       applyObjectSettings(canvas, 'seating');
     }, 100);
     
-    // Вызываем только setupHybridMode для режима рассадки
     setupHybridMode(canvas);
     return;
   }
   
-  // Для режима дизайна принудительно разблокируем все объекты
+  // Для режима дизайна
   if (viewMode === 'design') {
     setTimeout(() => {
       console.log('🔓 Enforcing design mode settings...');
       applyObjectSettings(canvas, 'design');
       
-      // Убедимся что selection включен
       canvas.selection = true;
-      
-      // Принудительно настраиваем обработчики
       setupHybridMode(canvas);
     }, 100);
   }
