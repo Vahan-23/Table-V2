@@ -3361,7 +3361,7 @@ const tableLabel = new fabric.Text(`${tableName}\n${tableInfo}`, {
   left: x,
   top: y,
   radius: 20,
-  fill: isOccupied ? '#e57373' : '#a3d9a5', // более приятные цвета
+  fill: isOccupied ? '#c12f2f' : '#28592a', // более приятные цвета
   originX: 'center',
   originY: 'center',
   chairIndex: i,
@@ -3446,7 +3446,7 @@ const tableLabel = new fabric.Text(`${tableName}\n${tableInfo}`, {
           left: x,
           top: y,
           radius: 20,
-          fill: isOccupied ? '#e57373' : '#a3d9a5',
+          fill: isOccupied ? '#c12f2f' : '#28592a',
           originX: 'center',
           originY: 'center',
           chairIndex: currentChairIndex,
@@ -3512,7 +3512,7 @@ const tableLabel = new fabric.Text(`${tableName}\n${tableInfo}`, {
           left: x,
           top: y,
           radius: 20,
-          fill: isOccupied ? '#e57373' : '#a3d9a5',
+          fill: isOccupied ? '#c12f2f' : '#28592a',
           originX: 'center',
           originY: 'center',
           chairIndex: currentChairIndex,
@@ -4524,7 +4524,7 @@ const tableLabel = new fabric.Text(`${tableName}\n${tableInfo}`, {
 
           // Обновляем цвет стула
           obj.set({
-            fill: person ? '#e57373' : '#a3d9a5'
+            fill: person ? '#c12f2f' : '#28592a'
           });
         }
 
