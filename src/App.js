@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import HallViewer from './components/HallViewer';
 import ResponsiveSeatingArrangement from './components/ResponsiveSeatingArrangement';
 import ClientBookingComponent from './components/ClientBookingComponent';
+import WebSite from './components/WebSite';
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
           {/* Страница /hallview будет показывать HallViewer */}
           <Route path="/hallview" element={<HallViewer />} />
           <Route path="/client" element={<ClientBookingComponent />} />
+          <Route path="/web" element={<WebSite />} />
         </Routes>
       </div>
     </Router>
