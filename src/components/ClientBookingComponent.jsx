@@ -117,7 +117,7 @@ const ClientBookingComponent = () => {
   // ✅ ИСПРАВЛЕННАЯ функция для правильной обработки координат shapes
   const processShapePosition = (shape) => {
     let displayX, displayY;
-    
+
     // Определяем правильные координаты в зависимости от типа и доступных свойств
     switch (shape.type) {
       case 'rect':
@@ -131,7 +131,7 @@ const ClientBookingComponent = () => {
           displayY = shape.y || 0;
         }
         break;
-        
+
       case 'circle':
         if (shape.centerX !== undefined && shape.centerY !== undefined) {
           // Для кругов используем центр и радиус
@@ -143,13 +143,13 @@ const ClientBookingComponent = () => {
           displayY = shape.y || 0;
         }
         break;
-        
+
       case 'text':
         // Для текста всегда используем x,y как левый верхний угол
         displayX = shape.x || 0;
         displayY = shape.y || 0;
         break;
-        
+
       case 'line':
         // Для линий используем первую точку
         if (shape.points && shape.points.length >= 2) {
@@ -160,12 +160,12 @@ const ClientBookingComponent = () => {
           displayY = shape.y || 0;
         }
         break;
-        
+
       default:
         displayX = shape.x || 0;
         displayY = shape.y || 0;
     }
-    
+
     return { displayX, displayY };
   };
 
@@ -227,56 +227,56 @@ const ClientBookingComponent = () => {
   }, []);
 
   useEffect(() => {
-  if (tablesAreaRef.current && hallData) {
-    // Calculate hall content dimensions with proper padding
-    const tables = hallData.tables || [];
-    
-    // ✅ FIX: Account for center-based positioning and add proper padding
-    const positions = tables.map(t => {
-      const rawLeft = t.renderingOptions?.left ?? t.x ?? 0;
-      const rawTop = t.renderingOptions?.top ?? t.y ?? 0;
-      const width = t.renderingOptions?.width ?? t.width ?? (t.shape !== 'rectangle' ? 300 : 400);
-      const height = t.renderingOptions?.height ?? t.height ?? (t.shape !== 'rectangle' ? 300 : 150);
-      const scaleX = t.renderingOptions?.scaleX ?? 1;
-      const scaleY = t.renderingOptions?.scaleY ?? 1;
-      
-      // Convert from center-based to boundaries
-      const leftBound = rawLeft - (width * scaleX) / 2;
-      const topBound = rawTop - (height * scaleY) / 2;
-      const rightBound = rawLeft + (width * scaleX) / 2;
-      const bottomBound = rawTop + (height * scaleY) / 2;
-      
-      return { leftBound, topBound, rightBound, bottomBound };
-    });
-    
-    if (positions.length > 0) {
-      const minX = Math.min(...positions.map(p => p.leftBound)) - 200; // Add padding
-      const minY = Math.min(...positions.map(p => p.topBound)) - 200;
-      const maxX = Math.max(...positions.map(p => p.rightBound)) + 200;
-      const maxY = Math.max(...positions.map(p => p.bottomBound)) + 200;
-      
-      const totalWidth = maxX - minX;
-      const totalHeight = maxY - minY;
-      
-      // Set minimum container size
-      tablesAreaRef.current.style.minWidth = `${totalWidth}px`;
-      tablesAreaRef.current.style.minHeight = `${totalHeight}px`;
-      
-      // Adjust positioning offset if needed
-      if (minX < 0 || minY < 0) {
-        const offsetX = Math.max(0, -minX);
-        const offsetY = Math.max(0, -minY);
-        
-        // Apply offset to all tables by updating their positioning
-        // This ensures all tables are visible within the container
-        const tablesContent = document.querySelector('.tables-content');
-        if (tablesContent) {
-          tablesContent.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
+    if (tablesAreaRef.current && hallData) {
+      // Calculate hall content dimensions with proper padding
+      const tables = hallData.tables || [];
+
+      // ✅ FIX: Account for center-based positioning and add proper padding
+      const positions = tables.map(t => {
+        const rawLeft = t.renderingOptions?.left ?? t.x ?? 0;
+        const rawTop = t.renderingOptions?.top ?? t.y ?? 0;
+        const width = t.renderingOptions?.width ?? t.width ?? (t.shape !== 'rectangle' ? 300 : 400);
+        const height = t.renderingOptions?.height ?? t.height ?? (t.shape !== 'rectangle' ? 300 : 150);
+        const scaleX = t.renderingOptions?.scaleX ?? 1;
+        const scaleY = t.renderingOptions?.scaleY ?? 1;
+
+        // Convert from center-based to boundaries
+        const leftBound = rawLeft - (width * scaleX) / 2;
+        const topBound = rawTop - (height * scaleY) / 2;
+        const rightBound = rawLeft + (width * scaleX) / 2;
+        const bottomBound = rawTop + (height * scaleY) / 2;
+
+        return { leftBound, topBound, rightBound, bottomBound };
+      });
+
+      if (positions.length > 0) {
+        const minX = Math.min(...positions.map(p => p.leftBound)) - 200; // Add padding
+        const minY = Math.min(...positions.map(p => p.topBound)) - 200;
+        const maxX = Math.max(...positions.map(p => p.rightBound)) + 200;
+        const maxY = Math.max(...positions.map(p => p.bottomBound)) + 200;
+
+        const totalWidth = maxX - minX;
+        const totalHeight = maxY - minY;
+
+        // Set minimum container size
+        tablesAreaRef.current.style.minWidth = `${totalWidth}px`;
+        tablesAreaRef.current.style.minHeight = `${totalHeight}px`;
+
+        // Adjust positioning offset if needed
+        if (minX < 0 || minY < 0) {
+          const offsetX = Math.max(0, -minX);
+          const offsetY = Math.max(0, -minY);
+
+          // Apply offset to all tables by updating their positioning
+          // This ensures all tables are visible within the container
+          const tablesContent = document.querySelector('.tables-content');
+          if (tablesContent) {
+            tablesContent.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
+          }
         }
       }
     }
-  }
-}, [hallData, zoom]);
+  }, [hallData, zoom]);
 
   // Set default booking values when modal opens
   useEffect(() => {
@@ -1038,403 +1038,413 @@ const ClientBookingComponent = () => {
     const isSelected = selectedTableId === table.id;
 
     // ✅ ИСПРАВЛЕННОЕ позиционирование - точно как в оригинале
-const getRenderingPosition = () => {
-  // Get the raw position data
-  const rawLeft = table.renderingOptions?.left ?? table.x ?? 0;
-  const rawTop = table.renderingOptions?.top ?? table.y ?? 0;
-  const angle = table.renderingOptions?.angle ?? table.rotation ?? 0;
-  const scaleX = table.renderingOptions?.scaleX ?? 1;
-  const scaleY = table.renderingOptions?.scaleY ?? 1;
-  
-  const width = table.renderingOptions?.width ?? table.width ?? (isRound ? 300 : 400);
-  const height = table.renderingOptions?.height ?? table.height ?? (isRound ? 300 : 150);
-  
-  // ✅ CRITICAL FIX: Convert from center-based (Fabric.js) to top-left based (HTML)
-  // Fabric.js positions tables by their center, but HTML positions by top-left
-  const left = rawLeft - (width * scaleX) / 2;
-  const top = rawTop - (height * scaleY) / 2;
-  
-  return { left, top, angle, scaleX, scaleY, width, height };
-};
+    const getRenderingPosition = () => {
+      // Get the raw position data
+      const rawLeft = table.renderingOptions?.left ?? table.x ?? 0;
+      const rawTop = table.renderingOptions?.top ?? table.y ?? 0;
+      const angle = table.renderingOptions?.angle ?? table.rotation ?? 0;
+      const scaleX = table.renderingOptions?.scaleX ?? 1;
+      const scaleY = table.renderingOptions?.scaleY ?? 1;
 
-   const position = getRenderingPosition();
-const isRound = table.shape !== 'rectangle';
+      // ✅ ИСПРАВЛЕНО: Используем базовые размеры БЕЗ scale для HTML позиционирования
+      const baseWidth = table.renderingOptions?.width ?? table.width ?? (isRound ? 300 : 400);
+      const baseHeight = table.renderingOptions?.height ?? table.height ?? (isRound ? 300 : 150);
 
-// ✅ ИСПРАВЛЕНО: используем размеры из getRenderingPosition
-const tableWidth = position.width;
-const tableHeight = position.height;
-const tableRadius = isRound ? Math.min(tableWidth, tableHeight) / 2 : 0;
+      // ✅ CRITICAL FIX: Convert from center-based (Fabric.js) to top-left based (HTML)
+      // Fabric.js positions tables by their center, but HTML positions by top-left
+      const left = rawLeft - (baseWidth * scaleX) / 2;
+      const top = rawTop - (baseHeight * scaleY) / 2;
+
+      // ✅ ИСПРАВЛЕНО: Возвращаем финальные размеры С учетом scale
+      const width = baseWidth * scaleX;
+      const height = baseHeight * scaleY;
+
+      return { left, top, angle, scaleX, scaleY, width, height };
+    };
+
+    const position = getRenderingPosition();
+    const isRound = table.shape !== 'rectangle';
+
+    // ✅ ИСПРАВЛЕНО: используем размеры из getRenderingPosition
+    const tableWidth = position.width;
+    const tableHeight = position.height;
+    const tableRadius = isRound ? Math.min(tableWidth, tableHeight) / 2 : 0;
 
     // ✅ ИСПРАВЛЕННЫЙ рендеринг стульев для круглого стола
-   const renderChairsForRoundTable = () => {
-  const chairs = [];
-  // ✅ FIX: Use consistent radius calculation
-  const baseRadius = Math.min(tableWidth, tableHeight) / 2;
-  const radius = baseRadius + 50; // Distance from table edge to chairs (increased from 40)
+    const renderChairsForRoundTable = () => {
+      const chairs = [];
 
-  for (let i = 0; i < chairCount; i++) {
-    const angle = (Math.PI * 2 * i) / chairCount;
-    const x = radius * Math.cos(angle);
-    const y = radius * Math.sin(angle);
+      const borderWidth = -20;
+      const baseRadius = Math.min(tableWidth, tableHeight) / 2;
+      const radius = baseRadius + borderWidth + 5;
 
-    const person = table.people && table.people[i];
-    const isOccupied = Boolean(person);
+      // ✅ ИСПРАВЛЕНО: Масштабируемые размеры стульев
+      const chairSize = Math.max(30, Math.min(50, tableWidth * 0.13)); // Размер стула пропорционален столу
+      const labelFontSize = Math.max(8, Math.min(12, tableWidth * 0.035)); // Размер шрифта подписи
 
-    chairs.push(
-      <div key={i} style={{ 
-        position: 'absolute',
-        left: '50%',
-        top: '50%',
-        transform: `translate(-50%, -50%)`,
-        pointerEvents: 'none' // ✅ ADD: Prevent interference with table clicking
-      }}>
-        {/* Chair */}
-        <div
-          style={{
+      for (let i = 0; i < chairCount; i++) {
+        const angle = (Math.PI * 2 * i) / chairCount;
+        const x = radius * Math.cos(angle);
+        const y = radius * Math.sin(angle);
+
+        const person = table.people && table.people[i];
+        const isOccupied = Boolean(person);
+
+        chairs.push(
+          <div key={i} style={{
             position: 'absolute',
-            left: `${x - 20}px`,
-            top: `${y - 20}px`,
-            width: '40px',
-            height: '40px',
-            borderRadius: '50%',
-            backgroundColor: isOccupied ? '#c12f2f' : '#28592a',
-            transform: `rotate(${(angle * 180 / Math.PI) + 90}deg)`,
-            transformOrigin: 'center',
-            zIndex: 1,
-            border: '2px solid #1a1a1a',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
-          }}
-        />
-        
-        {/* Name label */}
-        {isOccupied && person && person.name && (
-          <div
-            style={{
-              position: 'absolute',
-              left: `${x - 27.5}px`,
-              top: `${y + 30}px`, // ✅ FIX: Consistent positioning below chair
-              width: '55px',
-              fontSize: '10px',
-              fontFamily: 'Arial',
-              color: '#211812',
-              backgroundColor: 'rgba(255, 255, 255, 0.95)',
-              textAlign: 'center',
-              borderRadius: '3px',
-              padding: '2px',
-              zIndex: 2,
-              pointerEvents: 'none',
-              border: '1px solid #ccc',
-              boxShadow: '0 1px 2px rgba(0,0,0,0.2)'
-            }}
-          >
-            {person.name}
+            left: '50%',
+            top: '50%',
+            transform: `translate(-50%, -50%)`,
+            pointerEvents: 'none'
+          }}>
+            {/* Chair */}
+            <div
+              style={{
+                position: 'absolute',
+                left: `${x - chairSize / 2}px`,
+                top: `${y - chairSize / 2}px`,
+                width: `${chairSize}px`, // ✅ Масштабируемый размер
+                height: `${chairSize}px`, // ✅ Масштабируемый размер
+                borderRadius: '50%',
+                backgroundColor: isOccupied ? '#c12f2f' : '#28592a',
+                transform: `rotate(${(angle * 180 / Math.PI) + 90}deg)`,
+                transformOrigin: 'center',
+                zIndex: 1,
+                border: `${Math.max(1, chairSize * 0.05)}px solid #1a1a1a`, // ✅ Масштабируемая граница
+                boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+              }}
+            />
+
+            {/* Name label */}
+            {isOccupied && person && person.name && (
+              <div
+                style={{
+                  position: 'absolute',
+                  left: `${x - chairSize * 0.7}px`,
+                  top: `${y + chairSize * 0.6}px`,
+                  width: `${chairSize * 1.4}px`,
+                  fontSize: `${labelFontSize}px`, // ✅ Масштабируемый шрифт
+                  fontFamily: 'Arial',
+                  color: '#211812',
+                  backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                  textAlign: 'center',
+                  borderRadius: '3px',
+                  padding: '2px',
+                  zIndex: 2,
+                  pointerEvents: 'none',
+                  border: '1px solid #ccc',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.2)'
+                }}
+              >
+                {person.name}
+              </div>
+            )}
           </div>
-        )}
+        );
+      }
+
+      return chairs;
+    };
+
+
+    const renderChairsForRectangleTable = () => {
+      const chairs = [];
+
+      const chairsTop = Math.ceil(chairCount / 2);
+      const chairsBottom = chairCount - chairsTop;
+      let currentChairIndex = 0;
+
+      // ✅ FIX: Use more consistent spacing calculation
+      const horizontalSpacing = Math.max(80, tableWidth * 0.2); // Minimum 80px spacing
+      const verticalSpacing = 50; // Distance from table edge
+
+      // Top chairs
+      for (let i = 0; i < chairsTop; i++) {
+        const ratio = chairsTop === 1 ? 0.5 : i / (chairsTop - 1);
+        const x = ((tableWidth - horizontalSpacing) * ratio) - (tableWidth / 2) + (horizontalSpacing / 2);
+        const y = -(tableHeight / 2) - verticalSpacing;
+
+        // ... rest of the chair rendering logic stays the same
+        // Just update the positioning values to use the new x, y calculations
+      }
+
+      // Bottom chairs - similar fix
+      for (let i = 0; i < chairsBottom; i++) {
+        const ratio = chairsBottom === 1 ? 0.5 : i / (chairsBottom - 1);
+        const x = ((tableWidth - horizontalSpacing) * ratio) - (tableWidth / 2) + (horizontalSpacing / 2);
+        const y = (tableHeight / 2) + verticalSpacing;
+
+        // ... rest of the chair rendering logic
+      }
+
+      return chairs;
+    };
+
+
+
+
+    {/* Booking type selection */ }
+    <div className="form-group" style={{ marginBottom: '20px' }}>
+      <label style={{
+        display: 'block',
+        marginBottom: '8px',
+        fontWeight: 'bold',
+        fontSize: '15px'
+      }}>
+        Дата:
+      </label>
+      <input
+        type="date"
+        value={bookingDate}
+        onChange={(e) => setBookingDate(e.target.value)}
+        style={{
+          width: '80%',
+          padding: '12px',
+          borderRadius: '8px',
+          border: '1px solid #ddd',
+          fontSize: '16px',
+          boxShadow: '0 2px 5px rgba(0,0,0,0.05)',
+          backgroundColor: '#f9f9f9'
+        }}
+      />
+    </div>
+
+    {/* Time selectors */ }
+    <div className="form-group" style={{ marginBottom: '20px' }}>
+      <label style={{
+        display: 'block',
+        marginBottom: '8px',
+        fontWeight: 'bold',
+        fontSize: '15px'
+      }}>
+        Время:
+      </label>
+
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '12px'
+      }}>
+        {/* Start time */}
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <span style={{
+            fontSize: '14px',
+            fontWeight: 'bold',
+            color: '#555',
+            marginRight: '10px',
+            width: '60px'
+          }}>
+            Начало:
+          </span>
+          <div style={{
+            display: 'flex',
+            flex: 1,
+            border: '1px solid #ddd',
+            borderRadius: '8px',
+            overflow: 'hidden',
+            boxShadow: '0 2px 5px rgba(0,0,0,0.05)'
+          }}>
+            <select
+              value={bookingTime.split(':')[0] || '12'}
+              onChange={(e) => {
+                const hours = e.target.value;
+                const minutes = bookingTime.split(':')[1] || '00';
+                setBookingTime(`${hours}:${minutes}`);
+              }}
+              style={{
+                flex: 1,
+                padding: '12px',
+                border: 'none',
+                borderRight: '1px solid #ddd',
+                fontSize: '16px',
+                backgroundColor: '#f9f9f9'
+              }}
+            >
+              {Array.from({ length: 24 }, (_, i) => i).map(hour => {
+                const hourStr = hour.toString().padStart(2, '0');
+                const isHourFullyOccupied = ['00', '15', '30', '45'].every(min =>
+                  occupiedSlots.includes(`${hourStr}:${min}`)
+                );
+                const isHourPartiallyOccupied = ['00', '15', '30', '45'].some(min =>
+                  occupiedSlots.includes(`${hourStr}:${min}`)
+                );
+
+                return (
+                  <option
+                    key={hour}
+                    value={hourStr}
+                    disabled={isHourFullyOccupied}
+                    style={{
+                      backgroundColor: isHourFullyOccupied ? '#ffdddd' :
+                        isHourPartiallyOccupied ? '#fff8e1' : '#ffffff',
+                      color: isHourFullyOccupied ? '#999999' : '#000000'
+                    }}
+                  >
+                    {hourStr}
+                  </option>
+                );
+              })}
+            </select>
+            <span style={{
+              padding: '12px 8px',
+              display: 'flex',
+              alignItems: 'center',
+              backgroundColor: '#f0f0f0',
+              fontWeight: 'bold'
+            }}>:</span>
+            <select
+              value={bookingTime.split(':')[1] || '00'}
+              onChange={(e) => {
+                const hours = bookingTime.split(':')[0] || '12';
+                const minutes = e.target.value;
+                setBookingTime(`${hours}:${minutes}`);
+              }}
+              style={{
+                flex: 1,
+                padding: '12px',
+                border: 'none',
+                fontSize: '16px',
+                backgroundColor: '#f9f9f9'
+              }}
+            >
+              {['00', '15', '30', '45'].map(minute => {
+                const hourStr = bookingTime.split(':')[0] || '12';
+                const timeSlot = `${hourStr}:${minute}`;
+                const isSlotOccupied = occupiedSlots.includes(timeSlot);
+
+                return (
+                  <option
+                    key={minute}
+                    value={minute}
+                    disabled={isSlotOccupied}
+                    style={{
+                      backgroundColor: isSlotOccupied ? '#ffdddd' : '#ffffff',
+                      color: isSlotOccupied ? '#999999' : '#000000'
+                    }}
+                  >
+                    {minute}
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+        </div>
+
+        {/* End time */}
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <span style={{
+            fontSize: '14px',
+            fontWeight: 'bold',
+            color: '#555',
+            marginRight: '10px',
+            width: '60px'
+          }}>
+            Конец:
+          </span>
+          <div style={{
+            display: 'flex',
+            flex: 1,
+            border: '1px solid #ddd',
+            borderRadius: '8px',
+            overflow: 'hidden',
+            boxShadow: '0 2px 5px rgba(0,0,0,0.05)'
+          }}>
+            <select
+              value={bookingEndTime.split(':')[0] || '14'}
+              onChange={(e) => {
+                const hours = e.target.value;
+                const minutes = bookingEndTime.split(':')[1] || '00';
+                setBookingEndTime(`${hours}:${minutes}`);
+              }}
+              style={{
+                flex: 1,
+                padding: '12px',
+                border: 'none',
+                borderRight: '1px solid #ddd',
+                fontSize: '16px',
+                backgroundColor: '#f9f9f9'
+              }}
+            >
+              {Array.from({ length: 24 }, (_, i) => i).map(hour => {
+                const hourStr = hour.toString().padStart(2, '0');
+                const startHour = parseInt(bookingTime.split(':')[0] || '12');
+                const isHourFullyOccupied = ['00', '15', '30', '45'].every(min =>
+                  occupiedSlots.includes(`${hourStr}:${min}`)
+                );
+                const shouldDisable = hour <= startHour && isHourFullyOccupied;
+                const isHourPartiallyOccupied = ['00', '15', '30', '45'].some(min =>
+                  occupiedSlots.includes(`${hourStr}:${min}`)
+                );
+
+                return (
+                  <option
+                    key={hour}
+                    value={hourStr}
+                    disabled={shouldDisable}
+                    style={{
+                      backgroundColor: shouldDisable ? '#ffdddd' :
+                        isHourPartiallyOccupied ? '#fff8e1' : '#ffffff',
+                      color: shouldDisable ? '#999999' : '#000000'
+                    }}
+                  >
+                    {hourStr}
+                  </option>
+                );
+              })}
+            </select>
+            <span style={{
+              padding: '12px 8px',
+              display: 'flex',
+              alignItems: 'center',
+              backgroundColor: '#f0f0f0',
+              fontWeight: 'bold'
+            }}>:</span>
+            <select
+              value={bookingEndTime.split(':')[1] || '00'}
+              onChange={(e) => {
+                const hours = bookingEndTime.split(':')[0] || '14';
+                const minutes = e.target.value;
+                setBookingEndTime(`${hours}:${minutes}`);
+              }}
+              style={{
+                flex: 1,
+                padding: '12px',
+                border: 'none',
+                fontSize: '16px',
+                backgroundColor: '#f9f9f9'
+              }}
+            >
+              {['00', '15', '30', '45'].map(minute => {
+                const hourStr = bookingEndTime.split(':')[0] || '14';
+                const timeSlot = `${hourStr}:${minute}`;
+                const isSlotOccupied = occupiedSlots.includes(timeSlot);
+                const startHour = parseInt(bookingTime.split(':')[0] || '12');
+                const endHour = parseInt(hourStr);
+                const shouldDisable = endHour <= startHour && isSlotOccupied;
+
+                return (
+                  <option
+                    key={minute}
+                    value={minute}
+                    disabled={shouldDisable}
+                    style={{
+                      backgroundColor: shouldDisable ? '#ffdddd' :
+                        isSlotOccupied ? '#fff8e1' : '#ffffff',
+                      color: shouldDisable ? '#999999' : '#000000'
+                    }}
+                  >
+                    {minute}
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+        </div>
       </div>
-    );
-  }
-
-  return chairs;
-};
+    </div>
 
 
-const renderChairsForRectangleTable = () => {
-  const chairs = [];
-  
-  const chairsTop = Math.ceil(chairCount / 2);
-  const chairsBottom = chairCount - chairsTop;
-  let currentChairIndex = 0;
-
-  // ✅ FIX: Use more consistent spacing calculation
-  const horizontalSpacing = Math.max(80, tableWidth * 0.2); // Minimum 80px spacing
-  const verticalSpacing = 50; // Distance from table edge
-
-  // Top chairs
-  for (let i = 0; i < chairsTop; i++) {
-    const ratio = chairsTop === 1 ? 0.5 : i / (chairsTop - 1);
-    const x = ((tableWidth - horizontalSpacing) * ratio) - (tableWidth / 2) + (horizontalSpacing / 2);
-    const y = -(tableHeight / 2) - verticalSpacing;
-
-    // ... rest of the chair rendering logic stays the same
-    // Just update the positioning values to use the new x, y calculations
-  }
-
-  // Bottom chairs - similar fix
-  for (let i = 0; i < chairsBottom; i++) {
-    const ratio = chairsBottom === 1 ? 0.5 : i / (chairsBottom - 1);
-    const x = ((tableWidth - horizontalSpacing) * ratio) - (tableWidth / 2) + (horizontalSpacing / 2);
-    const y = (tableHeight / 2) + verticalSpacing;
-
-    // ... rest of the chair rendering logic
-  }
-
-  return chairs;
-};
-
-
-                    
-
-              {/* Booking type selection */}
-              <div className="form-group" style={{ marginBottom: '20px' }}>
-                <label style={{
-                  display: 'block',
-                  marginBottom: '8px',
-                    fontWeight: 'bold',
-                  fontSize: '15px'
-                }}>
-                  Дата:
-                </label>
-                <input
-                  type="date"
-                  value={bookingDate}
-                  onChange={(e) => setBookingDate(e.target.value)}
-                  style={{
-                    width: '80%',
-                    padding: '12px',
-                    borderRadius: '8px',
-                    border: '1px solid #ddd',
-                    fontSize: '16px',
-                    boxShadow: '0 2px 5px rgba(0,0,0,0.05)',
-                    backgroundColor: '#f9f9f9'
-                  }}
-                />
-              </div>
-
-              {/* Time selectors */}
-              <div className="form-group" style={{ marginBottom: '20px' }}>
-                <label style={{
-                  display: 'block',
-                  marginBottom: '8px',
-                  fontWeight: 'bold',
-                  fontSize: '15px'
-                }}>
-                  Время:
-                </label>
-
-                <div style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '12px'
-                }}>
-                  {/* Start time */}
-                  <div style={{ display: 'flex', alignItems: 'center' }}>
-                    <span style={{
-                      fontSize: '14px',
-                      fontWeight: 'bold',
-                      color: '#555',
-                      marginRight: '10px',
-                      width: '60px'
-                    }}>
-                      Начало:
-                    </span>
-                    <div style={{
-                      display: 'flex',
-                      flex: 1,
-                      border: '1px solid #ddd',
-                      borderRadius: '8px',
-                      overflow: 'hidden',
-                      boxShadow: '0 2px 5px rgba(0,0,0,0.05)'
-                    }}>
-                      <select
-                        value={bookingTime.split(':')[0] || '12'}
-                        onChange={(e) => {
-                          const hours = e.target.value;
-                          const minutes = bookingTime.split(':')[1] || '00';
-                          setBookingTime(`${hours}:${minutes}`);
-                        }}
-                        style={{
-                          flex: 1,
-                          padding: '12px',
-                          border: 'none',
-                          borderRight: '1px solid #ddd',
-                          fontSize: '16px',
-                          backgroundColor: '#f9f9f9'
-                        }}
-                      >
-                        {Array.from({ length: 24 }, (_, i) => i).map(hour => {
-                          const hourStr = hour.toString().padStart(2, '0');
-                          const isHourFullyOccupied = ['00', '15', '30', '45'].every(min =>
-                            occupiedSlots.includes(`${hourStr}:${min}`)
-                          );
-                          const isHourPartiallyOccupied = ['00', '15', '30', '45'].some(min =>
-                            occupiedSlots.includes(`${hourStr}:${min}`)
-                          );
-
-                          return (
-                            <option
-                              key={hour}
-                              value={hourStr}
-                              disabled={isHourFullyOccupied}
-                              style={{
-                                backgroundColor: isHourFullyOccupied ? '#ffdddd' :
-                                  isHourPartiallyOccupied ? '#fff8e1' : '#ffffff',
-                                color: isHourFullyOccupied ? '#999999' : '#000000'
-                              }}
-                            >
-                              {hourStr}
-                            </option>
-                          );
-                        })}
-                      </select>
-                      <span style={{
-                        padding: '12px 8px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        backgroundColor: '#f0f0f0',
-                        fontWeight: 'bold'
-                      }}>:</span>
-                      <select
-                        value={bookingTime.split(':')[1] || '00'}
-                        onChange={(e) => {
-                          const hours = bookingTime.split(':')[0] || '12';
-                          const minutes = e.target.value;
-                          setBookingTime(`${hours}:${minutes}`);
-                        }}
-                        style={{
-                          flex: 1,
-                          padding: '12px',
-                          border: 'none',
-                          fontSize: '16px',
-                          backgroundColor: '#f9f9f9'
-                        }}
-                      >
-                        {['00', '15', '30', '45'].map(minute => {
-                          const hourStr = bookingTime.split(':')[0] || '12';
-                          const timeSlot = `${hourStr}:${minute}`;
-                          const isSlotOccupied = occupiedSlots.includes(timeSlot);
-
-                          return (
-                            <option
-                              key={minute}
-                              value={minute}
-                              disabled={isSlotOccupied}
-                              style={{
-                                backgroundColor: isSlotOccupied ? '#ffdddd' : '#ffffff',
-                                color: isSlotOccupied ? '#999999' : '#000000'
-                              }}
-                            >
-                              {minute}
-                            </option>
-                          );
-                        })}
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* End time */}
-                  <div style={{ display: 'flex', alignItems: 'center' }}>
-                    <span style={{
-                      fontSize: '14px',
-                      fontWeight: 'bold',
-                      color: '#555',
-                      marginRight: '10px',
-                      width: '60px'
-                    }}>
-                      Конец:
-                    </span>
-                    <div style={{
-                      display: 'flex',
-                      flex: 1,
-                      border: '1px solid #ddd',
-                      borderRadius: '8px',
-                      overflow: 'hidden',
-                      boxShadow: '0 2px 5px rgba(0,0,0,0.05)'
-                    }}>
-                      <select
-                        value={bookingEndTime.split(':')[0] || '14'}
-                        onChange={(e) => {
-                          const hours = e.target.value;
-                          const minutes = bookingEndTime.split(':')[1] || '00';
-                          setBookingEndTime(`${hours}:${minutes}`);
-                        }}
-                        style={{
-                          flex: 1,
-                          padding: '12px',
-                          border: 'none',
-                          borderRight: '1px solid #ddd',
-                          fontSize: '16px',
-                          backgroundColor: '#f9f9f9'
-                        }}
-                      >
-                        {Array.from({ length: 24 }, (_, i) => i).map(hour => {
-                          const hourStr = hour.toString().padStart(2, '0');
-                          const startHour = parseInt(bookingTime.split(':')[0] || '12');
-                          const isHourFullyOccupied = ['00', '15', '30', '45'].every(min =>
-                            occupiedSlots.includes(`${hourStr}:${min}`)
-                          );
-                          const shouldDisable = hour <= startHour && isHourFullyOccupied;
-                          const isHourPartiallyOccupied = ['00', '15', '30', '45'].some(min =>
-                            occupiedSlots.includes(`${hourStr}:${min}`)
-                          );
-
-                          return (
-                            <option
-                              key={hour}
-                              value={hourStr}
-                              disabled={shouldDisable}
-                              style={{
-                                backgroundColor: shouldDisable ? '#ffdddd' :
-                                  isHourPartiallyOccupied ? '#fff8e1' : '#ffffff',
-                                color: shouldDisable ? '#999999' : '#000000'
-                              }}
-                            >
-                              {hourStr}
-                            </option>
-                          );
-                        })}
-                      </select>
-                      <span style={{
-                        padding: '12px 8px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        backgroundColor: '#f0f0f0',
-                        fontWeight: 'bold'
-                      }}>:</span>
-                      <select
-                        value={bookingEndTime.split(':')[1] || '00'}
-                        onChange={(e) => {
-                          const hours = bookingEndTime.split(':')[0] || '14';
-                          const minutes = e.target.value;
-                          setBookingEndTime(`${hours}:${minutes}`);
-                        }}
-                        style={{
-                          flex: 1,
-                          padding: '12px',
-                          border: 'none',
-                          fontSize: '16px',
-                          backgroundColor: '#f9f9f9'
-                        }}
-                      >
-                        {['00', '15', '30', '45'].map(minute => {
-                          const hourStr = bookingEndTime.split(':')[0] || '14';
-                          const timeSlot = `${hourStr}:${minute}`;
-                          const isSlotOccupied = occupiedSlots.includes(timeSlot);
-                          const startHour = parseInt(bookingTime.split(':')[0] || '12');
-                          const endHour = parseInt(hourStr);
-                          const shouldDisable = endHour <= startHour && isSlotOccupied;
-
-                          return (
-                            <option
-                              key={minute}
-                              value={minute}
-                              disabled={shouldDisable}
-                              style={{
-                                backgroundColor: shouldDisable ? '#ffdddd' :
-                                  isSlotOccupied ? '#fff8e1' : '#ffffff',
-                                color: shouldDisable ? '#999999' : '#000000'
-                              }}
-                            >
-                              {minute}
-                            </option>
-                          );
-                        })}
-                      </select>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              
     return (
       <div
         className={`table-container ${isSelected ? 'selected' : ''}`}
@@ -1444,9 +1454,10 @@ const renderChairsForRectangleTable = () => {
           left: `${position.left}px`,
           top: `${position.top}px`,
           cursor: 'pointer',
+          //  border: '40px solid #a67c52',
           border: isSelected ? '3px solid #3498db' : 'none',
-          borderRadius: '10px',
-          transform: `rotate(${position.angle}deg) scale(${position.scaleX}, ${position.scaleY})`,
+          borderRadius: '50%',
+          // transform: `rotate(${position.angle}deg) scale(${position.scaleX}, ${position.scaleY})`,
           transformOrigin: 'center center',
           zIndex: 10, // Увеличиваем zIndex чтобы столы были поверх shapes
           width: `${tableWidth}px`,
@@ -1464,11 +1475,11 @@ const renderChairsForRectangleTable = () => {
                 style={{
                   width: `${tableWidth}px`,
                   height: `${tableHeight}px`,
-                  borderRadius: '50%',
-                  backgroundColor: '#f2ebe9',
-                  border: '20px solid #a67c52',
+                  // borderRadius: '50%',
+                  // backgroundColor: '#293352',
+                  //  border: '20px solid #a67c52',
                   position: 'relative',
-                  boxShadow: '0 4px 8px rgba(0,0,0,0.2)'
+                  // boxShadow: '0 4px 8px rgba(0,0,0,0.2)'
                 }}
               >
                 {/* Table Top */}
@@ -1494,9 +1505,12 @@ const renderChairsForRectangleTable = () => {
                     width: `${tableWidth - 50}px`,
                     height: `${tableHeight - 50}px`,
                     borderRadius: '50%',
-                    backgroundColor: '#e0d6cc'
+                    backgroundColor: '#e0d6cc',
+                    border: '20px solid #a67c52',
+                    boxSizing: 'border-box'
                   }}
                 />
+               
 
                 {/* Table Label */}
                 <div
@@ -1515,11 +1529,14 @@ const renderChairsForRectangleTable = () => {
                     lineHeight: 1.2,
                     zIndex: 3,
                     fontWeight: 'bold',
-                    border: '1px solid #ddd'
+                    border: '1px solid #ddd',
+                    overflow: 'hidden'
                   }}
                 >
                   {table.name || `Стол ${table.id}`}<br />
                   {chairCount} мест
+                  <br />
+                   <button className='btn'>Click me</button>
                 </div>
 
                 {/* Reservation overlay */}
@@ -1535,8 +1552,8 @@ const renderChairsForRectangleTable = () => {
                       flexDirection: 'column',
                       justifyContent: 'center',
                       alignItems: 'center',
-                      backgroundColor: isCurrentlyReserved 
-                        ? 'rgba(231, 76, 60, 0.8)' 
+                      backgroundColor: isCurrentlyReserved
+                        ? 'rgba(231, 76, 60, 0.8)'
                         : 'rgba(242, 120, 75, 0.5)',
                       color: 'white',
                       fontWeight: 'bold',
@@ -1552,7 +1569,7 @@ const renderChairsForRectangleTable = () => {
                     </div>
                     {(activeReservation || (!isCurrentlyReserved && reservationText)) && (
                       <div style={{ fontSize: '14px', marginTop: '5px', textAlign: 'center' }}>
-                        {isCurrentlyReserved 
+                        {isCurrentlyReserved
                           ? `${activeReservation.startTime} - ${activeReservation.endTime}`
                           : reservationText
                         }
@@ -1644,8 +1661,8 @@ const renderChairsForRectangleTable = () => {
                       flexDirection: 'column',
                       justifyContent: 'center',
                       alignItems: 'center',
-                      backgroundColor: isCurrentlyReserved 
-                        ? 'rgba(231, 76, 60, 0.8)' 
+                      backgroundColor: isCurrentlyReserved
+                        ? 'rgba(231, 76, 60, 0.8)'
                         : 'rgba(242, 120, 75, 0.5)',
                       color: 'white',
                       fontWeight: 'bold',
@@ -1663,7 +1680,7 @@ const renderChairsForRectangleTable = () => {
                     </div>
                     {(activeReservation || (!isCurrentlyReserved && reservationText)) && (
                       <div style={{ fontSize: '14px', marginTop: '5px' }}>
-                        {isCurrentlyReserved 
+                        {isCurrentlyReserved
                           ? `${activeReservation.startTime} - ${activeReservation.endTime}`
                           : reservationText
                         }
@@ -1679,7 +1696,7 @@ const renderChairsForRectangleTable = () => {
           )}
 
           {/* Book button */}
-          <div style={{
+          {/* <div style={{
             display: 'flex',
             justifyContent: 'center',
             marginTop: '15px'
@@ -1703,7 +1720,7 @@ const renderChairsForRectangleTable = () => {
             >
               Забронировать
             </button>
-          </div>
+          </div> */}
         </div>
       </div>
     );
@@ -2116,7 +2133,7 @@ const renderChairsForRectangleTable = () => {
         </div>
       </div>
 
-      
+
 
       {/* Mobile instructions overlay */}
       {hallData && (
