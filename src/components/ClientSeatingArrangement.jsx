@@ -175,18 +175,75 @@ const SimpleSeatingApp = () => {
   const [dragStartPosition, setDragStartPosition] = useState({ x: 0, y: 0 });
   const [initialScrollPosition, setInitialScrollPosition] = useState({ x: 0, y: 0 });
 
+  const [isMobileGroupsExpanded, setIsMobileGroupsExpanded] = useState(false);
+
+  const [selectedPersonFromGroup, setSelectedPersonFromGroup] = useState(null);
 
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
 
 
-  useEffect(() => {
-  const handleResize = () => {
-    setWindowWidth(window.innerWidth);
-  };
+  const selectPersonFromGroup = (personName, groupId) => {
+  // Устанавливаем выбранного человека
+  setSelectedPersonFromGroup({ name: personName, groupId: groupId });
+  setPersonName(personName);
+  setSelectedGroup(groupId);
+};
 
-  window.addEventListener('resize', handleResize);
-  return () => window.removeEventListener('resize', handleResize);
-}, []);
+const getSeatedMembersCount = (groupId) => {
+  if (!hallData?.tables) return 0;
+  
+  let seatedCount = 0;
+  hallData.tables.forEach(table => {
+    if (table.people) {
+      table.people.forEach(person => {
+        if (person && person.groupId === groupId) {
+          seatedCount++;
+        }
+      });
+    }
+  });
+  
+  return seatedCount;
+};
+
+const getGroupStatus = (group) => {
+  const availableMembers = group.members.length; // Готовые к рассадке
+  const seatedMembers = getSeatedMembersCount(group.id); // Уже за столами
+  const totalMembers = availableMembers + seatedMembers; // Общее количество
+  
+  // Находим за каким столом сидят участники группы
+  let seatedAtTable = null;
+  if (seatedMembers > 0) {
+    hallData?.tables?.forEach(table => {
+      const groupMembersAtTable = table.people?.filter(person => 
+        person && person.groupId === group.id
+      ).length || 0;
+      
+      if (groupMembersAtTable > 0) {
+        seatedAtTable = table.name || `Стол ${table.id}`;
+      }
+    });
+  }
+  
+  return {
+    availableMembers,
+    seatedMembers,
+    totalMembers,
+    seatedAtTable, // НОВОЕ: за каким столом сидят
+    isFullySeated: availableMembers === 0 && seatedMembers > 0, // Все рассажены
+    isPartiallySeated: availableMembers > 0 && seatedMembers > 0, // Частично рассажены
+    isReadyToSeat: availableMembers > 0 // Есть кого рассаживать
+  };
+};
+
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Enhanced touch state for mobile pinch zoom
   const touchDistanceRef = useRef(null);
@@ -269,121 +326,56 @@ const SimpleSeatingApp = () => {
 
   // Функция для освобождения группы (убирает всех со столов и возвращает в группу)
   const releaseGroup = (groupId) => {
-  const group = groups.find(g => g.id === groupId);
-  if (!group) return;
+    const group = groups.find(g => g.id === groupId);
+    if (!group) return;
 
-  // Сначала находим всех людей этой группы за столами
-  const groupMembers = [];
-  
-  // Проходим по всем столам и собираем участников группы
-  hallData.tables.forEach(table => {
-    if (table.people) {
-      table.people.forEach(person => {
-        if (person && person.groupId === groupId) {
-          groupMembers.push(person.name);
-        }
-      });
-    }
-  });
+    // Сначала находим всех людей этой группы за столами
+    const groupMembers = [];
 
-  // Теперь убираем их со столов
-  setHallData(prevData => {
-    const updatedTables = prevData.tables.map(table => {
-      const updatedPeople = (table.people || []).map(person => {
-        if (person && person.groupId === groupId) {
-          return null; // Убираем со стола
-        }
-        return person;
-      });
-
-      return { ...table, people: updatedPeople };
+    // Проходим по всем столам и собираем участников группы
+    hallData.tables.forEach(table => {
+      if (table.people) {
+        table.people.forEach(person => {
+          if (person && person.groupId === groupId) {
+            groupMembers.push(person.name);
+          }
+        });
+      }
     });
 
-    const updatedHallData = {
-      ...prevData,
-      tables: updatedTables
-    };
-
-    localStorage.setItem('hallData', JSON.stringify(updatedHallData));
-    return updatedHallData;
-  });
-
-  // Возвращаем участников обратно в группу
-  const updatedGroups = groups.map(g => {
-    if (g.id === groupId) {
-      // Объединяем существующих участников с теми, кого сняли со столов
-      // и убираем дубликаты
-      const allMembers = [...(g.members || []), ...groupMembers];
-      const uniqueMembers = [...new Set(allMembers)];
-      
-      return {
-        ...g,
-        members: uniqueMembers
-      };
-    }
-    return g;
-  });
-
-  setGroups(updatedGroups);
-  localStorage.setItem('seatingGroups', JSON.stringify(updatedGroups));
-};
-  const seatGroupAtTable = (groupId, tableId, selectedPeople = null) => {
-    const group = groups.find(g => g.id === groupId);
-    if (!group || !group.members.length) {
-      alert('Группа пустая или не найдена!');
-      return;
-    }
-
-    const availableSeats = getAvailableSeats(tableId);
-    const peopleToSeat = selectedPeople || group.members;
-
-    if (availableSeats.length < peopleToSeat.length) {
-      alert(`За этим столом недостаточно свободных мест! Нужно: ${peopleToSeat.length}, доступно: ${availableSeats.length}`);
-      return;
-    }
-
-    // Рассаживаем выбранных участников группы
+    // Теперь убираем их со столов
     setHallData(prevData => {
       const updatedTables = prevData.tables.map(table => {
-        if (table.id === tableId) {
-          const updatedPeople = [...(table.people || [])];
+        const updatedPeople = (table.people || []).map(person => {
+          if (person && person.groupId === groupId) {
+            return null; // Убираем со стола
+          }
+          return person;
+        });
 
-          // Заполняем свободные места участниками группы
-          peopleToSeat.forEach((memberName, index) => {
-            if (index < availableSeats.length) {
-              const seatIndex = availableSeats[index];
-              updatedPeople[seatIndex] = {
-                name: memberName,
-                groupId: groupId,
-                isMainGuest: true
-              };
-            }
-          });
-
-          return {
-            ...table,
-            people: updatedPeople
-          };
-        }
-        return table;
+        return { ...table, people: updatedPeople };
       });
 
       const updatedHallData = {
         ...prevData,
-        tables: updatedTables,
-        shapes: shapes
+        tables: updatedTables
       };
 
       localStorage.setItem('hallData', JSON.stringify(updatedHallData));
       return updatedHallData;
     });
 
-    // Очищаем участников группы после успешной рассадки
+    // Возвращаем участников обратно в группу
     const updatedGroups = groups.map(g => {
       if (g.id === groupId) {
+        // Объединяем существующих участников с теми, кого сняли со столов
+        // и убираем дубликаты
+        const allMembers = [...(g.members || []), ...groupMembers];
+        const uniqueMembers = [...new Set(allMembers)];
+
         return {
           ...g,
-          members: [] // Очищаем участников
+          members: uniqueMembers
         };
       }
       return g;
@@ -391,14 +383,86 @@ const SimpleSeatingApp = () => {
 
     setGroups(updatedGroups);
     localStorage.setItem('seatingGroups', JSON.stringify(updatedGroups));
-
-    // Закрываем все модальные окна
-    setShowSeatingModal(false);
-    setSelectedGroupForSeating(null);
-    setShowMemberSelectionModal(false);
-    setPendingSeating(null);
-    setSelectedMembers([]);
   };
+  const seatGroupAtTable = (groupId, tableId, selectedPeople = null) => {
+  const group = groups.find(g => g.id === groupId);
+  if (!group) {
+    alert('Группа не найдена!');
+    return;
+  }
+
+  // Рассаживаем только доступных участников из группы (не трогаем уже сидящих!)
+  const peopleToSeat = selectedPeople || group.members;
+
+  if (peopleToSeat.length === 0) {
+    alert('В группе нет участников для рассадки!');
+    return;
+  }
+
+  const availableSeats = getAvailableSeats(tableId);
+
+  if (availableSeats.length < peopleToSeat.length) {
+    alert(`За этим столом недостаточно свободных мест! Нужно: ${peopleToSeat.length}, доступно: ${availableSeats.length}`);
+    return;
+  }
+
+  // Рассаживаем только доступных участников группы
+  setHallData(prevData => {
+    const updatedTables = prevData.tables.map(table => {
+      if (table.id === tableId) {
+        const updatedPeople = [...(table.people || [])];
+
+        // Заполняем свободные места участниками группы
+        peopleToSeat.forEach((memberName, index) => {
+          if (index < availableSeats.length) {
+            const seatIndex = availableSeats[index];
+            updatedPeople[seatIndex] = {
+              name: memberName,
+              groupId: groupId,
+              isMainGuest: true
+            };
+          }
+        });
+
+        return {
+          ...table,
+          people: updatedPeople
+        };
+      }
+      return table;
+    });
+
+    const updatedHallData = {
+      ...prevData,
+      tables: updatedTables,
+      shapes: shapes
+    };
+
+    localStorage.setItem('hallData', JSON.stringify(updatedHallData));
+    return updatedHallData;
+  });
+
+  // Убираем рассаженных участников из группы (только тех, кого рассадили)
+  const updatedGroups = groups.map(g => {
+    if (g.id === groupId) {
+      return {
+        ...g,
+        members: g.members.filter(member => !peopleToSeat.includes(member))
+      };
+    }
+    return g;
+  });
+
+  setGroups(updatedGroups);
+  localStorage.setItem('seatingGroups', JSON.stringify(updatedGroups));
+
+  // Закрываем все модальные окна
+  setShowSeatingModal(false);
+  setSelectedGroupForSeating(null);
+  setShowMemberSelectionModal(false);
+  setPendingSeating(null);
+  setSelectedMembers([]);
+};
 
   // Drag & Drop функции
   const handleDragStart = (e, group) => {
@@ -697,78 +761,132 @@ const SimpleSeatingApp = () => {
     setShowPersonModal(true);
   };
 
-  const savePerson = () => {
-    if (!personName.trim()) {
-      alert('Введите имя!');
-      return;
-    }
+ const savePerson = () => {
+  if (!personName.trim()) {
+    alert('Введите имя!');
+    return;
+  }
 
-    setHallData(prevData => {
-      const updatedTables = prevData.tables.map(t => {
-        if (t.id === selectedChair.tableId) {
-          const tablePeople = [...(t.people || [])];
-
-          tablePeople[selectedChair.chairIndex] = {
-            name: personName.trim(),
-            groupId: selectedGroup,
-            isMainGuest: true
-          };
-
-          return {
-            ...t,
-            people: tablePeople
-          };
-        }
-        return t;
-      });
-
-      const updatedHallData = {
-        ...prevData,
-        tables: updatedTables,
-        shapes: shapes
+  // Проверяем есть ли уже кто-то на этом стуле
+  const currentPersonOnChair = hallData.tables?.find(t => t.id === selectedChair.tableId)?.people?.[selectedChair.chairIndex];
+  
+  // ОДНОВРЕМЕННО обрабатываем и возврат старого человека И удаление нового
+  const updatedGroups = groups.map(group => {
+    let updatedGroup = { ...group };
+    
+    // 1. Возвращаем старого человека в группу (если это замена)
+    if (currentPersonOnChair && 
+        currentPersonOnChair.groupId === group.id && 
+        currentPersonOnChair.name !== personName.trim()) {
+      updatedGroup = {
+        ...updatedGroup,
+        members: [...updatedGroup.members, currentPersonOnChair.name]
       };
+    }
+    
+    // 2. Убираем нового человека из группы (если выбрали из группы)
+    if (selectedPersonFromGroup && selectedPersonFromGroup.groupId === group.id) {
+      updatedGroup = {
+        ...updatedGroup,
+        members: updatedGroup.members.filter(member => member !== selectedPersonFromGroup.name)
+      };
+    }
+    
+    return updatedGroup;
+  });
+  
+  // Применяем все изменения групп ОДНИМ вызовом
+  setGroups(updatedGroups);
+  localStorage.setItem('seatingGroups', JSON.stringify(updatedGroups));
 
-      localStorage.setItem('hallData', JSON.stringify(updatedHallData));
-      return updatedHallData;
+  // Сажаем нового человека за стол
+  setHallData(prevData => {
+    const updatedTables = prevData.tables.map(t => {
+      if (t.id === selectedChair.tableId) {
+        const tablePeople = [...(t.people || [])];
+
+        tablePeople[selectedChair.chairIndex] = {
+          name: personName.trim(),
+          groupId: selectedGroup,
+          isMainGuest: true
+        };
+
+        return {
+          ...t,
+          people: tablePeople
+        };
+      }
+      return t;
     });
 
-    resetPersonModal();
-  };
+    const updatedHallData = {
+      ...prevData,
+      tables: updatedTables,
+      shapes: shapes
+    };
+
+    localStorage.setItem('hallData', JSON.stringify(updatedHallData));
+    return updatedHallData;
+  });
+
+  resetPersonModal();
+};
 
   const removePerson = () => {
-    setHallData(prevData => {
-      const updatedTables = prevData.tables.map(t => {
-        if (t.id === selectedChair.tableId) {
-          const tablePeople = [...(t.people || [])];
-          tablePeople[selectedChair.chairIndex] = null;
+  // Находим текущего человека на стуле
+  const currentPerson = hallData.tables?.find(t => t.id === selectedChair.tableId)?.people?.[selectedChair.chairIndex];
+  
+  if (currentPerson && currentPerson.groupId) {
+    // Возвращаем человека обратно в его группу
+    const updatedGroups = groups.map(group => {
+      if (group.id === currentPerson.groupId) {
+        return {
+          ...group,
+          members: [...group.members, currentPerson.name] // Добавляем обратно в группу
+        };
+      }
+      return group;
+    });
+    
+    setGroups(updatedGroups);
+    localStorage.setItem('seatingGroups', JSON.stringify(updatedGroups));
+  }
 
-          return {
-            ...t,
-            people: tablePeople
-          };
-        }
-        return t;
-      });
+  // Убираем человека со стола
+  setHallData(prevData => {
+    const updatedTables = prevData.tables.map(t => {
+      if (t.id === selectedChair.tableId) {
+        const tablePeople = [...(t.people || [])];
+        tablePeople[selectedChair.chairIndex] = null;
 
-      const updatedHallData = {
-        ...prevData,
-        tables: updatedTables,
-        shapes: shapes
-      };
-
-      localStorage.setItem('hallData', JSON.stringify(updatedHallData));
-      return updatedHallData;
+        return {
+          ...t,
+          people: tablePeople
+        };
+      }
+      return t;
     });
 
-    resetPersonModal();
-  };
+    const updatedHallData = {
+      ...prevData,
+      tables: updatedTables,
+      shapes: shapes
+    };
+
+    localStorage.setItem('hallData', JSON.stringify(updatedHallData));
+    return updatedHallData;
+  });
+
+  resetPersonModal();
+};
 
   const resetPersonModal = () => {
-    setShowPersonModal(false);
-    setSelectedChair(null);
-    setPersonName('');
-    setSelectedGroup('');
-  };
+  setShowPersonModal(false);
+  setSelectedChair(null);
+  setPersonName('');
+  setSelectedGroup('');
+  setSelectedPersonFromGroup(null); // Сбрасываем выбранного человека
+};
 
   // Функции для работы с участниками групп при создании
   const addMemberToGroup = () => {
@@ -826,27 +944,27 @@ const SimpleSeatingApp = () => {
     }
 
     const colors = [
-  '#e74c3c', // Red
-  '#c0392b', // Dark Red
-  '#3498db', // Blue
-  '#2980b9', // Dark Blue
-  '#2ecc71', // Green
-  '#27ae60', // Dark Green
-  '#f39c12', // Orange
-  '#d35400', // Dark Orange
-  '#9b59b6', // Purple
-  '#8e44ad', // Dark Purple
-  '#1abc9c', // Turquoise
-  '#16a085', // Dark Turquoise
-  '#e67e22', // Carrot
-  '#f1c40f', // Yellow
-  '#f39c12', // Orange again
-  '#34495e', // Wet Asphalt
-  '#2c3e50', // Midnight Blue
-  '#ecf0f1', // Light Gray
-  '#bdc3c7', // Silver
-  '#95a5a6'  // Gray
-];
+      '#e74c3c', // Red
+      '#c0392b', // Dark Red
+      '#3498db', // Blue
+      '#2980b9', // Dark Blue
+      '#2ecc71', // Green
+      '#27ae60', // Dark Green
+      '#f39c12', // Orange
+      '#d35400', // Dark Orange
+      '#9b59b6', // Purple
+      '#8e44ad', // Dark Purple
+      '#1abc9c', // Turquoise
+      '#16a085', // Dark Turquoise
+      '#e67e22', // Carrot
+      '#f1c40f', // Yellow
+      '#f39c12', // Orange again
+      '#34495e', // Wet Asphalt
+      '#2c3e50', // Midnight Blue
+      '#ecf0f1', // Light Gray
+      '#bdc3c7', // Silver
+      '#95a5a6'  // Gray
+    ];
 
     const usedColors = groups.map(g => g.color);
     const availableColor = colors.find(color => !usedColors.includes(color)) || '#95a5a6';
@@ -1064,7 +1182,7 @@ const SimpleSeatingApp = () => {
   const handleWheel = (e) => {
     // ИСКЛЮЧАЕМ ОБЛАСТЬ СКРОЛЛА ИЗ PREVENTDEFAULT!
     const isInScrollArea = e.target.closest('.groups-scroll');
-    
+
     if (e.ctrlKey && !isInScrollArea) {
       e.preventDefault();
 
@@ -1083,7 +1201,7 @@ const SimpleSeatingApp = () => {
   const handleTouchStart = (e) => {
     // ИСКЛЮЧАЕМ ОБЛАСТИ СКРОЛЛА!
     const isInScrollArea = e.target.closest('.groups-scroll');
-    
+
     if (e.touches.length === 2 && !isInScrollArea) {
       e.preventDefault();
 
@@ -1123,7 +1241,7 @@ const SimpleSeatingApp = () => {
   const handleTouchMove = (e) => {
     // ИСКЛЮЧАЕМ ОБЛАСТИ СКРОЛЛА!
     const isInScrollArea = e.target.closest('.groups-scroll');
-    
+
     if (e.touches.length === 2 && touchDistanceRef.current && !isInScrollArea) {
       e.preventDefault();
 
@@ -1779,7 +1897,7 @@ const SimpleSeatingApp = () => {
         </div>
 
         {/* Зум контролы справа */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+        {/* <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
           <button id='zoomOutBtn'
             onClick={handleZoomOut}
             style={{
@@ -1822,381 +1940,380 @@ const SimpleSeatingApp = () => {
             }}
             aria-label="Увеличить"
           >+</button>
-        </div>
+        </div> */}
       </header>
-      
+
       {/* ПАНЕЛЬ ГРУПП ВЫНЕСЕНА ЗА ПРЕДЕЛЫ TRANSFORMWRAPPER */}
-     {window.innerWidth > 768 ? (
-  // ============ ДЕСКТОПНАЯ ВЕРСИЯ (как было) ============
-  <div style={{
-    backgroundColor: '#34495e',
-    padding: '10px 15px',
-    borderBottom: '2px solid #2c3e50',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '15px',
-    minHeight: '70px',
-    boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
-    transition: 'all 0.3s ease-in-out',
-    position: 'relative',
-    overflow: 'hidden',
-    zIndex: 50
-  }}>
-    {/* Add Group Button */}
-    <button
-      onClick={() => setShowAddGroupModal(true)}
-      style={{
-        backgroundColor: '#2ecc71',
-        color: 'white',
-        border: '2px solid white',
-        borderRadius: '20px',
-        padding: '10px 18px',
-        cursor: 'pointer',
-        fontSize: '13px',
-        fontWeight: 'bold',
-        whiteSpace: 'nowrap',
-        flexShrink: 0,
-        boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-        transition: 'all 0.2s',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px'
-      }}
-      onMouseEnter={(e) => {
-        e.target.style.transform = 'scale(1.05)';
-        e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.3)';
-      }}
-      onMouseLeave={(e) => {
-        e.target.style.transform = 'scale(1)';
-        e.target.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
-      }}
-    >
-      <span>+</span>
-      <span>Создать группу</span>
-    </button>
-
-    {/* Groups Toggle Button */}
-    <button
-      onClick={() => setIsGroupsExpanded(!isGroupsExpanded)}
-      style={{
-        backgroundColor: isGroupsExpanded ? 'rgba(255,255,255,0.1)' : 'transparent',
-        color: 'white',
-        border: '2px solid white',
-        borderRadius: '20px',
-        padding: '10px 18px',
-        cursor: 'pointer',
-        fontSize: '13px',
-        fontWeight: 'bold',
-        whiteSpace: 'nowrap',
-        flexShrink: 0,
-        transition: 'all 0.2s',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px'
-      }}
-      onMouseEnter={(e) => {
-        e.target.style.backgroundColor = 'rgba(255,255,255,0.2)';
-        e.target.style.transform = 'scale(1.02)';
-      }}
-      onMouseLeave={(e) => {
-        e.target.style.backgroundColor = isGroupsExpanded ? 'rgba(255,255,255,0.1)' : 'transparent';
-        e.target.style.transform = 'scale(1)';
-      }}
-    >
-      <span style={{
-        transition: 'transform 0.3s ease',
-        transform: isGroupsExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
-        fontSize: '12px'
-      }}>
-        ▶
-      </span>
-      <span>Группы</span>
-      <span style={{
-        backgroundColor: groups.length > 0 ? '#f39c12' : '#95a5a6',
-        color: 'white',
-        borderRadius: '12px',
-        padding: '2px 8px',
-        fontSize: '11px',
-        minWidth: '20px',
-        textAlign: 'center'
-      }}>
-        {groups.length}
-      </span>
-    </button>
-
-    {/* Expandable Groups List - ДЕСКТОПНАЯ ВЕРСИЯ */}
-    {isGroupsExpanded && (
-      <div style={{
-        flex: 1,
-        position: 'relative',
-        minWidth: 0,
-        maxWidth: '100%'
-      }}>
-        <div 
-          className="groups-scroll"
-          style={{
-            overflowX: 'auto',
-            overflowY: 'hidden',
-            paddingBottom: '8px',
-            paddingTop: '5px',
-            height: '80px',
-            scrollbarWidth: 'thin',
-            scrollbarColor: 'rgba(255,255,255,0.6) rgba(255,255,255,0.2)',
-            whiteSpace: 'nowrap'
-          }}
-        >
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '8px',
-            paddingRight: '20px',
-            width: 'max-content'
-          }}>
-            
-            {/* СЕКЦИЯ 1: ГОТОВЫЕ К РАССАДКЕ */}
-            <div style={{
+      {window.innerWidth > 768 ? (
+        // ============ ДЕСКТОПНАЯ ВЕРСИЯ (как было) ============
+        <div style={{
+          backgroundColor: '#34495e',
+          padding: '10px 15px',
+          borderBottom: '2px solid #2c3e50',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '15px',
+          minHeight: '70px',
+          boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
+          transition: 'all 0.3s ease-in-out',
+          position: 'relative',
+          overflow: 'hidden',
+          zIndex: 50
+        }}>
+          {/* Add Group Button */}
+          <button
+            onClick={() => setShowAddGroupModal(true)}
+            style={{
+              backgroundColor: '#2ecc71',
+              color: 'white',
+              border: '2px solid white',
+              borderRadius: '20px',
+              padding: '10px 18px',
+              cursor: 'pointer',
+              fontSize: '13px',
+              fontWeight: 'bold',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
+              boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+              transition: 'all 0.2s',
               display: 'flex',
               alignItems: 'center',
               gap: '8px'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.transform = 'scale(1.05)';
+              e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.3)';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.transform = 'scale(1)';
+              e.target.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
+            }}
+          >
+            <span>+</span>
+            <span>Создать группу</span>
+          </button>
+
+          {/* Groups Toggle Button */}
+          <button
+            onClick={() => setIsGroupsExpanded(!isGroupsExpanded)}
+            style={{
+              backgroundColor: isGroupsExpanded ? 'rgba(255,255,255,0.1)' : 'transparent',
+              color: 'white',
+              border: '2px solid white',
+              borderRadius: '20px',
+              padding: '10px 18px',
+              cursor: 'pointer',
+              fontSize: '13px',
+              fontWeight: 'bold',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
+              transition: 'all 0.2s',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.backgroundColor = 'rgba(255,255,255,0.2)';
+              e.target.style.transform = 'scale(1.02)';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.backgroundColor = isGroupsExpanded ? 'rgba(255,255,255,0.1)' : 'transparent';
+              e.target.style.transform = 'scale(1)';
+            }}
+          >
+            <span style={{
+              transition: 'transform 0.3s ease',
+              transform: isGroupsExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
+              fontSize: '12px'
             }}>
-              <div style={{
-                fontSize: '10px',
-                color: '#bdc3c7',
-                fontWeight: 'bold',
-                whiteSpace: 'nowrap',
-                minWidth: '80px'
-              }}>
-                📋 К рассадке:
-              </div>
-              
-              <div style={{
-                display: 'flex',
-                gap: '8px',
-                alignItems: 'center'
-              }}>
-                {groups.filter(group => group.members.length > 0).length > 0 ? (
-                  groups.filter(group => group.members.length > 0).map((group) => (
-                    <div
-                      key={group.id}
-                      draggable={true}
-                      onDragStart={(e) => handleDragStart(e, group)}
-                      onDragEnd={handleDragEnd}
-                      onClick={(e) => handleGroupClick(e, group)}
-                      style={{
-                        backgroundColor: group.color,
-                        color: 'white',
-                        padding: '6px 12px',
-                        borderRadius: '15px',
-                        border: '1px solid rgba(255,255,255,0.3)',
-                        cursor: 'grab',
-                        whiteSpace: 'nowrap',
-                        fontSize: '11px',
-                        fontWeight: 'bold',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                        transition: 'all 0.2s',
-                        minWidth: '100px',
-                        textAlign: 'center',
-                        position: 'relative',
-                        flexShrink: 0,
-                        userSelect: 'none',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.target.style.transform = 'scale(1.05)';
-                        e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.3)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.target.style.transform = 'scale(1)';
-                        e.target.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
-                      }}
-                    >
-                      <span style={{ fontSize: '10px' }}>👥</span>
-                      <span>{group.name}</span>
-                      <span style={{
-                        backgroundColor: 'rgba(255,255,255,0.2)',
-                        borderRadius: '8px',
-                        padding: '1px 4px',
-                        fontSize: '9px'
-                      }}>
-                        {group.members.length}
-                      </span>
+              ▶
+            </span>
+            <span>Группы</span>
+            <span style={{
+              backgroundColor: groups.length > 0 ? '#f39c12' : '#95a5a6',
+              color: 'white',
+              borderRadius: '12px',
+              padding: '2px 8px',
+              fontSize: '11px',
+              minWidth: '20px',
+              textAlign: 'center'
+            }}>
+              {groups.length}
+            </span>
+          </button>
+
+          {/* Expandable Groups List - ДЕСКТОПНАЯ ВЕРСИЯ */}
+          {isGroupsExpanded && (
+            <div style={{
+              flex: 1,
+              position: 'relative',
+              minWidth: 0,
+              maxWidth: '100%'
+            }}>
+              <div
+                className="groups-scroll"
+                style={{
+                  overflowX: 'auto',
+                  overflowY: 'hidden',
+                  paddingBottom: '8px',
+                  paddingTop: '5px',
+                  height: '80px',
+                  scrollbarWidth: 'thin',
+                  scrollbarColor: 'rgba(255,255,255,0.6) rgba(255,255,255,0.2)',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px',
+                  paddingRight: '20px',
+                  width: 'max-content'
+                }}>
+
+                  {/* СЕКЦИЯ 1: ГОТОВЫЕ К РАССАДКЕ */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}>
+                    <div style={{
+                      fontSize: '10px',
+                      color: '#bdc3c7',
+                      fontWeight: 'bold',
+                      whiteSpace: 'nowrap',
+                      minWidth: '80px'
+                    }}>
+                      📋 К рассадке:
                     </div>
-                  ))
-                ) : (
-                  <div style={{
-                    color: '#95a5a6',
-                    fontStyle: 'italic',
-                    fontSize: '10px',
-                    padding: '6px 12px',
-                    backgroundColor: 'rgba(255,255,255,0.05)',
-                    borderRadius: '12px',
-                    border: '1px dashed rgba(255,255,255,0.2)',
-                    flexShrink: 0
-                  }}>
-                    Все группы рассажены
+
+                    <div style={{
+                      display: 'flex',
+                      gap: '8px',
+                      alignItems: 'center'
+                    }}>
+                      {groups.filter(group => group.members.length > 0).length > 0 ? (
+                        groups.filter(group => group.members.length > 0).map((group) => (
+                          <div
+                            key={group.id}
+                            draggable={true}
+                            onDragStart={(e) => handleDragStart(e, group)}
+                            onDragEnd={handleDragEnd}
+                            onClick={(e) => handleGroupClick(e, group)}
+                            style={{
+                              backgroundColor: group.color,
+                              color: 'white',
+                              padding: '6px 12px',
+                              borderRadius: '15px',
+                              border: '1px solid rgba(255,255,255,0.3)',
+                              cursor: 'grab',
+                              whiteSpace: 'nowrap',
+                              fontSize: '11px',
+                              fontWeight: 'bold',
+                              boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                              transition: 'all 0.2s',
+                              minWidth: '100px',
+                              textAlign: 'center',
+                              position: 'relative',
+                              flexShrink: 0,
+                              userSelect: 'none',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.target.style.transform = 'scale(1.05)';
+                              e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.3)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.target.style.transform = 'scale(1)';
+                              e.target.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
+                            }}
+                          >
+                            <span style={{ fontSize: '10px' }}>👥</span>
+                            <span>{group.name}</span>
+                            <span style={{
+                              backgroundColor: 'rgba(255,255,255,0.2)',
+                              borderRadius: '8px',
+                              padding: '1px 4px',
+                              fontSize: '9px'
+                            }}>
+                              {group.members.length}
+                            </span>
+                          </div>
+                        ))
+                      ) : (
+                        <div style={{
+                          color: '#95a5a6',
+                          fontStyle: 'italic',
+                          fontSize: '10px',
+                          padding: '6px 12px',
+                          backgroundColor: 'rgba(255,255,255,0.05)',
+                          borderRadius: '12px',
+                          border: '1px dashed rgba(255,255,255,0.2)',
+                          flexShrink: 0
+                        }}>
+                          Все группы рассажены
+                        </div>
+                      )}
+                    </div>
                   </div>
-                )}
+
+                  {/* СЕКЦИЯ 2: РАССАЖЕННЫЕ ГРУППЫ */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}>
+                    <div style={{
+                      fontSize: '10px',
+                      color: '#95a5a6',
+                      fontWeight: 'bold',
+                      whiteSpace: 'nowrap',
+                      minWidth: '80px'
+                    }}>
+                      ✅ Рассажены:
+                    </div>
+
+                    <div style={{
+                      display: 'flex',
+                      gap: '8px',
+                      alignItems: 'center'
+                    }}>
+                      {groups.filter(group => group.members.length === 0).length > 0 ? (
+                        groups.filter(group => group.members.length === 0).map((group) => {
+                          const tableWithGroup = hallData?.tables?.find(table =>
+                            table.people?.some(person => person?.groupId === group.id)
+                          );
+
+                          return (
+                            <div
+                              key={group.id}
+                              onClick={(e) => handleGroupClick(e, group)}
+                              style={{
+                                backgroundColor: group.color,
+                                color: 'white',
+                                padding: '6px 12px',
+                                borderRadius: '15px',
+                                border: '1px solid rgba(255,255,255,0.3)',
+                                cursor: 'pointer',
+                                whiteSpace: 'nowrap',
+                                fontSize: '11px',
+                                fontWeight: 'bold',
+                                boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                                transition: 'all 0.2s',
+                                minWidth: '100px',
+                                textAlign: 'center',
+                                position: 'relative',
+                                flexShrink: 0,
+                                userSelect: 'none',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                opacity: 0.8
+                              }}
+                              onMouseEnter={(e) => {
+                                e.target.style.transform = 'scale(1.05)';
+                                e.target.style.opacity = '1';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.target.style.transform = 'scale(1)';
+                                e.target.style.opacity = '0.8';
+                              }}
+                            >
+                              <span style={{ fontSize: '10px' }}>🎯</span>
+                              <span>{group.name}</span>
+                              {tableWithGroup && (
+                                <span style={{
+                                  backgroundColor: 'rgba(255,255,255,0.2)',
+                                  borderRadius: '8px',
+                                  padding: '1px 4px',
+                                  fontSize: '8px'
+                                }}>
+                                  {tableWithGroup.name || `Стол ${tableWithGroup.id}`}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <div style={{
+                          color: '#95a5a6',
+                          fontStyle: 'italic',
+                          fontSize: '10px',
+                          padding: '6px 12px',
+                          backgroundColor: 'rgba(255,255,255,0.05)',
+                          borderRadius: '12px',
+                          border: '1px dashed rgba(255,255,255,0.2)',
+                          flexShrink: 0
+                        }}>
+                          Нет рассаженных групп
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
+          )}
 
-            {/* СЕКЦИЯ 2: РАССАЖЕННЫЕ ГРУППЫ */}
+          {/* Compact info when collapsed */}
+          {!isGroupsExpanded && groups.length > 0 && (
             <div style={{
+              color: '#bdc3c7',
+              fontSize: '11px',
+              opacity: 0.8,
               display: 'flex',
               alignItems: 'center',
               gap: '8px'
             }}>
-              <div style={{
-                fontSize: '10px',
-                color: '#95a5a6',
-                fontWeight: 'bold',
-                whiteSpace: 'nowrap',
-                minWidth: '80px'
-              }}>
-                ✅ Рассажены:
-              </div>
-              
-              <div style={{
-                display: 'flex',
-                gap: '8px',
-                alignItems: 'center'
-              }}>
-                {groups.filter(group => group.members.length === 0).length > 0 ? (
-                  groups.filter(group => group.members.length === 0).map((group) => {
-                    const tableWithGroup = hallData?.tables?.find(table => 
-                      table.people?.some(person => person?.groupId === group.id)
-                    );
-
-                    return (
-                      <div
-                        key={group.id}
-                        onClick={(e) => handleGroupClick(e, group)}
-                        style={{
-                          backgroundColor: group.color,
-                          color: 'white',
-                          padding: '6px 12px',
-                          borderRadius: '15px',
-                          border: '1px solid rgba(255,255,255,0.3)',
-                          cursor: 'pointer',
-                          whiteSpace: 'nowrap',
-                          fontSize: '11px',
-                          fontWeight: 'bold',
-                          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                          transition: 'all 0.2s',
-                          minWidth: '100px',
-                          textAlign: 'center',
-                          position: 'relative',
-                          flexShrink: 0,
-                          userSelect: 'none',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          opacity: 0.8
-                        }}
-                        onMouseEnter={(e) => {
-                          e.target.style.transform = 'scale(1.05)';
-                          e.target.style.opacity = '1';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.target.style.transform = 'scale(1)';
-                          e.target.style.opacity = '0.8';
-                        }}
-                      >
-                        <span style={{ fontSize: '10px' }}>🎯</span>
-                        <span>{group.name}</span>
-                        {tableWithGroup && (
-                          <span style={{
-                            backgroundColor: 'rgba(255,255,255,0.2)',
-                            borderRadius: '8px',
-                            padding: '1px 4px',
-                            fontSize: '8px'
-                          }}>
-                            {tableWithGroup.name || `Стол ${tableWithGroup.id}`}
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })
-                ) : (
-                  <div style={{
-                    color: '#95a5a6',
-                    fontStyle: 'italic',
-                    fontSize: '10px',
-                    padding: '6px 12px',
-                    backgroundColor: 'rgba(255,255,255,0.05)',
-                    borderRadius: '12px',
-                    border: '1px dashed rgba(255,255,255,0.2)',
-                    flexShrink: 0
-                  }}>
-                    Нет рассаженных групп
-                  </div>
-                )}
-              </div>
+              <span>📊</span>
+              <span>
+                {groups.filter(g => g.members.length > 0).length > 0
+                  ? `${groups.filter(g => g.members.length > 0).length} готовы к рассадке`
+                  : 'Все группы рассажены'
+                }
+              </span>
+              {groups.filter(g => g.members.length > 0).length > 0 && (
+                <>
+                  <span>•</span>
+                  <span>🖱️ перетащите на стол</span>
+                </>
+              )}
             </div>
-          </div>
+          )}
+
+          {/* Scroll hint when expanded */}
+          {isGroupsExpanded && groups.length > 3 && (
+            <div style={{
+              color: '#bdc3c7',
+              fontSize: '10px',
+              opacity: 0.6,
+              flexShrink: 0,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}>
+              <span>⬅️➡️</span>
+            </div>
+          )}
         </div>
-      </div>
-    )}
-
-    {/* Compact info when collapsed */}
-    {!isGroupsExpanded && groups.length > 0 && (
-      <div style={{
-        color: '#bdc3c7',
-        fontSize: '11px',
-        opacity: 0.8,
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px'
-      }}>
-        <span>📊</span>
-        <span>
-          {groups.filter(g => g.members.length > 0).length > 0 
-            ? `${groups.filter(g => g.members.length > 0).length} готовы к рассадке`
-            : 'Все группы рассажены'
-          }
-        </span>
-        {groups.filter(g => g.members.length > 0).length > 0 && (
-          <>
-            <span>•</span>
-            <span>🖱️ перетащите на стол</span>
-          </>
-        )}
-      </div>
-    )}
-
-    {/* Scroll hint when expanded */}
-    {isGroupsExpanded && groups.length > 3 && (
-      <div style={{
-        color: '#bdc3c7',
-        fontSize: '10px',
-        opacity: 0.6,
-        flexShrink: 0,
-        display: 'flex',
-        alignItems: 'center',
-        gap: '4px'
-      }}>
-        <span>⬅️➡️</span>
-      </div>
-    )}
-  </div>
-) : (
-  // ============ МОБИЛЬНАЯ ВЕРСИЯ ============
-  <div style={{
+      ) : (
+        // ============ МОБИЛЬНАЯ ВЕРСИЯ ============
+        <div style={{
     backgroundColor: '#34495e',
-    padding: '15px',
+    padding: '12px 15px',
     borderBottom: '2px solid #2c3e50',
     boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
     position: 'relative',
     overflow: 'hidden',
     zIndex: 50
   }}>
-    {/* Мобильный хедер */}
+    {/* Компактный хедер */}
     <div style={{
       display: 'flex',
       alignItems: 'center',
-      justifyContent: 'space-between',
-      marginBottom: '15px'
+      justifyContent: 'space-between'
     }}>
       <button
         onClick={() => setShowAddGroupModal(true)}
@@ -2204,194 +2321,466 @@ const SimpleSeatingApp = () => {
           backgroundColor: '#2ecc71',
           color: 'white',
           border: 'none',
-          borderRadius: '25px',
-          padding: '12px 20px',
+          borderRadius: '20px',
+          padding: '10px 16px',
           cursor: 'pointer',
-          fontSize: '14px',
+          fontSize: '13px',
           fontWeight: 'bold',
-          boxShadow: '0 3px 8px rgba(0,0,0,0.3)',
+          boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
           display: 'flex',
           alignItems: 'center',
-          gap: '8px'
+          gap: '6px'
         }}
       >
-        <span style={{ fontSize: '16px' }}>+</span>
-        <span>Создать группу</span>
+        <span style={{ fontSize: '14px' }}>+</span>
+        <span>Группа</span>
       </button>
 
-      <div style={{
-        color: '#bdc3c7',
-        fontSize: '12px',
-        textAlign: 'right'
-      }}>
-        <div>📋 {groups.filter(g => g.members.length > 0).length} готовы</div>
-        <div>✅ {groups.filter(g => g.members.length === 0).length} рассажены</div>
-      </div>
+       <button
+        onClick={() => setIsMobileGroupsExpanded(!isMobileGroupsExpanded)}
+        style={{
+          backgroundColor: isMobileGroupsExpanded ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.05)',
+          color: 'white',
+          border: '2px solid rgba(255,255,255,0.3)',
+          borderRadius: '18px',
+          padding: '8px 12px',
+          cursor: 'pointer',
+          fontSize: '12px',
+          fontWeight: 'bold',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          transition: 'all 0.3s ease'
+        }}
+      >
+        <span style={{
+          transition: 'transform 0.3s ease',
+          transform: isMobileGroupsExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
+          fontSize: '10px'
+        }}>
+          ▶
+        </span>
+        <span>Группы ({groups.length})</span>
+        <div style={{
+          display: 'flex',
+          gap: '3px',
+          fontSize: '9px'
+        }}>
+          {groups.filter(g => getGroupStatus(g).isReadyToSeat).length > 0 && (
+            <span style={{
+              backgroundColor: '#f39c12',
+              color: 'white',
+              borderRadius: '6px',
+              padding: '1px 3px'
+            }}>
+              {groups.filter(g => getGroupStatus(g).isReadyToSeat).length}
+            </span>
+          )}
+          {groups.filter(g => getGroupStatus(g).isFullySeated).length > 0 && (
+            <span style={{
+              backgroundColor: '#2ecc71',
+              color: 'white',
+              borderRadius: '6px',
+              padding: '1px 3px'
+            }}>
+              ✓{groups.filter(g => getGroupStatus(g).isFullySeated).length}
+            </span>
+          )}
+        </div>
+      </button>
     </div>
 
-    {/* Мобильная карусель групп */}
-    <div 
-      className="mobile-groups-carousel"
-      style={{
-        overflowX: 'auto',
-        overflowY: 'hidden',
-        display: 'flex',
-        gap: '15px',
-        padding: '5px 0 15px 0',
-        scrollSnapType: 'x mandatory',
-        WebkitOverflowScrolling: 'touch',
-        scrollbarWidth: 'none',
-        msOverflowStyle: 'none'
-      }}
-    >
-      {groups.length > 0 ? (
-        groups.map((group) => {
-          const isSeated = group.members.length === 0;
-          const tableWithGroup = isSeated ? hallData?.tables?.find(table => 
-            table.people?.some(person => person?.groupId === group.id)
-          ) : null;
-
-          return (
-            <div
-              key={group.id}
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                handleGroupClick(e, group);
-              }}
-              onTouchStart={(e) => {
-                e.currentTarget.style.transform = 'scale(0.95)';
-              }}
-              onTouchEnd={(e) => {
-                e.currentTarget.style.transform = 'scale(1)';
-              }}
+    {/* Расширенная секция групп */}
+    {isMobileGroupsExpanded && (
+      <div style={{
+        marginTop: '12px',
+        animation: 'slideDown 0.3s ease-out'
+      }}>
+        {/* ГОТОВЫЕ К РАССАДКЕ */}
+        {groups.filter(g => getGroupStatus(g).isReadyToSeat).length > 0 && (
+          <div style={{ marginBottom: '12px' }}>
+            <div style={{
+              color: '#f39c12',
+              fontSize: '12px',
+              fontWeight: 'bold',
+              marginBottom: '6px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}>
+              <span>📋</span>
+              <span>Готовы к рассадке ({groups.filter(g => getGroupStatus(g).isReadyToSeat).length})</span>
+            </div>
+            <div 
+              className="mobile-groups-carousel"
               style={{
-                backgroundColor: group.color,
-                color: 'white',
-                padding: '20px 16px',
-                borderRadius: '20px',
-                minWidth: '160px',
-                maxWidth: '200px',
-                scrollSnapAlign: 'start',
-                flexShrink: 0,
-                cursor: 'pointer',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-                transition: 'all 0.2s ease',
-                position: 'relative',
-                textAlign: 'center',
-                opacity: isSeated ? 0.85 : 1,
-                border: '2px solid rgba(255,255,255,0.2)'
+                overflowX: 'auto',
+                overflowY: 'hidden',
+                display: 'flex',
+                gap: '8px',
+                padding: '5px 0 8px 0',
+                scrollSnapType: 'x mandatory',
+                WebkitOverflowScrolling: 'touch',
+                scrollbarWidth: 'none',
+                msOverflowStyle: 'none'
               }}
             >
-              {/* Статус иконка */}
-              <div style={{
-                fontSize: '24px',
-                marginBottom: '8px'
-              }}>
-                {isSeated ? '✅' : '📋'}
-              </div>
-
-              {/* Название группы */}
-              <div style={{
-                fontSize: '16px',
-                fontWeight: 'bold',
-                marginBottom: '8px',
-                lineHeight: 1.2,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis'
-              }}>
-                {group.name}
-              </div>
-
-              {/* Информация */}
-              <div style={{
-                fontSize: '12px',
-                opacity: 0.9,
-                marginBottom: '8px'
-              }}>
-                {isSeated ? (
-                  tableWithGroup ? (
-                    <>Рассажены за<br/>{tableWithGroup.name || `Стол ${tableWithGroup.id}`}</>
-                  ) : (
-                    'Рассажены'
-                  )
-                ) : (
-                  `${group.members.length} человек готовы`
-                )}
-              </div>
-
-              {/* Действие */}
-              <div style={{
-                backgroundColor: 'rgba(255,255,255,0.2)',
-                borderRadius: '15px',
-                padding: '6px 12px',
-                fontSize: '11px',
-                fontWeight: 'bold'
-              }}>
-                {isSeated ? '👁️ Подробнее' : '🎯 Рассадить'}
-              </div>
-
-              {/* Индикатор long press для неразмещенных */}
-              {!isSeated && (
-                <div style={{
-                  position: 'absolute',
-                  top: '10px',
-                  right: '10px',
-                  width: '8px',
-                  height: '8px',
-                  backgroundColor: 'rgba(255,255,255,0.6)',
-                  borderRadius: '50%',
-                  animation: 'pulse 2s infinite'
-                }}>
-                </div>
-              )}
+              {groups.filter(g => getGroupStatus(g).isReadyToSeat).map((group) => {
+                const status = getGroupStatus(group);
+                
+                return (
+                  <div
+                    key={group.id}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleGroupClick(e, group);
+                    }}
+                    onTouchStart={(e) => {
+                      e.currentTarget.style.transform = 'scale(0.95)';
+                    }}
+                    onTouchEnd={(e) => {
+                      e.currentTarget.style.transform = 'scale(1)';
+                    }}
+                    style={{
+                      backgroundColor: group.color,
+                      color: 'white',
+                      padding: '8px 10px',
+                      borderRadius: '12px',
+                      minWidth: '100px',
+                      maxWidth: '130px',
+                      scrollSnapAlign: 'start',
+                      flexShrink: 0,
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                      transition: 'all 0.2s ease',
+                      position: 'relative',
+                      textAlign: 'center',
+                      border: status.isPartiallySeated ? '2px solid #f39c12' : '1px solid rgba(255,255,255,0.3)'
+                    }}
+                  >
+                    <div style={{
+                      fontSize: '16px',
+                      marginBottom: '4px'
+                    }}>
+                      {status.isPartiallySeated ? '⚠️' : '👥'}
+                    </div>
+                    <div style={{
+                      fontSize: '12px',
+                      fontWeight: 'bold',
+                      marginBottom: '4px',
+                      lineHeight: 1.1,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      {group.name}
+                    </div>
+                    <div style={{
+  fontSize: '10px',
+  opacity: 0.85,
+  marginBottom: '4px',
+  lineHeight: 1.1
+}}>
+  {status.isPartiallySeated 
+    ? `${status.availableMembers} из ${status.totalMembers}` 
+    : `${status.availableMembers} чел.`
+  }
+</div>
+{status.isPartiallySeated && (
+  <div style={{
+    fontSize: '8px',
+    opacity: 0.7,
+    marginBottom: '4px'
+  }}>
+    {status.seatedMembers} за {status.seatedAtTable}
+  </div>
+)}
+                    <div style={{
+                      backgroundColor: 'rgba(255,255,255,0.25)',
+                      borderRadius: '8px',
+                      padding: '2px 6px',
+                      fontSize: '9px',
+                      fontWeight: 'bold'
+                    }}>
+                      🎯 Рассадить
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          );
-        })
-      ) : (
-        <div style={{
-          color: '#95a5a6',
-          fontStyle: 'italic',
-          fontSize: '14px',
-          padding: '30px 20px',
-          backgroundColor: 'rgba(255,255,255,0.05)',
-          borderRadius: '20px',
-          border: '2px dashed rgba(255,255,255,0.2)',
-          flexShrink: 0,
-          textAlign: 'center',
-          minWidth: '200px'
-        }}>
-          <div style={{ fontSize: '32px', marginBottom: '10px' }}>📝</div>
-          <div>Создайте первую группу</div>
-        </div>
-      )}
-    </div>
+          </div>
+        )}
 
-    {/* Мобильная подсказка */}
-    {groups.filter(g => g.members.length > 0).length > 0 && (
-      <div style={{
-        backgroundColor: 'rgba(52, 152, 219, 0.1)',
-        border: '1px solid rgba(52, 152, 219, 0.3)',
-        borderRadius: '12px',
-        padding: '10px 15px',
-        fontSize: '12px',
-        color: '#74b9ff',
-        textAlign: 'center'
-      }}>
-        💡 Нажмите на группу чтобы выбрать стол для рассадки
+        {/* ПОЛНОСТЬЮ РАССАЖЕННЫЕ */}
+        {groups.filter(g => getGroupStatus(g).isFullySeated).length > 0 && (
+          <div>
+            <div style={{
+              color: '#2ecc71',
+              fontSize: '12px',
+              fontWeight: 'bold',
+              marginBottom: '6px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}>
+              <span>✅</span>
+              <span>Полностью рассаженные ({groups.filter(g => getGroupStatus(g).isFullySeated).length})</span>
+            </div>
+            <div 
+              className="mobile-groups-carousel"
+              style={{
+                overflowX: 'auto',
+                overflowY: 'hidden',
+                display: 'flex',
+                gap: '8px',
+                padding: '5px 0 8px 0',
+                scrollSnapType: 'x mandatory',
+                WebkitOverflowScrolling: 'touch',
+                scrollbarWidth: 'none',
+                msOverflowStyle: 'none'
+              }}
+            >
+              {groups.filter(g => getGroupStatus(g).isFullySeated).map((group) => {
+                const status = getGroupStatus(group);
+                const tableWithGroup = hallData?.tables?.find(table => 
+                  table.people?.some(person => person?.groupId === group.id)
+                );
+
+                return (
+                  <div
+                    key={group.id}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleGroupClick(e, group);
+                    }}
+                    onTouchStart={(e) => {
+                      e.currentTarget.style.transform = 'scale(0.95)';
+                    }}
+                    onTouchEnd={(e) => {
+                      e.currentTarget.style.transform = 'scale(1)';
+                    }}
+                    style={{
+                      backgroundColor: group.color,
+                      color: 'white',
+                      padding: '8px 10px',
+                      borderRadius: '12px',
+                      minWidth: '100px',
+                      maxWidth: '130px',
+                      scrollSnapAlign: 'start',
+                      flexShrink: 0,
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                      transition: 'all 0.2s ease',
+                      position: 'relative',
+                      textAlign: 'center',
+                      opacity: 0.85,
+                      border: '1px solid rgba(255,255,255,0.3)'
+                    }}
+                  >
+                    <div style={{
+                      fontSize: '16px',
+                      marginBottom: '4px'
+                    }}>
+                      🎯
+                    </div>
+                    <div style={{
+                      fontSize: '12px',
+                      fontWeight: 'bold',
+                      marginBottom: '4px',
+                      lineHeight: 1.1,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      {group.name}
+                    </div>
+                    <div style={{
+                      fontSize: '9px',
+                      opacity: 0.9,
+                      marginBottom: '4px',
+                      lineHeight: 1.1
+                    }}>
+                      {status.seatedMembers} чел. рассажены
+                    </div>
+                    <div style={{
+                      backgroundColor: 'rgba(255,255,255,0.25)',
+                      borderRadius: '8px',
+                      padding: '2px 6px',
+                      fontSize: '9px',
+                      fontWeight: 'bold'
+                    }}>
+                      👁️ Подробнее
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* РАССАЖЕННЫЕ */}
+        {groups.filter(g => g.members.length === 0).length > 0 && (
+          <div>
+            <div style={{
+              color: '#2ecc71',
+              fontSize: '12px',
+              fontWeight: 'bold',
+              marginBottom: '6px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}>
+              <span>✅</span>
+              <span>Рассаженные ({groups.filter(g => g.members.length === 0).length})</span>
+            </div>
+            <div 
+              className="mobile-groups-carousel"
+              style={{
+                overflowX: 'auto',
+                overflowY: 'hidden',
+                display: 'flex',
+                gap: '8px',
+                padding: '5px 0 8px 0',
+                scrollSnapType: 'x mandatory',
+                WebkitOverflowScrolling: 'touch',
+                scrollbarWidth: 'none',
+                msOverflowStyle: 'none'
+              }}
+            >
+              {groups.filter(g => g.members.length === 0).map((group) => {
+                const tableWithGroup = hallData?.tables?.find(table => 
+                  table.people?.some(person => person?.groupId === group.id)
+                );
+
+                return (
+                  <div
+                    key={group.id}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleGroupClick(e, group);
+                    }}
+                    onTouchStart={(e) => {
+                      e.currentTarget.style.transform = 'scale(0.95)';
+                    }}
+                    onTouchEnd={(e) => {
+                      e.currentTarget.style.transform = 'scale(1)';
+                    }}
+                    style={{
+                      backgroundColor: group.color,
+                      color: 'white',
+                      padding: '8px 10px',
+                      borderRadius: '12px',
+                      minWidth: '100px',
+                      maxWidth: '130px',
+                      scrollSnapAlign: 'start',
+                      flexShrink: 0,
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                      transition: 'all 0.2s ease',
+                      position: 'relative',
+                      textAlign: 'center',
+                      opacity: 0.85,
+                      border: '1px solid rgba(255,255,255,0.3)'
+                    }}
+                  >
+                    <div style={{
+                      fontSize: '16px',
+                      marginBottom: '4px'
+                    }}>
+                      🎯
+                    </div>
+                    <div style={{
+                      fontSize: '12px',
+                      fontWeight: 'bold',
+                      marginBottom: '4px',
+                      lineHeight: 1.1,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      {group.name}
+                    </div>
+                    <div style={{
+                      fontSize: '9px',
+                      opacity: 0.9,
+                      marginBottom: '4px',
+                      lineHeight: 1.1
+                    }}>
+                      {tableWithGroup ? 
+                        (tableWithGroup.name || `Стол ${tableWithGroup.id}`).length > 12 ?
+                          (tableWithGroup.name || `Стол ${tableWithGroup.id}`).substring(0, 12) + '...' :
+                          (tableWithGroup.name || `Стол ${tableWithGroup.id}`)
+                        : 'Рассажены'
+                      }
+                    </div>
+                    <div style={{
+                      backgroundColor: 'rgba(255,255,255,0.25)',
+                      borderRadius: '8px',
+                      padding: '2px 6px',
+                      fontSize: '9px',
+                      fontWeight: 'bold'
+                    }}>
+                      👁️ Подробнее
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Если нет групп */}
+        {groups.length === 0 && (
+          <div style={{
+            color: '#95a5a6',
+            fontStyle: 'italic',
+            fontSize: '13px',
+            padding: '15px',
+            backgroundColor: 'rgba(255,255,255,0.05)',
+            borderRadius: '12px',
+            border: '1px dashed rgba(255,255,255,0.2)',
+            textAlign: 'center'
+          }}>
+            <div style={{ fontSize: '24px', marginBottom: '8px' }}>📝</div>
+            <div>Создайте первую группу</div>
+          </div>
+        )}
+
+        {/* Подсказка для мобильных */}
+        {groups.filter(g => g.members.length > 0).length > 0 && (
+          <div style={{
+            backgroundColor: 'rgba(52, 152, 219, 0.1)',
+            border: '1px solid rgba(52, 152, 219, 0.3)',
+            borderRadius: '10px',
+            padding: '6px 10px',
+            fontSize: '10px',
+            color: '#74b9ff',
+            textAlign: 'center',
+            marginTop: '8px'
+          }}>
+            💡 Нажмите на группу чтобы выбрать стол
+          </div>
+        )}
       </div>
     )}
   </div>
 )}
 
       {/* Main content area - ТЕПЕРЬ БЕЗ ПАНЕЛИ ГРУПП */}
-      <div className="main-content" style={{
-        flex: 1,
-        width: '100%',
-        height: 'calc(100vh - 190px)', // Увеличили отступ для панели групп
-        overflow: 'hidden',
-        position: 'relative'
-      }}>
+     <div className="main-content" style={{
+  flex: 1,
+  width: '100%',
+  height: window.innerWidth > 768 
+    ? 'calc(100vh - 190px)' // Десктоп
+    : isMobileGroupsExpanded 
+      ? 'calc(100vh - 200px)' // Мобильный с открытой панелью (уменьшили еще больше)
+      : 'calc(100vh - 110px)', // Мобильный с закрытой панелью (уменьшили еще больше)
+  overflow: 'hidden',
+  position: 'relative'
+}}>
         <div className="zoom-container">
           <TransformWrapper
             initialScale={1}
@@ -2686,6 +3075,18 @@ const SimpleSeatingApp = () => {
   -ms-overflow-style: none !important;
 }
 
+@keyframes slideDown {
+  0% { 
+    opacity: 0;
+    transform: translateY(-10px);
+    max-height: 0;
+  }
+  100% { 
+    opacity: 1;
+    transform: translateY(0);
+    max-height: 200px;
+  }
+}
 .mobile-groups-carousel::-webkit-scrollbar {
   display: none !important;
 }
@@ -2973,182 +3374,321 @@ const SimpleSeatingApp = () => {
 
       {/* Person Modal */}
       {showPersonModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
-          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+  <div style={{
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1000,
+    padding: '20px',
+    boxSizing: 'border-box'
+  }}>
+    <div style={{
+      backgroundColor: 'white',
+      borderRadius: '12px',
+      padding: '25px',
+      width: '100%',
+      maxWidth: '500px',
+      maxHeight: '90vh',
+      overflowY: 'auto',
+      position: 'relative',
+      boxShadow: '0 10px 25px rgba(0, 0, 0, 0.3)'
+    }}>
+      <button
+        onClick={resetPersonModal}
+        style={{
+          position: 'absolute',
+          top: '15px',
+          right: '15px',
+          background: 'none',
+          border: 'none',
+          fontSize: '24px',
+          fontWeight: 'bold',
+          cursor: 'pointer',
+          color: '#777',
+          width: '30px',
+          height: '30px',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-          padding: '20px',
-          boxSizing: 'border-box'
-        }}>
-          <div style={{
-            backgroundColor: 'white',
-            borderRadius: '12px',
-            padding: '25px',
-            width: '100%',
-            maxWidth: '400px',
-            maxHeight: '90vh',
-            overflowY: 'auto',
-            position: 'relative',
-            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.3)'
+          justifyContent: 'center'
+        }}
+      >
+        ×
+      </button>
+
+      <h2 style={{
+        textAlign: 'center',
+        margin: '0 0 25px 0',
+        fontSize: '24px',
+        color: '#333'
+      }}>
+        {selectedChair ? `Стол ${selectedChair.tableId} • Место ${selectedChair.chairIndex + 1}` : 'Рассадка'}
+      </h2>
+
+      {/* Выбор существующего человека из групп */}
+      {groups.some(group => group.members.length > 0) && (
+        <div style={{ marginBottom: '25px' }}>
+          <h3 style={{
+            margin: '0 0 15px 0',
+            fontSize: '18px',
+            color: '#333',
+            borderBottom: '2px solid #eee',
+            paddingBottom: '10px'
           }}>
-            <button
-              onClick={resetPersonModal}
-              style={{
-                position: 'absolute',
-                top: '15px',
-                right: '15px',
-                background: 'none',
-                border: 'none',
-                fontSize: '24px',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                color: '#777',
-                width: '30px',
-                height: '30px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-            >
-              ×
-            </button>
-
-            <h2 style={{
-              textAlign: 'center',
-              margin: '0 0 25px 0',
-              fontSize: '24px',
-              color: '#333'
-            }}>
-              {selectedChair ? `Стол ${selectedChair.tableId} • Место ${selectedChair.chairIndex + 1}` : 'Рассадка'}
-            </h2>
-
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{
-                display: 'block',
-                marginBottom: '8px',
-                fontWeight: 'bold',
-                fontSize: '16px'
+            🎯 Выбрать из групп
+          </h3>
+          
+          <div style={{
+            border: '1px solid #ddd',
+            borderRadius: '8px',
+            backgroundColor: '#f8f9fa',
+            maxHeight: '200px',
+            overflowY: 'auto'
+          }}>
+            {groups.filter(group => group.members.length > 0).map((group) => (
+              <div key={group.id} style={{
+                borderBottom: '1px solid #eee',
+                padding: '15px'
               }}>
-                Имя гостя:
-              </label>
-              <input
-                type="text"
-                value={personName}
-                onChange={(e) => setPersonName(e.target.value)}
-                placeholder="Введите имя"
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  borderRadius: '8px',
-                  border: '2px solid #ddd',
-                  fontSize: '16px',
-                  boxSizing: 'border-box',
-                  backgroundColor: '#f9f9f9'
-                }}
-                autoFocus
-              />
-            </div>
-
-            <div style={{ marginBottom: '25px' }}>
-              <label style={{
-                display: 'block',
-                marginBottom: '8px',
-                fontWeight: 'bold',
-                fontSize: '16px'
-              }}>
-                Группа:
-              </label>
-              <select
-                value={selectedGroup}
-                onChange={(e) => setSelectedGroup(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  borderRadius: '8px',
-                  border: '2px solid #ddd',
-                  fontSize: '16px',
-                  boxSizing: 'border-box',
-                  backgroundColor: '#f9f9f9'
-                }}
-              >
-                <option value="">Без группы</option>
-                {groups.map(group => (
-                  <option key={group.id} value={group.id}>
-                    {group.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div style={{
-              display: 'flex',
-              gap: '10px',
-              flexDirection: 'column'
-            }}>
-              <button
-                onClick={savePerson}
-                style={{
-                  padding: '14px',
-                  backgroundColor: '#2ecc71',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontWeight: 'bold',
-                  fontSize: '16px',
-                  boxShadow: '0 4px 6px rgba(46, 204, 113, 0.2)',
-                  width: '100%'
-                }}
-              >
-                Сохранить
-              </button>
-
-              {/* Show remove button only if person exists */}
-              {selectedChair && hallData.tables?.find(t => t.id === selectedChair.tableId)?.people?.[selectedChair.chairIndex] && (
-                <button
-                  onClick={removePerson}
-                  style={{
-                    padding: '14px',
-                    backgroundColor: '#e74c3c',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  marginBottom: '10px'
+                }}>
+                  <div style={{
+                    width: '12px',
+                    height: '12px',
+                    backgroundColor: group.color,
+                    borderRadius: '50%'
+                  }}></div>
+                  <span style={{
                     fontWeight: 'bold',
-                    fontSize: '16px',
-                    width: '100%'
-                  }}
-                >
-                  Убрать гостя
-                </button>
-              )}
-
-              <button
-                onClick={resetPersonModal}
-                style={{
-                  padding: '14px',
-                  backgroundColor: '#f1f1f1',
-                  color: '#333',
-                  border: 'none',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontSize: '16px',
-                  width: '100%'
-                }}
-              >
-                Отмена
-              </button>
-            </div>
+                    fontSize: '14px',
+                    color: '#333'
+                  }}>
+                    {group.name} ({group.members.length})
+                  </span>
+                </div>
+                
+                <div style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '8px'
+                }}>
+                  {group.members.map((member, index) => (
+                    <button
+                      key={index}
+                      onClick={() => selectPersonFromGroup(member, group.id)}
+                      style={{
+                        backgroundColor: selectedPersonFromGroup?.name === member ? group.color : 'white',
+                        color: selectedPersonFromGroup?.name === member ? 'white' : '#333',
+                        border: `2px solid ${group.color}`,
+                        borderRadius: '20px',
+                        padding: '6px 12px',
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        transition: 'all 0.2s',
+                        whiteSpace: 'nowrap'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (selectedPersonFromGroup?.name !== member) {
+                          e.target.style.backgroundColor = group.color;
+                          e.target.style.color = 'white';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (selectedPersonFromGroup?.name !== member) {
+                          e.target.style.backgroundColor = 'white';
+                          e.target.style.color = '#333';
+                        }
+                      }}
+                    >
+                      {member}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
+          
+          {selectedPersonFromGroup && (
+            <div style={{
+              marginTop: '10px',
+              padding: '10px',
+              backgroundColor: '#e8f5e8',
+              border: '1px solid #4caf50',
+              borderRadius: '6px',
+              fontSize: '14px',
+              color: '#2e7d32'
+            }}>
+              ✅ Выбран: <strong>{selectedPersonFromGroup.name}</strong> из группы "
+              {groups.find(g => g.id === selectedPersonFromGroup.groupId)?.name}"
+            </div>
+          )}
         </div>
       )}
+
+      {/* Разделитель */}
+      {groups.some(group => group.members.length > 0) && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          margin: '20px 0',
+          fontSize: '14px',
+          color: '#666'
+        }}>
+          <div style={{ flex: 1, height: '1px', backgroundColor: '#ddd' }}></div>
+          <span style={{ padding: '0 15px', backgroundColor: 'white' }}>или</span>
+          <div style={{ flex: 1, height: '1px', backgroundColor: '#ddd' }}></div>
+        </div>
+      )}
+
+      {/* Добавление нового человека */}
+      <div>
+        <h3 style={{
+          margin: '0 0 15px 0',
+          fontSize: '18px',
+          color: '#333',
+          borderBottom: '2px solid #eee',
+          paddingBottom: '10px'
+        }}>
+          ➕ Добавить нового
+        </h3>
+
+        <div style={{ marginBottom: '20px' }}>
+          <label style={{
+            display: 'block',
+            marginBottom: '8px',
+            fontWeight: 'bold',
+            fontSize: '16px'
+          }}>
+            Имя гостя:
+          </label>
+          <input
+            type="text"
+            value={personName}
+            onChange={(e) => {
+              setPersonName(e.target.value);
+              // Сбрасываем выбранного из группы если начали вводить новое имя
+              if (selectedPersonFromGroup && e.target.value !== selectedPersonFromGroup.name) {
+                setSelectedPersonFromGroup(null);
+              }
+            }}
+            placeholder="Введите имя"
+            style={{
+              width: '100%',
+              padding: '12px',
+              borderRadius: '8px',
+              border: '2px solid #ddd',
+              fontSize: '16px',
+              boxSizing: 'border-box',
+              backgroundColor: '#f9f9f9'
+            }}
+            autoFocus
+          />
+        </div>
+
+        <div style={{ marginBottom: '25px' }}>
+          <label style={{
+            display: 'block',
+            marginBottom: '8px',
+            fontWeight: 'bold',
+            fontSize: '16px'
+          }}>
+            Группа:
+          </label>
+          <select
+            value={selectedGroup}
+            onChange={(e) => setSelectedGroup(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '12px',
+              borderRadius: '8px',
+              border: '2px solid #ddd',
+              fontSize: '16px',
+              boxSizing: 'border-box',
+              backgroundColor: '#f9f9f9'
+            }}
+          >
+            <option value="">Без группы</option>
+            {groups.map(group => (
+              <option key={group.id} value={group.id}>
+                {group.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div style={{
+        display: 'flex',
+        gap: '10px',
+        flexDirection: 'column'
+      }}>
+        <button
+          onClick={savePerson}
+          style={{
+            padding: '14px',
+            backgroundColor: '#2ecc71',
+            color: 'white',
+            border: 'none',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            fontWeight: 'bold',
+            fontSize: '16px',
+            boxShadow: '0 4px 6px rgba(46, 204, 113, 0.2)',
+            width: '100%'
+          }}
+        >
+          {selectedPersonFromGroup ? `Посадить ${selectedPersonFromGroup.name}` : 'Сохранить'}
+        </button>
+
+        {/* Show remove button only if person exists */}
+        {selectedChair && hallData.tables?.find(t => t.id === selectedChair.tableId)?.people?.[selectedChair.chairIndex] && (
+          <button
+            onClick={removePerson}
+            style={{
+              padding: '14px',
+              backgroundColor: '#e74c3c',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontWeight: 'bold',
+              fontSize: '16px',
+              width: '100%'
+            }}
+          >
+            Убрать гостя
+          </button>
+        )}
+
+        <button
+          onClick={resetPersonModal}
+          style={{
+            padding: '14px',
+            backgroundColor: '#f1f1f1',
+            color: '#333',
+            border: 'none',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            fontSize: '16px',
+            width: '100%'
+          }}
+        >
+          Отмена
+        </button>
+      </div>
+    </div>
+  </div>
+)}
 
       {/* Add Group Modal */}
       {showAddGroupModal && (
@@ -4207,7 +4747,7 @@ const SimpleSeatingApp = () => {
                 marginBottom: '15px'
               }}>
                 <h4 style={{ margin: 0, color: '#333' }}>
-                  {selectedGroupForDetails.members.length > 0 
+                  {selectedGroupForDetails.members.length > 0
                     ? `Участники группы (${selectedGroupForDetails.members.length}):`
                     : 'Рассаженные участники:'
                   }
