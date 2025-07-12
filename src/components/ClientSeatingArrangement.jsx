@@ -2209,82 +2209,94 @@ const [isBurgerOpen, setIsBurgerOpen] = useState(false);
 
       {/* Mobile burger menu button */}
       <button
-        onClick={() => {
-          setShowMobileMenu(!showMobileMenu);
-          setIsBurgerOpen(!isBurgerOpen);
-        }}
-        style={{
-          background: 'none',
-          border: '2px solid white',
-          color: 'white',
-          borderRadius: '8px',
-          padding: '8px',
-          cursor: 'pointer',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '3px',
-          alignItems: 'center',
-          justifyContent: 'center',
-          width: '40px',
-          height: '40px',
-          transition: 'all 0.2s ease',
-          position: 'relative'
-        }}
-        onTouchStart={(e) => {
-          e.target.style.backgroundColor = 'rgba(255,255,255,0.1)';
-          e.target.style.transform = 'scale(0.95)';
-        }}
-        onTouchEnd={(e) => {
-          e.target.style.backgroundColor = 'transparent';
-          e.target.style.transform = 'scale(1)';
-        }}
-      >
-        {/* Animated burger lines */}
-        <div style={{
-          width: '18px',
-          height: '2px',
-          backgroundColor: 'white',
-          borderRadius: '1px',
-          transition: 'all 0.3s ease',
-          transform: isBurgerOpen ? 'rotate(45deg) translate(6px, 6px)' : 'none',
-          transformOrigin: 'center'
-        }}></div>
-        <div style={{
-          width: '18px',
-          height: '2px',
-          backgroundColor: 'white',
-          borderRadius: '1px',
-          transition: 'all 0.3s ease',
-          opacity: isBurgerOpen ? '0' : '1',
-          transform: isBurgerOpen ? 'scale(0)' : 'scale(1)'
-        }}></div>
-        <div style={{
-          width: '18px',
-          height: '2px',
-          backgroundColor: 'white',
-          borderRadius: '1px',
-          transition: 'all 0.3s ease',
-          transform: isBurgerOpen ? 'rotate(-45deg) translate(6px, -6px)' : 'none',
-          transformOrigin: 'center'
-        }}></div>
-        
-        {/* Notification dots for loaded plan and groups */}
-        {(hallData || groups.length > 0) && !isBurgerOpen && (
-          <div style={{
-            position: 'absolute',
-            top: '-2px',
-            right: '-2px',
-            width: '8px',
-            height: '8px',
-            backgroundColor: hallData ? '#2ecc71' : '#f39c12',
-            borderRadius: '50%',
-            border: '1px solid #0a0a1d',
-            animation: hallData ? 'none' : 'pulse 2s infinite',
-            transition: 'opacity 0.3s ease',
-            opacity: isBurgerOpen ? 0 : 1
-          }}></div>
-        )}
-      </button>
+  onClick={() => {
+    setShowMobileMenu(!showMobileMenu);
+    setIsBurgerOpen(!isBurgerOpen);
+  }}
+  style={{
+    background: 'none',
+    border: '2px solid white',
+    color: 'white',
+    borderRadius: '8px',
+    padding: '8px',
+    cursor: 'pointer',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '3px',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '40px',
+    height: '40px',
+    transition: 'all 0.2s ease',
+    position: 'relative'
+  }}
+  onTouchStart={(e) => {
+    e.target.style.backgroundColor = 'rgba(255,255,255,0.1)';
+    e.target.style.transform = 'scale(0.95)';
+  }}
+  onTouchEnd={(e) => {
+    e.target.style.backgroundColor = 'transparent';
+    e.target.style.transform = 'scale(1)';
+  }}
+>
+  {/* Animated burger lines */}
+  <div style={{
+    width: '18px',
+    height: '2px',
+    backgroundColor: 'white',
+    borderRadius: '1px',
+    transition: 'all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55)',
+    transform: isBurgerOpen 
+      ? 'rotate(45deg) translateY(5px)' 
+      : 'rotate(0deg) translateY(0px)',
+    transformOrigin: 'center',
+    pointerEvents: 'none'  // Важно!
+  }}></div>
+  
+  <div style={{
+    width: '18px',
+    height: '2px',
+    backgroundColor: 'white',
+    borderRadius: '1px',
+    transition: 'all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55)',
+    opacity: isBurgerOpen ? '0' : '1',
+    transform: isBurgerOpen ? 'scaleX(0)' : 'scaleX(1)',
+    transformOrigin: 'center',
+    pointerEvents: 'none'  // Важно!
+  }}></div>
+  
+  <div style={{
+    width: '18px',
+    height: '2px',
+    backgroundColor: 'white',
+    borderRadius: '1px',
+    transition: 'all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55)',
+    transform: isBurgerOpen 
+      ? 'rotate(-45deg) translateY(-5px)' 
+      : 'rotate(0deg) translateY(0px)',
+    transformOrigin: 'center',
+    pointerEvents: 'none'  // Важно!
+  }}></div>
+  
+  {/* Notification dots for loaded plan and groups */}
+  {(hallData || groups.length > 0) && (
+    <div style={{
+      position: 'absolute',
+      top: '-2px',
+      right: '-2px',
+      width: '8px',
+      height: '8px',
+      backgroundColor: hallData ? '#2ecc71' : '#f39c12',
+      borderRadius: '50%',
+      border: '1px solid #0a0a1d',
+      animation: hallData ? 'none' : 'pulse 2s infinite',
+      transition: 'all 0.3s ease',
+      opacity: isBurgerOpen ? 0 : 1,
+      transform: isBurgerOpen ? 'scale(0)' : 'scale(1)',
+      pointerEvents: 'none'  // Важно!
+    }}></div>
+  )}
+</button>
     </>
   )}
 </header>
