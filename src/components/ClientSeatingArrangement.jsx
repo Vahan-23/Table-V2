@@ -101,14 +101,14 @@ const SimpleSeatingApp = () => {
       guestSeating: 'Рассадка гостей',
       loadPlan: 'Загрузить план',
       loading: 'Загрузка...',
-      
+
 
       // Menu
 
-       settings: 'Настройки',
-    language: 'Язык',
-    planLoaded: 'План загружен',
-    tables: 'столов',
+      settings: 'Настройки',
+      language: 'Язык',
+      planLoaded: 'План загружен',
+      tables: 'столов',
 
       // Groups
       createGroup: 'Создать группу',
@@ -118,11 +118,11 @@ const SimpleSeatingApp = () => {
       allGroupsSeated: 'Все группы рассажены',
       noSeatedGroups: 'Нет рассаженных групп',
       dragToTable: 'перетащите на стол',
-      
+
       // Group statuses
       readyForSeating: 'готовы к рассадке',
       allSeated: 'Все группы рассажены',
-      
+
       // Person modal
       guestName: 'Имя гостя',
       enterName: 'Введите имя',
@@ -134,7 +134,7 @@ const SimpleSeatingApp = () => {
       removeGuest: 'Убрать гостя',
       cancel: 'Отмена',
       seatPerson: 'Посадить',
-      
+
       // Group creation
       createNewGroup: 'Создать новую группу',
       groupName: 'Название группы',
@@ -145,7 +145,7 @@ const SimpleSeatingApp = () => {
       members: 'Участники',
       noMembersAdded: 'Участники не добавлены',
       createGroupBtn: 'Создать группу',
-      
+
       // Table details
       totalSeats: 'Всего мест',
       occupiedSeats: 'Занято мест',
@@ -156,27 +156,27 @@ const SimpleSeatingApp = () => {
       tableFullyOccupied: 'Стол полностью занят',
       noFreeSeatsAtTable: 'За этим столом нет свободных мест',
       close: 'Закрыть',
-      
+
       // Errors and warnings
       enterNameError: 'Введите имя!',
       notEnoughSeats: 'За этим столом недостаточно свободных мест!',
       groupEmpty: 'Группа пустая!',
       noFreeSeatsAtTable: 'За этим столом нет свободных мест!',
-      
+
       // File operations
       errorReadingFile: 'Ошибка при чтении JSON файла. Проверьте формат файла.',
-      
+
       // Common
       table: 'Стол',
       seat: 'Место',
       people: 'чел.',
       person: 'человек',
       of: 'из',
-      
+
       // Mobile hints
       dragGroupToTable: 'Перетащите группу на стол для рассадки',
       tapGroupToSelectTable: 'Нажмите на группу чтобы выбрать стол',
-      
+
       // Additional translations
       editGroup: 'Редактировать группу',
       deleteGroup: 'Удалить группу',
@@ -252,14 +252,14 @@ const SimpleSeatingApp = () => {
       guestSeating: 'Հյուրերի տեղադրում',
       loadPlan: 'Բեռնել պլան',
       loading: 'Բեռնում...',
-      
+
 
       // Menu
 
-       settings: 'Կարգավորումներ',
-    language: 'Լեզու',
-    planLoaded: 'Պլանը բեռնված է',
-    tables: 'սեղաններ' ,
+      settings: 'Կարգավորումներ',
+      language: 'Լեզու',
+      planLoaded: 'Պլանը բեռնված է',
+      tables: 'սեղաններ',
       // Groups
       createGroup: 'Ստեղծել խումբ',
       groups: 'Խմբեր',
@@ -268,11 +268,11 @@ const SimpleSeatingApp = () => {
       allGroupsSeated: 'Բոլոր խմբերը տեղադրված են',
       noSeatedGroups: 'Չկան տեղադրված խմբեր',
       dragToTable: 'քաշեք սեղանի վրա',
-      
+
       // Group statuses
       readyForSeating: 'պատրաստ են տեղադրման',
       allSeated: 'Բոլոր խմբերը տեղադրված են',
-      
+
       // Person modal
       guestName: 'Հյուրի անուն',
       enterName: 'Մուտքագրեք անունը',
@@ -284,7 +284,7 @@ const SimpleSeatingApp = () => {
       removeGuest: 'Հեռացնել հյուրին',
       cancel: 'Չեղարկել',
       seatPerson: 'Նստեցնել',
-      
+
       // Group creation
       createNewGroup: 'Ստեղծել նոր խումբ',
       groupName: 'Խմբի անվանումը',
@@ -295,7 +295,7 @@ const SimpleSeatingApp = () => {
       members: 'Անդամներ',
       noMembersAdded: 'Անդամներ չեն ավելացվել',
       createGroupBtn: 'Ստեղծել խումբ',
-      
+
       // Table details
       totalSeats: 'Ընդամենը տեղեր',
       occupiedSeats: 'Զբաղված տեղեր',
@@ -306,27 +306,27 @@ const SimpleSeatingApp = () => {
       tableFullyOccupied: 'Սեղանը լիովին զբաղված է',
       noFreeSeatsAtTable: 'Այս սեղանի մոտ ազատ տեղեր չկան',
       close: 'Փակել',
-      
+
       // Errors and warnings
       enterNameError: 'Մուտքագրեք անունը։',
       notEnoughSeats: 'Այս սեղանի մոտ բավարար ազատ տեղեր չկան։',
       groupEmpty: 'Խումբը դատարկ է։',
       noFreeSeatsAtTable: 'Այս սեղանի մոտ ազատ տեղեր չկան։',
-      
+
       // File operations
       errorReadingFile: 'Սխալ JSON ֆայլը կարդալիս։ Ստուգեք ֆայլի ֆորմատը։',
-      
+
       // Common
       table: 'Սեղան',
       seat: 'Տեղ',
       people: 'մարդ',
       person: 'մարդ',
       of: '-ից',
-      
+
       // Mobile hints
       dragGroupToTable: 'Քաշեք խումբը սեղանի վրա տեղադրման համար',
       tapGroupToSelectTable: 'Սեղմեք խմբի վրա՝ սեղան ընտրելու համար',
-      
+
       // Additional translations
       editGroup: 'Խմբագրել խումբը',
       deleteGroup: 'Ջնջել խումբը',
@@ -408,7 +408,7 @@ const SimpleSeatingApp = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
-const [isBurgerOpen, setIsBurgerOpen] = useState(false);
+  const [isBurgerOpen, setIsBurgerOpen] = useState(false);
 
   // Простые состояния для рассадки
   const [selectedChair, setSelectedChair] = useState(null); // {tableId, chairIndex}
@@ -491,15 +491,53 @@ const [isBurgerOpen, setIsBurgerOpen] = useState(false);
   const [selectedPersonFromGroup, setSelectedPersonFromGroup] = useState(null);
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
 
+
+  const [personSearchTerm, setPersonSearchTerm] = useState('');
+  const [showPersonSearch, setShowPersonSearch] = useState(true);
+
   const selectPersonFromGroup = (personName, groupId) => {
     setSelectedPersonFromGroup({ name: personName, groupId: groupId });
     setPersonName(personName);
     setSelectedGroup(groupId);
   };
 
+
+  // Добавьте эту функцию
+const getFilteredPeopleForPerson = () => {
+  // Собираем всех людей из всех групп
+  const peopleFromGroups = [];
+  groups.forEach(group => {
+    if (group.members && group.members.length > 0) {
+      group.members.forEach(member => {
+        peopleFromGroups.push({
+          name: member,
+          groupId: group.id,
+          groupName: group.name,
+          groupColor: group.color
+        });
+      });
+    }
+  });
+
+  // Фильтруем по поисковому запросу
+  if (!personSearchTerm) return peopleFromGroups;
+  return peopleFromGroups.filter(person =>
+    person.name.toLowerCase().includes(personSearchTerm.toLowerCase()) ||
+    person.groupName.toLowerCase().includes(personSearchTerm.toLowerCase())
+  );
+};
+
+const selectPersonFromSearch = (personData) => {
+  setPersonName(personData.name);
+  setSelectedGroup(personData.groupId);
+  setSelectedPersonFromGroup({ name: personData.name, groupId: personData.groupId });
+  setPersonSearchTerm('');
+  setShowPersonSearch(false);
+};
+
   const getSeatedMembersCount = (groupId) => {
     if (!hallData?.tables) return 0;
-    
+
     let seatedCount = 0;
     hallData.tables.forEach(table => {
       if (table.people) {
@@ -510,7 +548,7 @@ const [isBurgerOpen, setIsBurgerOpen] = useState(false);
         });
       }
     });
-    
+
     return seatedCount;
   };
 
@@ -518,20 +556,20 @@ const [isBurgerOpen, setIsBurgerOpen] = useState(false);
     const availableMembers = group.members.length;
     const seatedMembers = getSeatedMembersCount(group.id);
     const totalMembers = availableMembers + seatedMembers;
-    
+
     let seatedAtTable = null;
     if (seatedMembers > 0) {
       hallData?.tables?.forEach(table => {
-        const groupMembersAtTable = table.people?.filter(person => 
+        const groupMembersAtTable = table.people?.filter(person =>
           person && person.groupId === group.id
         ).length || 0;
-        
+
         if (groupMembersAtTable > 0) {
           seatedAtTable = table.name || `${t('table')} ${table.id}`;
         }
       });
     }
-    
+
     return {
       availableMembers,
       seatedMembers,
@@ -1056,29 +1094,29 @@ const [isBurgerOpen, setIsBurgerOpen] = useState(false);
     }
 
     const currentPersonOnChair = hallData.tables?.find(t => t.id === selectedChair.tableId)?.people?.[selectedChair.chairIndex];
-    
+
     const updatedGroups = groups.map(group => {
       let updatedGroup = { ...group };
-      
-      if (currentPersonOnChair && 
-          currentPersonOnChair.groupId === group.id && 
-          currentPersonOnChair.name !== personName.trim()) {
+
+      if (currentPersonOnChair &&
+        currentPersonOnChair.groupId === group.id &&
+        currentPersonOnChair.name !== personName.trim()) {
         updatedGroup = {
           ...updatedGroup,
           members: [...updatedGroup.members, currentPersonOnChair.name]
         };
       }
-      
+
       if (selectedPersonFromGroup && selectedPersonFromGroup.groupId === group.id) {
         updatedGroup = {
           ...updatedGroup,
           members: updatedGroup.members.filter(member => member !== selectedPersonFromGroup.name)
         };
       }
-      
+
       return updatedGroup;
     });
-    
+
     setGroups(updatedGroups);
     localStorage.setItem('seatingGroups', JSON.stringify(updatedGroups));
 
@@ -1116,7 +1154,7 @@ const [isBurgerOpen, setIsBurgerOpen] = useState(false);
 
   const removePerson = () => {
     const currentPerson = hallData.tables?.find(t => t.id === selectedChair.tableId)?.people?.[selectedChair.chairIndex];
-    
+
     if (currentPerson && currentPerson.groupId) {
       const updatedGroups = groups.map(group => {
         if (group.id === currentPerson.groupId) {
@@ -1127,7 +1165,7 @@ const [isBurgerOpen, setIsBurgerOpen] = useState(false);
         }
         return group;
       });
-      
+
       setGroups(updatedGroups);
       localStorage.setItem('seatingGroups', JSON.stringify(updatedGroups));
     }
@@ -1160,12 +1198,15 @@ const [isBurgerOpen, setIsBurgerOpen] = useState(false);
   };
 
   const resetPersonModal = () => {
-    setShowPersonModal(false);
-    setSelectedChair(null);
-    setPersonName('');
-    setSelectedGroup('');
-    setSelectedPersonFromGroup(null);
-  };
+  setShowPersonModal(false);
+  setSelectedChair(null);
+  setPersonName('');
+  setSelectedGroup('');
+  setSelectedPersonFromGroup(null);
+  // Добавьте эти строки
+  setPersonSearchTerm('');
+  setShowPersonSearch(false);
+};
 
   // Функции для работы с участниками групп при создании
   const addMemberToGroup = () => {
@@ -1220,9 +1261,9 @@ const [isBurgerOpen, setIsBurgerOpen] = useState(false);
     }
 
     const colors = [
-      '#e74c3c', '#c0392b', '#3498db', '#2980b9', '#2ecc71', '#27ae60', 
-      '#f39c12', '#d35400', '#9b59b6', '#8e44ad', '#1abc9c', '#16a085', 
-      '#e67e22', '#f1c40f', '#f39c12', '#34495e', '#2c3e50', '#ecf0f1', 
+      '#e74c3c', '#c0392b', '#3498db', '#2980b9', '#2ecc71', '#27ae60',
+      '#f39c12', '#d35400', '#9b59b6', '#8e44ad', '#1abc9c', '#16a085',
+      '#e67e22', '#f1c40f', '#f39c12', '#34495e', '#2c3e50', '#ecf0f1',
       '#bdc3c7', '#95a5a6'
     ];
 
@@ -2058,516 +2099,516 @@ const [isBurgerOpen, setIsBurgerOpen] = useState(false);
       fontFamily: 'Arial, sans-serif'
     }}>
       {/* Header */}
-     <header className="app-header" style={{
-  padding: '10px 15px',
-  backgroundColor: '#0a0a1d',
-  color: 'white',
-  boxShadow: '0 2px 10px rgba(0, 0, 0, 0.2)',
-  zIndex: 100,
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center'
-}}>
-  {/* Desktop Header */}
-  {windowWidth > 768 ? (
-    <>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flex: 1 }}>
-        <div style={{
-          fontSize: '20px',
-          fontWeight: 'bold',
-          whiteSpace: 'nowrap'
-        }}>
-          {hallData?.name || t('guestSeating')}
-        </div>
-
-        {/* Import button */}
-        <div className="import-container">
-          <input
-            type="file"
-            accept=".json"
-            onChange={handleFileUpload}
-            id="import-file"
-            className="file-input"
-            style={{ display: 'none' }}
-          />
-          <label
-            htmlFor="import-file"
-            className="import-button"
-            style={{
-              backgroundColor: '#3498db',
-              color: 'white',
-              border: '3px solid white',
-              borderRadius: '8px',
-              padding: '8px 16px',
-              cursor: 'pointer',
-              fontSize: '16px',
-              fontWeight: 'bold',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '5px',
-              boxShadow: '0 4px 8px rgba(0,0,0,0.3)',
-              transition: 'all 0.2s'
-            }}
-            onMouseEnter={(e) => {
-              e.target.style.transform = 'scale(1.05)';
-              e.target.style.boxShadow = '0 6px 12px rgba(0,0,0,0.4)';
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.transform = 'scale(1)';
-              e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.3)';
-            }}
-          >
-            📁 {t('loadPlan')}
-          </label>
-          {isLoading && <div style={{
-            position: 'absolute',
-            top: '70px',
-            left: '0',
-            color: 'white',
-            fontSize: '12px',
-            backgroundColor: 'rgba(0,0,0,0.8)',
-            padding: '5px 10px',
-            borderRadius: '4px'
-          }}>{t('loading')}</div>}
-          {error && <div style={{
-            position: 'absolute',
-            top: '70px',
-            left: '0',
-            color: '#ff6b6b',
-            fontSize: '12px',
-            backgroundColor: 'rgba(0,0,0,0.8)',
-            padding: '5px 10px',
-            borderRadius: '4px',
-            maxWidth: '200px'
-          }}>{error}</div>}
-        </div>
-      </div>
-
-      {/* Language switcher */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <button
-          onClick={() => setLanguage(language === 'ru' ? 'hy' : 'ru')}
-          style={{
-            backgroundImage: `url(${language === 'ru'
-              ? 'https://flagcdn.com/am.svg'
-              : 'https://flagcdn.com/ru.svg'})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            color: 'white',
-            border: '3px solid white',
-            borderRadius: '8px',
-            padding: '10px 15px',
-            cursor: 'pointer',
-            fontSize: '16px',
-            fontWeight: 'bold',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            transition: 'all 0.3s ease',
-            boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
-            minWidth: '110px',
-            justifyContent: 'center',
-            position: 'relative',
-            overflow: 'hidden',
-          }}
-          onMouseEnter={(e) => {
-            e.target.style.transform = 'scale(1.05)';
-            e.target.style.boxShadow = '0 6px 12px rgba(0,0,0,0.3)';
-          }}
-          onMouseLeave={(e) => {
-            e.target.style.transform = 'scale(1)';
-            e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.2)';
-          }}
-        >
-          <span style={{
-            fontSize: '14px',
-            letterSpacing: '0.5px',
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            borderRadius: '4px',
-            padding: '2px 6px',
-            color: 'white',
-            zIndex: 1
-          }}>
-            {language === 'ru' ? 'Հայ' : 'Рус'}
-          </span>
-        </button>
-      </div>
-    </>
-  ) : (
-    /* Mobile Header */
-    <>
-      <div style={{
-        fontSize: '18px',
-        fontWeight: 'bold',
-        flex: 1,
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
-        whiteSpace: 'nowrap'
-      }}>
-        {hallData?.name || t('guestSeating')}
-      </div>
-
-      {/* Mobile burger menu button */}
-      <button
-  onClick={() => {
-    setShowMobileMenu(!showMobileMenu);
-    setIsBurgerOpen(!isBurgerOpen);
-  }}
-  style={{
-    background: 'none',
-    border: '2px solid white',
-    color: 'white',
-    borderRadius: '8px',
-    padding: '8px',
-    cursor: 'pointer',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '3px',
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '40px',
-    height: '40px',
-    transition: 'all 0.2s ease',
-    position: 'relative'
-  }}
-  onTouchStart={(e) => {
-    e.target.style.backgroundColor = 'rgba(255,255,255,0.1)';
-    e.target.style.transform = 'scale(0.95)';
-  }}
-  onTouchEnd={(e) => {
-    e.target.style.backgroundColor = 'transparent';
-    e.target.style.transform = 'scale(1)';
-  }}
->
-  {/* Animated burger lines */}
-  <div style={{
-    width: '18px',
-    height: '2px',
-    backgroundColor: 'white',
-    borderRadius: '1px',
-    transition: 'all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55)',
-    transform: isBurgerOpen 
-      ? 'rotate(45deg) translateY(5px)' 
-      : 'rotate(0deg) translateY(0px)',
-    transformOrigin: 'center',
-    pointerEvents: 'none'  // Важно!
-  }}></div>
-  
-  <div style={{
-    width: '18px',
-    height: '2px',
-    backgroundColor: 'white',
-    borderRadius: '1px',
-    transition: 'all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55)',
-    opacity: isBurgerOpen ? '0' : '1',
-    transform: isBurgerOpen ? 'scaleX(0)' : 'scaleX(1)',
-    transformOrigin: 'center',
-    pointerEvents: 'none'  // Важно!
-  }}></div>
-  
-  <div style={{
-    width: '18px',
-    height: '2px',
-    backgroundColor: 'white',
-    borderRadius: '1px',
-    transition: 'all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55)',
-    transform: isBurgerOpen 
-      ? 'rotate(-45deg) translateY(-5px)' 
-      : 'rotate(0deg) translateY(0px)',
-    transformOrigin: 'center',
-    pointerEvents: 'none'  // Важно!
-  }}></div>
-  
-  {/* Notification dots for loaded plan and groups */}
-  {(hallData || groups.length > 0) && (
-    <div style={{
-      position: 'absolute',
-      top: '-2px',
-      right: '-2px',
-      width: '8px',
-      height: '8px',
-      backgroundColor: hallData ? '#2ecc71' : '#f39c12',
-      borderRadius: '50%',
-      border: '1px solid #0a0a1d',
-      animation: hallData ? 'none' : 'pulse 2s infinite',
-      transition: 'all 0.3s ease',
-      opacity: isBurgerOpen ? 0 : 1,
-      transform: isBurgerOpen ? 'scale(0)' : 'scale(1)',
-      pointerEvents: 'none'  // Важно!
-    }}></div>
-  )}
-</button>
-    </>
-  )}
-</header>
-{showMobileMenu && (
-  <div style={{
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    width: '100%',
-    height: '100%',
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-    display: 'flex',
-    alignItems: 'flex-start',
-    justifyContent: 'center',
-    zIndex: 2000,
-    padding: '20px',
-    boxSizing: 'border-box'
-  }}>
-    <div style={{
-      backgroundColor: '#0a0a1d',
-      borderRadius: '12px',
-      padding: '25px',
-      width: '100%',
-      maxWidth: '400px',
-      marginTop: '60px',
-      boxShadow: '0 10px 25px rgba(0, 0, 0, 0.5)',
-      color: 'white',
-      animation: 'slideDown 0.3s ease-out'
-    }}>
-      <div style={{
+      <header className="app-header" style={{
+        padding: '10px 15px',
+        backgroundColor: '#0a0a1d',
+        color: 'white',
+        boxShadow: '0 2px 10px rgba(0, 0, 0, 0.2)',
+        zIndex: 100,
         display: 'flex',
         justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '25px',
-        borderBottom: '2px solid rgba(255,255,255,0.1)',
-        paddingBottom: '15px'
+        alignItems: 'center'
       }}>
-        <h2 style={{ margin: 0, color: 'white', fontSize: '20px' }}>
-          ⚙️ {t('settings') || 'Настройки'}
-        </h2>
-        <button
-          onClick={() => {
-            setShowMobileMenu(false);
-            setIsBurgerOpen(false);
-          }}
-          style={{
-            background: 'none',
-            border: 'none',
-            fontSize: '24px',
-            fontWeight: 'bold',
-            cursor: 'pointer',
-            color: 'white',
-            width: '30px',
-            height: '30px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}
-        >
-          ×
-        </button>
-      </div>
+        {/* Desktop Header */}
+        {windowWidth > 768 ? (
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flex: 1 }}>
+              <div style={{
+                fontSize: '20px',
+                fontWeight: 'bold',
+                whiteSpace: 'nowrap'
+              }}>
+                {hallData?.name || t('guestSeating')}
+              </div>
 
-      {/* Language Selection */}
-      <div style={{ marginBottom: '25px' }}>
-        <h3 style={{ 
-          margin: '0 0 15px 0', 
-          color: 'white', 
-          fontSize: '16px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px'
-        }}>
-          🌐 {t('language') || 'Язык'}
-        </h3>
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <button
-            onClick={() => setLanguage('ru')}
-            style={{
-              flex: 1,
-              padding: '12px',
-              backgroundColor: language === 'ru' ? '#3498db' : 'rgba(255,255,255,0.1)',
-              color: 'white',
-              border: `2px solid ${language === 'ru' ? '#3498db' : 'rgba(255,255,255,0.3)'}`,
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: 'bold',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              transition: 'all 0.2s ease'
-            }}
-          >
-            <span style={{ 
-              width: '20px',
-              height: '15px',
-              backgroundImage: 'url(https://flagcdn.com/ru.svg)',
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              borderRadius: '2px'
-            }}></span>
-            <span>Русский</span>
-          </button>
-          <button
-            onClick={() => setLanguage('hy')}
-            style={{
-              flex: 1,
-              padding: '12px',
-              backgroundColor: language === 'hy' ? '#3498db' : 'rgba(255,255,255,0.1)',
-              color: 'white',
-              border: `2px solid ${language === 'hy' ? '#3498db' : 'rgba(255,255,255,0.3)'}`,
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: 'bold',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              transition: 'all 0.2s ease'
-            }}
-          >
-            <span style={{ 
-              width: '20px',
-              height: '15px',
-              backgroundImage: 'url(https://flagcdn.com/am.svg)',
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              borderRadius: '2px'
-            }}></span>
-            <span>Հայերեն</span>
-          </button>
-        </div>
-      </div>
-
-      {/* File Upload */}
-      <div style={{ marginBottom: '20px' }}>
-        <h3 style={{ 
-          margin: '0 0 15px 0', 
-          color: 'white', 
-          fontSize: '16px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px'
-        }}>
-          📁 {t('loadPlan')}
-        </h3>
-        
-        <input
-          type="file"
-          accept=".json"
-          onChange={(e) => {
-            handleFileUpload(e);
-            setShowMobileMenu(false);
-            setIsBurgerOpen(false);
-          }}
-          id="mobile-import-file"
-          style={{ display: 'none' }}
-        />
-        
-        <label
-          htmlFor="mobile-import-file"
-          style={{
-            display: 'block',
-            padding: '12px 16px',
-            backgroundColor: '#2ecc71',
-            color: 'white',
-            border: '2px solid rgba(255,255,255,0.3)',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            fontSize: '14px',
-            fontWeight: 'bold',
-            textAlign: 'center',
-            transition: 'all 0.2s ease',
-            boxShadow: '0 4px 8px rgba(0,0,0,0.3)'
-          }}
-          onTouchStart={(e) => {
-            e.target.style.transform = 'scale(0.95)';
-          }}
-          onTouchEnd={(e) => {
-            e.target.style.transform = 'scale(1)';
-          }}
-        >
-          📂 {t('loadHallPlanBtn') || 'Загрузить план зала'}
-        </label>
-
-        {isLoading && (
-          <div style={{
-            marginTop: '10px',
-            padding: '8px 12px',
-            backgroundColor: 'rgba(255,255,255,0.1)',
-            borderRadius: '6px',
-            fontSize: '12px',
-            textAlign: 'center',
-            color: '#74b9ff'
-          }}>
-            ⏳ {t('loading')}
-          </div>
-        )}
-
-        {error && (
-          <div style={{
-            marginTop: '10px',
-            padding: '8px 12px',
-            backgroundColor: 'rgba(231, 76, 60, 0.2)',
-            border: '1px solid #e74c3c',
-            borderRadius: '6px',
-            fontSize: '12px',
-            textAlign: 'center',
-            color: '#ff6b6b'
-          }}>
-            ❌ {error}
-          </div>
-        )}
-      </div>
-
-      {/* Current Status */}
-      {hallData && (
-        <div style={{
-          backgroundColor: 'rgba(46, 204, 113, 0.1)',
-          border: '1px solid rgba(46, 204, 113, 0.3)',
-          borderRadius: '8px',
-          padding: '12px',
-          marginBottom: '20px'
-        }}>
-          <div style={{ 
-            fontSize: '12px', 
-            color: '#2ecc71',
-            fontWeight: 'bold',
-            marginBottom: '5px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px'
-          }}>
-            ✅ {t('planLoaded') || 'План загружен'}
-          </div>
-          <div style={{ fontSize: '11px', color: '#bdc3c7' }}>
-            {hallData.name || t('guestSeating')}
-          </div>
-          {hallData.tables && (
-            <div style={{ fontSize: '11px', color: '#bdc3c7', marginTop: '2px' }}>
-              📊 {hallData.tables.length} {t('tables') || 'столов'}
+              {/* Import button */}
+              <div className="import-container">
+                <input
+                  type="file"
+                  accept=".json"
+                  onChange={handleFileUpload}
+                  id="import-file"
+                  className="file-input"
+                  style={{ display: 'none' }}
+                />
+                <label
+                  htmlFor="import-file"
+                  className="import-button"
+                  style={{
+                    backgroundColor: '#3498db',
+                    color: 'white',
+                    border: '3px solid white',
+                    borderRadius: '8px',
+                    padding: '8px 16px',
+                    cursor: 'pointer',
+                    fontSize: '16px',
+                    fontWeight: 'bold',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    boxShadow: '0 4px 8px rgba(0,0,0,0.3)',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.transform = 'scale(1.05)';
+                    e.target.style.boxShadow = '0 6px 12px rgba(0,0,0,0.4)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.transform = 'scale(1)';
+                    e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.3)';
+                  }}
+                >
+                  📁 {t('loadPlan')}
+                </label>
+                {isLoading && <div style={{
+                  position: 'absolute',
+                  top: '70px',
+                  left: '0',
+                  color: 'white',
+                  fontSize: '12px',
+                  backgroundColor: 'rgba(0,0,0,0.8)',
+                  padding: '5px 10px',
+                  borderRadius: '4px'
+                }}>{t('loading')}</div>}
+                {error && <div style={{
+                  position: 'absolute',
+                  top: '70px',
+                  left: '0',
+                  color: '#ff6b6b',
+                  fontSize: '12px',
+                  backgroundColor: 'rgba(0,0,0,0.8)',
+                  padding: '5px 10px',
+                  borderRadius: '4px',
+                  maxWidth: '200px'
+                }}>{error}</div>}
+              </div>
             </div>
-          )}
+
+            {/* Language switcher */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <button
+                onClick={() => setLanguage(language === 'ru' ? 'hy' : 'ru')}
+                style={{
+                  backgroundImage: `url(${language === 'ru'
+                    ? 'https://flagcdn.com/am.svg'
+                    : 'https://flagcdn.com/ru.svg'})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  color: 'white',
+                  border: '3px solid white',
+                  borderRadius: '8px',
+                  padding: '10px 15px',
+                  cursor: 'pointer',
+                  fontSize: '16px',
+                  fontWeight: 'bold',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  transition: 'all 0.3s ease',
+                  boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
+                  minWidth: '110px',
+                  justifyContent: 'center',
+                  position: 'relative',
+                  overflow: 'hidden',
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.transform = 'scale(1.05)';
+                  e.target.style.boxShadow = '0 6px 12px rgba(0,0,0,0.3)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.transform = 'scale(1)';
+                  e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.2)';
+                }}
+              >
+                <span style={{
+                  fontSize: '14px',
+                  letterSpacing: '0.5px',
+                  backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                  borderRadius: '4px',
+                  padding: '2px 6px',
+                  color: 'white',
+                  zIndex: 1
+                }}>
+                  {language === 'ru' ? 'Հայ' : 'Рус'}
+                </span>
+              </button>
+            </div>
+          </>
+        ) : (
+          /* Mobile Header */
+          <>
+            <div style={{
+              fontSize: '18px',
+              fontWeight: 'bold',
+              flex: 1,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap'
+            }}>
+              {hallData?.name || t('guestSeating')}
+            </div>
+
+            {/* Mobile burger menu button */}
+            <button
+              onClick={() => {
+                setShowMobileMenu(!showMobileMenu);
+                setIsBurgerOpen(!isBurgerOpen);
+              }}
+              style={{
+                background: 'none',
+                border: '2px solid white',
+                color: 'white',
+                borderRadius: '8px',
+                padding: '8px',
+                cursor: 'pointer',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '3px',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '40px',
+                height: '40px',
+                transition: 'all 0.2s ease',
+                position: 'relative'
+              }}
+              onTouchStart={(e) => {
+                e.target.style.backgroundColor = 'rgba(255,255,255,0.1)';
+                e.target.style.transform = 'scale(0.95)';
+              }}
+              onTouchEnd={(e) => {
+                e.target.style.backgroundColor = 'transparent';
+                e.target.style.transform = 'scale(1)';
+              }}
+            >
+              {/* Animated burger lines */}
+              <div style={{
+                width: '18px',
+                height: '2px',
+                backgroundColor: 'white',
+                borderRadius: '1px',
+                transition: 'all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55)',
+                transform: isBurgerOpen
+                  ? 'rotate(45deg) translateY(5px)'
+                  : 'rotate(0deg) translateY(0px)',
+                transformOrigin: 'center',
+                pointerEvents: 'none'  // Важно!
+              }}></div>
+
+              <div style={{
+                width: '18px',
+                height: '2px',
+                backgroundColor: 'white',
+                borderRadius: '1px',
+                transition: 'all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55)',
+                opacity: isBurgerOpen ? '0' : '1',
+                transform: isBurgerOpen ? 'scaleX(0)' : 'scaleX(1)',
+                transformOrigin: 'center',
+                pointerEvents: 'none'  // Важно!
+              }}></div>
+
+              <div style={{
+                width: '18px',
+                height: '2px',
+                backgroundColor: 'white',
+                borderRadius: '1px',
+                transition: 'all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55)',
+                transform: isBurgerOpen
+                  ? 'rotate(-45deg) translateY(-5px)'
+                  : 'rotate(0deg) translateY(0px)',
+                transformOrigin: 'center',
+                pointerEvents: 'none'  // Важно!
+              }}></div>
+
+              {/* Notification dots for loaded plan and groups */}
+              {(hallData || groups.length > 0) && (
+                <div style={{
+                  position: 'absolute',
+                  top: '-2px',
+                  right: '-2px',
+                  width: '8px',
+                  height: '8px',
+                  backgroundColor: hallData ? '#2ecc71' : '#f39c12',
+                  borderRadius: '50%',
+                  border: '1px solid #0a0a1d',
+                  animation: hallData ? 'none' : 'pulse 2s infinite',
+                  transition: 'all 0.3s ease',
+                  opacity: isBurgerOpen ? 0 : 1,
+                  transform: isBurgerOpen ? 'scale(0)' : 'scale(1)',
+                  pointerEvents: 'none'  // Важно!
+                }}></div>
+              )}
+            </button>
+          </>
+        )}
+      </header>
+      {showMobileMenu && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          display: 'flex',
+          alignItems: 'flex-start',
+          justifyContent: 'center',
+          zIndex: 2000,
+          padding: '20px',
+          boxSizing: 'border-box'
+        }}>
+          <div style={{
+            backgroundColor: '#0a0a1d',
+            borderRadius: '12px',
+            padding: '25px',
+            width: '100%',
+            maxWidth: '400px',
+            marginTop: '60px',
+            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.5)',
+            color: 'white',
+            animation: 'slideDown 0.3s ease-out'
+          }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '25px',
+              borderBottom: '2px solid rgba(255,255,255,0.1)',
+              paddingBottom: '15px'
+            }}>
+              <h2 style={{ margin: 0, color: 'white', fontSize: '20px' }}>
+                ⚙️ {t('settings') || 'Настройки'}
+              </h2>
+              <button
+                onClick={() => {
+                  setShowMobileMenu(false);
+                  setIsBurgerOpen(false);
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '24px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  color: 'white',
+                  width: '30px',
+                  height: '30px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Language Selection */}
+            <div style={{ marginBottom: '25px' }}>
+              <h3 style={{
+                margin: '0 0 15px 0',
+                color: 'white',
+                fontSize: '16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                🌐 {t('language') || 'Язык'}
+              </h3>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  onClick={() => setLanguage('ru')}
+                  style={{
+                    flex: 1,
+                    padding: '12px',
+                    backgroundColor: language === 'ru' ? '#3498db' : 'rgba(255,255,255,0.1)',
+                    color: 'white',
+                    border: `2px solid ${language === 'ru' ? '#3498db' : 'rgba(255,255,255,0.3)'}`,
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 'bold',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <span style={{
+                    width: '20px',
+                    height: '15px',
+                    backgroundImage: 'url(https://flagcdn.com/ru.svg)',
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    borderRadius: '2px'
+                  }}></span>
+                  <span>Русский</span>
+                </button>
+                <button
+                  onClick={() => setLanguage('hy')}
+                  style={{
+                    flex: 1,
+                    padding: '12px',
+                    backgroundColor: language === 'hy' ? '#3498db' : 'rgba(255,255,255,0.1)',
+                    color: 'white',
+                    border: `2px solid ${language === 'hy' ? '#3498db' : 'rgba(255,255,255,0.3)'}`,
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 'bold',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <span style={{
+                    width: '20px',
+                    height: '15px',
+                    backgroundImage: 'url(https://flagcdn.com/am.svg)',
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    borderRadius: '2px'
+                  }}></span>
+                  <span>Հայերեն</span>
+                </button>
+              </div>
+            </div>
+
+            {/* File Upload */}
+            <div style={{ marginBottom: '20px' }}>
+              <h3 style={{
+                margin: '0 0 15px 0',
+                color: 'white',
+                fontSize: '16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                📁 {t('loadPlan')}
+              </h3>
+
+              <input
+                type="file"
+                accept=".json"
+                onChange={(e) => {
+                  handleFileUpload(e);
+                  setShowMobileMenu(false);
+                  setIsBurgerOpen(false);
+                }}
+                id="mobile-import-file"
+                style={{ display: 'none' }}
+              />
+
+              <label
+                htmlFor="mobile-import-file"
+                style={{
+                  display: 'block',
+                  padding: '12px 16px',
+                  backgroundColor: '#2ecc71',
+                  color: 'white',
+                  border: '2px solid rgba(255,255,255,0.3)',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 'bold',
+                  textAlign: 'center',
+                  transition: 'all 0.2s ease',
+                  boxShadow: '0 4px 8px rgba(0,0,0,0.3)'
+                }}
+                onTouchStart={(e) => {
+                  e.target.style.transform = 'scale(0.95)';
+                }}
+                onTouchEnd={(e) => {
+                  e.target.style.transform = 'scale(1)';
+                }}
+              >
+                📂 {t('loadHallPlanBtn') || 'Загрузить план зала'}
+              </label>
+
+              {isLoading && (
+                <div style={{
+                  marginTop: '10px',
+                  padding: '8px 12px',
+                  backgroundColor: 'rgba(255,255,255,0.1)',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  textAlign: 'center',
+                  color: '#74b9ff'
+                }}>
+                  ⏳ {t('loading')}
+                </div>
+              )}
+
+              {error && (
+                <div style={{
+                  marginTop: '10px',
+                  padding: '8px 12px',
+                  backgroundColor: 'rgba(231, 76, 60, 0.2)',
+                  border: '1px solid #e74c3c',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  textAlign: 'center',
+                  color: '#ff6b6b'
+                }}>
+                  ❌ {error}
+                </div>
+              )}
+            </div>
+
+            {/* Current Status */}
+            {hallData && (
+              <div style={{
+                backgroundColor: 'rgba(46, 204, 113, 0.1)',
+                border: '1px solid rgba(46, 204, 113, 0.3)',
+                borderRadius: '8px',
+                padding: '12px',
+                marginBottom: '20px'
+              }}>
+                <div style={{
+                  fontSize: '12px',
+                  color: '#2ecc71',
+                  fontWeight: 'bold',
+                  marginBottom: '5px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}>
+                  ✅ {t('planLoaded') || 'План загружен'}
+                </div>
+                <div style={{ fontSize: '11px', color: '#bdc3c7' }}>
+                  {hallData.name || t('guestSeating')}
+                </div>
+                {hallData.tables && (
+                  <div style={{ fontSize: '11px', color: '#bdc3c7', marginTop: '2px' }}>
+                    📊 {hallData.tables.length} {t('tables') || 'столов'}
+                  </div>
+                )}
+              </div>
+            )}
+
+            <button
+              onClick={() => {
+                setShowMobileMenu(false);
+                setIsBurgerOpen(false);
+              }}
+              style={{
+                width: '100%',
+                padding: '12px',
+                backgroundColor: 'rgba(255,255,255,0.1)',
+                color: 'white',
+                border: '2px solid rgba(255,255,255,0.3)',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: 'bold'
+              }}
+            >
+              {t('close')}
+            </button>
+          </div>
         </div>
       )}
-
-      <button
-        onClick={() => {
-          setShowMobileMenu(false);
-          setIsBurgerOpen(false);
-        }}
-        style={{
-          width: '100%',
-          padding: '12px',
-          backgroundColor: 'rgba(255,255,255,0.1)',
-          color: 'white',
-          border: '2px solid rgba(255,255,255,0.3)',
-          borderRadius: '8px',
-          cursor: 'pointer',
-          fontSize: '14px',
-          fontWeight: 'bold'
-        }}
-      >
-        {t('close')}
-      </button>
-    </div>
-  </div>
-)}
 
       {/* Groups Panel */}
       {window.innerWidth > 768 ? (
@@ -3026,7 +3067,7 @@ const [isBurgerOpen, setIsBurgerOpen] = useState(false);
                     <span>📋</span>
                     <span>{t('readyToSeat')} ({groups.filter(g => getGroupStatus(g).isReadyToSeat).length})</span>
                   </div>
-                  <div 
+                  <div
                     className="mobile-groups-carousel"
                     style={{
                       overflowX: 'auto',
@@ -3042,7 +3083,7 @@ const [isBurgerOpen, setIsBurgerOpen] = useState(false);
                   >
                     {groups.filter(g => getGroupStatus(g).isReadyToSeat).map((group) => {
                       const status = getGroupStatus(group);
-                      
+
                       return (
                         <div
                           key={group.id}
@@ -3097,8 +3138,8 @@ const [isBurgerOpen, setIsBurgerOpen] = useState(false);
                             marginBottom: '4px',
                             lineHeight: 1.1
                           }}>
-                            {status.isPartiallySeated 
-                              ? `${status.availableMembers} ${t('of')} ${status.totalMembers}` 
+                            {status.isPartiallySeated
+                              ? `${status.availableMembers} ${t('of')} ${status.totalMembers}`
                               : `${status.availableMembers} ${t('people')}`
                             }
                           </div>
@@ -3141,7 +3182,7 @@ const [isBurgerOpen, setIsBurgerOpen] = useState(false);
                     <span>✅</span>
                     <span>{t('fullySeated')} ({groups.filter(g => getGroupStatus(g).isFullySeated).length})</span>
                   </div>
-                  <div 
+                  <div
                     className="mobile-groups-carousel"
                     style={{
                       overflowX: 'auto',
@@ -3157,7 +3198,7 @@ const [isBurgerOpen, setIsBurgerOpen] = useState(false);
                   >
                     {groups.filter(g => getGroupStatus(g).isFullySeated).map((group) => {
                       const status = getGroupStatus(group);
-                      const tableWithGroup = hallData?.tables?.find(table => 
+                      const tableWithGroup = hallData?.tables?.find(table =>
                         table.people?.some(person => person?.groupId === group.id)
                       );
 
@@ -3273,9 +3314,9 @@ const [isBurgerOpen, setIsBurgerOpen] = useState(false);
       <div className="main-content" style={{
         flex: 1,
         width: '100%',
-        height: window.innerWidth > 768 
+        height: window.innerWidth > 768
           ? 'calc(100vh - 190px)'
-          : isMobileGroupsExpanded 
+          : isMobileGroupsExpanded
             ? 'calc(100vh - 200px)'
             : 'calc(100vh - 110px)',
         overflow: 'hidden',
@@ -3903,7 +3944,7 @@ const [isBurgerOpen, setIsBurgerOpen] = useState(false);
               {selectedChair ? `${t('table')} ${selectedChair.tableId} • ${t('seat')} ${selectedChair.chairIndex + 1}` : t('guestSeating')}
             </h2>
 
-            {groups.some(group => group.members.length > 0) && (
+            {/* {groups.some(group => group.members.length > 0) && (
               <div style={{ marginBottom: '25px' }}>
                 <h3 style={{
                   margin: '0 0 15px 0',
@@ -3914,7 +3955,7 @@ const [isBurgerOpen, setIsBurgerOpen] = useState(false);
                 }}>
                   🎯 {t('selectFromGroups')}
                 </h3>
-                
+
                 <div style={{
                   border: '1px solid #ddd',
                   borderRadius: '8px',
@@ -3947,7 +3988,7 @@ const [isBurgerOpen, setIsBurgerOpen] = useState(false);
                           {group.name} ({group.members.length})
                         </span>
                       </div>
-                      
+
                       <div style={{
                         display: 'flex',
                         flexWrap: 'wrap',
@@ -3989,7 +4030,7 @@ const [isBurgerOpen, setIsBurgerOpen] = useState(false);
                     </div>
                   ))}
                 </div>
-                
+
                 {selectedPersonFromGroup && (
                   <div style={{
                     marginTop: '10px',
@@ -4005,8 +4046,147 @@ const [isBurgerOpen, setIsBurgerOpen] = useState(false);
                   </div>
                 )}
               </div>
-            )}
+            )} */}
+  <div style={{ marginBottom: '20px' }}>
+    <div style={{
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: '10px'
+    }}>
+      <label style={{
+        fontWeight: 'bold',
+        fontSize: '16px'
+      }}>
+        🔍 {t('selectFromList')}:
+      </label>
+      <button
+        onClick={() => setShowPersonSearch(!showPersonSearch)}
+        style={{
+          backgroundColor: showPersonSearch ? '#e74c3c' : '#3498db',
+          color: 'white',
+          border: 'none',
+          borderRadius: '6px',
+          padding: '6px 12px',
+          cursor: 'pointer',
+          fontSize: '12px',
+          fontWeight: 'bold'
+        }}
+      >
+        {showPersonSearch ? '✕ Скрыть' : '👥 Поиск'}
+      </button>
+    </div>
 
+    {showPersonSearch && (
+      <div style={{
+        border: '2px solid #3498db',
+        borderRadius: '8px',
+        padding: '15px',
+        backgroundColor: '#f8f9ff',
+        marginBottom: '15px'
+      }}>
+        <div style={{ marginBottom: '10px' }}>
+          <input
+            type="text"
+            value={personSearchTerm}
+            onChange={(e) => setPersonSearchTerm(e.target.value)}
+            placeholder={t('searchByName')}
+            style={{
+              width: '100%',
+              padding: '10px',
+              borderRadius: '6px',
+              border: '2px solid #ddd',
+              fontSize: '14px',
+              boxSizing: 'border-box'
+            }}
+            autoFocus
+          />
+        </div>
+
+        <div style={{
+  maxHeight: '150px',
+  overflowY: 'auto',
+  border: '1px solid #ddd',
+  borderRadius: '6px',
+  backgroundColor: 'white'
+}}>
+  {getFilteredPeopleForPerson().length > 0 ? (
+    getFilteredPeopleForPerson().map((person, index) => (
+      <div
+        key={index}
+        onClick={() => selectPersonFromSearch(person)}
+        style={{
+          padding: '10px 12px',
+          borderBottom: index < getFilteredPeopleForPerson().length - 1 ? '1px solid #eee' : 'none',
+          cursor: 'pointer',
+          backgroundColor: 'transparent',
+          fontSize: '14px',
+          transition: 'background-color 0.2s',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
+        }}
+        onMouseEnter={(e) => e.target.style.backgroundColor = '#e3f2fd'}
+        onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+      >
+        <div style={{
+          width: '8px',
+          height: '8px',
+          backgroundColor: person.groupColor,
+          borderRadius: '50%',
+          flexShrink: 0
+        }}></div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontWeight: 'bold' }}>{person.name}</div>
+          <div style={{ 
+            fontSize: '11px', 
+            color: '#666',
+            opacity: 0.8 
+          }}>
+            {person.groupName}
+          </div>
+        </div>
+        <span style={{
+          fontSize: '12px',
+          color: '#2ecc71',
+          fontWeight: 'bold'
+        }}>
+          ✓ Выбрать
+        </span>
+      </div>
+    ))
+  ) : (
+    <div style={{
+      padding: '15px',
+      textAlign: 'center',
+      color: '#666',
+      fontStyle: 'italic'
+    }}>
+      {personSearchTerm ? t('noOneFound') : 'Нет людей в группах'}
+    </div>
+  )}
+</div>
+
+<div style={{
+  marginTop: '10px',
+  fontSize: '12px',
+  color: '#666',
+  textAlign: 'center'
+}}>
+  {t('available')}: {getFilteredPeopleForPerson().length} людей из групп
+</div>
+
+        <div style={{
+          marginTop: '10px',
+          fontSize: '12px',
+          color: '#666',
+          textAlign: 'center'
+        }}>
+          {t('available')}: {getFilteredPeopleForPerson().length} {t('outOf')} {TEST_PEOPLE.length} {t('people')}
+        </div>
+      </div>
+    )}
+  </div>
             {groups.some(group => group.members.length > 0) && (
               <div style={{
                 display: 'flex',
@@ -4021,80 +4201,84 @@ const [isBurgerOpen, setIsBurgerOpen] = useState(false);
               </div>
             )}
 
-            <div>
-              <h3 style={{
-                margin: '0 0 15px 0',
-                fontSize: '18px',
-                color: '#333',
-                borderBottom: '2px solid #eee',
-                paddingBottom: '10px'
-              }}>
-                ➕ {t('addNew')}
-              </h3>
+           <div>
+  <h3 style={{
+    margin: '0 0 15px 0',
+    fontSize: '18px',
+    color: '#333',
+    borderBottom: '2px solid #eee',
+    paddingBottom: '10px'
+  }}>
+    ➕ {t('addNew')}
+  </h3>
 
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{
-                  display: 'block',
-                  marginBottom: '8px',
-                  fontWeight: 'bold',
-                  fontSize: '16px'
-                }}>
-                  {t('guestName')}:
-                </label>
-                <input
-                  type="text"
-                  value={personName}
-                  onChange={(e) => {
-                    setPersonName(e.target.value);
-                    if (selectedPersonFromGroup && e.target.value !== selectedPersonFromGroup.name) {
-                      setSelectedPersonFromGroup(null);
-                    }
-                  }}
-                  placeholder={t('enterName')}
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    borderRadius: '8px',
-                    border: '2px solid #ddd',
-                    fontSize: '16px',
-                    boxSizing: 'border-box',
-                    backgroundColor: '#f9f9f9'
-                  }}
-                  autoFocus
-                />
-              </div>
+  {/* Добавьте поиск людей */}
 
-              <div style={{ marginBottom: '25px' }}>
-                <label style={{
-                  display: 'block',
-                  marginBottom: '8px',
-                  fontWeight: 'bold',
-                  fontSize: '16px'
-                }}>
-                  {t('group')}:
-                </label>
-                <select
-                  value={selectedGroup}
-                  onChange={(e) => setSelectedGroup(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    borderRadius: '8px',
-                    border: '2px solid #ddd',
-                    fontSize: '16px',
-                    boxSizing: 'border-box',
-                    backgroundColor: '#f9f9f9'
-                  }}
-                >
-                  <option value="">{t('noGroup')}</option>
-                  {groups.map(group => (
-                    <option key={group.id} value={group.id}>
-                      {group.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
+
+  {/* Существующее поле ввода имени */}
+  <div style={{ marginBottom: '20px' }}>
+    <label style={{
+      display: 'block',
+      marginBottom: '8px',
+      fontWeight: 'bold',
+      fontSize: '16px'
+    }}>
+      {t('guestName')}:
+    </label>
+    <input
+      type="text"
+      value={personName}
+      onChange={(e) => {
+        setPersonName(e.target.value);
+        if (selectedPersonFromGroup && e.target.value !== selectedPersonFromGroup.name) {
+          setSelectedPersonFromGroup(null);
+        }
+      }}
+      placeholder={t('enterName')}
+      style={{
+        width: '100%',
+        padding: '12px',
+        borderRadius: '8px',
+        border: '2px solid #ddd',
+        fontSize: '16px',
+        boxSizing: 'border-box',
+        backgroundColor: '#f9f9f9'
+      }}
+    />
+  </div>
+
+  {/* Остальной код для группы остается без изменений */}
+  <div style={{ marginBottom: '25px' }}>
+    <label style={{
+      display: 'block',
+      marginBottom: '8px',
+      fontWeight: 'bold',
+      fontSize: '16px'
+    }}>
+      {t('group')}:
+    </label>
+    <select
+      value={selectedGroup}
+      onChange={(e) => setSelectedGroup(e.target.value)}
+      style={{
+        width: '100%',
+        padding: '12px',
+        borderRadius: '8px',
+        border: '2px solid #ddd',
+        fontSize: '16px',
+        boxSizing: 'border-box',
+        backgroundColor: '#f9f9f9'
+      }}
+    >
+      <option value="">{t('noGroup')}</option>
+      {groups.map(group => (
+        <option key={group.id} value={group.id}>
+          {group.name}
+        </option>
+      ))}
+    </select>
+  </div>
+</div>
 
             <div style={{
               display: 'flex',
