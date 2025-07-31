@@ -4,6 +4,8 @@ import HallViewer from './components/HallViewer';
 import ResponsiveSeatingArrangement from './components/ResponsiveSeatingArrangement';
 import ClientBookingComponent from './components/ClientBookingComponent';
 import WebSite from './components/WebSite';
+import ClientSeatingArrangement from './components/ClientSeatingArrangement';
+import SimpleSeatingApp from './components/ClientSeatingArrangement';
 
 function App() {
   return (
@@ -16,6 +18,7 @@ function App() {
           {/* Страница /hallview будет показывать HallViewer */}
           <Route path="/hallview" element={<HallViewer />} />
           <Route path="/client" element={<ClientBookingComponent />} />
+          <Route path="/seating" element={<SimpleSeatingApp />} />
           <Route path="/web" element={<WebSite />} />
         </Routes>
       </div>
