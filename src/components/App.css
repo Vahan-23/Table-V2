@@ -1,5 +1,6 @@
 /* Modern styles for the Seating Arrangement app */
 @import url('https://fonts.googleapis.com/css2?family=Berkshire+Swash&family=Dancing+Script:wght@400..700&family=Protest+Guerrilla&display=swap');
+
 /* Скрываем стандартный скроллбар */
 ::-webkit-scrollbar {
   width: 10px;
@@ -83,9 +84,10 @@ body {
 
 .control-group {
   display: flex;
-  flex-wrap: wrap;
   gap: 1rem;
   width: 100%;
+  flex-direction: column;
+  align-items: center;
 }
 
 .input-group {
@@ -398,14 +400,15 @@ button {
 }
 
 /* Main Content */
-.main-content {
+.main-content2 {
   display: flex;
   flex: 1;
   padding: 1rem;
-  gap: 20px;
+  /* gap: 20px; */
   /* max-width: 1600px; */
   margin: 0 auto;
   width: 95%;
+  align-items: center;
 }
 
 /* Sidebar */
@@ -1352,6 +1355,7 @@ button {
   max-width: 1200px;
   margin: 0 auto;
 }
+
 /* Navigation */
 .main-nav {
   flex: 1;
@@ -1448,7 +1452,7 @@ button {
 
 .figmaContainer {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   width: 100%;
 }
 
@@ -1620,9 +1624,7 @@ button {
 .group-name {
   font-weight: bold;
 }
-.group-name2{
 
-}
 
 .group-count {
   color: #666;
@@ -1753,18 +1755,20 @@ button {
 /* Стили для уведомления о перемещении */
 .transfer-notification {
   position: fixed;
+  height: 20px;
   top: 20px;
   right: 20px;
-  padding: 15px 20px;
   background-color: #2ecc71;
   color: white;
+  padding: 10px 15px;
   border-radius: 4px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-  font-weight: bold;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  font-size: 14px;
   z-index: 9999;
   opacity: 0;
   transform: translateY(-20px);
-  transition: opacity 0.3s ease, transform 0.3s ease;
+  transition: opacity 0.3s, transform 0.3s;
+  max-width: 300px;
 }
 
 .transfer-notification.show {
@@ -2297,6 +2301,7 @@ button {
   background-color: #f9f9f9;
   transition: background-color 0.2s ease;
 }
+
 .member-item:hover {
   background-color: #f0f0f0;
 }
@@ -2513,4 +2518,32 @@ button {
   display: flex;
   flex-direction: column;
   background: #1a1a1a;
+}
+
+.tool-btn.active {
+  background-color: #3498db;
+  color: white;
+}
+
+
+.tool-btn:hover {
+  background-color: #e6e6e6;
+}
+
+
+.export-hall-btn, .import-hall-btn {
+    background-color: #27ae60;
+    margin-left: 8px;
+}
+
+.export-hall-btn:hover, .import-hall-btn:hover {
+    background-color: #2ecc71;
+}
+
+.import-hall-btn {
+    background-color: #3498db;
+}
+
+.import-hall-btn:hover {
+    background-color: #2980b9;
 }

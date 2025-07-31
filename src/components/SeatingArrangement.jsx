@@ -2,11 +2,10 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useDrag, useDrop } from 'react-dnd';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
-
 import './HallElement.css';
 import './ElementProperties.css';
 import './App.css';
-
+import EnhancedCanvas from './EnhancedCanvas';
 
 import { HallElementsManager, ElementProperties } from './index';
 import { ItemTypes as HallElementItemTypes, HallElementsCatalog } from './HallElements'
@@ -65,11 +64,107 @@ const SeatingArrangement = () => {
     const [activeMode, setActiveMode] = useState('tables'); // 'tables' или 'elements'
     const [hallElements, setHallElements] = useState([]);
     const [selectedElementId, setSelectedElementId] = useState(null);
-
-
     // Добавляем новые состояния для отслеживания позиции перетаскивания
     const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
+const [viewMode, setViewMode] = useState('design');
 
+const handleViewModeChange = (newMode) => {
+  console.log('Changing view mode to:', newMode);
+  setViewMode(newMode);
+};
+
+    const enhancedCanvasRef = useRef(null);
+
+    const exportHallData = () => {
+        if (!currentHall) {
+            alert('Խնդրում ենք նախ ընտրել դահլիճը');
+            return;
+        }
+
+        // Create a complete hall data object with all components
+        const hallData = {
+            id: currentHall.id,
+            name: currentHall.name,
+            tables: tables,
+            hallElements: hallElements,
+            chairCount: currentHall.chairCount || chairCount
+        };
+
+        // Convert to JSON
+        const jsonData = JSON.stringify(hallData, null, 2);
+
+        // Create a blob and download link
+        const blob = new Blob([jsonData], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+
+        // Create a temporary download link
+        const downloadLink = document.createElement('a');
+        downloadLink.href = url;
+        downloadLink.download = `${currentHall.name.replace(/\s+/g, '_')}_hall_export.json`;
+
+        // Trigger download
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+
+        // Clean up
+        document.body.removeChild(downloadLink);
+        URL.revokeObjectURL(url);
+
+        alert(`Դահլիճը "${currentHall.name}" հաջողությամբ արտահանվել է`);
+    };
+
+
+    const importHallData = (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const importedData = JSON.parse(e.target.result);
+
+                // Validate the imported data has required fields
+                if (!importedData.id || !importedData.name || !importedData.tables) {
+                    alert('Անվավեր հատակագծի ֆայլ: պակասում են պարտադիր դաշտերը');
+                    return;
+                }
+
+                // Check if a hall with this ID already exists
+                const existingHallIndex = halls.findIndex(h => h.id === importedData.id);
+
+                let updatedHalls;
+                if (existingHallIndex >= 0) {
+                    // Update existing hall
+                    updatedHalls = [...halls];
+                    updatedHalls[existingHallIndex] = importedData;
+                } else {
+                    // Add as a new hall
+                    updatedHalls = [...halls, importedData];
+                }
+
+                // Update state
+                setHalls(updatedHalls);
+                localStorage.setItem('halls', JSON.stringify(updatedHalls));
+
+                // Set the imported hall as current
+                setCurrentHall(importedData);
+                setTables(importedData.tables || []);
+                setHallElements(importedData.hallElements || []);
+
+                alert(`Դահլիճը "${importedData.name}" հաջողությամբ ներմուծվել է`);
+            } catch (error) {
+                console.error('Error importing hall data:', error);
+                alert('Սխալ ֆայլի ներմուծման ժամանակ: ' + error.message);
+            }
+        };
+
+        reader.readAsText(file);
+
+        // Reset the file input
+        event.target.value = '';
+    };
+
+    const fileInputRef = useRef(null);
 
     const handleCanvasClick = (e) => {
         // Проверяем, что клик был именно по фону холста,
@@ -256,8 +351,10 @@ const SeatingArrangement = () => {
     const handlePlaceSelectedPeople = (selectedPeople) => {
         if (!groupToPlace || !targetTableId) return;
 
+        console.log('Placing selected people:', selectedPeople, 'on table:', targetTableId);
+
         setTables((prevTables) => {
-            return prevTables.map(table => {
+            const updatedTables = prevTables.map(table => {
                 // Обрабатываем исходный стол (если это перемещение между столами)
                 if (groupToPlace.sourceTableId && table.id === groupToPlace.sourceTableId) {
                     // Удаляем только выбранных людей из исходного стола
@@ -290,10 +387,22 @@ const SeatingArrangement = () => {
                         seatsUsed++;
                     }
 
-                    return { ...table, people: updatedPeople };
+                    const updatedTable = { ...table, people: updatedPeople };
+
+                    // ✅ ОБНОВЛЯЕМ ВИЗУАЛИЗАЦИЮ СТОЛА
+                    setTimeout(() => {
+                        if (enhancedCanvasRef.current?.updateTableVisual) {
+                            console.log('Updating table visual after people selection');
+                            enhancedCanvasRef.current.updateTableVisual(targetTableId, updatedTable);
+                        }
+                    }, 100);
+
+                    return updatedTable;
                 }
                 return table;
             });
+
+            return updatedTables;
         });
 
         // Если это не перемещение между столами, удаляем выбранных людей из общего списка
@@ -672,7 +781,7 @@ const SeatingArrangement = () => {
                 ? {
                     ...hall,
                     tables: tables,
-                    hallElements: hallElements // Добавляем элементы зала
+                    hallElements: hallElements,
                 }
                 : hall
         );
@@ -760,11 +869,10 @@ const SeatingArrangement = () => {
         // Загружаем элементы зала, если они есть
         setHallElements(hall.hallElements || []);
 
+
+
         // Сбрасываем выбор элемента
         setSelectedElementId(null);
-
-        // Устанавливаем режим столов по умолчанию
-        // setActiveMode('tables');
     };
 
     // Delete a hall
@@ -913,20 +1021,48 @@ const SeatingArrangement = () => {
                         </button>
 
                         {currentHall && (
-                            <button
-                                className="secondary-btn delete-hall-btn"
-                                onClick={() => deleteHall(currentHall.id)}
-                            >
-                                Ջնջել դահլիճը
-                            </button>
+                            <>
+                                <button
+                                    className="primary-btn export-hall-btn"
+                                    onClick={exportHallData}
+                                >
+                                    Արտահանել դահլիճը
+                                </button>
+
+                                <button
+                                    className="secondary-btn import-hall-btn"
+                                    onClick={() => fileInputRef.current && fileInputRef.current.click()}
+                                >
+                                    Ներմուծել դահլիճ
+                                </button>
+
+                                <button
+                                    className="secondary-btn delete-hall-btn"
+                                    onClick={() => deleteHall(currentHall.id)}
+                                >
+                                    Ջնջել դահլիճը
+                                </button>
+                            </>
                         )}
                     </div>
                 </div>
+
+                {/* Hidden file input for importing hall data */}
+                <input
+                    type="file"
+                    ref={fileInputRef}
+                    style={{ display: 'none' }}
+                    accept=".json"
+                    onChange={importHallData}
+                />
 
                 {currentHall && (
                     <div className="current-hall-info">
                         <h4>Ընթացիկ դահլիճ: {currentHall.name}</h4>
                         <p>{currentHall.tables.length} սեղաններ</p>
+                        {currentHall.shapes && currentHall.shapes.length > 0 && (
+                            <p>{currentHall.shapes.length} նկարներ</p>
+                        )}
                     </div>
                 )}
             </div>
@@ -942,10 +1078,18 @@ const SeatingArrangement = () => {
         const newTables = [];
         const currentTime = Date.now();
 
-        // Get container dimensions
-        const containerRect = tablesAreaRef.current.getBoundingClientRect();
-        const containerWidth = containerRect.width / zoom;
-        const containerHeight = containerRect.height / zoom;
+        // Default values for container dimensions if ref is not available
+        let containerWidth = 1000;  // Default width
+        let containerHeight = 800;  // Default height
+
+        // Only try to get container dimensions if tablesAreaRef.current exists
+        if (tablesAreaRef.current) {
+            const containerRect = tablesAreaRef.current.getBoundingClientRect();
+            containerWidth = containerRect.width / zoom;
+            containerHeight = containerRect.height / zoom;
+        } else {
+            console.warn("tablesAreaRef.current is null, using default dimensions");
+        }
 
         // Estimate table size (approximate values)
         const tableWidth = 300;
@@ -972,6 +1116,7 @@ const SeatingArrangement = () => {
                 id: currentTime + i, // Ensure unique IDs
                 people: [],
                 chairCount,
+                shape: 'round',
                 x: safeX,
                 y: safeY,
                 width: tableWidth,
@@ -1471,45 +1616,55 @@ const SeatingArrangement = () => {
     };
 
     const handleChairClick = (tableId, chairIndex) => {
-        const table = tables.find(t => t.id === tableId);
-        const person = table?.people[chairIndex];
-
-        if (person) {
-            // If there's a person in the chair, show removal popup
-            setSelectedTableId(tableId);
-            setSelectedChairIndex(chairIndex);
-            setPersonToRemove(person);
-            setIsRemoveMode(true);
-            setIsPopupVisible(true);
-        } else {
-            // If chair is empty, show popup to add a person
-            setSelectedTableId(tableId);
-            setSelectedChairIndex(chairIndex);
-            setIsRemoveMode(false);
-            setIsPopupVisible(true);
-        }
-    };
+    const table = tables.find(t => t.id === tableId);
+    const person = table?.people[chairIndex];
+    if (person && person.name) {
+        // Показываем модальное окно для удаления
+        setSelectedTableId(tableId);
+        setSelectedChairIndex(chairIndex);
+        setPersonToRemove(person);
+        setIsRemoveMode(true);
+        setIsPopupVisible(true);
+    } else {
+        // Показываем модальное окно для добавления
+        setSelectedTableId(tableId);
+        setSelectedChairIndex(chairIndex);
+        setIsRemoveMode(false);
+        setIsPopupVisible(true);
+    }
+};
 
     const handleRemovePerson = () => {
         if (selectedTableId !== null && selectedChairIndex !== null && personToRemove) {
+            console.log('Removing person from table:', selectedTableId, 'chair:', selectedChairIndex);
+
             setTables(prevTables => {
-                const tableIndex = prevTables.findIndex(t => t.id === selectedTableId);
-                if (tableIndex === -1) return prevTables;
+                const updatedTables = prevTables.map(table => {
+                    if (table.id === selectedTableId) {
+                        const updatedTable = { ...table };
+                        const updatedPeople = [...updatedTable.people];
 
-                const updatedTable = { ...prevTables[tableIndex] };
-                const updatedPeople = [...updatedTable.people];
+                        // Удаляем человека со стула
+                        updatedPeople[selectedChairIndex] = null;
+                        updatedTable.people = updatedPeople;
 
-                // Remove the person from the chair
-                updatedPeople[selectedChairIndex] = null;
-                updatedTable.people = updatedPeople;
+                        // ✅ ОБНОВЛЯЕМ ВИЗУАЛИЗАЦИЮ СТОЛА
+                        setTimeout(() => {
+                            if (enhancedCanvasRef.current?.updateTableVisual) {
+                                console.log('Updating table visual after removing person');
+                                enhancedCanvasRef.current.updateTableVisual(selectedTableId, updatedTable);
+                            }
+                        }, 100);
 
-                // Update tables
-                const newTables = [...prevTables];
-                newTables[tableIndex] = updatedTable;
-                return newTables;
+                        return updatedTable;
+                    }
+                    return table;
+                });
+
+                return updatedTables;
             });
 
-            // Only add the person back to the people list if they don't already exist there
+            // Добавляем человека обратно в общий список (если его там нет)
             setPeople(prev => {
                 if (!prev.some(p => p.name === personToRemove.name)) {
                     return [...prev, personToRemove];
@@ -1517,6 +1672,7 @@ const SeatingArrangement = () => {
                 return prev;
             });
 
+            // Сбрасываем состояние
             setIsPopupVisible(false);
             setSelectedTableId(null);
             setSelectedChairIndex(null);
@@ -1526,36 +1682,38 @@ const SeatingArrangement = () => {
     };
 
     const handleSelectPerson = (person) => {
-        if (selectedTableId !== null && selectedChairIndex !== null) {
-            setTables((prevTables) => {
-                // Find the current table
-                const currentTableIndex = prevTables.findIndex(t => t.id === selectedTableId);
-                if (currentTableIndex === -1) return prevTables;
+  if (selectedTableId !== null && selectedChairIndex !== null) {
+    setTables((prevTables) => {
+      const updatedTables = prevTables.map((table) => {
+        if (table.id === selectedTableId) {
+          const updatedPeople = [...table.people];
+          updatedPeople[selectedChairIndex] = person;
+          const updatedTable = { ...table, people: updatedPeople };
 
-                // Create a copy of the table's people array
-                const updatedPeople = [...prevTables[currentTableIndex].people];
-                updatedPeople[selectedChairIndex] = person;
+          // Немедленно обновляем визуализацию стола через ref
+          setTimeout(() => {
+            if (enhancedCanvasRef.current?.updateTableVisual) {
+              console.log('Updating table visual after adding person');
+              enhancedCanvasRef.current.updateTableVisual(selectedTableId, updatedTable);
+            }
+          }, 0);
 
-                // Create a new table with updated people
-                const updatedTable = {
-                    ...prevTables[currentTableIndex],
-                    people: updatedPeople
-                };
-
-                const newTables = [...prevTables];
-                newTables.splice(currentTableIndex, 1, updatedTable);
-                return newTables;
-            });
-
-            setPeople((prevPeople) =>
-                prevPeople.filter((p) => p.name !== person.name)
-            );
-
-            setIsPopupVisible(false);
-            setSelectedTableId(null);
-            setSelectedChairIndex(null);
+          return updatedTable;
         }
-    };
+        return table;
+      });
+      return updatedTables;
+    });
+
+    // Удаляем человека из списка доступных людей
+    setPeople((prevPeople) => prevPeople.filter((p) => p.name !== person.name));
+
+    // Закрываем popup и сбрасываем выбор
+    setIsPopupVisible(false);
+    setSelectedTableId(null);
+    setSelectedChairIndex(null);
+  }
+};
 
     const closePopup = () => {
         setIsPopupVisible(false);
@@ -1789,7 +1947,7 @@ const SeatingArrangement = () => {
 
                     {showHallModal && <HallModal />}
                 </header>
-                <div className="main-content">
+                <div className="main-content2">
 
                     <TableDetailsPopup
                         table={getDetailsTable()}
@@ -1798,11 +1956,11 @@ const SeatingArrangement = () => {
                         isOpen={isDetailsOpen}
                         onClose={handleCloseTableDetails}
                         setPeople={setPeople}
-                        
+                        enhancedCanvasRef={enhancedCanvasRef}
                     />
                     <div className="figmaContainer">
-                       <SidebarLayout position='right' >
-                        
+                        <SidebarLayout position='right' >
+
                             <GroupsPanel
                                 defaultExpanded={false}
                                 groups={people}
@@ -1811,12 +1969,19 @@ const SeatingArrangement = () => {
                                 updateGroups={setPeople}
                             />
                             <ElementsPanel
-                            defaultExpanded={false}
-                            onAddElement={(elementType) => {
-                            }} />
+                                defaultExpanded={false}
+                                onAddElement={(elementType) => {
+                                }} />
+
+                            {/* <HallElementsCatalog
+                                onAddElement={(elementType) => {
+                                    console.log("Element catalog item clicked:", elementType);
+                                    // This is just for logging - the actual drag and drop is handled by the catalog component
+                                }}
+                            /> */}
 
                         </SidebarLayout>
-                       <div className="zoom-controls">
+                        {/* <div className="zoom-controls">
                             <div className="zoom-buttons">
                                 <button
                                     className="zoom-btn zoom-out-btn"
@@ -1831,106 +1996,43 @@ const SeatingArrangement = () => {
                                 >+</button>
                             </div>
 
-                        </div>
-                        <div
-                            className={`tables-area ${isDraggingCanvas ? 'dragging' : ''} ${draggingGroup ? 'active-drop-area' : ''}`}
-                            ref={tablesAreaRef}
-                            onMouseDown={handleCanvasMouseDown}
-                            onMouseMove={handleMouseMoveOnCanvas}
-                            onClick={handleCanvasClick} // <-- Добавляем этот обработчик
-                            onDragOver={handleCanvasDragOver}
-                            onDragLeave={(e) => {
-                                e.currentTarget.style.backgroundColor = '';
-                            }}
-                            onDrop={handleCanvasDrop}
-                            style={{
-                                transform: `scale(${zoom})`,
-                                transformOrigin: 'top left',
-                                display: 'flex',
-                                overflow: 'auto',
-                                width: `${100 / zoom}%`,
-                                height: `${100 / zoom}%`,
-                                minHeight: `${100 / zoom}%`,
-                                padding: '20px',
-                                position: 'relative',
-                                cursor: isDraggingCanvas ? 'grabbing' : (draggingGroup ? 'copy' : 'default'),
-                                '--zoom-level': zoom,
-                                transition: isZooming ? 'transform 0.1s ease-out' : 'none',
-                                willChange: 'transform',
-                            }}
-                        >
-                            {/* Показываем визуальный индикатор при перетаскивании группы */}
-                            {draggingGroup && (
-                                <div className="new-table-preview" style={{
-                                    position: 'absolute',
-                                    left: `${dragPosition.x - 150}px`,
-                                    top: `${dragPosition.y - 150}px`,
-                                    width: '300px',
-                                    height: '300px',
-                                    borderRadius: '50%',
-                                    border: '2px dashed #3498db',
-                                    backgroundColor: 'rgba(52, 152, 219, 0.1)',
-                                    pointerEvents: 'none',
-                                    display: 'flex',
-                                    justifyContent: 'center',
-                                    alignItems: 'center',
-                                    zIndex: 1
-                                }}
-                                >
-                                    <div style={{
-                                        backgroundColor: 'rgba(52, 152, 219, 0.7)',
-                                        color: 'white',
-                                        padding: '8px 12px',
-                                        borderRadius: '4px',
-                                        fontSize: '14px'
-                                    }}>
-                                        Отпустите для создания стола
-                                    </div>
-                                </div>
-                            )}
 
-                            {/* Отображаем столы независимо от режима */}
-                            {tables.map((table) => (
-                                <Table
-                                    key={table.id}
-                                    table={table}
-                                    setTables={setTables}
-                                    handleDeleteTable={handleDeleteTable}
-                                    draggingGroup={draggingGroup}
-                                    setDraggingGroup={setDraggingGroup}
-                                    people={people}
-                                    setPeople={setPeople}
-                                    onChairClick={(chairIndex) => handleChairClick(table.id, chairIndex)}
-                                    isDraggable={true}
-                                    onShowDetails={handleShowTableDetails}
-                                    onDrop={(e) => handleTableDrop(e, table.id)}
-                                    isTableHighlighted={isTableHighlighted(table.id)}
-                                    tables={tables}
-                                    setGroupToPlace={setGroupToPlace}
-                                    setTargetTableId={setTargetTableId}
-                                    setAvailableSeats={setAvailableSeats}
-                                    setGroupSelectionActive={setGroupSelectionActive}
-                                    showTransferNotification={showTransferNotification}
-                                />
-                            ))}
+                        </div> */}
+                        <EnhancedCanvas
+                            ref={enhancedCanvasRef}
+                            tables={tables}
+                            setTables={setTables}
+                            hallElements={hallElements}
+                            setHallElements={setHallElements}
+                            selectedElementId={selectedElementId}
+                            setSelectedElementId={setSelectedElementId}
+                            canvasMode={activeMode}
+                            onChairClick={handleChairClick}
+                            onTableSelect={handleShowTableDetails}
+                            onTableMove={(tableId, x, y) => { }}
+                            initialZoom={0.2}
+                            people={people}
+                            setPeople={setPeople}
+                            draggingGroup={draggingGroup}
+                            setDraggingGroup={setDraggingGroup}
+                            chairCount={chairCount}
+                             viewMode={viewMode}
+  onViewModeChange={handleViewModeChange}
+                            PeopleSelector={PeopleSelector}
+                            // ✅ ДОБАВИТЬ CALLBACK
+                            onShowPeopleSelector={(groupData) => {
+                                setGroupToPlace(groupData.groupToPlace);
+                                setTargetTableId(groupData.targetTableId);
+                                setAvailableSeats(groupData.availableSeats);
+                                setGroupSelectionActive(true);
+                            }}
+                        />
 
-                            <HallElementsManager
-                                tablesAreaRef={tablesAreaRef}
-                                zoom={zoom}
-                                elements={hallElements}
-                                setElements={setHallElements}
-                                selectedElementId={selectedElementId}
-                                // setSelectedElementId={setSelectedElementId}
-                                setSelectedElementId={(elementId) => {
-                                    setSelectedElementId(elementId); // Выбираем элемент
-                                    setActiveMode('elements');      // Переключаем режим
-                                }}
-                            />
-                        </div>
+
+
                     </div>
                 </div>
             </div>
-
             {/* Fullscreen popup */}
             {isPopupVisible && (
                 <div
@@ -2086,64 +2188,64 @@ const Table = ({
     // Получаем форму стола
     const shape = table.shape || 'round';
     const isRectangleTable = shape === 'rectangle';
-    
+
     // Получаем текущий угол поворота
     const rotation = table.rotation || 0;
 
     // Функция для ручного поворота стола
     const handleRotateStart = (e) => {
         if (!tableRef.current || !isRectangleTable) return;
-        
+
         // Остановка всплытия события
         e.stopPropagation();
         e.preventDefault();
-        
+
         console.log('ROTATION START'); // Отладочный вывод
-        
+
         setIsRotating(true);
-        
+
         // Вычисляем центр стола
         const rect = tableRef.current.getBoundingClientRect();
         const centerX = rect.left + rect.width / 2;
         const centerY = rect.top + rect.height / 2;
-        
+
         // Вычисляем начальный угол
         const startAngle = Math.atan2(
             e.clientY - centerY,
             e.clientX - centerX
         ) * (180 / Math.PI);
-        
+
         console.log('Start angle:', startAngle, 'Current rotation:', table.rotation || 0);
-        
+
         setRotateStartAngle(startAngle - (table.rotation || 0));
-        
+
         // Обрабатываем события на уровне документа
         document.addEventListener('mousemove', handleRotateMove);
         document.addEventListener('mouseup', handleRotateEnd);
     };
-    
+
     const handleRotateMove = (e) => {
         if (!isRotating || !tableRef.current) return;
-        
+
         // Вычисляем центр стола
         const rect = tableRef.current.getBoundingClientRect();
         const centerX = rect.left + rect.width / 2;
         const centerY = rect.top + rect.height / 2;
-        
+
         // Вычисляем новый угол
         const currentAngle = Math.atan2(
             e.clientY - centerY,
             e.clientX - centerX
         ) * (180 / Math.PI);
-        
+
         // Получаем разницу поворота
         let newRotation = currentAngle - rotateStartAngle;
-        
+
         // Нормализуем угол поворота до диапазона 0-360
         newRotation = (newRotation + 360) % 360;
-        
+
         // Обновляем поворот стола
-        setTables(prevTables => 
+        setTables(prevTables =>
             prevTables.map(t => {
                 if (t.id === table.id) {
                     return { ...t, rotation: newRotation };
@@ -2152,10 +2254,10 @@ const Table = ({
             })
         );
     };
-    
+
     const handleRotateEnd = () => {
         setIsRotating(false);
-        
+
         // Удаляем обработчики событий
         document.removeEventListener('mousemove', handleRotateMove);
         document.removeEventListener('mouseup', handleRotateEnd);
@@ -2423,62 +2525,10 @@ const Table = ({
         setIsResizing(true);
         e.stopPropagation();
     };
+    useEffect(() => {
+        console.log('Table component updated:', table.id, 'people:', table.people);
+    }, [table.people]);
 
-    const handleMouseMove = (e) => {
-        if (isDragging) {
-            // Mark this as a drag operation, not a click
-            isDragOperation.current = true;
-
-            const container = tableRef.current.parentElement;
-            const zoom = parseFloat(container.style.getPropertyValue('--zoom-level') || 1);
-
-            // Calculate new position with exact 1:1 movement, accounting for zoom
-            const newX = (e.clientX - dragOffset.x) / zoom;
-            const newY = (e.clientY - dragOffset.y) / zoom;
-
-            // Calculate container boundaries
-            const containerRect = container.getBoundingClientRect();
-            const containerWidth = containerRect.width / zoom;
-            const containerHeight = containerRect.height / zoom;
-
-            // Calculate table dimensions
-            const tableRect = tableRef.current.getBoundingClientRect();
-            const tableWidth = tableRect.width / zoom;
-            const tableHeight = tableRect.height / zoom;
-
-            // Enforce boundaries
-            const boundedX = Math.max(0, Math.min(containerWidth - tableWidth, newX));
-            const boundedY = Math.max(0, Math.min(containerHeight - tableHeight, newY));
-
-            // Update table position with exact coordinates
-            setTables(prev => prev.map(t =>
-                t.id === table.id ? { ...t, x: boundedX, y: boundedY } : t
-            ));
-        } else if (isResizing) {
-            // Existing resizing code...
-        }
-    };
-
-    const handleMouseUp = (e) => {
-        // Detect if this was a click (not a drag)
-        if (isDragging && !isDragOperation.current) {
-            // If it's a click (not a drag) and less than 200ms, show details
-            const elapsedTime = Date.now() - dragStartTime;
-            if (elapsedTime < 200) {
-                onShowDetails(table.id);
-            }
-        }
-
-        setIsDragging(false);
-        setIsResizing(false);
-        isDragOperation.current = false;
-
-        if (tableRef.current) {
-            const rect = tableRef.current.getBoundingClientRect();
-            tableRef.current.x = e.clientX - rect.left;
-            tableRef.current.y = e.clientY - rect.top;
-        }
-    };
 
     // Enhanced drop target to handle both regular group drops and seated group transfers
     const [{ isOver }, drop] = useDrop({
@@ -2566,7 +2616,7 @@ const Table = ({
             const angle = angleStep * i;
             const xPosition = radius * Math.cos((angle * Math.PI) / 180);
             const yPosition = radius * Math.sin((angle * Math.PI) / 180);
-
+            const person = peopleOnTable[i];
             const chairStyle = {
                 position: 'absolute',
                 transformOrigin: 'center',
@@ -2584,7 +2634,10 @@ const Table = ({
                 textAlign: 'center',
                 left: `calc(50% + ${xPosition}px)`,
                 top: `calc(50% + ${yPosition}px)`,
-                cursor: 'pointer'
+                cursor: 'pointer',
+                // ✅ ДОБАВЬТЕ ЭТИ СТРОКИ
+                zIndex: 20, // Выше чем у overlay
+                pointerEvents: 'auto' // Убеждаемся что клики обрабатываются
             };
 
             const nameOverlayStyle = {
@@ -2620,10 +2673,10 @@ const Table = ({
                 <div
                     key={i}
                     className="chair"
-                    style={chairStyle}
                     onClick={(e) => {
                         e.stopPropagation();
-                        onChairClick(i);
+                        console.log('Chair onclick - index:', i, 'person:', person); // ✅ Добавьте отладку
+                        onChairClick(table.id, i); // ✅ Убедитесь что передается правильный индекс
                     }}
                     title={peopleOnTable[i] ? `Нажмите на стул, чтобы удалить ${peopleOnTable[i].name}` : "Нажмите на стул, чтобы добавить человека"}
                 >
@@ -2943,7 +2996,7 @@ const Table = ({
 
         return chairs;
     };
-    
+
     // Стили для кнопки вращения - показываем только для прямоугольных столов
     const rotateHandleStyles = isRectangleTable ? {
         position: 'absolute',
@@ -3003,7 +3056,7 @@ const Table = ({
             </div>
 
             {/* Кнопка поворота - только для прямоугольных столов */}
-            
+
 
             {shape === 'rectangle' ? (
                 // Прямоугольный стол
@@ -3032,6 +3085,7 @@ const Table = ({
             )}
         </div>
     );
+
 };
 
 // Модифицированный компонент DraggableGroup
@@ -3040,12 +3094,12 @@ const DraggableGroup = ({ group, tableId, onRemoveGroup, onRemovePerson, onDragS
         type: ItemTypes.SEATED_GROUP,
         item: () => {
             console.log("Drag started for group from table details:", group.groupName);
-            
+
             // Вызываем функцию закрытия панели деталей при начале перетаскивания
             if (onDragStart) {
                 onDragStart();
             }
-            
+
             return {
                 sourceTableId: tableId,
                 groupName: group.groupName,
@@ -3104,7 +3158,7 @@ const DraggableGroup = ({ group, tableId, onRemoveGroup, onRemovePerson, onDragS
     );
 };
 
-const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeople }) => {
+const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeople, enhancedCanvasRef }) => {
     const [tableShape, setTableShape] = useState(table ? (table.shape || 'round') : 'round');
     const [tableName, setTableName] = useState(table ? (table.name || `Стол ${table.id}`) : '');
     // Добавляем состояние для отслеживания угла поворота
@@ -3112,10 +3166,10 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
     // Локальное состояние для отслеживания изменений количества стульев
     const [chairCount, setChairCount] = useState(table ? table.chairCount : 12);
     const popupRef = useRef(null);
-    
+
     // Определяем, является ли стол прямоугольным
     const isRectangleTable = tableShape === 'rectangle';
-    
+
     useEffect(() => {
         // Функция для проверки клика снаружи
         const handleClickOutside = (event) => {
@@ -3135,13 +3189,13 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
             document.removeEventListener('mousedown', handleClickOutside);
         };
     }, [isOpen, onClose]);
-    
+
     // Функция для закрытия панели деталей
     // Эта функция будет передана в компонент DraggableGroup
     const handleDragStart = () => {
         onClose(); // Закрываем панель деталей при начале перетаскивания
     };
-    
+
     // Обновляем локальное состояние при изменении стола
     useEffect(() => {
         if (table) {
@@ -3151,7 +3205,7 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
             setTableRotation(table.rotation || 0);
         }
     }, [table]);
-    
+
     // Применение изменения имени стола
     const applyTableNameChange = () => {
         if (table) {
@@ -3168,7 +3222,7 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
             );
         }
     };
-    
+
     // Применение изменения формы стола
     const applyTableShapeChange = () => {
         if (table && tableShape !== table.shape) {
@@ -3185,22 +3239,22 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
             );
         }
     };
-    
+
     // Функция для сброса поворота стола
     const resetTableRotation = () => {
         if (table && isRectangleTable) {
             applyTableRotationChange(0);
         }
     };
-    
+
     // Функция для применения изменения поворота
     const applyTableRotationChange = (newRotation) => {
         if (table && isRectangleTable) {
             // Нормализуем угол поворота от 0 до 359 градусов
             const normalizedRotation = ((newRotation % 360) + 360) % 360;
-            
+
             setTableRotation(normalizedRotation);
-            
+
             setTables(prevTables =>
                 prevTables.map(t => {
                     if (t.id === table.id) {
@@ -3214,18 +3268,18 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
             );
         }
     };
-    
+
     // Обработчик изменения слайдера поворота
     const handleRotationSliderChange = (e) => {
         const newRotation = parseInt(e.target.value, 10);
         setTableRotation(newRotation);
     };
-    
+
     // Применяем новое значение после завершения движения слайдера
     const handleRotationSliderComplete = () => {
         applyTableRotationChange(tableRotation);
     };
-    
+
     // Обработчик изменения количества стульев
     const handleChairCountChange = (e) => {
         const newCount = parseInt(e.target.value, 10);
@@ -3306,12 +3360,22 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
             setTables(prevTables =>
                 prevTables.map(t => {
                     if (t.id === table.id) {
-                        return {
+                        const updatedTable = {
                             ...t,
                             people: t.people.map(person =>
                                 (person && person.group === groupName) ? null : person
                             )
                         };
+
+                        // ✅ ОБНОВЛЯЕМ ВИЗУАЛИЗАЦИЮ
+                        setTimeout(() => {
+                            if (enhancedCanvasRef?.current?.updateTableVisual) {
+                                console.log('Updating table visual after removing group');
+                                enhancedCanvasRef.current.updateTableVisual(table.id, updatedTable);
+                            }
+                        }, 100);
+
+                        return updatedTable;
                     }
                     return t;
                 })
@@ -3321,7 +3385,7 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
             setPeople(prevPeople => [...prevPeople, ...groupPeople]);
         }
     };
-    
+
     // Функция для удаления отдельного человека из стола
     const handleRemovePerson = (personName) => {
         if (window.confirm(`Вы уверены, что хотите удалить ${personName} с этого стола?`)) {
@@ -3329,12 +3393,22 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
             setTables(prevTables =>
                 prevTables.map(t => {
                     if (t.id === table.id) {
-                        return {
+                        const updatedTable = {
                             ...t,
                             people: t.people.map(person =>
                                 (person && person.name === personName) ? null : person
                             )
                         };
+
+                        // ✅ ТЕПЕРЬ ИСПОЛЬЗУЕМ ПЕРЕДАННЫЙ REF
+                        setTimeout(() => {
+                            if (enhancedCanvasRef?.current?.updateTableVisual) {
+                                console.log('Updating table visual after removing person from details');
+                                enhancedCanvasRef.current.updateTableVisual(table.id, updatedTable);
+                            }
+                        }, 100);
+
+                        return updatedTable;
                     }
                     return t;
                 })
@@ -3344,7 +3418,6 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
             const personToReturn = table.people.find(p => p && p.name === personName);
             if (personToReturn) {
                 setPeople(prevPeople => {
-                    // Проверяем, что человека еще нет в списке
                     if (!prevPeople.some(p => p.name === personName)) {
                         return [...prevPeople, personToReturn];
                     }
@@ -3360,7 +3433,7 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
                 <h3>Table Details {table ? `${table.id}` : ''}</h3>
                 <button className="close-details-btn" onClick={onClose}>×</button>
             </div>
-            
+
             <div className="table-name-section">
                 <h4>Изменить название стола</h4>
                 <div className="table-name-control">
@@ -3380,7 +3453,7 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
                     </button>
                 </div>
             </div>
-            
+
             <div className="table-details-content">
                 {table ? (
                     <>
@@ -3463,7 +3536,7 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
                                 Применить
                             </button>
                         </div>
-                        
+
                         {/* Элементы управления поворотом - только для прямоугольных столов */}
                         {isRectangleTable && (
                             <div style={{
@@ -3477,7 +3550,7 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
                                     fontSize: '14px',
                                     fontWeight: 'bold'
                                 }}>Поворот стола</h4>
-                                
+
                                 <div style={{
                                     display: 'flex',
                                     flexDirection: 'column',
@@ -3522,7 +3595,7 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
                                                 }}></div>
                                             </div>
                                         </div>
-                                        
+
                                         <div style={{
                                             fontSize: '18px',
                                             fontWeight: 'bold',
@@ -3532,7 +3605,7 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
                                             {Math.round(tableRotation)}°
                                         </div>
                                     </div>
-                                    
+
                                     {/* Слайдер для произвольного поворота */}
                                     <div style={{
                                         width: '100%',
@@ -3543,9 +3616,9 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
                                             justifyContent: 'space-between',
                                             marginBottom: '5px'
                                         }}>
-                                            <span style={{fontSize: '12px'}}>0°</span>
-                                            <span style={{fontSize: '12px'}}>180°</span>
-                                            <span style={{fontSize: '12px'}}>359°</span>
+                                            <span style={{ fontSize: '12px' }}>0°</span>
+                                            <span style={{ fontSize: '12px' }}>180°</span>
+                                            <span style={{ fontSize: '12px' }}>359°</span>
                                         </div>
                                         <input
                                             type="range"
@@ -3562,9 +3635,9 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
                                             }}
                                         />
                                     </div>
-                                    
+
                                     {/* Сбросить кнопку вращения */}
-                                    <button 
+                                    <button
                                         style={{
                                             padding: '8px 15px',
                                             backgroundColor: '#e74c3c',
@@ -3580,7 +3653,7 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
                                     >
                                         Сбросить поворот (0°)
                                     </button>
-                                    
+
                                     <div style={{
                                         marginTop: '10px',
                                         padding: '8px',
@@ -3595,7 +3668,7 @@ const TableDetailsPopup = ({ table, tables, setTables, isOpen, onClose, setPeopl
                                 </div>
                             </div>
                         )}
-                        
+
                         <div className="table-stats">
                             <p>Total Chairs: {table.chairCount}</p>
                             <p>Occupied Chairs: {table.people.filter(Boolean).length}</p>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import './clientBooking.css';
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
+
 // Helper functions remain the same
 const parseTimeToMinutes = (timeString) => {
   if (!timeString) return 0;
@@ -51,6 +51,32 @@ const findNextAvailableTime = (occupiedSlots, startHour = 12) => {
   return "12:00"; // Default fallback
 };
 
+// Helper function to get event emoji
+const getEventTypeEmoji = (type) => {
+  const types = {
+    'birthday': '🎂',
+    'business': '💼',
+    'party': '🎉',
+    'romantic': '❤️',
+    'family': '👨‍👩‍👧‍👦',
+    'other': '✨'
+  };
+  return types[type] || '';
+};
+
+// Helper function to get event type name
+const getEventTypeName = (type) => {
+  const types = {
+    'birthday': 'День Рождения',
+    'business': 'Деловая Встреча',
+    'party': 'Вечеринка',
+    'romantic': 'Романтический Ужин',
+    'family': 'Семейный Ужин',
+    'other': 'Другое'
+  };
+  return types[type] || '';
+};
+
 const ClientBookingComponent = () => {
   const [hallData, setHallData] = useState(null);
   const [scale, setScale] = useState(1);
@@ -69,6 +95,11 @@ const ClientBookingComponent = () => {
   const [bookingSuccess, setBookingSuccess] = useState(false);
   const [bookingSummary, setBookingSummary] = useState(null);
   const [occupiedSlots, setOccupiedSlots] = useState([]);
+  const [bookingType, setBookingType] = useState('');
+  const [showEventTypeSelector, setShowEventTypeSelector] = useState(false);
+
+  // This state will store the shapes imported from the hall data
+  const [shapes, setShapes] = useState([]);
 
   const tablesAreaRef = useRef(null);
   const zoomRef = useRef(0.2); // Use ref for intermediate zoom values to prevent re-renders
@@ -83,19 +114,112 @@ const ClientBookingComponent = () => {
   const zoomOperationInProgress = useRef(false);
   const lastZoomUpdateTime = useRef(0);
 
+  // ✅ ИСПРАВЛЕННАЯ функция для правильной обработки координат shapes
+  const processShapePosition = (shape) => {
+    let displayX, displayY;
+    
+    // Определяем правильные координаты в зависимости от типа и доступных свойств
+    switch (shape.type) {
+      case 'rect':
+        if (shape.centerX !== undefined && shape.centerY !== undefined) {
+          // Используем центральные координаты для прямоугольника
+          displayX = shape.centerX - (shape.width || 100) / 2;
+          displayY = shape.centerY - (shape.height || 50) / 2;
+        } else {
+          // Используем угловые координаты
+          displayX = shape.x || 0;
+          displayY = shape.y || 0;
+        }
+        break;
+        
+      case 'circle':
+        if (shape.centerX !== undefined && shape.centerY !== undefined) {
+          // Для кругов используем центр и радиус
+          displayX = shape.centerX - (shape.radius || 50);
+          displayY = shape.centerY - (shape.radius || 50);
+        } else {
+          // Fallback к угловым координатам
+          displayX = shape.x || 0;
+          displayY = shape.y || 0;
+        }
+        break;
+        
+      case 'text':
+        // Для текста всегда используем x,y как левый верхний угол
+        displayX = shape.x || 0;
+        displayY = shape.y || 0;
+        break;
+        
+      case 'line':
+        // Для линий используем первую точку
+        if (shape.points && shape.points.length >= 2) {
+          displayX = shape.points[0];
+          displayY = shape.points[1];
+        } else {
+          displayX = shape.x || 0;
+          displayY = shape.y || 0;
+        }
+        break;
+        
+      default:
+        displayX = shape.x || 0;
+        displayY = shape.y || 0;
+    }
+    
+    return { displayX, displayY };
+  };
+
+  // ✅ ОТКЛЮЧАЕМ автоматическую корректировку позиций - используем координаты как есть
+  useEffect(() => {
+    if (hallData && (hallData.tables?.length > 0 || shapes.length > 0)) {
+      console.log("Hall data loaded - using original coordinates");
+      // Не корректируем координаты автоматически, используем как есть из JSON
+    }
+  }, [hallData, shapes]);
+
+  // Add an additional fix to ensure tables render correctly when first loaded
+  useEffect(() => {
+    if (hallData && hallData.tables) {
+      // This force-triggers a component update to ensure tables are rendered
+      const forceUpdateTimeout = setTimeout(() => {
+        console.log("Force update to ensure tables render");
+        setScale(prev => prev + 0.01);
+        setTimeout(() => setScale(prev => prev - 0.01), 100);
+      }, 1000);
+
+      return () => clearTimeout(forceUpdateTimeout);
+    }
+  }, [hallData]);
+
   useEffect(() => {
     setTimeout(() => {
       var zoomOutBtn = window.document.getElementById('zoomOutBtn');
-      zoomOutBtn.click();
+      if (zoomOutBtn) {
+        zoomOutBtn.click();
+      }
     }, 200)
   }, []);
 
+  // ✅ ИСПРАВЛЕННАЯ загрузка данных с учетом canvasData
   useEffect(() => {
-    // Try loading saved hall data from localStorage on initial load
     const savedHallData = localStorage.getItem('hallData');
     if (savedHallData) {
       try {
-        setHallData(JSON.parse(savedHallData));
+        const parsedData = JSON.parse(savedHallData);
+        setHallData(parsedData);
+
+        if (parsedData.shapes && Array.isArray(parsedData.shapes)) {
+          console.log("Importing shapes:", parsedData.shapes);
+          setShapes(parsedData.shapes);
+        }
+
+        // ✅ Устанавливаем зум из canvasData без увеличения
+        if (parsedData.canvasData && parsedData.canvasData.zoom) {
+          const canvasZoom = Math.max(parsedData.canvasData.zoom, 0.1); // Используем как есть
+          console.log("Setting initial zoom from canvas data:", canvasZoom);
+          setZoom(canvasZoom);
+          zoomRef.current = canvasZoom;
+        }
       } catch (e) {
         console.error("Error loading saved hall data:", e);
       }
@@ -106,8 +230,8 @@ const ClientBookingComponent = () => {
     if (tablesAreaRef.current && hallData) {
       // Calculate hall content dimensions
       const tables = hallData.tables || [];
-      const maxX = Math.max(...tables.map(t => (t.x || 0) + 400), 0); // 400 - table width
-      const maxY = Math.max(...tables.map(t => (t.y || 0) + 150), 0); // 150 - table height
+      const maxX = Math.max(...tables.map(t => (t.renderingOptions?.left ?? t.x ?? 0) + 400), 0);
+      const maxY = Math.max(...tables.map(t => (t.renderingOptions?.top ?? t.y ?? 0) + 150), 0);
 
       // Set minimum container size
       tablesAreaRef.current.style.minWidth = `${maxX}px`;
@@ -156,6 +280,7 @@ const ClientBookingComponent = () => {
     }
   }, [showBookingModal]);
 
+  // ✅ ИСПРАВЛЕННАЯ обработка загрузки файла с canvasData
   const handleFileUpload = (event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -168,23 +293,38 @@ const ClientBookingComponent = () => {
     reader.onload = (e) => {
       try {
         const parsedData = JSON.parse(e.target.result);
+
+        console.log("Imported data:", parsedData);
+        console.log("Tables:", parsedData.tables?.length);
+        console.log("Shapes:", parsedData.shapes?.length);
+
         setHallData(parsedData);
+
+        if (parsedData.shapes && Array.isArray(parsedData.shapes)) {
+          setShapes(parsedData.shapes);
+        } else {
+          setShapes([]);
+        }
+
+        // ✅ Устанавливаем зум из canvasData без изменений
+        if (parsedData.canvasData && parsedData.canvasData.zoom) {
+          const canvasZoom = Math.max(parsedData.canvasData.zoom, 0.1);
+          console.log("Setting zoom from imported canvas data:", canvasZoom);
+          setZoom(canvasZoom);
+          zoomRef.current = canvasZoom;
+        }
+
         localStorage.setItem('hallData', JSON.stringify(parsedData));
         setIsLoading(false);
+
       } catch (error) {
+        console.error("Error parsing JSON:", error);
         setError("Ошибка при чтении JSON файла. Проверьте формат файла.");
         setIsLoading(false);
       }
     };
 
-    reader.onerror = () => {
-      setError("Ошибка при чтении файла.");
-      setIsLoading(false);
-    };
-
     reader.readAsText(file);
-
-    // Reset input value to allow selecting the same file again
     event.target.value = "";
   };
 
@@ -317,7 +457,8 @@ const ClientBookingComponent = () => {
           startTime: person.booking.time,
           endTime: person.booking.endTime,
           name: person.name,
-          guestCount: person.guestCount || person.seatsOccupied || 1
+          guestCount: person.guestCount || person.seatsOccupied || 1,
+          type: person.booking.type // Add type to include event emoji
         });
       }
     });
@@ -372,6 +513,9 @@ const ClientBookingComponent = () => {
     setSelectedTableId(tableId);
     // After selecting table, show booking form
     setShowBookingModal(true);
+    // Reset booking type selection
+    setBookingType('');
+    setShowEventTypeSelector(false);
   };
 
   // Handle booking confirmation
@@ -389,6 +533,11 @@ const ClientBookingComponent = () => {
 
     if (guestCount < 1) {
       alert('Количество гостей должно быть не менее 1');
+      return;
+    }
+
+    if (!bookingType) {
+      alert('Пожалуйста, выберите тип мероприятия');
       return;
     }
 
@@ -411,6 +560,7 @@ const ClientBookingComponent = () => {
       time: bookingTime,
       endTime: bookingEndTime,
       note: bookingNote.trim(),
+      type: bookingType, // Include booking type
       timestamp: new Date().toISOString()
     };
 
@@ -455,7 +605,8 @@ const ClientBookingComponent = () => {
 
       const updatedHallData = {
         ...prevData,
-        tables: updatedTables
+        tables: updatedTables,
+        shapes: shapes // Make sure to preserve shapes when updating hall data
       };
 
       // Save to localStorage
@@ -471,7 +622,8 @@ const ClientBookingComponent = () => {
       time: `${formatTimeDisplay(bookingTime)} - ${formatTimeDisplay(bookingEndTime)}`,
       guestCount: guestCount,
       name: clientName,
-      phone: clientPhone
+      phone: clientPhone,
+      type: bookingType // Include type for emoji display
     });
 
     setBookingSuccess(true);
@@ -489,6 +641,8 @@ const ClientBookingComponent = () => {
     setBookingTime('');
     setBookingEndTime('');
     setBookingSummary(null);
+    setBookingType('');
+    setShowEventTypeSelector(false);
   };
 
   // Apply zoom with smooth animation and centered on point
@@ -803,7 +957,7 @@ const ClientBookingComponent = () => {
     }
   }, [isDraggingView]);
 
-  // Render table component
+  // ✅ ПОЛНОСТЬЮ ИСПРАВЛЕННЫЙ рендер table component с правильными стульями
   const TableComponent = ({ table }) => {
     // Get current date for bookings display
     const today = new Date();
@@ -825,19 +979,16 @@ const ClientBookingComponent = () => {
       const endMinutes = parseTimeToMinutes(range.endTime);
 
       if (endMinutes < startMinutes) {
-        // Booking spans midnight
         return currentTimeMinutes >= startMinutes || currentTimeMinutes < endMinutes;
       } else {
         return currentTimeMinutes >= startMinutes && currentTimeMinutes < endMinutes;
       }
     });
 
-    // Get the active reservation if currently reserved
     const activeReservation = isCurrentlyReserved
       ? mergedTimeRanges.find(range => {
         const startMinutes = parseTimeToMinutes(range.startTime);
         const endMinutes = parseTimeToMinutes(range.endTime);
-
         if (endMinutes < startMinutes) {
           return currentTimeMinutes >= startMinutes || currentTimeMinutes < endMinutes;
         } else {
@@ -846,412 +997,769 @@ const ClientBookingComponent = () => {
       })
       : null;
 
-    // Format all reservation times for display
     const reservationText = mergedTimeRanges.length > 0
       ? mergedTimeRanges.map(range => `${range.startTime}-${range.endTime}`).join(', ')
       : '';
 
-    // Get chair count and available seats
-    const chairCount = table.chairCount || 0;
-
-    // Check if table is selected
+    const chairCount = table.chairCount || 12;
     const isSelected = selectedTableId === table.id;
 
-    // Render chairs based on table shape
-    const renderChairs = () => {
-      if (table.shape === 'rectangle') {
-        return renderRectangleChairs();
-      } else {
-        return renderRoundChairs();
-      }
-    };
+    // ✅ ИСПРАВЛЕННОЕ позиционирование - точно как в оригинале
+const getRenderingPosition = () => {
+  // Приоритет renderingOptions.left/top, затем x/y
+  const left = table.renderingOptions?.left ?? table.x ?? 0;
+  const top = table.renderingOptions?.top ?? table.y ?? 0;
+  const angle = table.renderingOptions?.angle ?? table.rotation ?? 0;
+  const scaleX = table.renderingOptions?.scaleX ?? 1;
+  const scaleY = table.renderingOptions?.scaleY ?? 1;
+  
+  // ✅ ИСПРАВЛЕНО: правильное получение размеров
+  const width = table.renderingOptions?.width ?? table.width ?? (isRound ? 300 : 400);
+  const height = table.renderingOptions?.height ?? table.height ?? (isRound ? 300 : 150);
+  
+  return { left, top, angle, scaleX, scaleY, width, height };
+};
 
-    // Render chairs for round table
-    const renderRoundChairs = () => {
-      const chairs = [];
-      const angleStep = 360 / table.chairCount;
-      const radius = 140;
+   const position = getRenderingPosition();
+const isRound = table.shape !== 'rectangle';
 
-      for (let i = 0; i < table.chairCount; i++) {
-        const angle = angleStep * i;
-        const xPosition = radius * Math.cos((angle * Math.PI) / 180);
-        const yPosition = radius * Math.sin((angle * Math.PI) / 180);
+// ✅ ИСПРАВЛЕНО: используем размеры из getRenderingPosition
+const tableWidth = position.width;
+const tableHeight = position.height;
+const tableRadius = isRound ? Math.min(tableWidth, tableHeight) / 2 : 0;
 
-        chairs.push(
+    // ✅ ИСПРАВЛЕННЫЙ рендеринг стульев для круглого стола
+   const renderChairsForRoundTable = () => {
+  const chairs = [];
+  // ✅ ИСПРАВЛЕНО: используем правильный радиус стола
+  const radius = tableRadius + 40; // Расстояние от края стола до стульев
+
+  for (let i = 0; i < chairCount; i++) {
+    const angle = (Math.PI * 2 * i) / chairCount;
+    const x = radius * Math.cos(angle);
+    const y = radius * Math.sin(angle);
+
+    const person = table.people && table.people[i];
+    const isOccupied = Boolean(person);
+
+    chairs.push(
+      <div key={i} style={{ 
+        position: 'absolute',
+        left: '50%',
+        top: '50%',
+        transform: `translate(-50%, -50%)`
+      }}>
+        {/* Стул */}
+        <div
+          style={{
+            position: 'absolute',
+            left: `${x - 20}px`, // Центрируем стул 40px/2 = 20px
+            top: `${y - 20}px`,
+            width: '40px',
+            height: '40px',
+            borderRadius: '50%',
+            backgroundColor: isOccupied ? '#c12f2f' : '#28592a',
+            transform: `rotate(${(angle * 180 / Math.PI) + 90}deg)`,
+            transformOrigin: 'center',
+            zIndex: 1,
+            border: '2px solid #1a1a1a',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+          }}
+        />
+        
+        {/* Подпись имени */}
+        {isOccupied && person && person.name && (
           <div
-            key={i}
-            className="chair"
             style={{
               position: 'absolute',
-              transformOrigin: 'center',
-              width: '60px',
-              height: '60px',
-              backgroundImage: "url('/green2.png')",
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              backgroundRepeat: 'no-repeat',
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              borderRadius: '50%',
-              fontSize: '12px',
+              left: `${x - 27.5}px`, // Центрируем текст 55px/2 = 27.5px
+              top: `${y + 25}px`, // Под стулом
+              width: '55px',
+              fontSize: '10px',
+              fontFamily: 'Arial',
+              color: '#211812',
+              backgroundColor: 'rgba(255, 255, 255, 0.95)',
               textAlign: 'center',
-              left: `calc(50% + ${xPosition}px)`,
-              top: `calc(50% + ${yPosition}px)`,
-              transform: `rotate(${angle + 90}deg)`,
-              zIndex: 1
+              borderRadius: '3px',
+              padding: '2px',
+              zIndex: 2,
+              pointerEvents: 'none',
+              border: '1px solid #ccc',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.2)'
             }}
-          />
-        );
-      }
+          >
+            {person.name}
+          </div>
+        )}
+      </div>
+    );
+  }
 
-      return chairs;
-    };
+  return chairs;
+};
 
-    // Render chairs for rectangle table
-    const renderRectangleChairs = () => {
-      const chairs = [];
-      const tableWidth = 400;
-      const tableHeight = 150;
-      const border = 50;
+    // ✅ ИСПРАВЛЕННЫЙ рендеринг стульев для прямоугольного стола
+    const renderChairsForRectangleTable = () => {
+  const chairs = [];
+  
+  const chairsTop = Math.ceil(chairCount / 2);
+  const chairsBottom = chairCount - chairsTop;
+  let currentChairIndex = 0;
 
-      const totalChairs = table.chairCount;
+  // Top chairs
+  for (let i = 0; i < chairsTop; i++) {
+    const ratio = chairsTop === 1 ? 0.5 : i / (chairsTop - 1);
+    const x = ((tableWidth - 80) * ratio) - (tableWidth / 2) + 40; // ✅ ИСПРАВЛЕНО: увеличен отступ
+    const y = -(tableHeight / 2) - 40; // ✅ ИСПРАВЛЕНО: увеличен отступ
 
-      // Distribute chairs around the table
-      let chairsLeft = 0;
-      let chairsRight = 0;
-      let chairsTop = 0;
-      let chairsBottom = 0;
+    const person = table.people && table.people[currentChairIndex];
+    const isOccupied = Boolean(person);
 
-      // Initially allocate chairs on left and right sides (if more than 4 chairs)
-      if (totalChairs > 4) {
-        chairsLeft = 1;
-        chairsRight = 1;
-        // Remaining chairs go to top and bottom sides
-        const remainingChairs = totalChairs - 2;
-        const maxTopBottom = Math.floor(remainingChairs / 2);
-        chairsTop = maxTopBottom;
-        chairsBottom = remainingChairs - chairsTop;
-      } else {
-        // If 4 or fewer chairs, distribute only on top and bottom
-        chairsTop = Math.ceil(totalChairs / 2);
-        chairsBottom = totalChairs - chairsTop;
-      }
-
-      let chairIndex = 0;
-
-      // Left side chair
-      if (chairsLeft > 0) {
-        chairs.push(
+    chairs.push(
+      <div key={`top-${currentChairIndex}`} style={{ 
+        position: 'absolute',
+        left: '50%',
+        top: '50%',
+        transform: `translate(-50%, -50%)`
+      }}>
+        <div
+          style={{
+            position: 'absolute',
+            left: `${x - 20}px`,
+            top: `${y - 20}px`,
+            width: '40px',
+            height: '40px',
+            borderRadius: '50%',
+            backgroundColor: isOccupied ? '#c12f2f' : '#28592a',
+            zIndex: 1,
+            border: '2px solid #1a1a1a',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+          }}
+        />
+        
+        {isOccupied && person && person.name && (
           <div
-            key={`left-${chairIndex}`}
-            className="chair"
             style={{
               position: 'absolute',
-              width: '60px',
-              height: '60px',
-              backgroundImage: "url('/green2.png')",
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              backgroundRepeat: 'no-repeat',
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              borderRadius: '50%',
-              fontSize: '12px',
+              left: `${x - 27.5}px`,
+              top: `${y - 50}px`, // ✅ ИСПРАВЛЕНО: подпись выше стула
+              width: '55px',
+              fontSize: '10px',
+              fontFamily: 'Arial',
+              color: '#211812',
+              backgroundColor: 'rgba(255, 255, 255, 0.95)',
               textAlign: 'center',
-              left: `calc(50% - ${250}px)`,
-              top: `calc(50% - ${15}px)`,
-              transform: 'rotate(270deg)',
-              zIndex: 1
+              borderRadius: '3px',
+              padding: '2px',
+              zIndex: 2,
+              pointerEvents: 'none',
+              border: '1px solid #ccc',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.2)'
             }}
-          />
-        );
-        chairIndex++;
-      }
+          >
+            {person.name}
+          </div>
+        )}
+      </div>
+    );
+    currentChairIndex++;
+  }
 
-      // Right side chair
-      if (chairsRight > 0) {
-        chairs.push(
+  // Bottom chairs
+  for (let i = 0; i < chairsBottom; i++) {
+    const ratio = chairsBottom === 1 ? 0.5 : i / (chairsBottom - 1);
+    const x = ((tableWidth - 80) * ratio) - (tableWidth / 2) + 40; // ✅ ИСПРАВЛЕНО: увеличен отступ
+    const y = (tableHeight / 2) + 40; // ✅ ИСПРАВЛЕНО: увеличен отступ
+
+    const person = table.people && table.people[currentChairIndex];
+    const isOccupied = Boolean(person);
+
+    chairs.push(
+      <div key={`bottom-${currentChairIndex}`} style={{ 
+        position: 'absolute',
+        left: '50%',
+        top: '50%',
+        transform: `translate(-50%, -50%)`
+      }}>
+        <div
+          style={{
+            position: 'absolute',
+            left: `${x - 20}px`,
+            top: `${y - 20}px`,
+            width: '40px',
+            height: '40px',
+            borderRadius: '50%',
+            backgroundColor: isOccupied ? '#c12f2f' : '#28592a',
+            transform: 'rotate(180deg)',
+            zIndex: 1,
+            border: '2px solid #1a1a1a',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+          }}
+        />
+        
+        {isOccupied && person && person.name && (
           <div
-            key={`right-${chairIndex}`}
-            className="chair"
             style={{
               position: 'absolute',
-              width: '60px',
-              height: '60px',
-              backgroundImage: "url('/green2.png')",
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              backgroundRepeat: 'no-repeat',
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              borderRadius: '50%',
-              fontSize: '12px',
+              left: `${x - 27.5}px`,
+              top: `${y + 30}px`, // ✅ ИСПРАВЛЕНО: подпись ниже стула
+              width: '55px',
+              fontSize: '10px',
+              fontFamily: 'Arial',
+              color: '#211812',
+              backgroundColor: 'rgba(255, 255, 255, 0.95)',
               textAlign: 'center',
-              left: `calc(50% + ${190}px)`,
-              top: `calc(50% - ${15}px)`,
-              transform: 'rotate(90deg)',
-              zIndex: 1
+              borderRadius: '3px',
+              padding: '2px',
+              zIndex: 2,
+              pointerEvents: 'none',
+              border: '1px solid #ccc',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.2)'
             }}
-          />
-        );
-        chairIndex++;
-      }
+          >
+            {person.name}
+          </div>
+        )}
+      </div>
+    );
+    currentChairIndex++;
+  }
 
-      // Top chairs
-      for (let i = 0; i < chairsTop; i++) {
-        const ratio = chairsTop === 1 ? 0.5 : i / (chairsTop - 1);
-        const xPosition = ((tableWidth - 50) * ratio) - tableWidth / 2;
-        const yPosition = -tableHeight / 2 - border + 10;
+  return chairs;
+};
 
-        chairs.push(
-          <div
-            key={`top-${chairIndex}`}
-            className="chair"
-            style={{
-              position: 'absolute',
-              width: '60px',
-              height: '60px',
-              backgroundImage: "url('/green2.png')",
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              backgroundRepeat: 'no-repeat',
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              borderRadius: '50%',
-              fontSize: '12px',
-              textAlign: 'center',
-              left: `calc(50% + ${xPosition}px)`,
-              top: `calc(50% + ${yPosition}px)`,
-              transform: 'rotate(0deg)',
-              zIndex: 1
-            }}
-          />
-        );
-        chairIndex++;
-      }
+                    
 
-      // Bottom chairs
-      for (let i = 0; i < chairsBottom; i++) {
-        const ratio = chairsBottom === 1 ? 0.5 : i / (chairsBottom - 1);
-        const xPosition = ((tableWidth - 50) * ratio) - tableWidth / 2;
-        const yPosition = tableHeight / 2;
+              {/* Booking type selection */}
+              <div className="form-group" style={{ marginBottom: '20px' }}>
+                <label style={{
+                  display: 'block',
+                  marginBottom: '8px',
+                    fontWeight: 'bold',
+                  fontSize: '15px'
+                }}>
+                  Дата:
+                </label>
+                <input
+                  type="date"
+                  value={bookingDate}
+                  onChange={(e) => setBookingDate(e.target.value)}
+                  style={{
+                    width: '80%',
+                    padding: '12px',
+                    borderRadius: '8px',
+                    border: '1px solid #ddd',
+                    fontSize: '16px',
+                    boxShadow: '0 2px 5px rgba(0,0,0,0.05)',
+                    backgroundColor: '#f9f9f9'
+                  }}
+                />
+              </div>
 
-        chairs.push(
-          <div
-            key={`bottom-${chairIndex}`}
-            className="chair"
-            style={{
-              position: 'absolute',
-              width: '60px',
-              height: '60px',
-              backgroundImage: "url('/green2.png')",
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              backgroundRepeat: 'no-repeat',
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              borderRadius: '50%',
-              fontSize: '12px',
-              textAlign: 'center',
-              left: `calc(50% + ${xPosition}px)`,
-              top: `calc(50% + ${yPosition}px)`,
-              transform: 'rotate(180deg)',
-              zIndex: 1
-            }}
-          />
-        );
-        chairIndex++;
-      }
+              {/* Time selectors */}
+              <div className="form-group" style={{ marginBottom: '20px' }}>
+                <label style={{
+                  display: 'block',
+                  marginBottom: '8px',
+                  fontWeight: 'bold',
+                  fontSize: '15px'
+                }}>
+                  Время:
+                </label>
 
-      return chairs;
-    };
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '12px'
+                }}>
+                  {/* Start time */}
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <span style={{
+                      fontSize: '14px',
+                      fontWeight: 'bold',
+                      color: '#555',
+                      marginRight: '10px',
+                      width: '60px'
+                    }}>
+                      Начало:
+                    </span>
+                    <div style={{
+                      display: 'flex',
+                      flex: 1,
+                      border: '1px solid #ddd',
+                      borderRadius: '8px',
+                      overflow: 'hidden',
+                      boxShadow: '0 2px 5px rgba(0,0,0,0.05)'
+                    }}>
+                      <select
+                        value={bookingTime.split(':')[0] || '12'}
+                        onChange={(e) => {
+                          const hours = e.target.value;
+                          const minutes = bookingTime.split(':')[1] || '00';
+                          setBookingTime(`${hours}:${minutes}`);
+                        }}
+                        style={{
+                          flex: 1,
+                          padding: '12px',
+                          border: 'none',
+                          borderRight: '1px solid #ddd',
+                          fontSize: '16px',
+                          backgroundColor: '#f9f9f9'
+                        }}
+                      >
+                        {Array.from({ length: 24 }, (_, i) => i).map(hour => {
+                          const hourStr = hour.toString().padStart(2, '0');
+                          const isHourFullyOccupied = ['00', '15', '30', '45'].every(min =>
+                            occupiedSlots.includes(`${hourStr}:${min}`)
+                          );
+                          const isHourPartiallyOccupied = ['00', '15', '30', '45'].some(min =>
+                            occupiedSlots.includes(`${hourStr}:${min}`)
+                          );
 
+                          return (
+                            <option
+                              key={hour}
+                              value={hourStr}
+                              disabled={isHourFullyOccupied}
+                              style={{
+                                backgroundColor: isHourFullyOccupied ? '#ffdddd' :
+                                  isHourPartiallyOccupied ? '#fff8e1' : '#ffffff',
+                                color: isHourFullyOccupied ? '#999999' : '#000000'
+                              }}
+                            >
+                              {hourStr}
+                            </option>
+                          );
+                        })}
+                      </select>
+                      <span style={{
+                        padding: '12px 8px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        backgroundColor: '#f0f0f0',
+                        fontWeight: 'bold'
+                      }}>:</span>
+                      <select
+                        value={bookingTime.split(':')[1] || '00'}
+                        onChange={(e) => {
+                          const hours = bookingTime.split(':')[0] || '12';
+                          const minutes = e.target.value;
+                          setBookingTime(`${hours}:${minutes}`);
+                        }}
+                        style={{
+                          flex: 1,
+                          padding: '12px',
+                          border: 'none',
+                          fontSize: '16px',
+                          backgroundColor: '#f9f9f9'
+                        }}
+                      >
+                        {['00', '15', '30', '45'].map(minute => {
+                          const hourStr = bookingTime.split(':')[0] || '12';
+                          const timeSlot = `${hourStr}:${minute}`;
+                          const isSlotOccupied = occupiedSlots.includes(timeSlot);
+
+                          return (
+                            <option
+                              key={minute}
+                              value={minute}
+                              disabled={isSlotOccupied}
+                              style={{
+                                backgroundColor: isSlotOccupied ? '#ffdddd' : '#ffffff',
+                                color: isSlotOccupied ? '#999999' : '#000000'
+                              }}
+                            >
+                              {minute}
+                            </option>
+                          );
+                        })}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* End time */}
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <span style={{
+                      fontSize: '14px',
+                      fontWeight: 'bold',
+                      color: '#555',
+                      marginRight: '10px',
+                      width: '60px'
+                    }}>
+                      Конец:
+                    </span>
+                    <div style={{
+                      display: 'flex',
+                      flex: 1,
+                      border: '1px solid #ddd',
+                      borderRadius: '8px',
+                      overflow: 'hidden',
+                      boxShadow: '0 2px 5px rgba(0,0,0,0.05)'
+                    }}>
+                      <select
+                        value={bookingEndTime.split(':')[0] || '14'}
+                        onChange={(e) => {
+                          const hours = e.target.value;
+                          const minutes = bookingEndTime.split(':')[1] || '00';
+                          setBookingEndTime(`${hours}:${minutes}`);
+                        }}
+                        style={{
+                          flex: 1,
+                          padding: '12px',
+                          border: 'none',
+                          borderRight: '1px solid #ddd',
+                          fontSize: '16px',
+                          backgroundColor: '#f9f9f9'
+                        }}
+                      >
+                        {Array.from({ length: 24 }, (_, i) => i).map(hour => {
+                          const hourStr = hour.toString().padStart(2, '0');
+                          const startHour = parseInt(bookingTime.split(':')[0] || '12');
+                          const isHourFullyOccupied = ['00', '15', '30', '45'].every(min =>
+                            occupiedSlots.includes(`${hourStr}:${min}`)
+                          );
+                          const shouldDisable = hour <= startHour && isHourFullyOccupied;
+                          const isHourPartiallyOccupied = ['00', '15', '30', '45'].some(min =>
+                            occupiedSlots.includes(`${hourStr}:${min}`)
+                          );
+
+                          return (
+                            <option
+                              key={hour}
+                              value={hourStr}
+                              disabled={shouldDisable}
+                              style={{
+                                backgroundColor: shouldDisable ? '#ffdddd' :
+                                  isHourPartiallyOccupied ? '#fff8e1' : '#ffffff',
+                                color: shouldDisable ? '#999999' : '#000000'
+                              }}
+                            >
+                              {hourStr}
+                            </option>
+                          );
+                        })}
+                      </select>
+                      <span style={{
+                        padding: '12px 8px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        backgroundColor: '#f0f0f0',
+                        fontWeight: 'bold'
+                      }}>:</span>
+                      <select
+                        value={bookingEndTime.split(':')[1] || '00'}
+                        onChange={(e) => {
+                          const hours = bookingEndTime.split(':')[0] || '14';
+                          const minutes = e.target.value;
+                          setBookingEndTime(`${hours}:${minutes}`);
+                        }}
+                        style={{
+                          flex: 1,
+                          padding: '12px',
+                          border: 'none',
+                          fontSize: '16px',
+                          backgroundColor: '#f9f9f9'
+                        }}
+                      >
+                        {['00', '15', '30', '45'].map(minute => {
+                          const hourStr = bookingEndTime.split(':')[0] || '14';
+                          const timeSlot = `${hourStr}:${minute}`;
+                          const isSlotOccupied = occupiedSlots.includes(timeSlot);
+                          const startHour = parseInt(bookingTime.split(':')[0] || '12');
+                          const endHour = parseInt(hourStr);
+                          const shouldDisable = endHour <= startHour && isSlotOccupied;
+
+                          return (
+                            <option
+                              key={minute}
+                              value={minute}
+                              disabled={shouldDisable}
+                              style={{
+                                backgroundColor: shouldDisable ? '#ffdddd' :
+                                  isSlotOccupied ? '#fff8e1' : '#ffffff',
+                                color: shouldDisable ? '#999999' : '#000000'
+                              }}
+                            >
+                              {minute}
+                            </option>
+                          );
+                        })}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              
     return (
       <div
         className={`table-container ${isSelected ? 'selected' : ''}`}
         data-id={table.id}
         style={{
           position: 'absolute',
-          left: `${table.x || 0}px`,
-          top: `${table.y || 0}px`,
-          padding: '1rem',
-          borderRadius: '10px',
+          left: `${position.left}px`,
+          top: `${position.top}px`,
           cursor: 'pointer',
-          border: isSelected ? '2px solid #3498db' : 'none',
-          transition: 'transform 0.2s',
-          transform: isSelected ? 'scale(1.05)' : 'scale(1)'
+          border: isSelected ? '3px solid #3498db' : 'none',
+          borderRadius: '10px',
+          transform: `rotate(${position.angle}deg) scale(${position.scaleX}, ${position.scaleY})`,
+          transformOrigin: 'center center',
+          zIndex: 10, // Увеличиваем zIndex чтобы столы были поверх shapes
+          width: `${tableWidth}px`,
+          height: `${tableHeight}px`
         }}
         onClick={() => handleTableClick(table.id)}
       >
-        <div className="table-header">
-          <h3>Стол {table.id} (Мест: {chairCount})</h3>
-        </div>
+        {/* ✅ Структура стола */}
+        <div style={{ position: 'relative' }}>
+          {isRound ? (
+            // ✅ Круглый стол
+            <div style={{ position: 'relative' }}>
+              {/* Table Base */}
+              <div
+                style={{
+                  width: `${tableWidth}px`,
+                  height: `${tableHeight}px`,
+                  borderRadius: '50%',
+                  backgroundColor: '#f2ebe9',
+                  border: '20px solid #a67c52',
+                  position: 'relative',
+                  boxShadow: '0 4px 8px rgba(0,0,0,0.2)'
+                }}
+              >
+                {/* Table Top */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '20px',
+                    left: '20px',
+                    width: `${tableWidth - 40}px`,
+                    height: `${tableHeight - 40}px`,
+                    borderRadius: '50%',
+                    backgroundColor: '#ffffff',
+                    opacity: 0.8
+                  }}
+                />
 
-        {table.shape === 'rectangle' ? (
-          <div className="table" style={{
-            margin: "20px",
-            width: "400px",
-            height: "150px",
-            border: "30px solid #e7d8c7",
-            borderRadius: "0%",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            backgroundImage: "url('/table2.png')",
-            backgroundSize: "100% 100%",
-            backgroundRepeat: "no-repeat",
-            position: "relative"
-          }}>
-            {/* Show RESERVED status if table is currently booked */}
-            {isCurrentlyReserved && (
-              <div style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                alignItems: 'center',
-                backgroundColor: 'rgba(231, 76, 60, 0.8)',
-                color: 'white',
-                fontWeight: 'bold',
-                fontSize: '24px',
-                zIndex: 2
-              }}>
-                <div>ЗАНЯТО</div>
-                {activeReservation && (
-                  <div style={{ fontSize: '18px', marginTop: '5px', textAlign: 'center' }}>
-                    {activeReservation.startTime} - {activeReservation.endTime}
+                {/* Wood Texture */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '25px',
+                    left: '25px',
+                    width: `${tableWidth - 50}px`,
+                    height: `${tableHeight - 50}px`,
+                    borderRadius: '50%',
+                    backgroundColor: '#e0d6cc'
+                  }}
+                />
+
+                {/* Table Label */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    fontSize: '20px',
+                    fontFamily: 'Arial',
+                    color: '#374151',
+                    textAlign: 'center',
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    padding: '8px',
+                    borderRadius: '6px',
+                    lineHeight: 1.2,
+                    zIndex: 3,
+                    fontWeight: 'bold',
+                    border: '1px solid #ddd'
+                  }}
+                >
+                  {table.name || `Стол ${table.id}`}<br />
+                  {chairCount} мест
+                </div>
+
+                {/* Reservation overlay */}
+                {(isCurrentlyReserved || mergedTimeRanges.length > 0) && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      backgroundColor: isCurrentlyReserved 
+                        ? 'rgba(231, 76, 60, 0.8)' 
+                        : 'rgba(242, 120, 75, 0.5)',
+                      color: 'white',
+                      fontWeight: 'bold',
+                      fontSize: isCurrentlyReserved ? '18px' : '16px',
+                      borderRadius: '50%',
+                      zIndex: 4
+                    }}
+                  >
+                    <div>
+                      {activeReservation && activeReservation.type ?
+                        getEventTypeEmoji(activeReservation.type) + " " : ""}
+                      {isCurrentlyReserved ? "ЗАНЯТО" : "ЗАБРОНИРОВАНО"}
+                    </div>
+                    {(activeReservation || (!isCurrentlyReserved && reservationText)) && (
+                      <div style={{ fontSize: '14px', marginTop: '5px', textAlign: 'center' }}>
+                        {isCurrentlyReserved 
+                          ? `${activeReservation.startTime} - ${activeReservation.endTime}`
+                          : reservationText
+                        }
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
-            )}
 
-            {/* Show all reservations for today if not currently reserved */}
-            {mergedTimeRanges.length > 0 && !isCurrentlyReserved && (
-              <div style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                alignItems: 'center',
-                backgroundColor: 'rgba(242, 120, 75, 0.5)',
-                color: 'white',
-                fontWeight: 'bold',
-                fontSize: '20px',
-                padding: '10px',
-                textAlign: 'center',
-                zIndex: 2
-              }}>
-                <div>ЗАБРОНИРОВАНО СЕГОДНЯ</div>
-                <div style={{ fontSize: '16px', marginTop: '5px' }}>
-                  {reservationText}
-                </div>
-              </div>
-            )}
-
-            {/* Render chairs */}
-            {renderChairs()}
-          </div>
-        ) : (
-          <div className="table" style={{ position: "relative" }}>
-            {/* Show RESERVED status for round table */}
-            {isCurrentlyReserved && (
-              <div style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                alignItems: 'center',
-                backgroundColor: 'rgba(231, 76, 60, 0.8)',
-                color: 'white',
-                fontWeight: 'bold',
-                fontSize: '24px',
-                borderRadius: '50%',
-                zIndex: 2
-              }}>
-                <div>ЗАНЯТО</div>
-                {activeReservation && (
-                  <div style={{ fontSize: '18px', marginTop: '5px', textAlign: 'center' }}>
-                    {activeReservation.startTime} - {activeReservation.endTime}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Show all reservations for round table */}
-            {mergedTimeRanges.length > 0 && !isCurrentlyReserved && (
-              <div style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                alignItems: 'center',
-                backgroundColor: 'rgba(242, 120, 75, 0.5)',
-                color: 'white',
-                fontWeight: 'bold',
-                fontSize: '20px',
-                borderRadius: '50%',
-                padding: '10px',
-                textAlign: 'center',
-                zIndex: 2
-              }}>
-                <div>ЗАБРОНИРОВАНО СЕГОДНЯ</div>
-                <div style={{ fontSize: '16px', marginTop: '5px' }}>
-                  {reservationText}
-                </div>
-              </div>
-            )}
-
-            <div className="table-top">
-              {renderChairs()}
+              {/* Стулья */}
+              {renderChairsForRoundTable()}
             </div>
-          </div>
-        )}
+          ) : (
+            // ✅ Прямоугольный стол
+            <div style={{ position: 'relative' }}>
+              {/* Table Base */}
+              <div
+                style={{
+                  width: `${tableWidth}px`,
+                  height: `${tableHeight}px`,
+                  backgroundColor: '#e7d8c7',
+                  border: '20px solid #7b5c3e',
+                  borderRadius: '8px',
+                  position: 'relative',
+                  boxShadow: '0 4px 8px rgba(0,0,0,0.2)'
+                }}
+              >
+                {/* Table Top */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '20px',
+                    left: '20px',
+                    width: `${tableWidth - 40}px`,
+                    height: `${tableHeight - 40}px`,
+                    backgroundColor: '#ffffff',
+                    opacity: 0.8,
+                    borderRadius: '5px'
+                  }}
+                />
 
-        {/* Book now button for client-friendly UX */}
-        <div className="book-button-container" style={{
-          display: 'flex',
-          justifyContent: 'center',
-          marginTop: '10px'
-        }}>
-          <button
-            className="book-button"
-            onClick={(e) => {
-              e.stopPropagation(); // Prevent event bubbling
-              handleTableClick(table.id);
-            }}
-            style={{
-              backgroundColor: '#2ecc71',
-              color: 'white',
-              border: 'none',
-              padding: '8px 15px',
-              borderRadius: '4px',
-              fontWeight: 'bold',
-              cursor: 'pointer'
-            }}
-          >
-            Забронировать
-          </button>
+                {/* Wood Texture */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '25px',
+                    left: '25px',
+                    width: `${tableWidth - 50}px`,
+                    height: `${tableHeight - 50}px`,
+                    backgroundColor: '#e7d8c7',
+                    borderRadius: '3px'
+                  }}
+                />
+
+                {/* Table Label */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    fontSize: '20px',
+                    fontFamily: 'Arial',
+                    color: '#374151',
+                    textAlign: 'center',
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    padding: '8px',
+                    borderRadius: '6px',
+                    lineHeight: 1.2,
+                    zIndex: 3,
+                    fontWeight: 'bold',
+                    border: '1px solid #ddd'
+                  }}
+                >
+                  {table.name || `Стол ${table.id}`}<br />
+                  {chairCount} мест
+                </div>
+
+                {/* Reservation overlay */}
+                {(isCurrentlyReserved || mergedTimeRanges.length > 0) && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      backgroundColor: isCurrentlyReserved 
+                        ? 'rgba(231, 76, 60, 0.8)' 
+                        : 'rgba(242, 120, 75, 0.5)',
+                      color: 'white',
+                      fontWeight: 'bold',
+                      fontSize: isCurrentlyReserved ? '18px' : '16px',
+                      padding: '10px',
+                      textAlign: 'center',
+                      zIndex: 4,
+                      borderRadius: '8px'
+                    }}
+                  >
+                    <div>
+                      {activeReservation && activeReservation.type ?
+                        getEventTypeEmoji(activeReservation.type) + " " : ""}
+                      {isCurrentlyReserved ? "ЗАНЯТО" : "ЗАБРОНИРОВАНО"}
+                    </div>
+                    {(activeReservation || (!isCurrentlyReserved && reservationText)) && (
+                      <div style={{ fontSize: '14px', marginTop: '5px' }}>
+                        {isCurrentlyReserved 
+                          ? `${activeReservation.startTime} - ${activeReservation.endTime}`
+                          : reservationText
+                        }
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Стулья */}
+              {renderChairsForRectangleTable()}
+            </div>
+          )}
+
+          {/* Book button */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            marginTop: '15px'
+          }}>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleTableClick(table.id);
+              }}
+              style={{
+                backgroundColor: '#2ecc71',
+                color: 'white',
+                border: 'none',
+                padding: '10px 20px',
+                borderRadius: '6px',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                fontSize: '14px',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+              }}
+            >
+              Забронировать
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -1362,78 +1870,218 @@ const ClientBookingComponent = () => {
           </div>
         </div>
       </header>
-  <div className="main-content" style={{
-                flex: 1,
-                width: '100%',
-                height: 'calc(100vh - 60px)',
-                overflow: 'hidden',
-                position: 'relative'
-              }}>
-      <div className="zoom-container">
-        <TransformWrapper
-          initialScale={1}
-          minScale={0.5}
-          maxScale={4}
-          limitToBounds={false}
-          doubleClick={{ disabled: true }} // Prevents accidental double-click zooms
-          pinch={{ step: 5 }} // More responsive pinch zooming
-          wheel={{ step: 0.05 }}
-          onZoomChange={({ state }) => setScale(state.scale)}
-        >
-          {({ zoomIn, zoomOut, resetTransform }) => (
-            <>
-              {/* Mobile-friendly controls */}
-              <div className="controls fixed bottom-4 right-4 z-10 flex gap-2">
-                <button
-                  onClick={() => zoomIn(0.2)}
-                  className="p-2 bg-white rounded-full shadow-md"
-                  aria-label="Zoom in"
-                >
-                  +
-                </button>
-                <button
-                  onClick={() => zoomOut(0.2)}
-                  className="p-2 bg-white rounded-full shadow-md"
-                  aria-label="Zoom out"
-                >
-                  -
-                </button>
-                <button
-                  onClick={() => resetTransform()}
-                  className="p-2 bg-white rounded-full shadow-md"
-                  aria-label="Reset zoom"
-                >
-                  Reset
-                </button>
-              </div>
 
-              {/* Scale indicator */}
-              <div className="scale-display fixed top-4 left-4 z-10 bg-white p-2 rounded shadow-md">
-                {Math.round(scale * 100)}%
-              </div>
-            
-             
-              <TransformComponent
-                wrapperStyle={{ width: "100%", height: "100vh" }}
-                contentStyle={{ width: "100%", height: "100%" }}
-                className="tables-area"
-                 ref={tablesAreaRef}
-                 
-              >
+      {/* Main content area */}
+      <div className="main-content" style={{
+        flex: 1,
+        width: '100%',
+        height: 'calc(100vh - 60px)',
+        overflow: 'hidden',
+        position: 'relative'
+      }}>
+        <div className="zoom-container">
+          <TransformWrapper
+            initialScale={1}
+            minScale={0.1}
+            maxScale={4}
+            limitToBounds={false}
+            doubleClick={{ disabled: true }}
+            pinch={{ step: 5 }}
+            wheel={{ step: 0.05 }}
+            onZoomChange={({ state }) => setScale(state.scale)}
+          >
+            {({ zoomIn, zoomOut, resetTransform }) => (
+              <>
+                {/* Mobile-friendly controls */}
+                <div style={{
+                  position: 'fixed',
+                  bottom: '20px',
+                  right: '20px',
+                  zIndex: 10,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '10px'
+                }}>
+                  <button
+                    onClick={() => zoomIn(0.2)}
+                    style={{
+                      padding: '12px',
+                      backgroundColor: 'white',
+                      borderRadius: '50%',
+                      border: '2px solid #ddd',
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                      fontSize: '18px',
+                      fontWeight: 'bold'
+                    }}
+                  >
+                    +
+                  </button>
+                  <button
+                    onClick={() => zoomOut(0.2)}
+                    style={{
+                      padding: '12px',
+                      backgroundColor: 'white',
+                      borderRadius: '50%',
+                      border: '2px solid #ddd',
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                      fontSize: '18px',
+                      fontWeight: 'bold'
+                    }}
+                  >
+                    -
+                  </button>
+                  <button
+                    onClick={() => resetTransform()}
+                    style={{
+                      padding: '8px 12px',
+                      backgroundColor: 'white',
+                      borderRadius: '20px',
+                      border: '2px solid #ddd',
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                      fontSize: '12px',
+                      fontWeight: 'bold'
+                    }}
+                  >
+                    Reset
+                  </button>
+                </div>
 
-                {hallData ? (
-                 
+                {/* Scale indicator */}
+                <div style={{
+                  position: 'fixed',
+                  top: '70px',
+                  left: '20px',
+                  zIndex: 10,
+                  backgroundColor: 'rgba(255,255,255,0.9)',
+                  padding: '8px 12px',
+                  borderRadius: '20px',
+                  border: '1px solid #ddd',
+                  fontSize: '14px',
+                  fontWeight: 'bold'
+                }}>
+                  Масштаб: {Math.round(scale * 100)}%
+                </div>
+
+                <TransformComponent
+                  wrapperStyle={{ width: "100%", height: "100vh" }}
+                  contentStyle={{ width: "100%", height: "100%" }}
+                  className="tables-area"
+                  ref={tablesAreaRef}
+                >
+                  {hallData ? (
                     <div
                       className="tables-content"
                       style={{
                         position: 'relative',
-                        minWidth: '5000px',  // Большое значение, чтобы весь зал помещался
-                        minHeight: '5000px', // Большое значение, чтобы весь зал помещался
-                        transformOrigin: 'top left',
-                        transform: `scale(${zoom})`,
-                        willChange: 'transform', // Optimize for performance
+                        minWidth: '3000px',
+                        minHeight: '3000px',
+                        willChange: 'transform'
                       }}
                     >
+                      {/* ✅ ИСПРАВЛЕННЫЙ рендеринг shapes */}
+                      <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 1 }}>
+                        {shapes.map(shape => {
+                          const { displayX, displayY } = processShapePosition(shape);
+
+                          switch (shape.type) {
+                            case 'rect':
+                              return (
+                                <div
+                                  key={shape.id}
+                                  style={{
+                                    position: 'absolute',
+                                    left: `${displayX}px`,
+                                    top: `${displayY}px`,
+                                    width: `${shape.width}px`,
+                                    height: `${shape.height}px`,
+                                    border: `${shape.strokeWidth || 2}px solid ${shape.color}`,
+                                    backgroundColor: shape.fill === 'transparent' ? 'transparent' : (shape.fill || 'transparent'),
+                                    pointerEvents: 'none',
+                                    boxSizing: 'border-box',
+                                    transform: `rotate(${shape.rotation || 0}deg)`,
+                                    transformOrigin: '50% 50%',
+                                  }}
+                                />
+                              );
+
+                            case 'circle':
+                              return (
+                                <div
+                                  key={shape.id}
+                                  style={{
+                                    position: 'absolute',
+                                    left: `${displayX}px`,
+                                    top: `${displayY}px`,
+                                    width: `${(shape.radius || 50) * 2}px`,
+                                    height: `${(shape.radius || 50) * 2}px`,
+                                    borderRadius: '50%',
+                                    border: `${shape.strokeWidth || 2}px solid ${shape.color}`,
+                                    backgroundColor: shape.fill === 'transparent' ? 'transparent' : (shape.fill || 'transparent'),
+                                    pointerEvents: 'none',
+                                    boxSizing: 'border-box',
+                                    transform: `rotate(${shape.rotation || 0}deg)`,
+                                    transformOrigin: '50% 50%',
+                                  }}
+                                />
+                              );
+
+                            case 'text':
+                              return (
+                                <div
+                                  key={shape.id}
+                                  style={{
+                                    position: 'absolute',
+                                    left: `${displayX}px`,
+                                    top: `${displayY}px`,
+                                    color: shape.color,
+                                    fontSize: `${shape.fontSize || 16}px`,
+                                    fontFamily: shape.fontFamily || 'Arial, sans-serif',
+                                    pointerEvents: 'none',
+                                    whiteSpace: 'nowrap',
+                                    transform: `rotate(${shape.rotation || 0}deg)`,
+                                    transformOrigin: '0 0',
+                                    fontWeight: shape.fontFamily === 'Serif' ? 'bold' : 'normal'
+                                  }}
+                                >
+                                  {shape.text}
+                                </div>
+                              );
+
+                            case 'line':
+                              if (shape.points && shape.points.length >= 4) {
+                                const [x1, y1, x2, y2] = shape.points;
+                                const length = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+                                const baseAngle = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
+                                const totalAngle = baseAngle + (shape.rotation || 0);
+
+                                return (
+                                  <div
+                                    key={shape.id}
+                                    style={{
+                                      position: 'absolute',
+                                      left: `${x1}px`,
+                                      top: `${y1}px`,
+                                      width: `${length}px`,
+                                      height: `${shape.strokeWidth || 2}px`,
+                                      backgroundColor: shape.color,
+                                      transformOrigin: '0 50%',
+                                      transform: `rotate(${totalAngle}deg)`,
+                                      pointerEvents: 'none'
+                                    }}
+                                  />
+                                );
+                              }
+                              return null;
+
+                            default:
+                              return null;
+                          }
+                        })}
+                      </div>
+
                       {/* Render tables */}
                       {hallData.tables && hallData.tables.map((table) => (
                         <TableComponent key={table.id} table={table} />
@@ -1450,7 +2098,7 @@ const ClientBookingComponent = () => {
                             top: `${element.y}px`,
                             transform: `rotate(${element.rotation || 0}deg)`,
                             opacity: element.opacity || 1,
-                            zIndex: element.zIndex || 1
+                            zIndex: 2
                           }}
                         >
                           <img
@@ -1467,68 +2115,64 @@ const ClientBookingComponent = () => {
                         </div>
                       ))}
                     </div>
-                ) : (
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    height: '100%',
-                    width: '100%',
-                    flexDirection: 'column',
-                    padding: '20px'
-                  }}>
+                  ) : (
                     <div style={{
-                      backgroundColor: 'white',
-                      padding: '30px',
-                      borderRadius: '8px',
-                      boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1)',
-                      textAlign: 'center',
-                      maxWidth: '500px',
-                      width: '90%'
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      height: '100%',
+                      width: '100%',
+                      flexDirection: 'column',
+                      padding: '20px'
                     }}>
-                      <h2 style={{ marginTop: 0 }}>Добро пожаловать в систему бронирования</h2>
-                      <p>Чтобы начать, загрузите план зала с помощью кнопки "Импорт плана зала".</p>
-                      <input
-                        type="file"
-                        accept=".json"
-                        onChange={handleFileUpload}
-                        id="import-file-center"
-                        className="file-input"
-                        style={{ display: 'none' }}
-                      />
-                      <label
-                        htmlFor="import-file-center"
-                        className="import-button-large"
-                        style={{
-                          backgroundColor: '#2ecc71',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '4px',
-                          padding: '12px 24px',
-                          cursor: 'pointer',
-                          fontSize: '16px',
-                          display: 'inline-block',
-                          marginTop: '15px',
-                          fontWeight: 'bold'
-                        }}
-                      >
-                        Импортировать план зала
-                      </label>
+                      <div style={{
+                        backgroundColor: 'white',
+                        padding: '30px',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1)',
+                        textAlign: 'center',
+                        maxWidth: '500px',
+                        width: '90%'
+                      }}>
+                        <h2 style={{ marginTop: 0 }}>Добро пожаловать в систему бронирования</h2>
+                        <p>Чтобы начать, загрузите план зала с помощью кнопки "Импорт плана зала".</p>
+                        <input
+                          type="file"
+                          accept=".json"
+                          onChange={handleFileUpload}
+                          id="import-file-center"
+                          className="file-input"
+                          style={{ display: 'none' }}
+                        />
+                        <label
+                          htmlFor="import-file-center"
+                          className="import-button-large"
+                          style={{
+                            backgroundColor: '#2ecc71',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            padding: '12px 24px',
+                            cursor: 'pointer',
+                            fontSize: '16px',
+                            display: 'inline-block',
+                            marginTop: '15px',
+                            fontWeight: 'bold'
+                          }}
+                        >
+                          Импортировать план зала
+                        </label>
+                      </div>
                     </div>
-                  </div>
-                )}
-
-              </TransformComponent>
-            </>
-          )}
-          
-        </TransformWrapper>
-       
-      </div>
+                  )}
+                </TransformComponent>
+              </>
+            )}
+          </TransformWrapper>
         </div>
+      </div>
 
-      {/* Main content area */}
-
+      
 
       {/* Mobile instructions overlay */}
       {hallData && (
@@ -1568,392 +2212,348 @@ const ClientBookingComponent = () => {
         }}>
           <div className="booking-modal-content" style={{
             backgroundColor: 'white',
-            borderRadius: '8px',
+            borderRadius: '12px',
             padding: '20px',
-            maxWidth: '500px',
             width: '90%',
+            maxWidth: '600px',
             maxHeight: '90vh',
-            overflowY: 'auto'
+            overflowY: 'auto',
+            position: 'relative',
+            boxShadow: '0 5px 25px rgba(0, 0, 0, 0.3)'
           }} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ textAlign: 'center' }}>Бронирование стола {selectedTableId}</h2>
+            {/* Close button */}
+            <button
+              onClick={() => {
+                setShowBookingModal(false);
+                setSelectedTableId(null);
+              }}
+              style={{
+                position: 'absolute',
+                top: '15px',
+                right: '15px',
+                background: 'none',
+                border: 'none',
+                fontSize: '24px',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                color: '#777',
+                width: '30px',
+                height: '30px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 2
+              }}
+            >
+              ×
+            </button>
 
-            {/* Date selector */}
-            <div className="form-group" style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-                Дата:
-              </label>
-              <input
-                type="date"
-                value={bookingDate}
-                onChange={(e) => setBookingDate(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  borderRadius: '4px',
-                  border: '1px solid #ddd'
-                }}
-              />
-            </div>
-
-            {/* Time selector */}
-            <div className="form-group" style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-                Время:
-              </label>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ display: 'flex', flex: 1 }}>
-                  <select
-                    value={bookingTime.split(':')[0] || '12'}
-                    onChange={(e) => {
-                      const hours = e.target.value;
-                      const minutes = bookingTime.split(':')[1] || '00';
-                      setBookingTime(`${hours}:${minutes}`);
-                    }}
-                    style={{
-                      flex: 1,
-                      padding: '10px',
-                      borderRadius: '4px 0 0 4px',
-                      border: '1px solid #ddd',
-                      borderRight: 'none'
-                    }}
-                  >
-                    {Array.from({ length: 24 }, (_, i) => i).map(hour => {
-                      const hourStr = hour.toString().padStart(2, '0');
-
-                      // Check if all slots in this hour are occupied
-                      const isHourFullyOccupied = ['00', '15', '30', '45'].every(min =>
-                        occupiedSlots.includes(`${hourStr}:${min}`)
-                      );
-
-                      // Check if some slots in this hour are occupied
-                      const isHourPartiallyOccupied = ['00', '15', '30', '45'].some(min =>
-                        occupiedSlots.includes(`${hourStr}:${min}`)
-                      );
-
-                      return (
-                        <option
-                          key={hour}
-                          value={hourStr}
-                          disabled={isHourFullyOccupied}
-                          style={{
-                            backgroundColor: isHourFullyOccupied ? '#ffdddd' :
-                              isHourPartiallyOccupied ? '#fff8e1' :
-                                '#ffffff',
-                            color: isHourFullyOccupied ? '#999999' : '#000000'
-                          }}
-                        >
-                          {hourStr}{isHourFullyOccupied ? ' (занято)' :
-                            isHourPartiallyOccupied ? ' (частично)' : ''}
-                        </option>
-                      );
-                    })}
-                  </select>
-                  <span style={{
-                    padding: '10px 5px',
-                    backgroundColor: '#f5f5f5',
-                    borderTop: '1px solid #ddd',
-                    borderBottom: '1px solid #ddd'
-                  }}>:</span>
-                  <select
-                    value={bookingTime.split(':')[1] || '00'}
-                    onChange={(e) => {
-                      const hours = bookingTime.split(':')[0] || '12';
-                      const minutes = e.target.value;
-                      setBookingTime(`${hours}:${minutes}`);
-                    }}
-                    style={{
-                      flex: 1,
-                      padding: '10px',
-                      borderRadius: '0 4px 4px 0',
-                      border: '1px solid #ddd',
-                      borderLeft: 'none'
-                    }}
-                  >
-                    {['00', '15', '30', '45'].map(minute => {
-                      const hourStr = bookingTime.split(':')[0] || '12';
-                      const timeSlot = `${hourStr}:${minute}`;
-                      const isSlotOccupied = occupiedSlots.includes(timeSlot);
-
-                      return (
-                        <option
-                          key={minute}
-                          value={minute}
-                          disabled={isSlotOccupied}
-                          style={{
-                            backgroundColor: isSlotOccupied ? '#ffdddd' : '#ffffff',
-                            color: isSlotOccupied ? '#999999' : '#000000'
-                          }}
-                        >
-                          {minute}{isSlotOccupied ? ' (занято)' : ''}
-                        </option>
-                      );
-                    })}
-                  </select>
-                </div>
-
-                <span style={{ padding: '0 5px' }}>до</span>
-
-                <div style={{ display: 'flex', flex: 1 }}>
-                  <select
-                    value={bookingEndTime.split(':')[0] || '14'}
-                    onChange={(e) => {
-                      const hours = e.target.value;
-                      const minutes = bookingEndTime.split(':')[1] || '00';
-                      setBookingEndTime(`${hours}:${minutes}`);
-                    }}
-                    style={{
-                      flex: 1,
-                      padding: '10px',
-                      borderRadius: '4px 0 0 4px',
-                      border: '1px solid #ddd',
-                      borderRight: 'none'
-                    }}
-                  >
-                    {Array.from({ length: 24 }, (_, i) => i).map(hour => {
-                      const hourStr = hour.toString().padStart(2, '0');
-
-                      // For end time, we don't need to disable hours that come after the start time
-                      const startHour = parseInt(bookingTime.split(':')[0] || '12');
-
-                      // Check if all slots in this hour are occupied
-                      const isHourFullyOccupied = ['00', '15', '30', '45'].every(min =>
-                        occupiedSlots.includes(`${hourStr}:${min}`)
-                      );
-
-                      // If this hour is before or equal to start hour, check if it's fully occupied
-                      // Otherwise, it's selectable even if occupied (since end time can be after occupied slots)
-                      const shouldDisable = hour <= startHour && isHourFullyOccupied;
-
-                      // Check if some slots in this hour are occupied (for color indication)
-                      const isHourPartiallyOccupied = ['00', '15', '30', '45'].some(min =>
-                        occupiedSlots.includes(`${hourStr}:${min}`)
-                      );
-
-                      return (
-                        <option
-                          key={hour}
-                          value={hourStr}
-                          disabled={shouldDisable}
-                          style={{
-                            backgroundColor: shouldDisable ? '#ffdddd' :
-                              isHourPartiallyOccupied ? '#fff8e1' :
-                                '#ffffff',
-                            color: shouldDisable ? '#999999' : '#000000'
-                          }}
-                        >
-                          {hourStr}{shouldDisable ? ' (занято)' :
-                            isHourPartiallyOccupied && hour > startHour ? ' (частично)' : ''}
-                        </option>
-                      );
-                    })}
-                  </select>
-                  <span style={{
-                    padding: '10px 5px',
-                    backgroundColor: '#f5f5f5',
-                    borderTop: '1px solid #ddd',
-                    borderBottom: '1px solid #ddd'
-                  }}>:</span>
-                  <select
-                    value={bookingEndTime.split(':')[1] || '00'}
-                    onChange={(e) => {
-                      const hours = bookingEndTime.split(':')[0] || '14';
-                      const minutes = e.target.value;
-                      setBookingEndTime(`${hours}:${minutes}`);
-                    }}
-                    style={{
-                      flex: 1,
-                      padding: '10px',
-                      borderRadius: '0 4px 4px 0',
-                      border: '1px solid #ddd',
-                      borderLeft: 'none'
-                    }}
-                  >
-                    {['00', '15', '30', '45'].map(minute => {
-                      const hourStr = bookingEndTime.split(':')[0] || '14';
-                      const timeSlot = `${hourStr}:${minute}`;
-                      const isSlotOccupied = occupiedSlots.includes(timeSlot);
-
-                      // End time minute can be occupied if the hour is after start time
-                      const startHour = parseInt(bookingTime.split(':')[0] || '12');
-                      const endHour = parseInt(hourStr);
-                      const shouldDisable = endHour <= startHour && isSlotOccupied;
-
-                      return (
-                        <option
-                          key={minute}
-                          value={minute}
-                          disabled={shouldDisable}
-                          style={{
-                            backgroundColor: shouldDisable ? '#ffdddd' :
-                              isSlotOccupied ? '#fff8e1' :
-                                '#ffffff',
-                            color: shouldDisable ? '#999999' : '#000000'
-                          }}
-                        >
-                          {minute}{shouldDisable ? ' (занято)' : ''}
-                        </option>
-                      );
-                    })}
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            {/* Client information */}
-            <div className="form-group" style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-                Ваше имя:
-              </label>
-              <input
-                type="text"
-                value={clientName}
-                onChange={(e) => setClientName(e.target.value)}
-                placeholder="Иван Иванов"
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  borderRadius: '4px',
-                  border: '1px solid #ddd'
-                }}
-              />
-            </div>
-
-            <div className="form-group" style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-                Номер телефона:
-              </label>
-              <input
-                type="tel"
-                value={clientPhone}
-                onChange={(e) => setClientPhone(e.target.value)}
-                placeholder="+7 (___) ___-__-__"
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  borderRadius: '4px',
-                  border: '1px solid #ddd'
-                }}
-              />
-            </div>
-
-            <div className="form-group" style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-                Количество гостей:
-              </label>
-              <input
-                type="text"
-                value={guestCount === 0 ? '' : guestCount.toString()}
-                onChange={(e) => setGuestCount(parseInt(e.target.value) | 0)}
-                style={{
-                  width: '100px',
-                  padding: '10px',
-                  borderRadius: '4px',
-                  border: '1px solid #ddd'
-                }}
-              />
-            </div>
-
-            <div className="form-group" style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-                Примечание (необязательно):
-              </label>
-              <textarea
-                value={bookingNote}
-                onChange={(e) => setBookingNote(e.target.value)}
-                placeholder="Особые пожелания, комментарии..."
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  borderRadius: '4px',
-                  border: '1px solid #ddd',
-                  minHeight: '80px',
-                  resize: 'vertical'
-                }}
-              />
-            </div>
-
-            {/* Available times info */}
-            <div className="available-times-info" style={{
-              backgroundColor: '#f8f9fa',
-              borderRadius: '4px',
-              padding: '15px',
-              marginBottom: '20px'
+            {/* Title */}
+            <h2 style={{
+              textAlign: 'center',
+              margin: '0 0 25px 0',
+              fontSize: '24px',
+              color: '#333',
+              borderBottom: '2px solid #f0f0f0',
+              paddingBottom: '15px',
             }}>
-              <h4 style={{ margin: '0 0 10px 0' }}>Информация о доступности:</h4>
-              {(() => {
-                const occupiedSlots = selectedTableId && bookingDate ?
-                  getOccupiedTimeSlots(selectedTableId, bookingDate) : [];
+              Бронирование стола {selectedTableId}
+            </h2>
 
-                if (occupiedSlots.length > 0) {
-                  // Group consecutive times for better display
-                  let currentHour = -1;
-                  const occupiedHours = [];
-
-                  occupiedSlots.forEach(slot => {
-                    const hour = parseInt(slot.split(':')[0], 10);
-                    if (hour !== currentHour) {
-                      occupiedHours.push(hour);
-                      currentHour = hour;
-                    }
-                  });
-
-                  return (
-                    <div>
-                      <p style={{ color: '#dc3545' }}>
-                        <strong>Занятое время:</strong> {occupiedHours.map(h => `${h}:00-${(h + 1).toString().padStart(2, '0')}:00`).join(', ')}
-                      </p>
-                      <p>Выберите другое время для бронирования.</p>
-                    </div>
-                  );
-                } else {
-                  return (
-                    <p style={{ color: '#28a745' }}>
-                      <strong>Стол свободен</strong> в выбранную дату и время.
-                    </p>
-                  );
-                }
-              })()}
-            </div>
-
-            {/* Action buttons */}
-            <div className="actions" style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              gap: '10px'
+            {/* Main form content with 80% width for form elements */}
+            <div style={{
+              margin: '0 auto',
+              width: '80%'
             }}>
-              <button
-                onClick={() => {
-                  setShowBookingModal(false);
-                  setSelectedTableId(null);
-                }}
-                style={{
-                  padding: '10px 20px',
-                  backgroundColor: '#6c757d',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  flex: 1
-                }}
-              >
-                Отмена
-              </button>
-
-              <button
-                onClick={confirmBooking}
-                style={{
-                  padding: '10px 20px',
-                  backgroundColor: '#2ecc71',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
+              {/* Date selector */}
+              <div className="form-group" style={{ marginBottom: '20px' }}>
+                <label style={{
+                  display: 'block',
+                  marginBottom: '8px',
                   fontWeight: 'bold',
-                  flex: 1
-                }}
-              >
-                Подтвердить бронирование
-              </button>
+                  fontSize: '15px'
+                }}>
+                  Тип мероприятия:
+                </label>
+
+                {/* Event type selector button */}
+                <div
+                  onClick={() => setShowEventTypeSelector(!showEventTypeSelector)}
+                  style={{
+                    padding: '12px 15px',
+                    borderRadius: '8px',
+                    border: '1px solid #ddd',
+                    backgroundColor: '#f9f9f9',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    boxShadow: '0 2px 5px rgba(0,0,0,0.05)'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ fontSize: '24px' }}>
+                      {bookingType ? getEventTypeEmoji(bookingType) : '📅'}
+                    </span>
+                    <span>
+                      {bookingType ? getEventTypeName(bookingType) : 'Выберите тип мероприятия'}
+                    </span>
+                  </div>
+                  <span style={{ fontSize: '18px' }}>
+                    {showEventTypeSelector ? '▲' : '▼'}
+                  </span>
+                </div>
+
+                {/* Event type options dropdown */}
+                {showEventTypeSelector && (
+                  <div style={{
+                    marginTop: '10px',
+                    border: '1px solid #ddd',
+                    borderRadius: '8px',
+                    overflow: 'hidden',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                  }}>
+                    {[
+                      { type: 'birthday', label: 'День Рождения', emoji: '🎂' },
+                      { type: 'business', label: 'Деловая Встреча', emoji: '💼' },
+                      { type: 'party', label: 'Вечеринка', emoji: '🎉' },
+                      { type: 'romantic', label: 'Романтический Ужин', emoji: '❤️' },
+                      { type: 'family', label: 'Семейный Ужин', emoji: '👨‍👩‍👧‍👦' },
+                      { type: 'other', label: 'Другое', emoji: '✨' }
+                    ].map(item => (
+                      <div
+                        key={item.type}
+                        onClick={() => {
+                          setBookingType(item.type);
+                          setShowEventTypeSelector(false);
+                        }}
+                        style={{
+                          padding: '12px 15px',
+                          borderBottom: '1px solid #eee',
+                          backgroundColor: bookingType === item.type ? '#e8f8f0' : 'white',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '10px',
+                          transition: 'all 0.2s ease'
+                        }}
+                      >
+                        <span style={{ fontSize: '24px' }}>{item.emoji}</span>
+                        <span style={{
+                          fontWeight: bookingType === item.type ? 'bold' : 'normal'
+                        }}>
+                          {item.label}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Available times info */}
+              <div className="available-times-info" style={{
+                backgroundColor: '#f8f9fa',
+                borderRadius: '8px',
+                padding: '15px',
+                marginBottom: '20px',
+                fontSize: '14px',
+                boxShadow: '0 2px 5px rgba(0,0,0,0.05)'
+              }}>
+                {(() => {
+                  const occupiedSlots = selectedTableId && bookingDate ?
+                    getOccupiedTimeSlots(selectedTableId, bookingDate) : [];
+
+                  if (occupiedSlots.length > 0) {
+                    // Group consecutive times for better display
+                    let currentHour = -1;
+                    const occupiedHours = [];
+
+                    occupiedSlots.forEach(slot => {
+                      const hour = parseInt(slot.split(':')[0], 10);
+                      if (hour !== currentHour) {
+                        occupiedHours.push(hour);
+                        currentHour = hour;
+                      }
+                    });
+
+                    return (
+                      <div>
+                        <p style={{
+                          color: '#dc3545',
+                          margin: '0 0 8px 0',
+                          fontWeight: 'bold'
+                        }}>
+                          Занятое время:
+                        </p>
+                        <p style={{ margin: '0' }}>
+                          {occupiedHours.map(h => `${h}:00-${(h + 1).toString().padStart(2, '0')}:00`).join(', ')}
+                        </p>
+                      </div>
+                    );
+                  } else {
+                    return (
+                      <p style={{
+                        color: '#28a745',
+                        margin: '0',
+                        fontWeight: 'bold'
+                      }}>
+                        Стол свободен в выбранную дату и время
+                      </p>
+                    );
+                  }
+                })()}
+              </div>
+
+              {/* Client information */}
+              <div className="form-group" style={{ marginBottom: '20px' }}>
+                <label style={{
+                  display: 'block',
+                  marginBottom: '8px',
+                  fontWeight: 'bold',
+                  fontSize: '15px'
+                }}>
+                  Ваше имя:
+                </label>
+                <input
+                  type="text"
+                  value={clientName}
+                  onChange={(e) => setClientName(e.target.value)}
+                  placeholder="Иван Иванов"
+                  style={{
+                    width: '80%',
+                    padding: '12px',
+                    borderRadius: '8px',
+                    border: '1px solid #ddd',
+                    fontSize: '16px',
+                    boxShadow: '0 2px 5px rgba(0,0,0,0.05)',
+                    backgroundColor: '#f9f9f9'
+                  }}
+                />
+              </div>
+
+              <div className="form-group" style={{ marginBottom: '20px' }}>
+                <label style={{
+                  display: 'block',
+                  marginBottom: '8px',
+                  fontWeight: 'bold',
+                  fontSize: '15px'
+                }}>
+                  Номер телефона:
+                </label>
+                <input
+                  type="tel"
+                  value={clientPhone}
+                  onChange={(e) => setClientPhone(e.target.value)}
+                  placeholder="+374 (77) 77-77-77"
+                  style={{
+                    width: '80%',
+                    padding: '12px',
+                    borderRadius: '8px',
+                    border: '1px solid #ddd',
+                    fontSize: '16px',
+                    boxShadow: '0 2px 5px rgba(0,0,0,0.05)',
+                    backgroundColor: '#f9f9f9'
+                  }}
+                />
+              </div>
+
+              <div className="form-group" style={{ marginBottom: '20px' }}>
+                <label style={{
+                  display: 'block',
+                  marginBottom: '8px',
+                  fontWeight: 'bold',
+                  fontSize: '15px'
+                }}>
+                  Количество гостей:
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={guestCount === 0 ? '' : guestCount.toString()}
+                  onChange={(e) => setGuestCount(parseInt(e.target.value) || 1)}
+                  style={{
+                    width: '80%',
+                    padding: '12px',
+                    borderRadius: '8px',
+                    border: '1px solid #ddd',
+                    fontSize: '16px',
+                    boxShadow: '0 2px 5px rgba(0,0,0,0.05)',
+                    backgroundColor: '#f9f9f9'
+                  }}
+                />
+              </div>
+
+              <div className="form-group" style={{ marginBottom: '25px' }}>
+                <label style={{
+                  display: 'block',
+                  marginBottom: '8px',
+                  fontWeight: 'bold',
+                  fontSize: '15px'
+                }}>
+                  Примечание (необязательно):
+                </label>
+                <textarea
+                  value={bookingNote}
+                  onChange={(e) => setBookingNote(e.target.value)}
+                  placeholder="Особые пожелания, комментарии..."
+                  style={{
+                    width: '80%',
+                    padding: '12px',
+                    borderRadius: '8px',
+                    border: '1px solid #ddd',
+                    fontSize: '16px',
+                    minHeight: '100px',
+                    resize: 'vertical',
+                    boxShadow: '0 2px 5px rgba(0,0,0,0.05)',
+                    backgroundColor: '#f9f9f9'
+                  }}
+                />
+              </div>
+
+              {/* Action buttons */}
+              <div className="actions" style={{
+                display: 'flex',
+                gap: '15px',
+                marginTop: '10px',
+                justifyContent: 'center'
+              }}>
+                <button
+                  onClick={confirmBooking}
+                  style={{
+                    padding: '14px 24px',
+                    backgroundColor: '#2ecc71',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontWeight: 'bold',
+                    fontSize: '16px',
+                    boxShadow: '0 4px 6px rgba(46, 204, 113, 0.2)',
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  Подтвердить бронирование
+                </button>
+
+                <button
+                  onClick={() => {
+                    setShowBookingModal(false);
+                    setSelectedTableId(null);
+                  }}
+                  style={{
+                    padding: '14px 24px',
+                    backgroundColor: '#f1f1f1',
+                    color: '#333',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '16px',
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  Отмена
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1975,75 +2575,125 @@ const ClientBookingComponent = () => {
         }}>
           <div className="success-modal-content" style={{
             backgroundColor: 'white',
-            borderRadius: '8px',
-            padding: '20px',
-            maxWidth: '500px',
+            borderRadius: '12px',
+            padding: '30px',
+            maxWidth: '600px',
             width: '90%',
-            textAlign: 'center'
+            textAlign: 'center',
+            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)'
           }} onClick={(e) => e.stopPropagation()}>
             <div style={{
-              width: '70px',
-              height: '70px',
+              width: '80px',
+              height: '80px',
               borderRadius: '50%',
               backgroundColor: '#2ecc71',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              margin: '0 auto 20px auto'
+              margin: '0 auto 25px auto'
             }}>
-              <span style={{ color: 'white', fontSize: '40px' }}>✓</span>
+              <span style={{ color: 'white', fontSize: '45px' }}>✓</span>
             </div>
 
-            <h2 style={{ marginBottom: '20px', color: '#2ecc71' }}>Бронирование успешно!</h2>
+            <h2 style={{
+              marginBottom: '25px',
+              color: '#2ecc71',
+              fontSize: '28px'
+            }}>
+              {getEventTypeEmoji(bookingSummary.type)} Бронирование успешно!
+            </h2>
 
             <div className="booking-details" style={{
               backgroundColor: '#f8f9fa',
-              padding: '20px',
-              borderRadius: '8px',
+              padding: '25px',
+              borderRadius: '10px',
               textAlign: 'left',
-              marginBottom: '20px'
+              marginBottom: '25px',
+              boxShadow: '0 4px 10px rgba(0, 0, 0, 0.05)'
             }}>
-              <h3 style={{ marginTop: 0, marginBottom: '15px', textAlign: 'center' }}>Детали бронирования</h3>
+              <h3 style={{
+                marginTop: 0,
+                marginBottom: '20px',
+                textAlign: 'center',
+                color: '#333',
+                fontSize: '20px'
+              }}>
+                Детали бронирования
+              </h3>
 
-              <div style={{ marginBottom: '10px' }}>
-                <strong>Стол:</strong> {bookingSummary.tableName}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+                gap: '15px'
+              }}>
+                <div>
+                  <div style={{ marginBottom: '12px' }}>
+                    <strong>Стол:</strong> {bookingSummary.tableName}
+                  </div>
+
+                  <div style={{ marginBottom: '12px' }}>
+                    <strong>Дата:</strong> {bookingSummary.date}
+                  </div>
+
+                  <div style={{ marginBottom: '12px' }}>
+                    <strong>Время:</strong> {bookingSummary.time}
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ marginBottom: '12px' }}>
+                    <strong>Имя:</strong> {bookingSummary.name}
+                  </div>
+
+                  <div style={{ marginBottom: '12px' }}>
+                    <strong>Телефон:</strong> {bookingSummary.phone}
+                  </div>
+
+                  <div style={{ marginBottom: '12px' }}>
+                    <strong>Количество гостей:</strong> {bookingSummary.guestCount}
+                  </div>
+                </div>
               </div>
 
-              <div style={{ marginBottom: '10px' }}>
-                <strong>Дата:</strong> {bookingSummary.date}
-              </div>
-
-              <div style={{ marginBottom: '10px' }}>
-                <strong>Время:</strong> {bookingSummary.time}
-              </div>
-
-              <div style={{ marginBottom: '10px' }}>
-                <strong>Имя:</strong> {bookingSummary.name}
-              </div>
-
-              <div style={{ marginBottom: '10px' }}>
-                <strong>Телефон:</strong> {bookingSummary.phone}
-              </div>
-
-              <div>
-                <strong>Количество гостей:</strong> {bookingSummary.guestCount}
+              {/* Display booking type with emoji */}
+              <div style={{
+                marginTop: '15px',
+                textAlign: 'center',
+                padding: '15px',
+                backgroundColor: '#e8f8f0',
+                borderRadius: '8px'
+              }}>
+                <div style={{
+                  fontSize: '24px',
+                  marginBottom: '5px'
+                }}>
+                  {getEventTypeEmoji(bookingSummary.type)}
+                </div>
+                <strong>Тип мероприятия:</strong> {getEventTypeName(bookingSummary.type)}
               </div>
             </div>
 
-            <p style={{ marginBottom: '20px' }}>
+            <p style={{
+              marginBottom: '25px',
+              fontSize: '15px',
+              color: '#666'
+            }}>
               В случае изменения планов, пожалуйста, свяжитесь с нами по телефону для отмены бронирования.
             </p>
 
             <button
               onClick={resetBooking}
               style={{
-                padding: '10px 20px',
+                padding: '14px 24px',
                 backgroundColor: '#3498db',
                 color: 'white',
                 border: 'none',
-                borderRadius: '4px',
+                borderRadius: '8px',
                 cursor: 'pointer',
-                fontWeight: 'bold'
+                fontWeight: 'bold',
+                fontSize: '16px',
+                boxShadow: '0 4px 6px rgba(52, 152, 219, 0.2)',
+                transition: 'all 0.2s ease'
               }}
             >
               Вернуться к плану зала

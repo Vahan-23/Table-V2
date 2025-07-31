@@ -227,7 +227,7 @@ const DraggableGroup = ({ group, groupName, setDraggingGroup, people, setPeople,
 // Основной компонент панели групп
 const GroupsPanel = ({ groups, setDraggingGroup, createTablesForAllGroups, updateGroups, onDragStart }) => {
   // Состояние для отслеживания раскрытых панелей
-  const [isGroupsPanelExpanded, setIsGroupsPanelExpanded] = useState(false);
+  const [isGroupsPanelExpanded, setIsGroupsPanelExpanded] = useState(true);
   
   // Реф для панели групп
   const groupsPanelRef = useRef(null);
@@ -258,19 +258,19 @@ const GroupsPanel = ({ groups, setDraggingGroup, createTablesForAllGroups, updat
   };
   
   // Обработчик клика вне панели
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (groupsPanelRef.current && !groupsPanelRef.current.contains(event.target)) {
-        closePanels();
-      }
-    };
+  // useEffect(() => {
+  //   const handleClickOutside = (event) => {
+  //     if (groupsPanelRef.current && !groupsPanelRef.current.contains(event.target)) {
+  //       closePanels();
+  //     }
+  //   };
     
-    document.addEventListener('mousedown', handleClickOutside);
+  //   document.addEventListener('mousedown', handleClickOutside);
     
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
+  //   return () => {
+  //     document.removeEventListener('mousedown', handleClickOutside);
+  //   };
+  // }, []);
   
   // Функция, которая будет вызываться при начале перетаскивания
   const handleDragStart = () => {
@@ -305,7 +305,7 @@ const GroupsPanel = ({ groups, setDraggingGroup, createTablesForAllGroups, updat
                   setDraggingGroup={setDraggingGroup}
                   people={groups}
                   setPeople={updateGroups}
-                  onDragStart={handleDragStart}
+                  // onDragStart={handleDragStart}
                 />
               ))}
             </div>

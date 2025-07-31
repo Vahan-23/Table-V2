@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useDrag, useDrop } from 'react-dnd';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
+import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch"; // Добавьте этот импорт
 import './hallview.css';
 import CollapsiblePanel from './CollapsiblePanel';
 import SidebarLayout from './SidebarLayout';
@@ -107,7 +108,8 @@ const isTimeSlotOccupiedByMinutes = (occupiedSlots, timeInMinutes) => {
 
 const HallViewer = ({ hallData: initialHallData, onDataChange }) => {
   const [hallData, setHallData] = useState(initialHallData);
-  const [zoom, setZoom] = useState(0.4);
+  const [zoom, setZoom] = useState(0.2); // Оставляем для совместимости с существующим кодом
+  const [scale, setScale] = useState(0.2); // Новое состояние для отслеживания масштаба TransformWrapper
   const tablesAreaRef = useRef(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -151,6 +153,23 @@ const HallViewer = ({ hallData: initialHallData, onDataChange }) => {
   let currentDraggedItem = null;
   let dragImage = null;
   let dragOffset = { x: 0, y: 0 };
+
+  useEffect(() => {
+  // Эта функция будет работать в качестве резервной опции для центрирования
+  // вместо основной функциональности TransformComponent
+  if (tablesAreaRef.current && hallData) {
+    // Рассчитываем размеры содержимого зала
+    const tables = hallData.tables || [];
+    const maxX = Math.max(...tables.map(t => (t.x || 0) + 400), 0); // 400 - ширина стола
+    const maxY = Math.max(...tables.map(t => (t.y || 0) + 150), 0); // 150 - высота стола
+
+    // Устанавливаем минимальные размеры контейнера
+    if (tablesAreaRef.current.firstChild) {
+      tablesAreaRef.current.firstChild.style.minWidth = `${maxX}px`;
+      tablesAreaRef.current.firstChild.style.minHeight = `${maxY}px`;
+    }
+  }
+}, [hallData]);
 
   const isTableAvailableAtTime = (hallData, tableId, date, startTime, endTime) => {
     // Получаем все бронирования для стола на указанную дату
@@ -1836,6 +1855,7 @@ const HallViewer = ({ hallData: initialHallData, onDataChange }) => {
     return chairs;
   };
 
+
   // Render chairs for rectangle tables
   const renderRectangleChairs = (table) => {
     const chairs = [];
@@ -2661,189 +2681,159 @@ const HallViewer = ({ hallData: initialHallData, onDataChange }) => {
       }}>
         {/* Compact header */}
         <header className="app-header" style={{
-          padding: '10px 15px',
-          backgroundColor: '#0a0a1d',
+  padding: '10px 15px',
+  backgroundColor: '#0a0a1d',
+  color: 'white',
+  boxShadow: '0 2px 10px rgba(0, 0, 0, 0.2)',
+  zIndex: 100,
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center'
+}}>
+  <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+    <div style={{
+      fontSize: '20px',
+      fontWeight: 'bold',
+      whiteSpace: 'nowrap'
+    }}>
+      {hallData?.name || 'Зал без названия'}
+    </div>
+
+    <div style={{ display: 'flex', gap: '10px' }}>
+      {/* View switching buttons */}
+      <button
+        onClick={() => setActiveView('hall')}
+        style={{
+          backgroundColor: activeView === 'hall' ? '#3498db' : '#333',
           color: 'white',
-          boxShadow: '0 2px 10px rgba(0, 0, 0, 0.2)',
-          zIndex: 100,
+          border: 'none',
+          borderRadius: '4px',
+          padding: '6px 12px',
+          cursor: 'pointer',
+          fontSize: '14px'
+        }}
+      >
+        План зала
+      </button>
+      <button
+        onClick={() => setActiveView('calendar')}
+        style={{
+          backgroundColor: activeView === 'calendar' ? '#3498db' : '#333',
+          color: 'white',
+          border: 'none',
+          borderRadius: '4px',
+          padding: '6px 12px',
+          cursor: 'pointer',
+          fontSize: '14px'
+        }}
+      >
+        Календарь
+      </button>
+
+      {/* Existing buttons */}
+      <button
+        onClick={() => {
+          setIsSidePanelOpen(true);
+          setSidePanelTab('groups');
+        }}
+        style={{
+          backgroundColor: sidePanelTab === 'groups' && isSidePanelOpen ? '#3498db' : '#333',
+          color: 'white',
+          border: 'none',
+          borderRadius: '4px',
+          padding: '6px 12px',
+          cursor: 'pointer',
+          fontSize: '14px',
           display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
+          alignItems: 'center',
+          gap: '5px'
+        }}
+      >
+        <span>Клиенты</span>
+        <span style={{
+          backgroundColor: '#555',
+          borderRadius: '50%',
+          width: '20px',
+          height: '20px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '12px'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-            <div style={{
-              fontSize: '20px',
-              fontWeight: 'bold',
-              whiteSpace: 'nowrap'
-            }}>
-              {hallData?.name || 'Зал без названия'}
-            </div>
+          {groups.length}
+        </span>
+      </button>
 
-            <div style={{ display: 'flex', gap: '10px' }}>
-              {/* View switching buttons */}
-              <button
-                onClick={() => setActiveView('hall')}
-                style={{
-                  backgroundColor: activeView === 'hall' ? '#3498db' : '#333',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  padding: '6px 12px',
-                  cursor: 'pointer',
-                  fontSize: '14px'
-                }}
-              >
-                План зала
-              </button>
-              <button
-                onClick={() => setActiveView('calendar')}
-                style={{
-                  backgroundColor: activeView === 'calendar' ? '#3498db' : '#333',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  padding: '6px 12px',
-                  cursor: 'pointer',
-                  fontSize: '14px'
-                }}
-              >
-                Календарь
-              </button>
+      {detailsTableId && (
+        <button
+          onClick={() => {
+            setIsSidePanelOpen(true);
+            setSidePanelTab('tableDetails');
+          }}
+          style={{
+            backgroundColor: sidePanelTab === 'tableDetails' && isSidePanelOpen ? '#3498db' : '#333',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            padding: '6px 12px',
+            cursor: 'pointer',
+            fontSize: '14px'
+          }}
+        >
+          Стол {detailsTableId}
+        </button>
+      )}
+    </div>
+  </div>
 
-              {/* Existing buttons */}
-              <button
-                onClick={() => {
-                  setIsSidePanelOpen(true);
-                  setSidePanelTab('groups');
-                }}
-                style={{
-                  backgroundColor: sidePanelTab === 'groups' && isSidePanelOpen ? '#3498db' : '#333',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  padding: '6px 12px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '5px'
-                }}
-              >
-                <span>Клиенты</span>
-                <span style={{
-                  backgroundColor: '#555',
-                  borderRadius: '50%',
-                  width: '20px',
-                  height: '20px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '12px'
-                }}>
-                  {groups.length}
-                </span>
-              </button>
+  <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+    {activeView === 'hall' && (
+      <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+        {/* 
+          Примечание: конкретные кнопки зумирования теперь находятся внутри
+          TransformWrapper и используются через его render prop.
+          Здесь мы отображаем только состояние масштаба.
+        */}
+        <span style={{
+          color: 'white',
+          fontSize: '14px',
+          textAlign: 'center'
+        }}>
+          {Math.round(scale * 100)}%
+        </span>
+      </div>
+    )}
 
-              {detailsTableId && (
-                <button
-                  onClick={() => {
-                    setIsSidePanelOpen(true);
-                    setSidePanelTab('tableDetails');
-                  }}
-                  style={{
-                    backgroundColor: sidePanelTab === 'tableDetails' && isSidePanelOpen ? '#3498db' : '#333',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    padding: '6px 12px',
-                    cursor: 'pointer',
-                    fontSize: '14px'
-                  }}
-                >
-                  Стол {detailsTableId}
-                </button>
-              )}
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-            {activeView === 'hall' && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                <button
-                  className="zoom-btn zoom-out-btn"
-                  onClick={handleButtonZoomOut}
-                  style={{
-                    backgroundColor: '#333',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    width: '30px',
-                    height: '30px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '18px',
-                    cursor: 'pointer'
-                  }}
-                >−</button>
-                <span style={{
-                  color: 'white',
-                  fontSize: '14px',
-                  width: '40px',
-                  textAlign: 'center'
-                }}>
-                  {Math.round(zoom * 100)}%
-                </span>
-                <button
-                  className="zoom-btn zoom-in-btn"
-                  onClick={handleButtonZoomIn}
-                  style={{
-                    backgroundColor: '#333',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    width: '30px',
-                    height: '30px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '18px',
-                    cursor: 'pointer'
-                  }}
-                >+</button>
-              </div>
-            )}
-
-            <div className="import-container">
-              <input
-                type="file"
-                accept=".json"
-                onChange={handleFileUpload}
-                id="import-file"
-                className="file-input"
-                style={{ display: 'none' }}
-              />
-              <label
-                htmlFor="import-file"
-                className="import-button"
-                style={{
-                  backgroundColor: '#2ecc71',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  padding: '6px 12px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  display: 'inline-block'
-                }}
-              >
-                Импорт зала
-              </label>
-              {isLoading && <div className="loading-indicator">Загрузка...</div>}
-              {error && <div className="error-message">{error}</div>}
-            </div>
-          </div>
-        </header>
+    <div className="import-container">
+      <input
+        type="file"
+        accept=".json"
+        onChange={handleFileUpload}
+        id="import-file"
+        className="file-input"
+        style={{ display: 'none' }}
+      />
+      <label
+        htmlFor="import-file"
+        className="import-button"
+        style={{
+          backgroundColor: '#2ecc71',
+          color: 'white',
+          border: 'none',
+          borderRadius: '4px',
+          padding: '6px 12px',
+          cursor: 'pointer',
+          fontSize: '14px',
+          display: 'inline-block'
+        }}
+      >
+        Импорт зала
+      </label>
+      {isLoading && <div className="loading-indicator">Загрузка...</div>}
+      {error && <div className="error-message">{error}</div>}
+    </div>
+  </div>
+</header>
 
         {/* Main content with hall view and side panel */}
         <div style={{
@@ -2893,7 +2883,7 @@ const HallViewer = ({ hallData: initialHallData, onDataChange }) => {
           </div>
 
           {/* Main content area - either hall or calendar */}
-          {hallData ? (
+         {hallData ? (
             <div
               style={{
                 flex: 1,
@@ -2903,37 +2893,86 @@ const HallViewer = ({ hallData: initialHallData, onDataChange }) => {
               }}
             >
               {activeView === 'hall' ? (
-                /* Hall layout view - existing code */
-                <div
-                  className="tables-area"
-                  ref={tablesAreaRef}
-                  onClick={handleTablesAreaClick}
-                  style={{
-                    transform: `scale(${zoom})`,
-                    transformOrigin: 'top left',
-                    display: 'flex',
-                    overflow: 'auto',
-                    width: `${100 / zoom}%`,
-                    height: `${100 / zoom}%`,
-                    minHeight: `${100 / zoom}%`,
-                    padding: '20px',
-                    position: 'relative',
-                    '--zoom-level': zoom,
-                    transition: isDraggingView ? 'none' : 'transform 0.1s ease-out',
-                    background: 'linear-gradient(rgba(255, 255, 255, 0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.2) 1px, transparent 1px)',
-                    backgroundSize: '20px 20px',
-                    backgroundColor: '#e6eef5',
-                    border: '2px dashed #3a3a3a',
-                    cursor: isDraggingView ? 'grabbing' : 'default'
-                  }}
-                >
-                  {/* Render tables */}
-                  {hallData.tables && hallData.tables.map((table) => (
-                    <DroppableTable key={table.id} table={table} />
-                  ))}
+                /* Замените существующий код зала на TransformWrapper/TransformComponent */
+                <div className="zoom-container">
+                  <TransformWrapper
+                    initialScale={0.2}
+                    minScale={0.1}
+                    maxScale={1}
+                    limitToBounds={false}
+                    doubleClick={{ disabled: true }} // Предотвращает случайное двойное нажатие для масштабирования
+                    pinch={{ step: 5 }} // Более отзывчивый щипок для масштабирования
+                    wheel={{ step: 0.05 }}
+                    onZoomChange={({ state }) => {
+                      setScale(state.scale);
+                      setZoom(state.scale); // Обновляем также старое значение zoom для совместимости
+                    }}
+                  >
+                    {({ zoomIn, zoomOut, resetTransform }) => (
+                      <>
+                        {/* Элементы управления для мобильных устройств */}
+                        <div className="controls2 fixed bottom-4 right-4 z-10 flex gap-2">
+                          <button
+                            onClick={() => zoomIn(0.2)}
+                            className="p-2 bg-white rounded-full shadow-md"
+                            aria-label="Увеличить"
+                          >
+                            +
+                          </button>
+                          <button
+                            onClick={() => zoomOut(0.2)}
+                            className="p-2 bg-white rounded-full shadow-md"
+                            aria-label="Уменьшить"
+                          >
+                            -
+                          </button>
+                          <button
+                            onClick={() => resetTransform()}
+                            className="p-2 bg-white rounded-full shadow-md"
+                            aria-label="Сбросить масштаб"
+                          >
+                            Сброс
+                          </button>
+                        </div>
 
-                  {/* Render hall elements */}
-                  {renderHallElements()}
+                        {/* Индикатор масштаба */}
+                        {/* <div className="scale-display fixed top-4 left-4 z-10 bg-white p-2 rounded shadow-md">
+                          {Math.round(scale * 100)}%
+                        </div> */}
+
+                        <TransformComponent
+                          wrapperStyle={{ width: "100%", height: "100vh" }}
+                          contentStyle={{ width: "100%", height: "100%" }}
+                          className="tables-area"
+                          ref={tablesAreaRef}
+                        >
+                          {/* Hall content */}
+                          <div
+                            className="tables-content"
+                            onClick={handleTablesAreaClick}
+                            style={{
+                              position: 'relative',
+                              // minWidth: '5000px',  // Большое значение, чтобы весь зал помещался
+                              // minHeight: '5000px', // Большое значение, чтобы весь зал помещался
+                              // padding: '20px',
+                              // background: 'linear-gradient(rgba(255, 255, 255, 0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.2) 1px, transparent 1px)',
+                              // backgroundSize: '20px 20px',
+                              // backgroundColor: '#e6eef5',
+                              // border: '2px dashed #3a3a3a',
+                            }}
+                          >
+                            {/* Render tables */}
+                            {hallData.tables && hallData.tables.map((table) => (
+                              <DroppableTable key={table.id} table={table} />
+                            ))}
+
+                            {/* Render hall elements */}
+                            {renderHallElements()}
+                          </div>
+                        </TransformComponent>
+                      </>
+                    )}
+                  </TransformWrapper>
                 </div>
               ) : (
                 /* Calendar view - new component */
@@ -2994,7 +3033,26 @@ const HallViewer = ({ hallData: initialHallData, onDataChange }) => {
             </div>
           )}
         </div>
-
+{hallData && activeView === 'hall' && (
+  <div className="mobile-instructions" style={{
+    position: 'absolute',
+    bottom: '15px',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    color: 'white',
+    padding: '8px 15px',
+    borderRadius: '20px',
+    fontSize: '12px',
+    zIndex: 10,
+    textAlign: 'center',
+    pointerEvents: 'none',
+    opacity: '0.8',
+    display: window.innerWidth <= 768 ? 'block' : 'none'
+  }}>
+    Используйте пальцы для перемещения зала и масштабирования
+  </div>
+)}
         {/* Fullscreen popup for chair selection/removal */}
         {isPopupVisible && (
           <div

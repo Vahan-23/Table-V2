@@ -8,7 +8,10 @@
     "@testing-library/react": "^16.2.0",
     "@testing-library/user-event": "^13.5.0",
     "@vercel/speed-insights": "^1.2.0",
+    "fabric": "^4.6.0",
     "framer-motion": "^12.4.10",
+    "konva": "^9.3.20",
+    "lucide-react": "^0.515.0",
     "react": "^18.0.0",
     "react-beautiful-dnd": "^13.1.1",
     "react-dnd": "^16.0.1",
@@ -16,6 +19,7 @@
     "react-dnd-touch-backend": "^16.0.1",
     "react-dom": "^18.0.0",
     "react-draggable": "^4.4.6",
+    "react-konva": "^18.2.10",
     "react-router-dom": "^7.5.2",
     "react-scripts": "5.0.1",
     "react-zoom-pan-pinch": "^3.7.0",
@@ -23,9 +27,9 @@
     "yocto-queue": "^1.2.0"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
+    "start": "react-app-rewired start",
+    "build": "react-app-rewired build",
+    "test": "react-app-rewired test",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
@@ -45,5 +49,11 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.5",
+    "react-app-rewired": "^2.2.1",
+    "tailwindcss": "^4.1.10"
   }
 }
