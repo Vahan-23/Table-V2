@@ -102,7 +102,7 @@ const PersonModal = () => {
          </div>
 
          {/* Статистика по людям */}
-         <div style={{
+         {/* <div style={{
            marginBottom: '20px',
            padding: '15px',
            backgroundColor: '#f8f9fa',
@@ -197,7 +197,7 @@ const PersonModal = () => {
                </div>
              </div>
            </div>
-         </div>
+         </div> */}
 
         {/* Секция для ввода имени и выбора группы - ОТКЛЮЧЕНА
         <div style={{ 
@@ -352,6 +352,9 @@ const PersonModal = () => {
                     </span>
                     <span style={{ fontSize: '10px', color: '#666' }}>
                       ({person.groupName})
+                    </span>
+                    <span style={{ fontSize: '10px', color: '#27ae60', marginLeft: 'auto' }}>
+                      ✅
                     </span>
                   </div>
                 ))}

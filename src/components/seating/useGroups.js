@@ -71,15 +71,31 @@ export const useGroups = () => {
   // Фильтрация людей для персоны
   const getFilteredPeopleForPerson = useCallback(() => {
     const peopleFromGroups = [];
+    
+    // Получаем список уже рассаженных людей
+    const seatedPeople = [];
+    hallData?.tables?.forEach(table => {
+      if (table.people) {
+        table.people.forEach(person => {
+          if (person && person.name) {
+            seatedPeople.push(person.name);
+          }
+        });
+      }
+    });
+
     groups.forEach(group => {
       if (group.members && group.members.length > 0) {
         group.members.forEach(member => {
-          peopleFromGroups.push({
-            name: member,
-            groupId: group.id,
-            groupName: group.name,
-            groupColor: group.color
-          });
+          // Проверяем, не рассажен ли уже этот человек
+          if (!seatedPeople.includes(member)) {
+            peopleFromGroups.push({
+              name: member,
+              groupId: group.id,
+              groupName: group.name,
+              groupColor: group.color
+            });
+          }
         });
       }
     });
@@ -89,7 +105,7 @@ export const useGroups = () => {
       person.name.toLowerCase().includes(state.personSearchTerm.toLowerCase()) ||
       person.groupName.toLowerCase().includes(state.personSearchTerm.toLowerCase())
     );
-  }, [groups, state.personSearchTerm]);
+  }, [groups, state.personSearchTerm, hallData]);
 
   // Добавление группы
   const addGroup = useCallback((groupName, groupMembers) => {

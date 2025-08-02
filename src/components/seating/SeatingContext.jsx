@@ -74,7 +74,9 @@ const ACTIONS = {
   SET_TABLE_ENABLED: 'SET_TABLE_ENABLED',
   SET_SHOW_TABLE_CONTROLS: 'SET_SHOW_TABLE_CONTROLS',
   SET_TARGET_TABLE_FOR_SEATING: 'SET_TARGET_TABLE_FOR_SEATING',
-  SET_AVAILABLE_SEATS_FOR_SEATING: 'SET_AVAILABLE_SEATS_FOR_SEATING'
+  SET_AVAILABLE_SEATS_FOR_SEATING: 'SET_AVAILABLE_SEATS_FOR_SEATING',
+  SET_SHOW_STATISTICS: 'SET_SHOW_STATISTICS',
+  SET_SHOW_GROUPS_PANEL: 'SET_SHOW_GROUPS_PANEL'
 };
 
 // Начальное состояние
@@ -145,7 +147,13 @@ const initialState = {
   
   // Данные для рассадки при недостатке мест
   targetTableForSeating: null,
-  availableSeatsForSeating: 0
+  availableSeatsForSeating: 0,
+  
+  // Показ статистики
+  showStatistics: true,
+  
+  // Показ панели групп
+  showGroupsPanel: true
 };
 
 // --- Default groups/people logic start ---
@@ -483,6 +491,12 @@ function seatingReducer(state, action) {
       
     case ACTIONS.SET_AVAILABLE_SEATS_FOR_SEATING:
       return { ...state, availableSeatsForSeating: action.payload };
+      
+    case ACTIONS.SET_SHOW_STATISTICS:
+      return { ...state, showStatistics: action.payload };
+      
+    case ACTIONS.SET_SHOW_GROUPS_PANEL:
+      return { ...state, showGroupsPanel: action.payload };
       
     case ACTIONS.RESET_MODALS:
       return {

@@ -113,6 +113,21 @@ const SeatingModal = () => {
             <strong>Всего людей в группе:</strong> {group.members.length}
           </div>
           <div style={{ marginBottom: '10px' }}>
+            <strong>Нерассаженных людей:</strong> {(() => {
+              const seatedPeople = [];
+              state.hallData?.tables?.forEach(table => {
+                if (table.people) {
+                  table.people.forEach(person => {
+                    if (person && person.groupId === selectedGroupForSeating) {
+                      seatedPeople.push(person.name);
+                    }
+                  });
+                }
+              });
+              return group.members.filter(member => !seatedPeople.includes(member)).length;
+            })()}
+          </div>
+          <div style={{ marginBottom: '10px' }}>
             <strong>Доступно мест за столом:</strong> {availableSeatsForSeating}
           </div>
           <div style={{
@@ -161,11 +176,26 @@ const SeatingModal = () => {
             )}
           </div>
           
-                     {group.members.map((person, index) => {
-             const isSelected = selectedPeople.includes(person);
-             
-             // Человек "красный" только если он не выбран И уже выбрано максимальное количество людей
-             const isOverLimit = !isSelected && selectedPeople.length >= availableSeatsForSeating;
+                     {/* Получаем только нерассаженных людей из группы */}
+                     {(() => {
+                       const seatedPeople = [];
+                       state.hallData?.tables?.forEach(table => {
+                         if (table.people) {
+                           table.people.forEach(person => {
+                             if (person && person.groupId === selectedGroupForSeating) {
+                               seatedPeople.push(person.name);
+                             }
+                           });
+                         }
+                       });
+                       
+                       const unseatedPeople = group.members.filter(member => !seatedPeople.includes(member));
+                       
+                       return unseatedPeople.map((person, index) => {
+                         const isSelected = selectedPeople.includes(person);
+                         
+                         // Человек "красный" только если он не выбран И уже выбрано максимальное количество людей
+                         const isOverLimit = !isSelected && selectedPeople.length >= availableSeatsForSeating;
             
             return (
               <div
@@ -228,7 +258,8 @@ const SeatingModal = () => {
                 </span>
               </div>
             );
-          })}
+          });
+        })()}
         </div>
 
         {/* Кнопки действий */}

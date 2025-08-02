@@ -29,7 +29,23 @@ export const useTables = () => {
       return;
     }
 
-    const peopleToSeat = selectedPeople || group.members;
+    // Получаем только нерассаженных людей из группы
+    const getUnseatedPeopleFromGroup = (groupId) => {
+      const seatedPeople = [];
+      hallData?.tables?.forEach(table => {
+        if (table.people) {
+          table.people.forEach(person => {
+            if (person && person.groupId === groupId) {
+              seatedPeople.push(person.name);
+            }
+          });
+        }
+      });
+      
+      return group.members.filter(member => !seatedPeople.includes(member));
+    };
+
+    const peopleToSeat = selectedPeople || getUnseatedPeopleFromGroup(groupId);
 
     if (peopleToSeat.length === 0) {
       alert('Группа пустая!');
@@ -92,19 +108,20 @@ export const useTables = () => {
     dispatch({ type: actions.SET_HALL_DATA, payload: updatedHallData });
     localStorage.setItem('hallData', JSON.stringify(updatedHallData));
 
-    // Обновление участников группы
-    const updatedGroups = state.groups.map(g => {
-      if (g.id === groupId) {
-        return {
-          ...g,
-          members: g.members.filter(member => !peopleToSeat.includes(member))
-        };
-      }
-      return g;
-    });
+    // НЕ удаляем людей из группы после рассадки
+    // Это позволяет правильно отслеживать статус группы
+    // const updatedGroups = state.groups.map(g => {
+    //   if (g.id === groupId) {
+    //     return {
+    //       ...g,
+    //       members: g.members.filter(member => !peopleToSeat.includes(member))
+    //     };
+    //   }
+    //   return g;
+    // });
 
-    dispatch({ type: actions.SET_GROUPS, payload: updatedGroups });
-    localStorage.setItem('seatingGroups', JSON.stringify(updatedGroups));
+    // dispatch({ type: actions.SET_GROUPS, payload: updatedGroups });
+    // localStorage.setItem('seatingGroups', JSON.stringify(updatedGroups));
 
     // Сброс модальных окон
     dispatch({ type: actions.RESET_MODALS });
@@ -154,31 +171,32 @@ export const useTables = () => {
     const { tableId, chairIndex } = state.selectedChair;
     const currentPersonOnChair = hallData?.tables?.find(t => t.id === tableId)?.people?.[chairIndex];
 
-    // Обновление групп
-    const updatedGroups = state.groups.map(group => {
-      let updatedGroup = { ...group };
+    // НЕ обновляем группы при сохранении человека
+    // Это позволяет правильно отслеживать статус группы
+    // const updatedGroups = state.groups.map(group => {
+    //   let updatedGroup = { ...group };
 
-      if (currentPersonOnChair &&
-        currentPersonOnChair.groupId === group.id &&
-        currentPersonOnChair.name !== state.personName.trim()) {
-        updatedGroup = {
-          ...updatedGroup,
-          members: [...updatedGroup.members, currentPersonOnChair.name]
-        };
-      }
+    //   if (currentPersonOnChair &&
+    //     currentPersonOnChair.groupId === group.id &&
+    //     currentPersonOnChair.name !== state.personName.trim()) {
+    //     updatedGroup = {
+    //       ...updatedGroup,
+    //       members: [...updatedGroup.members, currentPersonOnChair.name]
+    //     };
+    //   }
 
-      if (state.selectedPersonFromGroup && state.selectedPersonFromGroup.groupId === group.id) {
-        updatedGroup = {
-          ...updatedGroup,
-          members: updatedGroup.members.filter(member => member !== state.selectedPersonFromGroup.name)
-        };
-      }
+    //   if (state.selectedPersonFromGroup && state.selectedPersonFromGroup.groupId === group.id) {
+    //     updatedGroup = {
+    //       ...updatedGroup,
+    //       members: updatedGroup.members.filter(member => member !== state.selectedPersonFromGroup.name)
+    //     };
+    //   }
 
-      return updatedGroup;
-    });
+    //   return updatedGroup;
+    // });
 
-    dispatch({ type: actions.SET_GROUPS, payload: updatedGroups });
-    localStorage.setItem('seatingGroups', JSON.stringify(updatedGroups));
+    // dispatch({ type: actions.SET_GROUPS, payload: updatedGroups });
+    // localStorage.setItem('seatingGroups', JSON.stringify(updatedGroups));
 
     // Обновление людей за столом
     const updatedTables = hallData.tables.map(t => {
@@ -216,20 +234,21 @@ export const useTables = () => {
     const { tableId, chairIndex } = state.selectedChair;
     const currentPerson = hallData?.tables?.find(t => t.id === tableId)?.people?.[chairIndex];
 
-    if (currentPerson && currentPerson.groupId) {
-      const updatedGroups = state.groups.map(group => {
-        if (group.id === currentPerson.groupId) {
-          return {
-            ...group,
-            members: [...group.members, currentPerson.name]
-          };
-        }
-        return group;
-      });
+    // НЕ возвращаем человека в группу, так как группа остается неизменной
+    // if (currentPerson && currentPerson.groupId) {
+    //   const updatedGroups = state.groups.map(group => {
+    //     if (group.id === currentPerson.groupId) {
+    //       return {
+    //         ...group,
+    //         members: [...group.members, currentPerson.name]
+    //       };
+    //     }
+    //     return group;
+    //   });
 
-      dispatch({ type: actions.SET_GROUPS, payload: updatedGroups });
-      localStorage.setItem('seatingGroups', JSON.stringify(updatedGroups));
-    }
+    //   dispatch({ type: actions.SET_GROUPS, payload: updatedGroups });
+    //   localStorage.setItem('seatingGroups', JSON.stringify(updatedGroups));
+    // }
 
     // Удаление человека со стола
     const updatedTables = hallData.tables.map(t => {
@@ -329,6 +348,24 @@ export const useTables = () => {
     return hallData.tables.filter(table => table.enabled === false);
   }, [hallData]);
 
+  // Удаление всех людей со всех столов
+  const clearAllTables = useCallback(() => {
+    if (!hallData?.tables) return;
+
+    const updatedTables = hallData.tables.map(table => ({
+      ...table,
+      people: table.people ? table.people.map(() => null) : []
+    }));
+
+    const updatedHallData = {
+      ...hallData,
+      tables: updatedTables
+    };
+
+    dispatch({ type: actions.SET_HALL_DATA, payload: updatedHallData });
+    localStorage.setItem('hallData', JSON.stringify(updatedHallData));
+  }, [hallData, dispatch, actions]);
+
   return {
     hallData,
     getAvailableSeats,
@@ -343,6 +380,7 @@ export const useTables = () => {
     toggleTableEnabled,
     setTableEnabled,
     getActiveTables,
-    getDisabledTables
+    getDisabledTables,
+    clearAllTables
   };
 }; 

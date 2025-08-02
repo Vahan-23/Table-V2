@@ -15,6 +15,7 @@ import GroupDetailsModal from './GroupDetailsModal';
 import EditGroupModal from './EditGroupModal';
 import SeatingModal from './SeatingModal';
 import MobileGroupsPanel from './MobileGroupsPanel';
+import StatisticsPanel from './StatisticsPanel';
 
 // Компонент для отображения стола
 const TableComponent = ({ 
@@ -556,15 +557,26 @@ const ClientSeatingAppContent = () => {
     }}>
       <Header />
 
+      {/* Statistics Panel */}
+      {state.groups && state.groups.length > 0 && state.showStatistics && (
+        <div style={{
+          padding: '0 20px',
+          backgroundColor: '#f8f9fa',
+          borderBottom: '1px solid #e9ecef'
+        }}>
+          <StatisticsPanel />
+        </div>
+      )}
+
       {/* Main content area */}
       <div className="main-content" style={{
         flex: 1,
         width: '100%',
         height: windowWidth > 768
-          ? 'calc(100vh - 190px)'
+          ? (state.groups && state.groups.length > 0 && state.showStatistics ? 'calc(100vh - 280px)' : 'calc(100vh - 190px)')
           : isMobileGroupsExpanded
-            ? 'calc(100vh - 200px)'
-            : 'calc(100vh - 110px)',
+            ? (state.groups && state.groups.length > 0 && state.showStatistics ? 'calc(100vh - 290px)' : 'calc(100vh - 200px)')
+            : (state.groups && state.groups.length > 0 && state.showStatistics ? 'calc(100vh - 200px)' : 'calc(100vh - 110px)'),
         overflow: 'hidden',
         position: 'relative'
       }}>
