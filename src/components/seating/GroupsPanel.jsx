@@ -29,36 +29,14 @@ const GroupsPanel = () => {
     const fullySeated = [];
 
     state.groups?.forEach(group => {
-      if (!group.members || group.members.length === 0) return;
-
-      // Подсчитываем сколько людей из группы рассажено
-      const seatedPeopleFromGroup = state.hallData?.tables?.reduce((total, table) => {
-        return total + (table.people?.filter(seatedPerson => 
-          seatedPerson && seatedPerson.groupId === group.id
-        ).length || 0);
-      }, 0) || 0;
-
-      // Отладочная информация для тестовой группы (временно)
-      if (group.name === 'Тест группа') {
-        console.log(`Группа "${group.name}":`, {
-          totalMembers: group.members.length,
-          seatedPeople: seatedPeopleFromGroup,
-          percentage: Math.round((seatedPeopleFromGroup / group.members.length) * 100),
-          category: seatedPeopleFromGroup === 0 ? 'available' : 
-                   seatedPeopleFromGroup >= group.members.length ? 'fullySeated' : 'partiallySeated'
-        });
-      }
-
-      // Категоризация групп
-      if (seatedPeopleFromGroup === 0) {
-        // Группа доступна - никто не рассажен
-        available.push(group);
-      } else if (seatedPeopleFromGroup >= group.members.length) {
-        // Группа полностью рассажена - все люди рассажены
+      const status = getGroupStatus(group);
+      
+      if (status.isFullySeated) {
         fullySeated.push(group);
-      } else {
-        // Группа частично рассажена - есть рассаженные, но не все
+      } else if (status.isPartiallySeated) {
         partiallySeated.push(group);
+      } else {
+        available.push(group);
       }
     });
 
@@ -540,42 +518,115 @@ const GroupsPanel = () => {
             maxHeight: 'calc(80vh - 150px)',
             overflow: 'auto'
           }}>
-            {/* Show filtered groups in a single section */}
-            <div>
-              <h4 style={{
-                margin: '0 0 15px 0',
-                color: '#333',
-                fontSize: '16px',
-                fontWeight: 'bold',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}>
-                📋 {t('filteredGroups')} ({filteredAvailableGroups.length + filteredPartiallySeatedGroups.length + filteredSeatedGroups.length})
-              </h4>
-              <div style={{
-                maxHeight: 'calc(80vh - 200px)',
-                overflow: 'auto'
-              }}>
-                {filteredAvailableGroups.length === 0 && filteredPartiallySeatedGroups.length === 0 && filteredSeatedGroups.length === 0 ? (
-                  <div style={{
-                    textAlign: 'center',
-                    padding: '20px',
-                    color: '#95a5a6',
-                    fontSize: '12px',
-                    fontStyle: 'italic'
-                  }}>
-                    {t('noGroupsFound')}
-                  </div>
-                ) : (
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-                    gap: '15px'
-                  }}>
-                    {[...filteredAvailableGroups, ...filteredPartiallySeatedGroups, ...filteredSeatedGroups].map(group => renderGroupCard(group, false))}
-                  </div>
-                )}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr 1fr',
+              gap: '15px',
+              height: '100%'
+            }}>
+              {/* Available Groups */}
+              <div>
+                <h4 style={{
+                  margin: '0 0 15px 0',
+                  color: '#2ecc71',
+                  fontSize: '16px',
+                  fontWeight: 'bold',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
+                  🟢 {t('availableGroups')} ({filteredAvailableGroups.length})
+                </h4>
+                <div style={{
+                  maxHeight: 'calc(80vh - 200px)',
+                  overflow: 'auto'
+                }}>
+                  {filteredAvailableGroups.length === 0 ? (
+                    <div style={{
+                      textAlign: 'center',
+                      padding: '20px',
+                      color: '#95a5a6',
+                      fontSize: '12px',
+                      fontStyle: 'italic'
+                    }}>
+                      {t('noAvailableGroups')}
+                    </div>
+                  ) : (
+                    <div>
+                      {filteredAvailableGroups.map(group => renderGroupCard(group, false))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Partially Seated Groups */}
+              <div>
+                <h4 style={{
+                  margin: '0 0 15px 0',
+                  color: '#f39c12',
+                  fontSize: '16px',
+                  fontWeight: 'bold',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
+                  🟡 {t('partiallySeatedGroups')} ({filteredPartiallySeatedGroups.length})
+                </h4>
+                <div style={{
+                  maxHeight: 'calc(80vh - 200px)',
+                  overflow: 'auto'
+                }}>
+                  {filteredPartiallySeatedGroups.length === 0 ? (
+                    <div style={{
+                      textAlign: 'center',
+                      padding: '20px',
+                      color: '#95a5a6',
+                      fontSize: '12px',
+                      fontStyle: 'italic'
+                    }}>
+                      {t('noPartiallySeatedGroups')}
+                    </div>
+                  ) : (
+                    <div>
+                      {filteredPartiallySeatedGroups.map(group => renderGroupCard(group, false))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Fully Seated Groups */}
+              <div>
+                <h4 style={{
+                  margin: '0 0 15px 0',
+                  color: '#e74c3c',
+                  fontSize: '16px',
+                  fontWeight: 'bold',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
+                  🔴 {t('fullySeatedGroups')} ({filteredSeatedGroups.length})
+                </h4>
+                <div style={{
+                  maxHeight: 'calc(80vh - 200px)',
+                  overflow: 'auto'
+                }}>
+                  {filteredSeatedGroups.length === 0 ? (
+                    <div style={{
+                      textAlign: 'center',
+                      padding: '20px',
+                      color: '#95a5a6',
+                      fontSize: '12px',
+                      fontStyle: 'italic'
+                    }}>
+                      {t('noFullySeatedGroups')}
+                    </div>
+                  ) : (
+                    <div>
+                      {filteredSeatedGroups.map(group => renderGroupCard(group, false))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>

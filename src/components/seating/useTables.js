@@ -113,9 +113,11 @@ export const useTables = () => {
     // Удаляем рассаженных людей из группы
     const updatedGroups = state.groups.map(g => {
       if (g.id === groupId) {
+        const newMembers = g.members.filter(member => !peopleToSeat.includes(member));
+        console.log(`🪑 РАССАЖАЕМ: ${g.name} - было ${g.members.length} людей, стало ${newMembers.length}`);
         return {
           ...g,
-          members: g.members.filter(member => !peopleToSeat.includes(member))
+          members: newMembers
         };
       }
       return g;

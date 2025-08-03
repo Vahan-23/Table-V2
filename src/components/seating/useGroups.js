@@ -29,7 +29,6 @@ export const useGroups = () => {
   const getGroupStatus = useCallback((group) => {
     const availableMembers = group.members.length;
     const seatedMembers = getSeatedMembersCount(group.id);
-    const totalMembers = availableMembers + seatedMembers;
 
     let seatedAtTable = null;
     if (seatedMembers > 0) {
@@ -47,10 +46,10 @@ export const useGroups = () => {
     return {
       availableMembers,
       seatedMembers,
-      totalMembers,
+      totalMembers: availableMembers + seatedMembers,
       seatedAtTable,
-      isFullySeated: availableMembers === 0 && seatedMembers > 0,
-      isPartiallySeated: availableMembers > 0 && seatedMembers > 0,
+      isFullySeated: seatedMembers > 0 && availableMembers === 0,
+      isPartiallySeated: seatedMembers > 0 && availableMembers > 0,
       isReadyToSeat: availableMembers > 0
     };
   }, [hallData, getSeatedMembersCount]);
