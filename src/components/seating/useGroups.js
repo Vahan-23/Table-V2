@@ -5,6 +5,8 @@ export const useGroups = () => {
   const { state, dispatch, actions } = useSeating();
   const { groups, hallData, usedPeople } = state;
 
+
+
   // Получение количества рассаженных участников группы
   const getSeatedMembersCount = useCallback((groupId) => {
     if (!hallData?.tables) return 0;
@@ -248,6 +250,27 @@ export const useGroups = () => {
     localStorage.setItem('seatingGroups', JSON.stringify(updatedGroups));
   }, [groups, hallData, dispatch, actions]);
 
+  // Функции для работы с модальными окнами
+  const createGroup = useCallback((groupName, groupMembers) => {
+    addGroup(groupName, groupMembers);
+    dispatch({ type: actions.SET_SHOW_ADD_GROUP_MODAL, payload: false });
+  }, [addGroup, dispatch, actions]);
+
+  const editGroup = useCallback((groupId, groupName, groupMembers) => {
+    updateGroup(groupId, groupName, groupMembers);
+    dispatch({ type: actions.SET_SHOW_EDIT_GROUP_MODAL, payload: false });
+    dispatch({ type: actions.SET_EDITING_GROUP, payload: null });
+  }, [updateGroup, dispatch, actions]);
+
+  const deleteGroup = useCallback((groupId) => {
+    removeGroup(groupId);
+  }, [removeGroup]);
+
+  const showGroupDetails = useCallback((group) => {
+    dispatch({ type: actions.SET_SELECTED_GROUP_FOR_DETAILS, payload: group });
+    dispatch({ type: actions.SET_SHOW_GROUP_DETAILS_MODAL, payload: true });
+  }, [dispatch, actions]);
+
   // Группы готовые к рассадке
   const readyToSeatGroups = useMemo(() => {
     return groups.filter(group => group.members.length > 0);
@@ -271,6 +294,10 @@ export const useGroups = () => {
     updateGroup,
     removeGroup,
     releaseGroup,
+    createGroup,
+    editGroup,
+    deleteGroup,
+    showGroupDetails,
     TEST_PEOPLE
   };
 }; 

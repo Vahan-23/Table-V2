@@ -17,7 +17,15 @@ const SeatingModal = () => {
 
   const [selectedPeople, setSelectedPeople] = useState([]);
 
-  if (!showSeatingModal || !selectedGroupForSeating || !targetTableForSeating) return null;
+  console.log('SeatingModal render:', {
+    showSeatingModal,
+    selectedGroupForSeating,
+    targetTableForSeating,
+    availableSeatsForSeating,
+    group: state.groups.find(g => g.id === selectedGroupForSeating)
+  });
+
+  if (!showSeatingModal || !selectedGroupForSeating) return null;
 
   const group = state.groups.find(g => g.id === selectedGroupForSeating);
   if (!group) return null;

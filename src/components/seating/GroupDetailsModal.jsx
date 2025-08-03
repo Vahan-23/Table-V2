@@ -10,7 +10,8 @@ const GroupDetailsModal = () => {
 
   const {
     showGroupDetailsModal,
-    selectedGroupForDetails
+    selectedGroupForDetails,
+    windowWidth
   } = state;
 
   if (!showGroupDetailsModal || !selectedGroupForDetails) return null;
@@ -45,10 +46,36 @@ const GroupDetailsModal = () => {
   };
 
   const handleSelectTable = () => {
-    dispatch({ type: actions.SET_SELECTED_GROUP_FOR_SEATING, payload: selectedGroupForDetails });
-    dispatch({ type: actions.SET_SHOW_SEATING_MODAL, payload: true });
+    // Передаем ID группы, а не весь объект
+    dispatch({ type: actions.SET_SELECTED_GROUP_FOR_SEATING, payload: selectedGroupForDetails.id });
+    
+    // Включаем режим выбора стола
+    dispatch({ type: actions.SET_TABLE_SELECTION_MODE, payload: true });
+    
+    // Закрываем все модальные окна и панели
+    dispatch({ type: actions.SET_SHOW_GROUP_DETAILS_MODAL, payload: false });
+    dispatch({ type: actions.SET_SELECTED_GROUP_FOR_DETAILS, payload: null });
+    dispatch({ type: actions.SET_SHOW_ADD_GROUP_MODAL, payload: false });
+    dispatch({ type: actions.SET_SHOW_EDIT_GROUP_MODAL, payload: false });
+    dispatch({ type: actions.SET_SHOW_PERSON_MODAL, payload: false });
+    dispatch({ type: actions.SET_SHOW_TABLE_DETAILS_MODAL, payload: false });
+    dispatch({ type: actions.SET_SHOW_SEATING_MODAL, payload: false });
+    dispatch({ type: actions.SET_SHOW_MOBILE_SEATING_CANVAS, payload: false });
+    dispatch({ type: actions.SET_SHOW_STATISTICS, payload: false });
+    dispatch({ type: actions.SET_SHOW_GROUPS_PANEL, payload: false });
+    dispatch({ type: actions.SET_IS_MOBILE_GROUPS_EXPANDED, payload: false });
+    
+    // Принудительно закрываем панель групп
+    setTimeout(() => {
+      dispatch({ type: actions.SET_SHOW_GROUPS_PANEL, payload: false });
+      dispatch({ type: actions.SET_IS_MOBILE_GROUPS_EXPANDED, payload: false });
+    }, 100);
+    
+    // Явно закрываем модальное окно группы
     handleClose();
   };
+
+  const isMobile = windowWidth <= 768;
 
   return (
     <div style={{
@@ -61,15 +88,16 @@ const GroupDetailsModal = () => {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      zIndex: 1000
+      zIndex: 1000,
+      padding: isMobile ? '10px' : '20px'
     }}>
       <div style={{
         backgroundColor: 'white',
         borderRadius: '8px',
-        padding: '20px',
-        width: '90%',
-        maxWidth: '500px',
-        maxHeight: '80vh',
+        padding: isMobile ? '15px' : '20px',
+        width: '100%',
+        maxWidth: isMobile ? '100%' : '500px',
+        maxHeight: isMobile ? '90vh' : '80vh',
         overflow: 'auto',
         boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)'
       }}>
@@ -136,333 +164,194 @@ const GroupDetailsModal = () => {
 
             <div style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+              gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(120px, 1fr))',
               gap: '10px',
-              marginBottom: '10px'
+              marginBottom: '15px'
             }}>
               <div style={{
-                backgroundColor: 'white',
-                padding: '8px',
+                backgroundColor: '#e3f2fd',
+                padding: '10px',
                 borderRadius: '6px',
                 textAlign: 'center'
               }}>
-                <div style={{ fontSize: '12px', color: '#666', marginBottom: '2px' }}>
-                  {t('totalMembers')}
+                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1976d2' }}>
+                  {selectedGroupForDetails.members.length}
                 </div>
-                <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#333' }}>
-                  {status.totalMembers}
+                <div style={{ fontSize: '12px', color: '#666' }}>
+                  {t('members')}
                 </div>
               </div>
-              
+
               <div style={{
-                backgroundColor: 'white',
-                padding: '8px',
+                backgroundColor: '#e8f5e8',
+                padding: '10px',
                 borderRadius: '6px',
                 textAlign: 'center'
               }}>
-                <div style={{ fontSize: '12px', color: '#666', marginBottom: '2px' }}>
-                  {t('availableMembers')}
+                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#2e7d32' }}>
+                  {status.seatedMembers}
                 </div>
-                <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#27ae60' }}>
+                <div style={{ fontSize: '12px', color: '#666' }}>
+                  {t('seated')}
+                </div>
+              </div>
+
+              <div style={{
+                backgroundColor: '#fff3e0',
+                padding: '10px',
+                borderRadius: '6px',
+                textAlign: 'center'
+              }}>
+                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#f57c00' }}>
                   {status.availableMembers}
                 </div>
-              </div>
-              
-              {status.seatedMembers > 0 && (
-                <div style={{
-                  backgroundColor: 'white',
-                  padding: '8px',
-                  borderRadius: '6px',
-                  textAlign: 'center'
-                }}>
-                  <div style={{ fontSize: '12px', color: '#666', marginBottom: '2px' }}>
-                    {t('seatedMembers')}
-                  </div>
-                  <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#3498db' }}>
-                    {status.seatedMembers}
-                  </div>
+                <div style={{ fontSize: '12px', color: '#666' }}>
+                  {t('available')}
                 </div>
-              )}
+              </div>
             </div>
 
+            {/* Members List */}
+            <div>
+              <h5 style={{
+                margin: '0 0 10px 0',
+                color: '#333',
+                fontSize: '14px',
+                fontWeight: 'bold'
+              }}>
+                {t('groupMembers')}:
+              </h5>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(150px, 1fr))',
+                gap: '8px'
+              }}>
+                {selectedGroupForDetails.members.map((member, index) => (
+                  <div
+                    key={index}
+                    style={{
+                      backgroundColor: '#f5f5f5',
+                      padding: '8px 12px',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      border: '1px solid #e0e0e0'
+                    }}
+                  >
+                    {member}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Seating Status */}
             {status.seatedAtTable && (
               <div style={{
-                fontSize: '12px',
-                color: '#27ae60',
-                marginTop: '5px',
-                fontStyle: 'italic',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '5px'
+                marginTop: '15px',
+                padding: '10px',
+                backgroundColor: '#e8f5e8',
+                borderRadius: '6px',
+                border: '1px solid #4caf50'
               }}>
-                📍 {status.seatedAtTable}
+                <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#2e7d32' }}>
+                  🪑 {t('seatedAtTable')}: {status.seatedAtTable}
+                </div>
               </div>
             )}
-
-            <div style={{
-              marginTop: '10px',
-              padding: '8px',
-              backgroundColor: 'white',
-              borderRadius: '4px',
-              fontSize: '12px',
-              color: '#666',
-              textAlign: 'center'
-            }}>
-              {status.isFullySeated ? (
-                <span style={{ color: '#3498db', fontWeight: 'bold' }}>
-                  ✅ {t('allMembersSeated')}
-                </span>
-              ) : status.isPartiallySeated ? (
-                <span style={{ color: '#f39c12', fontWeight: 'bold' }}>
-                  ⏳ {status.seatedMembers} {t('seatedMembers')}, {status.availableMembers} {t('waitingForSeating')}
-                </span>
-              ) : (
-                <span style={{ color: '#27ae60', fontWeight: 'bold' }}>
-                  🎯 {t('groupReadyToSeat')}
-                </span>
-              )}
-            </div>
           </div>
-        </div>
-
-        {/* Members List */}
-        <div style={{ marginBottom: '20px' }}>
-          <h4 style={{
-            margin: '0 0 10px 0',
-            fontSize: '16px',
-            color: '#333',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
-          }}>
-            👥 {t('members')} ({selectedGroupForDetails.members.length})
-          </h4>
-
-          {selectedGroupForDetails.members.length === 0 ? (
-            <div style={{
-              textAlign: 'center',
-              color: '#999',
-              fontSize: '12px',
-              padding: '20px',
-              border: '1px dashed #ddd',
-              borderRadius: '4px'
-            }}>
-              {t('membersNotFound')}
-            </div>
-          ) : (
-            <div style={{
-              border: '1px solid #ddd',
-              borderRadius: '8px',
-              maxHeight: '200px',
-              overflow: 'auto',
-              backgroundColor: '#fafafa'
-            }}>
-              {selectedGroupForDetails.members.map((member, index) => (
-                <div
-                  key={index}
-                  style={{
-                    padding: '12px',
-                    borderBottom: '1px solid #eee',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    backgroundColor: 'white',
-                    margin: '4px',
-                    borderRadius: '6px',
-                    transition: 'all 0.2s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.backgroundColor = '#f8f9fa';
-                    e.target.style.transform = 'translateX(2px)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.backgroundColor = 'white';
-                    e.target.style.transform = 'translateX(0)';
-                  }}
-                >
-                  <div style={{
-                    width: '8px',
-                    height: '8px',
-                    borderRadius: '50%',
-                    backgroundColor: selectedGroupForDetails.color,
-                    flexShrink: 0
-                  }} />
-                  <span style={{ 
-                    fontSize: '14px', 
-                    flex: 1,
-                    fontWeight: '500'
-                  }}>
-                    {member}
-                  </span>
-                  <span style={{
-                    fontSize: '10px',
-                    color: '#27ae60',
-                    backgroundColor: '#e8f5e8',
-                    padding: '4px 8px',
-                    borderRadius: '12px',
-                    fontWeight: 'bold'
-                  }}>
-                    {t('readyToSeat')}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
 
         {/* Action Buttons */}
         <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-          gap: '10px'
+          display: 'flex',
+          flexDirection: isMobile ? 'column' : 'row',
+          gap: '10px',
+          justifyContent: 'space-between'
         }}>
-          {status.availableMembers > 0 && (
+          <div style={{
+            display: 'flex',
+            flexDirection: isMobile ? 'column' : 'row',
+            gap: '10px',
+            flex: 1
+          }}>
             <button
-              onClick={handleSelectTable}
+              onClick={handleEditGroup}
               style={{
-                padding: '12px 16px',
-                backgroundColor: '#2ecc71',
+                flex: 1,
+                padding: '12px',
+                backgroundColor: '#3498db',
                 color: 'white',
                 border: 'none',
-                borderRadius: '8px',
+                borderRadius: '6px',
                 cursor: 'pointer',
-                fontWeight: 'bold',
                 fontSize: '14px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '6px',
-                transition: 'all 0.2s ease',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-              }}
-              onMouseEnter={(e) => {
-                e.target.style.transform = 'translateY(-1px)';
-                e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.15)';
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.transform = 'translateY(0)';
-                e.target.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+                fontWeight: 'bold'
               }}
             >
-              🎯 {t('selectTableAction')}
+              ✏️ {t('editGroup')}
             </button>
-          )}
 
-          {status.seatedMembers > 0 && (
+            {status.seatedMembers > 0 && (
+              <button
+                onClick={handleReleaseGroup}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  backgroundColor: '#f39c12',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 'bold'
+                }}
+              >
+                🔄 {t('releaseGroup')}
+              </button>
+            )}
+          </div>
+
+          <div style={{
+            display: 'flex',
+            flexDirection: isMobile ? 'column' : 'row',
+            gap: '10px',
+            flex: 1
+          }}>
+                         {status.availableMembers > 0 && (
+               <button
+                 onClick={handleSelectTable}
+                 style={{
+                   flex: 1,
+                   padding: '12px',
+                   backgroundColor: '#2ecc71',
+                   color: 'white',
+                   border: 'none',
+                   borderRadius: '6px',
+                   cursor: 'pointer',
+                   fontSize: '14px',
+                   fontWeight: 'bold'
+                 }}
+               >
+                 🪑 {t('seatGroup')}
+               </button>
+             )}
+
             <button
-              onClick={handleReleaseGroup}
+              onClick={handleDeleteGroup}
               style={{
-                padding: '12px 16px',
-                backgroundColor: '#f39c12',
+                flex: 1,
+                padding: '12px',
+                backgroundColor: '#e74c3c',
                 color: 'white',
                 border: 'none',
-                borderRadius: '8px',
+                borderRadius: '6px',
                 cursor: 'pointer',
-                fontWeight: 'bold',
                 fontSize: '14px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '6px',
-                transition: 'all 0.2s ease',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-              }}
-              onMouseEnter={(e) => {
-                e.target.style.transform = 'translateY(-1px)';
-                e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.15)';
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.transform = 'translateY(0)';
-                e.target.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+                fontWeight: 'bold'
               }}
             >
-              🔄 {t('releaseGroupAction')}
+              🗑️ {t('deleteGroup')}
             </button>
-          )}
-
-          <button
-            onClick={handleEditGroup}
-            style={{
-              padding: '12px 16px',
-              backgroundColor: '#3498db',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontWeight: 'bold',
-              fontSize: '14px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px',
-              transition: 'all 0.2s ease',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-            }}
-            onMouseEnter={(e) => {
-              e.target.style.transform = 'translateY(-1px)';
-              e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.15)';
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.transform = 'translateY(0)';
-              e.target.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
-            }}
-          >
-            ✏️ {t('editGroupAction')}
-          </button>
-
-          <button
-            onClick={handleDeleteGroup}
-            style={{
-              padding: '12px 16px',
-              backgroundColor: '#e74c3c',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontWeight: 'bold',
-              fontSize: '14px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px',
-              transition: 'all 0.2s ease',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-            }}
-            onMouseEnter={(e) => {
-              e.target.style.transform = 'translateY(-1px)';
-              e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.15)';
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.transform = 'translateY(0)';
-              e.target.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
-            }}
-          >
-            🗑️ {t('deleteGroupAction')}
-          </button>
-
-          <button
-            onClick={handleClose}
-            style={{
-              gridColumn: '1 / -1',
-              padding: '12px 16px',
-              backgroundColor: '#f1f1f1',
-              color: '#333',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: '500',
-              transition: 'all 0.2s ease'
-            }}
-            onMouseEnter={(e) => {
-              e.target.style.backgroundColor = '#e5e5e5';
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.backgroundColor = '#f1f1f1';
-            }}
-          >
-            {t('close')}
-          </button>
+          </div>
         </div>
       </div>
     </div>

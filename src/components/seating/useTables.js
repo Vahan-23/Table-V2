@@ -1,11 +1,13 @@
 import { useCallback } from 'react';
 import { useSeating } from './SeatingContext';
 import { useTranslations } from './useTranslations';
+import { useGroups } from './useGroups';
 
 export const useTables = () => {
   const { state, dispatch, actions } = useSeating();
   const { hallData } = state;
   const { t } = useTranslations();
+  const { getGroupStatus } = useGroups();
 
   // Получение доступных мест за столом
   const getAvailableSeats = useCallback((tableId) => {
@@ -108,19 +110,19 @@ export const useTables = () => {
     dispatch({ type: actions.SET_HALL_DATA, payload: updatedHallData });
     localStorage.setItem('hallData', JSON.stringify(updatedHallData));
 
-    // НЕ удаляем людей из группы после рассадки
-    // Это позволяет правильно отслеживать статус группы
-    // const updatedGroups = state.groups.map(g => {
-    //   if (g.id === groupId) {
-    //     return {
-    //       ...g,
-    //       members: g.members.filter(member => !peopleToSeat.includes(member))
-    //     };
-    //   }
-    //   return g;
-    // });
+    // Удаляем рассаженных людей из группы
+    const updatedGroups = state.groups.map(g => {
+      if (g.id === groupId) {
+        return {
+          ...g,
+          members: g.members.filter(member => !peopleToSeat.includes(member))
+        };
+      }
+      return g;
+    });
 
-    // dispatch({ type: actions.SET_GROUPS, payload: updatedGroups });
+    dispatch({ type: actions.SET_GROUPS, payload: updatedGroups });
+    localStorage.setItem('seatingGroups', JSON.stringify(updatedGroups));
     // localStorage.setItem('seatingGroups', JSON.stringify(updatedGroups));
 
     // Сброс модальных окон
@@ -157,14 +159,84 @@ export const useTables = () => {
   // Обработка клика по столу
   const handleTableClick = useCallback((e, table) => {
     e.stopPropagation();
+    
+    // Проверяем, находимся ли мы в режиме выбора стола для рассадки группы
+    if (state.isTableSelectionMode && state.selectedGroupForSeating) {
+      const group = state.groups.find(g => g.id === state.selectedGroupForSeating);
+      if (group) {
+        // Проверяем, есть ли свободные места за столом
+        const occupiedSeats = table.people?.filter(person => person).length || 0;
+        const availableSeats = table.chairCount - occupiedSeats;
+        
+        if (availableSeats === 0) {
+          dispatch({ 
+            type: actions.SET_NOTIFICATION, 
+            payload: {
+              type: 'error',
+              message: t('tableFullyOccupied')
+            }
+          });
+          return;
+        }
+
+        if (availableSeats < group.members.length) {
+          dispatch({ 
+            type: actions.SET_NOTIFICATION, 
+            payload: {
+              type: 'error',
+              message: t('notEnoughSeats')
+            }
+          });
+          return;
+        }
+        
+        // Проверяем, не рассажена ли уже вся группа
+        const status = getGroupStatus(group);
+        if (status.isFullySeated) {
+          dispatch({ 
+            type: actions.SET_NOTIFICATION, 
+            payload: {
+              type: 'warning',
+              message: t('groupAlreadyFullySeated')
+            }
+          });
+          return;
+        }
+
+        // Автоматически рассаживаем всю группу за выбранный стол
+        seatGroupAtTable(state.selectedGroupForSeating, table.id, group.members);
+        
+        // Отключаем режим выбора стола
+        dispatch({ type: actions.SET_TABLE_SELECTION_MODE, payload: false });
+        dispatch({ type: actions.SET_SELECTED_GROUP_FOR_SEATING, payload: null });
+        
+        // Показываем красивое уведомление об успешной рассадке
+        dispatch({ 
+          type: actions.SET_NOTIFICATION, 
+          payload: {
+            type: 'success',
+            message: `${t('groupSeatedSuccessfully')} "${group.name}" ${t('atTable')} ${table.name || table.id}`
+          }
+        });
+        return;
+      }
+    }
+    
+    // Обычная логика для показа деталей стола
     dispatch({ type: actions.SET_SELECTED_TABLE, payload: table });
     dispatch({ type: actions.SET_SHOW_TABLE_DETAILS_MODAL, payload: true });
-  }, [dispatch, actions]);
+  }, [dispatch, actions, state.isTableSelectionMode, state.selectedGroupForSeating, state.groups, seatGroupAtTable, t, getGroupStatus]);
 
   // Сохранение человека за столом
   const savePerson = useCallback(() => {
     if (!state.personName.trim()) {
-      alert('Введите имя!');
+      dispatch({ 
+        type: actions.SET_NOTIFICATION, 
+        payload: {
+          type: 'error',
+          message: 'Введите имя!'
+        }
+      });
       return;
     }
 
@@ -234,21 +306,21 @@ export const useTables = () => {
     const { tableId, chairIndex } = state.selectedChair;
     const currentPerson = hallData?.tables?.find(t => t.id === tableId)?.people?.[chairIndex];
 
-    // НЕ возвращаем человека в группу, так как группа остается неизменной
-    // if (currentPerson && currentPerson.groupId) {
-    //   const updatedGroups = state.groups.map(group => {
-    //     if (group.id === currentPerson.groupId) {
-    //       return {
-    //         ...group,
-    //         members: [...group.members, currentPerson.name]
-    //       };
-    //     }
-    //     return group;
-    //   });
+    // Возвращаем человека в группу
+    if (currentPerson && currentPerson.groupId) {
+      const updatedGroups = state.groups.map(group => {
+        if (group.id === currentPerson.groupId) {
+          return {
+            ...group,
+            members: [...group.members, currentPerson.name]
+          };
+        }
+        return group;
+      });
 
-    //   dispatch({ type: actions.SET_GROUPS, payload: updatedGroups });
-    //   localStorage.setItem('seatingGroups', JSON.stringify(updatedGroups));
-    // }
+      dispatch({ type: actions.SET_GROUPS, payload: updatedGroups });
+      localStorage.setItem('seatingGroups', JSON.stringify(updatedGroups));
+    }
 
     // Удаление человека со стола
     const updatedTables = hallData.tables.map(t => {
@@ -298,12 +370,24 @@ export const useTables = () => {
     const availableSeats = getAvailableSeats(tableId);
 
     if (state.draggedGroup.members.length === 0) {
-      alert('Группа пустая!');
+      dispatch({ 
+        type: actions.SET_NOTIFICATION, 
+        payload: {
+          type: 'error',
+          message: 'Группа пустая!'
+        }
+      });
       return;
     }
 
     if (availableSeats.length === 0) {
-      alert('За этим столом нет свободных мест!');
+      dispatch({ 
+        type: actions.SET_NOTIFICATION, 
+        payload: {
+          type: 'error',
+          message: 'За этим столом нет свободных мест!'
+        }
+      });
       return;
     }
 

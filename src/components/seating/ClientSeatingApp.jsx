@@ -13,9 +13,12 @@ import GroupsPanel from './GroupsPanel';
 import CreateGroupModal from './CreateGroupModal';
 import GroupDetailsModal from './GroupDetailsModal';
 import EditGroupModal from './EditGroupModal';
-import SeatingModal from './SeatingModal';
+import TableSelectionModal from './TableSelectionModal';
+import TableSelectionIndicator from './TableSelectionIndicator';
+import MobileSeatingCanvas from './MobileSeatingCanvas';
 import MobileGroupsPanel from './MobileGroupsPanel';
 import StatisticsPanel from './StatisticsPanel';
+import Notification from './Notification';
 
 // Компонент для отображения стола
 const TableComponent = ({ 
@@ -526,7 +529,7 @@ const TableComponent = ({
 
 // Основной компонент приложения
 const ClientSeatingAppContent = () => {
-  const { state } = useSeating();
+  const { state, dispatch, actions } = useSeating();
   const { t } = useTranslations();
   const { getGroupColor } = useGroups();
   const { 
@@ -544,6 +547,9 @@ const ClientSeatingAppContent = () => {
   const { renderShapes } = useShapes();
 
   const { windowWidth, isMobileGroupsExpanded, showTableControls } = state;
+  
+  // Ref для хранения функций масштабирования
+  const zoomFunctionsRef = React.useRef(null);
 
   return (
     <div className="simple-seating-container" style={{
@@ -593,63 +599,88 @@ const ClientSeatingAppContent = () => {
               // Обработка изменения зума
             }}
           >
-            {({ zoomIn, zoomOut, resetTransform }) => (
+            {({ zoomIn, zoomOut, resetTransform }) => {
+              // Сохраняем функции масштабирования для мобильных кнопок
+              zoomFunctionsRef.current = { zoomIn, zoomOut, resetTransform };
+              
+              return (
               <>
-                <div style={{
-                  position: 'fixed',
-                  bottom: '20px',
-                  right: '20px',
-                  zIndex: 10,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '10px'
-                }}>
-                  <button
-                    onClick={() => zoomIn(0.2)}
-                    style={{
-                      padding: '12px',
-                      backgroundColor: 'white',
-                      borderRadius: '50%',
-                      border: '2px solid #ddd',
-                      cursor: 'pointer',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                      fontSize: '18px',
-                      fontWeight: 'bold'
-                    }}
-                  >
-                    +
-                  </button>
-                  <button
-                    onClick={() => zoomOut(0.2)}
-                    style={{
-                      padding: '12px',
-                      backgroundColor: 'white',
-                      borderRadius: '50%',
-                      border: '2px solid #ddd',
-                      cursor: 'pointer',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                      fontSize: '18px',
-                      fontWeight: 'bold'
-                    }}
-                  >
-                    -
-                  </button>
-                  <button
-                    onClick={() => resetTransform()}
-                    style={{
-                      padding: '8px 12px',
-                      backgroundColor: 'white',
-                      borderRadius: '20px',
-                      border: '2px solid #ddd',
-                      cursor: 'pointer',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                      fontSize: '12px',
-                      fontWeight: 'bold'
-                    }}
-                  >
-                    Reset
-                  </button>
-                </div>
+                {/* Desktop Zoom Controls */}
+                {windowWidth > 768 && (
+                  <div style={{
+                    position: 'fixed',
+                    bottom: '20px',
+                    right: '20px',
+                    zIndex: 1000,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '10px'
+                  }}>
+                    <button
+                      onClick={() => zoomIn(0.2)}
+                      style={{
+                        backgroundColor: '#3498db',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '50%',
+                        width: '50px',
+                        height: '50px',
+                        fontSize: '18px',
+                        cursor: 'pointer',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: 'bold'
+                      }}
+                      title="Увеличить масштаб"
+                    >
+                      +
+                    </button>
+                    <button
+                      onClick={() => zoomOut(0.2)}
+                      style={{
+                        backgroundColor: '#3498db',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '50%',
+                        width: '50px',
+                        height: '50px',
+                        fontSize: '18px',
+                        cursor: 'pointer',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: 'bold'
+                      }}
+                      title="Уменьшить масштаб"
+                    >
+                      -
+                    </button>
+                    <button
+                      onClick={() => resetTransform()}
+                      style={{
+                        backgroundColor: '#3498db',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '50%',
+                        width: '50px',
+                        height: '50px',
+                        fontSize: '18px',
+                        cursor: 'pointer',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: 'bold'
+                      }}
+                      title="Сбросить масштаб"
+                    >
+                      🔄
+                    </button>
+                  </div>
+                )}
 
                 <TransformComponent
                   wrapperStyle={{ width: "100%", height: "100vh" }}
@@ -738,7 +769,8 @@ const ClientSeatingAppContent = () => {
                   )}
                 </TransformComponent>
               </>
-            )}
+            );
+          }}
           </TransformWrapper>
         </div>
       </div>
@@ -771,7 +803,176 @@ const ClientSeatingAppContent = () => {
       <CreateGroupModal />
       <GroupDetailsModal />
       <EditGroupModal />
-      <SeatingModal />
+              <TableSelectionModal />
+        <TableSelectionIndicator />
+      <MobileSeatingCanvas />
+
+      {/* Mobile Groups Button */}
+      {windowWidth <= 768 && (
+        <button
+          onClick={() => dispatch({ type: actions.SET_IS_MOBILE_GROUPS_EXPANDED, payload: !isMobileGroupsExpanded })}
+          style={{
+            position: 'fixed',
+            bottom: '20px',
+            left: '20px',
+            backgroundColor: isMobileGroupsExpanded ? '#e74c3c' : '#3498db',
+            color: 'white',
+            border: 'none',
+            borderRadius: '50%',
+            width: '60px',
+            height: '60px',
+            fontSize: '24px',
+            cursor: 'pointer',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000
+          }}
+          title={isMobileGroupsExpanded ? t('closeGroups') : t('groups')}
+        >
+          👥
+        </button>
+      )}
+
+      {/* Mobile Navigation */}
+      {windowWidth <= 768 && (
+        <div style={{
+          position: 'fixed',
+          bottom: '20px',
+          right: '20px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '10px',
+          zIndex: 1000
+        }}>
+          {/* Zoom Controls */}
+          <button
+            onClick={() => {
+              if (zoomFunctionsRef.current) {
+                zoomFunctionsRef.current.zoomIn(0.2);
+              }
+            }}
+            style={{
+              backgroundColor: '#3498db',
+              color: 'white',
+              border: 'none',
+              borderRadius: '50%',
+              width: '50px',
+              height: '50px',
+              fontSize: '18px',
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontWeight: 'bold'
+            }}
+            title="Увеличить масштаб"
+          >
+            +
+          </button>
+          
+          <button
+            onClick={() => {
+              if (zoomFunctionsRef.current) {
+                zoomFunctionsRef.current.zoomOut(0.2);
+              }
+            }}
+            style={{
+              backgroundColor: '#3498db',
+              color: 'white',
+              border: 'none',
+              borderRadius: '50%',
+              width: '50px',
+              height: '50px',
+              fontSize: '18px',
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontWeight: 'bold'
+            }}
+            title="Уменьшить масштаб"
+          >
+            -
+          </button>
+          
+          <button
+            onClick={() => {
+              if (zoomFunctionsRef.current) {
+                zoomFunctionsRef.current.resetTransform();
+              }
+            }}
+            style={{
+              backgroundColor: '#3498db',
+              color: 'white',
+              border: 'none',
+              borderRadius: '50%',
+              width: '50px',
+              height: '50px',
+              fontSize: '18px',
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontWeight: 'bold'
+            }}
+            title="Сбросить масштаб"
+          >
+            🔄
+          </button>
+
+          {/* Statistics Toggle Button */}
+          <button
+            onClick={() => dispatch({ type: actions.SET_SHOW_STATISTICS, payload: !state.showStatistics })}
+            style={{
+              backgroundColor: state.showStatistics ? '#e74c3c' : '#2ecc71',
+              color: 'white',
+              border: 'none',
+              borderRadius: '50%',
+              width: '50px',
+              height: '50px',
+              fontSize: '18px',
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+            title={state.showStatistics ? t('hideStatistics') : t('showStatistics')}
+          >
+            📊
+          </button>
+
+          {/* Quick Actions Button */}
+          <button
+            onClick={() => dispatch({ type: actions.SET_SHOW_MOBILE_MENU, payload: !state.showMobileMenu })}
+            style={{
+              backgroundColor: '#f39c12',
+              color: 'white',
+              border: 'none',
+              borderRadius: '50%',
+              width: '50px',
+              height: '50px',
+              fontSize: '18px',
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+            title={t('quickActions')}
+          >
+            ⚙️
+          </button>
+        </div>
+      )}
+
+      {/* Notification Component */}
+      <Notification />
     </div>
   );
 };

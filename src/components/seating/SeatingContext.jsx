@@ -76,7 +76,11 @@ const ACTIONS = {
   SET_TARGET_TABLE_FOR_SEATING: 'SET_TARGET_TABLE_FOR_SEATING',
   SET_AVAILABLE_SEATS_FOR_SEATING: 'SET_AVAILABLE_SEATS_FOR_SEATING',
   SET_SHOW_STATISTICS: 'SET_SHOW_STATISTICS',
-  SET_SHOW_GROUPS_PANEL: 'SET_SHOW_GROUPS_PANEL'
+  SET_SHOW_GROUPS_PANEL: 'SET_SHOW_GROUPS_PANEL',
+  SET_SHOW_MOBILE_SEATING_CANVAS: 'SET_SHOW_MOBILE_SEATING_CANVAS',
+  SET_TABLE_SELECTION_MODE: 'SET_TABLE_SELECTION_MODE',
+  SET_NOTIFICATION: 'SET_NOTIFICATION',
+  CLEAR_NOTIFICATION: 'CLEAR_NOTIFICATION'
 };
 
 // Начальное состояние
@@ -153,7 +157,16 @@ const initialState = {
   showStatistics: true,
   
   // Показ панели групп
-  showGroupsPanel: true
+  showGroupsPanel: true,
+  
+  // Мобильная рассадка
+  showMobileSeatingCanvas: false,
+  
+  // Режим выбора стола для рассадки группы
+  isTableSelectionMode: false,
+  
+  // Уведомления
+  notification: null
 };
 
 // --- Default groups/people logic start ---
@@ -497,6 +510,18 @@ function seatingReducer(state, action) {
       
     case ACTIONS.SET_SHOW_GROUPS_PANEL:
       return { ...state, showGroupsPanel: action.payload };
+      
+    case ACTIONS.SET_SHOW_MOBILE_SEATING_CANVAS:
+      return { ...state, showMobileSeatingCanvas: action.payload };
+      
+    case ACTIONS.SET_TABLE_SELECTION_MODE:
+      return { ...state, isTableSelectionMode: action.payload };
+      
+    case ACTIONS.SET_NOTIFICATION:
+      return { ...state, notification: action.payload };
+      
+    case ACTIONS.CLEAR_NOTIFICATION:
+      return { ...state, notification: null };
       
     case ACTIONS.RESET_MODALS:
       return {

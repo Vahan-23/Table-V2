@@ -14,7 +14,8 @@ const CreateGroupModal = () => {
     groupMembers,
     newMemberName,
     searchTerm,
-    usedPeople
+    usedPeople,
+    windowWidth
   } = state;
 
   if (!showAddGroupModal) return null;
@@ -79,6 +80,7 @@ const CreateGroupModal = () => {
   };
 
   const filteredPeople = getFilteredPeople();
+  const isMobile = windowWidth <= 768;
 
   return (
     <div style={{
@@ -91,15 +93,16 @@ const CreateGroupModal = () => {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      zIndex: 1000
+      zIndex: 1000,
+      padding: isMobile ? '10px' : '20px'
     }}>
       <div style={{
         backgroundColor: 'white',
         borderRadius: '8px',
-        padding: '20px',
-        width: '90%',
-        maxWidth: '500px',
-        maxHeight: '80vh',
+        padding: isMobile ? '15px' : '20px',
+        width: '100%',
+        maxWidth: isMobile ? '100%' : '500px',
+        maxHeight: isMobile ? '90vh' : '80vh',
         overflow: 'auto',
         boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)'
       }}>

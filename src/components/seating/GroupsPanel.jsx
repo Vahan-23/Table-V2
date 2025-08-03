@@ -3,23 +3,16 @@ import { useSeating } from './SeatingContext';
 import { useTranslations } from './useTranslations';
 import { useGroups } from './useGroups';
 import { useTables } from './useTables';
+import CreateGroupModal from './CreateGroupModal';
+import EditGroupModal from './EditGroupModal';
+import GroupDetailsModal from './GroupDetailsModal';
 
 const GroupsPanel = () => {
   const { state, dispatch, actions } = useSeating();
   const { t } = useTranslations();
   const { 
-    createGroup, 
-    editGroup, 
-    deleteGroup, 
-    showGroupDetails,
-    selectedGroup,
-    showCreateModal,
-    showEditModal,
-    showDetailsModal,
-    setShowCreateModal,
-    setShowEditModal,
-    setShowDetailsModal,
-    setSelectedGroup
+    removeGroup,
+    getGroupStatus
   } = useGroups();
   const { seatGroupAtTable } = useTables();
   const { windowWidth } = state;
@@ -121,17 +114,26 @@ const GroupsPanel = () => {
   const renderGroupCard = (group, seatingStatus = false) => {
     const isSeated = seatingStatus === true;
     const isPartiallySeated = seatingStatus === 'partial';
+    const isMobile = windowWidth <= 768;
+    
+    // Получаем статус группы
+    const status = getGroupStatus(group);
+    const isFullySeated = status.isFullySeated;
+    const isPartiallySeatedStatus = status.isPartiallySeated;
+    const isAvailable = status.isReadyToSeat;
+    
+
     
     return (
     <div
       key={group.id}
-              draggable={!isSeated}
-        onDragStart={(e) => !isSeated && handleDragStart(e, group)}
-        onDragEnd={handleDragEnd}
-              style={{
+      draggable={!isSeated}
+      onDragStart={(e) => !isSeated && handleDragStart(e, group)}
+      onDragEnd={handleDragEnd}
+      style={{
         backgroundColor: 'white',
         borderRadius: '8px',
-        padding: '15px',
+        padding: isMobile ? '12px' : '15px',
         marginBottom: '10px',
         border: `2px solid ${getGroupColor(group.id)}`,
         cursor: isSeated ? 'default' : 'grab',
@@ -140,18 +142,18 @@ const GroupsPanel = () => {
         boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
         position: 'relative'
       }}
-        onMouseEnter={(e) => {
-          if (!isSeated) {
-            e.target.style.transform = 'scale(1.02)';
-            e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.2)';
-          }
-        }}
-        onMouseLeave={(e) => {
-          if (!isSeated) {
-            e.target.style.transform = 'scale(1)';
-            e.target.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
-          }
-        }}
+      onMouseEnter={(e) => {
+        if (!isSeated) {
+          e.target.style.transform = 'scale(1.02)';
+          e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.2)';
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!isSeated) {
+          e.target.style.transform = 'scale(1)';
+          e.target.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+        }
+      }}
     >
       <div style={{
         display: 'flex',
@@ -159,90 +161,171 @@ const GroupsPanel = () => {
         alignItems: 'center',
         marginBottom: '8px'
       }}>
-                 <h4 style={{
-           margin: 0,
-           fontSize: '16px',
-           fontWeight: 'bold',
-           color: getGroupColor(group.id)
-         }}>
-           {group.name}
-         </h4>
-        <div style={{ display: 'flex', gap: '4px' }}>
+        <h4 style={{
+          margin: 0,
+          fontSize: isMobile ? '14px' : '16px',
+          fontWeight: 'bold',
+          color: getGroupColor(group.id),
+          flex: 1,
+          marginRight: '8px'
+        }}>
+          {group.name}
+        </h4>
+        <div style={{ 
+          display: 'flex', 
+          gap: isMobile ? '6px' : '4px',
+          flexShrink: 0
+        }}>
           {!isSeated && (
             <button
               onClick={() => {
-                setSelectedGroup(group);
-                setShowEditModal(true);
+                dispatch({ type: actions.SET_EDITING_GROUP, payload: group });
+                dispatch({ type: actions.SET_EDIT_GROUP_NAME, payload: group.name });
+                dispatch({ type: actions.SET_EDIT_GROUP_MEMBERS, payload: [...group.members] });
+                dispatch({ type: actions.SET_SHOW_EDIT_GROUP_MODAL, payload: true });
               }}
               style={{
                 backgroundColor: '#3498db',
                 color: 'white',
                 border: 'none',
                 borderRadius: '4px',
-                padding: '4px 8px',
+                padding: isMobile ? '6px 10px' : '4px 8px',
                 cursor: 'pointer',
-                fontSize: '10px',
-                fontWeight: 'bold'
+                fontSize: isMobile ? '12px' : '10px',
+                fontWeight: 'bold',
+                minWidth: isMobile ? '32px' : 'auto'
               }}
               title={t('editGroup')}
             >
-              ✏️
+              {isMobile ? '✏️' : '✏️'}
             </button>
           )}
           <button
             onClick={() => {
-              setSelectedGroup(group);
-              setShowDetailsModal(true);
+              dispatch({ type: actions.SET_SELECTED_GROUP_FOR_DETAILS, payload: group });
+              dispatch({ type: actions.SET_SHOW_GROUP_DETAILS_MODAL, payload: true });
             }}
             style={{
               backgroundColor: '#f39c12',
               color: 'white',
               border: 'none',
               borderRadius: '4px',
-              padding: '4px 8px',
+              padding: isMobile ? '6px 10px' : '4px 8px',
               cursor: 'pointer',
-              fontSize: '10px',
-              fontWeight: 'bold'
+              fontSize: isMobile ? '12px' : '10px',
+              fontWeight: 'bold',
+              minWidth: isMobile ? '32px' : 'auto'
             }}
             title={t('groupDetails')}
           >
-            👁️
+            {isMobile ? '👁️' : '👁️'}
           </button>
           <button
-            onClick={() => deleteGroup(group.id)}
+            onClick={() => removeGroup(group.id)}
             style={{
               backgroundColor: '#e74c3c',
               color: 'white',
               border: 'none',
               borderRadius: '4px',
-              padding: '4px 8px',
+              padding: isMobile ? '6px 10px' : '4px 8px',
               cursor: 'pointer',
-              fontSize: '10px',
-              fontWeight: 'bold'
+              fontSize: isMobile ? '12px' : '10px',
+              fontWeight: 'bold',
+              minWidth: isMobile ? '32px' : 'auto'
             }}
             title={t('deleteGroup')}
           >
-            🗑️
+            {isMobile ? '🗑️' : '🗑️'}
           </button>
         </div>
       </div>
       
       <div style={{
-        fontSize: '14px',
+        fontSize: isMobile ? '12px' : '14px',
         color: '#666',
-        marginBottom: '8px'
+        marginBottom: '8px',
+        lineHeight: '1.3'
       }}>
-        {group.members?.slice(0, 3).join(', ')}
-        {group.members && group.members.length > 3 && ` +${group.members.length - 3}`}
+        {isMobile ? (
+          <div>
+            <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
+              {group.members.length} {t('people')}
+            </div>
+            <div style={{ fontSize: '11px', color: '#888' }}>
+              {group.members?.slice(0, 2).join(', ')}
+              {group.members && group.members.length > 2 && ` +${group.members.length - 2}`}
+            </div>
+          </div>
+        ) : (
+          <>
+            {group.members?.slice(0, 3).join(', ')}
+            {group.members && group.members.length > 3 && ` +${group.members.length - 3}`}
+          </>
+        )}
+      </div>
+      
+      {/* Статус группы */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        marginBottom: '8px',
+        fontSize: '11px',
+        fontWeight: 'bold'
+      }}>
+        {isAvailable && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            color: '#2ecc71',
+            backgroundColor: '#e8f5e8',
+            padding: '4px 8px',
+            borderRadius: '12px',
+            fontSize: '10px'
+          }}>
+            🟢 {t('available')} ({status.availableMembers})
+          </div>
+        )}
+        
+        {isPartiallySeatedStatus && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            color: '#f39c12',
+            backgroundColor: '#fff3e0',
+            padding: '4px 8px',
+            borderRadius: '12px',
+            fontSize: '10px'
+          }}>
+            🟡 {t('partiallySeated')} ({status.seatedMembers}/{status.totalMembers})
+          </div>
+        )}
+        
+        {isFullySeated && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            color: '#e74c3c',
+            backgroundColor: '#fdf2f2',
+            padding: '4px 8px',
+            borderRadius: '12px',
+            fontSize: '10px'
+          }}>
+            🔴 {t('fullySeated')} ({status.seatedMembers})
+          </div>
+        )}
       </div>
       
       {isSeated && (
         <div style={{
-          fontSize: '10px',
+          fontSize: isMobile ? '11px' : '10px',
           color: '#e74c3c',
           fontWeight: 'bold',
           textAlign: 'center',
-          padding: '4px',
+          padding: isMobile ? '6px' : '4px',
           backgroundColor: '#fdf2f2',
           borderRadius: '4px'
         }}>
@@ -252,7 +335,7 @@ const GroupsPanel = () => {
       
       {isPartiallySeated && (
         <div style={{
-          fontSize: '10px',
+          fontSize: isMobile ? '11px' : '10px',
           color: '#f39c12',
           fontWeight: 'bold',
           textAlign: 'center',
@@ -299,7 +382,7 @@ const GroupsPanel = () => {
             </h3>
             <div style={{ display: 'flex', gap: '8px' }}>
               <button
-                onClick={() => setShowCreateModal(true)}
+                onClick={() => dispatch({ type: actions.SET_SHOW_ADD_GROUP_MODAL, payload: true })}
                 style={{
                   backgroundColor: '#2ecc71',
                   color: 'white',
@@ -506,7 +589,7 @@ const GroupsPanel = () => {
             </h3>
             <div style={{ display: 'flex', gap: '8px' }}>
               <button
-                onClick={() => setShowCreateModal(true)}
+                onClick={() => dispatch({ type: actions.SET_SHOW_ADD_GROUP_MODAL, payload: true })}
                 style={{
                   backgroundColor: '#2ecc71',
                   color: 'white',
@@ -517,6 +600,7 @@ const GroupsPanel = () => {
                   fontSize: '12px',
                   fontWeight: 'bold'
                 }}
+                title={t('createGroup')}
               >
                 ➕
               </button>
@@ -532,44 +616,73 @@ const GroupsPanel = () => {
                   fontSize: '12px',
                   fontWeight: 'bold'
                 }}
+                title={t('close')}
               >
                 ✕
               </button>
             </div>
           </div>
 
+          {/* Mobile Search */}
+          <div style={{
+            padding: '15px 20px',
+            borderBottom: '1px solid #e9ecef',
+            backgroundColor: '#f8f9fa'
+          }}>
+            <input
+              type="text"
+              placeholder={t('searchGroups')}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '8px 12px',
+                border: '1px solid #ddd',
+                borderRadius: '6px',
+                fontSize: '14px',
+                boxSizing: 'border-box'
+              }}
+            />
+          </div>
+
           {/* Mobile Content */}
           <div style={{
             padding: '20px',
-            maxHeight: 'calc(60vh - 80px)',
+            maxHeight: 'calc(60vh - 120px)',
             overflow: 'auto'
           }}>
             <div style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gap: '15px'
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '20px'
             }}>
               {/* Available Groups */}
               <div>
                 <h4 style={{
                   margin: '0 0 15px 0',
                   color: '#2ecc71',
-                  fontSize: '14px',
-                  fontWeight: 'bold'
+                  fontSize: '16px',
+                  fontWeight: 'bold',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
                 }}>
                   🟢 {t('availableGroups')} ({availableGroups.length})
                 </h4>
                 <div style={{
-                  maxHeight: 'calc(60vh - 140px)',
+                  maxHeight: 'calc(60vh - 200px)',
                   overflow: 'auto'
                 }}>
                   {availableGroups.length === 0 ? (
                     <div style={{
                       textAlign: 'center',
-                      padding: '10px',
+                      padding: '15px',
                       color: '#95a5a6',
-                      fontSize: '11px',
-                      fontStyle: 'italic'
+                      fontSize: '13px',
+                      fontStyle: 'italic',
+                      backgroundColor: '#f8f9fa',
+                      borderRadius: '8px',
+                      border: '1px dashed #ddd'
                     }}>
                       {t('noAvailableGroups')}
                     </div>
@@ -586,22 +699,28 @@ const GroupsPanel = () => {
                 <h4 style={{
                   margin: '0 0 15px 0',
                   color: '#e74c3c',
-                  fontSize: '14px',
-                  fontWeight: 'bold'
+                  fontSize: '16px',
+                  fontWeight: 'bold',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
                 }}>
                   🔴 {t('seatedGroups')} ({seatedGroups.length})
                 </h4>
                 <div style={{
-                  maxHeight: 'calc(60vh - 140px)',
+                  maxHeight: 'calc(60vh - 200px)',
                   overflow: 'auto'
                 }}>
                   {seatedGroups.length === 0 ? (
                     <div style={{
                       textAlign: 'center',
-                      padding: '10px',
+                      padding: '15px',
                       color: '#95a5a6',
-                      fontSize: '11px',
-                      fontStyle: 'italic'
+                      fontSize: '13px',
+                      fontStyle: 'italic',
+                      backgroundColor: '#f8f9fa',
+                      borderRadius: '8px',
+                      border: '1px dashed #ddd'
                     }}>
                       {t('noSeatedGroups')}
                     </div>
@@ -617,251 +736,12 @@ const GroupsPanel = () => {
         </div>
       )}
 
-      {/* Mobile Groups Button */}
-      {windowWidth <= 768 && (
-        <button
-          onClick={() => setIsExpanded(!isExpanded)}
-          style={{
-            position: 'fixed',
-            bottom: '20px',
-            left: '20px',
-            backgroundColor: '#3498db',
-            color: 'white',
-            border: 'none',
-            borderRadius: '50%',
-            width: '60px',
-            height: '60px',
-            fontSize: '24px',
-            cursor: 'pointer',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000
-          }}
-          title={t('groups')}
-        >
-          👥
-        </button>
-      )}
+
 
       {/* Modals */}
-      {showCreateModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1001
-        }}>
-          <div style={{
-            backgroundColor: 'white',
-            padding: '20px',
-            borderRadius: '12px',
-            width: '90%',
-            maxWidth: '400px'
-          }}>
-            <h3 style={{ margin: '0 0 20px 0' }}>{t('createGroup')}</h3>
-            <input
-              type="text"
-              placeholder={t('groupName')}
-              value={selectedGroup?.name || ''}
-              onChange={(e) => setSelectedGroup({ ...selectedGroup, name: e.target.value })}
-              style={{
-                width: '100%',
-                padding: '10px',
-                border: '1px solid #ddd',
-                borderRadius: '6px',
-                marginBottom: '10px'
-              }}
-            />
-            <textarea
-              placeholder={t('groupMembers')}
-              value={selectedGroup?.members?.join('\n') || ''}
-              onChange={(e) => setSelectedGroup({ 
-                ...selectedGroup, 
-                members: e.target.value.split('\n').filter(m => m.trim()) 
-              })}
-              style={{
-                width: '100%',
-                padding: '10px',
-                border: '1px solid #ddd',
-                borderRadius: '6px',
-                marginBottom: '20px',
-                minHeight: '100px',
-                resize: 'vertical'
-              }}
-            />
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-              <button
-                onClick={() => setShowCreateModal(false)}
-                style={{
-                  padding: '8px 16px',
-                  border: '1px solid #ddd',
-                  borderRadius: '6px',
-                  backgroundColor: 'white',
-                  cursor: 'pointer'
-                }}
-              >
-                {t('cancel')}
-              </button>
-              <button
-                onClick={() => {
-                  createGroup(selectedGroup);
-                  setShowCreateModal(false);
-                }}
-                style={{
-                  padding: '8px 16px',
-                  border: 'none',
-                  borderRadius: '6px',
-                  backgroundColor: '#2ecc71',
-                  color: 'white',
-                  cursor: 'pointer'
-                }}
-              >
-                {t('create')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showEditModal && selectedGroup && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1001
-        }}>
-          <div style={{
-            backgroundColor: 'white',
-            padding: '20px',
-            borderRadius: '12px',
-            width: '90%',
-            maxWidth: '400px'
-          }}>
-            <h3 style={{ margin: '0 0 20px 0' }}>{t('editGroup')}</h3>
-            <input
-              type="text"
-              placeholder={t('groupName')}
-              value={selectedGroup.name}
-              onChange={(e) => setSelectedGroup({ ...selectedGroup, name: e.target.value })}
-              style={{
-                width: '100%',
-                padding: '10px',
-                border: '1px solid #ddd',
-                borderRadius: '6px',
-                marginBottom: '10px'
-              }}
-            />
-            <textarea
-              placeholder={t('groupMembers')}
-              value={selectedGroup.members?.join('\n') || ''}
-              onChange={(e) => setSelectedGroup({ 
-                ...selectedGroup, 
-                members: e.target.value.split('\n').filter(m => m.trim()) 
-              })}
-              style={{
-                width: '100%',
-                padding: '10px',
-                border: '1px solid #ddd',
-                borderRadius: '6px',
-                marginBottom: '20px',
-                minHeight: '100px',
-                resize: 'vertical'
-              }}
-            />
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-              <button
-                onClick={() => setShowEditModal(false)}
-                style={{
-                  padding: '8px 16px',
-                  border: '1px solid #ddd',
-                  borderRadius: '6px',
-                  backgroundColor: 'white',
-                  cursor: 'pointer'
-                }}
-              >
-                {t('cancel')}
-              </button>
-              <button
-                onClick={() => {
-                  editGroup(selectedGroup);
-                  setShowEditModal(false);
-                }}
-                style={{
-                  padding: '8px 16px',
-                  border: 'none',
-                  borderRadius: '6px',
-                  backgroundColor: '#3498db',
-                  color: 'white',
-                  cursor: 'pointer'
-                }}
-              >
-                {t('save')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showDetailsModal && selectedGroup && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1001
-        }}>
-          <div style={{
-            backgroundColor: 'white',
-            padding: '20px',
-            borderRadius: '12px',
-            width: '90%',
-            maxWidth: '400px'
-          }}>
-            <h3 style={{ margin: '0 0 20px 0' }}>{selectedGroup.name}</h3>
-            <div style={{ marginBottom: '20px' }}>
-              <strong>{t('groupMembers')}:</strong>
-              <ul style={{ margin: '10px 0', paddingLeft: '20px' }}>
-                {selectedGroup.members?.map((member, index) => (
-                  <li key={index}>{member}</li>
-                ))}
-              </ul>
-            </div>
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-              <button
-                onClick={() => setShowDetailsModal(false)}
-                style={{
-                  padding: '8px 16px',
-                  border: '1px solid #ddd',
-                  borderRadius: '6px',
-                  backgroundColor: 'white',
-                  cursor: 'pointer'
-                }}
-              >
-                {t('close')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <CreateGroupModal />
+      <EditGroupModal />
+      <GroupDetailsModal />
     </>
   );
 };

@@ -3,8 +3,9 @@ import { useSeating } from './SeatingContext';
 import { useTranslations } from './useTranslations';
 
 const StatisticsPanel = () => {
-  const { state } = useSeating();
+  const { state, dispatch, actions } = useSeating();
   const { t } = useTranslations();
+  const { windowWidth } = state;
 
   // Подсчет статистики
   const totalPeople = state.groups?.reduce((total, group) => total + (group.members?.length || 0), 0) || 0;
@@ -39,58 +40,97 @@ const StatisticsPanel = () => {
   
   const groupsWithoutSeatedPeople = totalGroups - groupsWithSeatedPeople;
 
+  const handleCloseStatistics = () => {
+    dispatch({ type: actions.SET_SHOW_STATISTICS, payload: false });
+  };
+
+  const isMobile = windowWidth <= 768;
+
   return (
     <div style={{
       backgroundColor: '#f8f9fa',
       borderRadius: '12px',
-      padding: '20px',
+      padding: isMobile ? '15px' : '20px',
       border: '1px solid #e9ecef',
       marginBottom: '20px',
-      boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+      boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+      position: 'relative'
     }}>
-      <h3 style={{
-        margin: '0 0 15px 0',
-        color: '#495057',
-        fontSize: '18px',
-        fontWeight: 'bold',
+      {/* Header с кнопкой закрытия для мобильных */}
+      <div style={{
         display: 'flex',
+        justifyContent: 'space-between',
         alignItems: 'center',
-        gap: '8px'
+        marginBottom: '15px'
       }}>
-        📊 {t('statistics')}
-      </h3>
+        <h3 style={{
+          margin: 0,
+          color: '#495057',
+          fontSize: isMobile ? '16px' : '18px',
+          fontWeight: 'bold',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
+        }}>
+          📊 {t('statistics')}
+        </h3>
+        
+        {/* Кнопка закрытия для мобильных */}
+        {isMobile && (
+          <button
+            onClick={handleCloseStatistics}
+            style={{
+              background: 'none',
+              border: 'none',
+              fontSize: '20px',
+              cursor: 'pointer',
+              color: '#666',
+              padding: '4px',
+              borderRadius: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '28px',
+              height: '28px'
+            }}
+            title={t('close')}
+          >
+            ×
+          </button>
+        )}
+      </div>
       
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-        gap: '15px'
+        gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(200px, 1fr))',
+        gap: isMobile ? '12px' : '15px'
       }}>
         {/* Статистика по людям */}
         <div style={{
           backgroundColor: '#e3f2fd',
           borderRadius: '8px',
-          padding: '15px',
+          padding: isMobile ? '12px' : '15px',
           border: '1px solid #2196f3'
         }}>
           <h4 style={{
             margin: '0 0 10px 0',
             color: '#1976d2',
-            fontSize: '14px',
+            fontSize: isMobile ? '13px' : '14px',
             fontWeight: 'bold'
           }}>
             👥 {t('people')}
           </h4>
-                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-             <span style={{ color: '#666', fontSize: '13px' }}>{t('allPeopleInGroups')}:</span>
-             <span style={{ fontWeight: 'bold', color: '#1976d2', fontSize: '16px' }}>{allPeopleInGroups}</span>
-           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-            <span style={{ color: '#666', fontSize: '13px' }}>{t('seatedPeople')}:</span>
-            <span style={{ fontWeight: 'bold', color: '#2e7d32', fontSize: '16px' }}>{seatedPeople}</span>
+            <span style={{ color: '#666', fontSize: isMobile ? '12px' : '13px' }}>{t('allPeopleInGroups')}:</span>
+            <span style={{ fontWeight: 'bold', color: '#1976d2', fontSize: isMobile ? '14px' : '16px' }}>{allPeopleInGroups}</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+            <span style={{ color: '#666', fontSize: isMobile ? '12px' : '13px' }}>{t('seatedPeople')}:</span>
+            <span style={{ fontWeight: 'bold', color: '#2e7d32', fontSize: isMobile ? '14px' : '16px' }}>{seatedPeople}</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ color: '#666', fontSize: '13px' }}>{t('unseatedPeople')}:</span>
-            <span style={{ fontWeight: 'bold', color: '#f57c00', fontSize: '16px' }}>{unseatedPeople}</span>
+            <span style={{ color: '#666', fontSize: isMobile ? '12px' : '13px' }}>{t('unseatedPeople')}:</span>
+            <span style={{ fontWeight: 'bold', color: '#f57c00', fontSize: isMobile ? '14px' : '16px' }}>{unseatedPeople}</span>
           </div>
         </div>
 
@@ -98,28 +138,28 @@ const StatisticsPanel = () => {
         <div style={{
           backgroundColor: '#e8f5e8',
           borderRadius: '8px',
-          padding: '15px',
+          padding: isMobile ? '12px' : '15px',
           border: '1px solid #4caf50'
         }}>
           <h4 style={{
             margin: '0 0 10px 0',
             color: '#2e7d32',
-            fontSize: '14px',
+            fontSize: isMobile ? '13px' : '14px',
             fontWeight: 'bold'
           }}>
             🏷️ {t('groups')}
           </h4>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-            <span style={{ color: '#666', fontSize: '13px' }}>{t('totalGroups')}:</span>
-            <span style={{ fontWeight: 'bold', color: '#2e7d32', fontSize: '16px' }}>{totalGroups}</span>
+            <span style={{ color: '#666', fontSize: isMobile ? '12px' : '13px' }}>{t('totalGroups')}:</span>
+            <span style={{ fontWeight: 'bold', color: '#2e7d32', fontSize: isMobile ? '14px' : '16px' }}>{totalGroups}</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-            <span style={{ color: '#666', fontSize: '13px' }}>{t('groupsWithSeated')}:</span>
-            <span style={{ fontWeight: 'bold', color: '#2e7d32', fontSize: '16px' }}>{groupsWithSeatedPeople}</span>
+            <span style={{ color: '#666', fontSize: isMobile ? '12px' : '13px' }}>{t('groupsWithSeated')}:</span>
+            <span style={{ fontWeight: 'bold', color: '#2e7d32', fontSize: isMobile ? '14px' : '16px' }}>{groupsWithSeatedPeople}</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ color: '#666', fontSize: '13px' }}>{t('groupsWithoutSeated')}:</span>
-            <span style={{ fontWeight: 'bold', color: '#f57c00', fontSize: '16px' }}>{groupsWithoutSeatedPeople}</span>
+            <span style={{ color: '#666', fontSize: isMobile ? '12px' : '13px' }}>{t('groupsWithoutSeated')}:</span>
+            <span style={{ fontWeight: 'bold', color: '#f57c00', fontSize: isMobile ? '14px' : '16px' }}>{groupsWithoutSeatedPeople}</span>
           </div>
         </div>
 
@@ -127,35 +167,35 @@ const StatisticsPanel = () => {
         <div style={{
           backgroundColor: '#fff3e0',
           borderRadius: '8px',
-          padding: '15px',
+          padding: isMobile ? '12px' : '15px',
           border: '1px solid #ff9800'
         }}>
           <h4 style={{
             margin: '0 0 10px 0',
             color: '#f57c00',
-            fontSize: '14px',
+            fontSize: isMobile ? '13px' : '14px',
             fontWeight: 'bold'
           }}>
             📈 {t('occupancy')}
           </h4>
-                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-             <span style={{ color: '#666', fontSize: '13px' }}>{t('seatingRate')}:</span>
-             <span style={{ fontWeight: 'bold', color: '#f57c00', fontSize: '16px' }}>
-               {allPeopleInGroups > 0 ? Math.round((seatedPeople / allPeopleInGroups) * 100) : 0}%
-             </span>
-           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-            <span style={{ color: '#666', fontSize: '13px' }}>{t('groupSeatingRate')}:</span>
-            <span style={{ fontWeight: 'bold', color: '#f57c00', fontSize: '16px' }}>
+            <span style={{ color: '#666', fontSize: isMobile ? '12px' : '13px' }}>{t('seatingRate')}:</span>
+            <span style={{ fontWeight: 'bold', color: '#f57c00', fontSize: isMobile ? '14px' : '16px' }}>
+              {allPeopleInGroups > 0 ? Math.round((seatedPeople / allPeopleInGroups) * 100) : 0}%
+            </span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+            <span style={{ color: '#666', fontSize: isMobile ? '12px' : '13px' }}>{t('groupSeatingRate')}:</span>
+            <span style={{ fontWeight: 'bold', color: '#f57c00', fontSize: isMobile ? '14px' : '16px' }}>
               {totalGroups > 0 ? Math.round((groupsWithSeatedPeople / totalGroups) * 100) : 0}%
             </span>
           </div>
-                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-             <span style={{ color: '#666', fontSize: '13px' }}>{t('averageGroupSize')}:</span>
-             <span style={{ fontWeight: 'bold', color: '#f57c00', fontSize: '16px' }}>
-               {totalGroups > 0 ? Math.round(allPeopleInGroups / totalGroups) : 0}
-             </span>
-           </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ color: '#666', fontSize: isMobile ? '12px' : '13px' }}>{t('averageGroupSize')}:</span>
+            <span style={{ fontWeight: 'bold', color: '#f57c00', fontSize: isMobile ? '14px' : '16px' }}>
+              {totalGroups > 0 ? Math.round(allPeopleInGroups / totalGroups) : 0}
+            </span>
+          </div>
         </div>
       </div>
     </div>
