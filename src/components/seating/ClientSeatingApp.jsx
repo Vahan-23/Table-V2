@@ -559,7 +559,8 @@ const ClientSeatingAppContent = () => {
       width: '100vw',
       overflow: 'hidden',
       position: 'relative',
-      fontFamily: 'Arial, sans-serif'
+      fontFamily: 'Arial, sans-serif',
+      paddingTop: '60px' // Отступ для фиксированного header
     }}>
       <Header />
 
@@ -579,10 +580,10 @@ const ClientSeatingAppContent = () => {
         flex: 1,
         width: '100%',
         height: windowWidth > 768
-          ? (state.groups && state.groups.length > 0 && state.showStatistics ? 'calc(100vh - 280px)' : 'calc(100vh - 190px)')
+          ? (state.groups && state.groups.length > 0 && state.showStatistics ? 'calc(100vh - 340px)' : 'calc(100vh - 250px)')
           : isMobileGroupsExpanded
-            ? (state.groups && state.groups.length > 0 && state.showStatistics ? 'calc(100vh - 290px)' : 'calc(100vh - 200px)')
-            : (state.groups && state.groups.length > 0 && state.showStatistics ? 'calc(100vh - 200px)' : 'calc(100vh - 110px)'),
+            ? (state.groups && state.groups.length > 0 && state.showStatistics ? 'calc(100vh - 350px)' : 'calc(100vh - 260px)')
+            : (state.groups && state.groups.length > 0 && state.showStatistics ? 'calc(100vh - 260px)' : 'calc(100vh - 170px)'),
         overflow: 'hidden',
         position: 'relative'
       }}>
