@@ -20,6 +20,7 @@ const GroupsPanel = () => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [dragOverTable, setDragOverTable] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all'); // all, available, partiallySeated, fullySeated
 
   // Правильная логика категоризации групп
   const categorizeGroups = () => {
@@ -78,15 +79,38 @@ const GroupsPanel = () => {
     });
   }
 
-  // Фильтруем группы по поиску
+  // Фильтруем группы по поиску и статусу
   const filterGroupsBySearch = (groups) => {
-    if (!searchTerm.trim()) return groups;
-    return groups.filter(group => 
-      group.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      group.members?.some(member => 
-        member.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    );
+    let filtered = groups;
+    
+    // Фильтр по поиску
+    if (searchTerm.trim()) {
+      filtered = filtered.filter(group => 
+        group.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        group.members?.some(member => 
+          member.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+      );
+    }
+    
+    // Фильтр по статусу
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(group => {
+        const status = getGroupStatus(group);
+        switch (statusFilter) {
+          case 'available':
+            return !status.isPartiallySeated && !status.isFullySeated;
+          case 'partiallySeated':
+            return status.isPartiallySeated;
+          case 'fullySeated':
+            return status.isFullySeated;
+          default:
+            return true;
+        }
+      });
+    }
+    
+    return filtered;
   };
 
   const filteredAvailableGroups = filterGroupsBySearch(availableGroups);
@@ -417,26 +441,97 @@ const GroupsPanel = () => {
             </div>
           </div>
 
-          {/* Search */}
+          {/* Search and Filters */}
           <div style={{
             padding: '15px 20px',
             borderBottom: '1px solid #e9ecef',
             backgroundColor: '#f8f9fa'
           }}>
-            <input
-              type="text"
-              placeholder={t('searchGroups')}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '8px 12px',
-                border: '1px solid #ddd',
-                borderRadius: '6px',
-                fontSize: '14px',
-                boxSizing: 'border-box'
-              }}
-            />
+            {/* Search */}
+            <div style={{ marginBottom: '10px' }}>
+              <input
+                type="text"
+                placeholder={t('searchGroups')}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  border: '1px solid #ddd',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  boxSizing: 'border-box'
+                }}
+              />
+            </div>
+            
+            {/* Status Filter */}
+            <div style={{
+              display: 'flex',
+              gap: '8px',
+              flexWrap: 'wrap'
+            }}>
+              <button
+                onClick={() => setStatusFilter('all')}
+                style={{
+                  padding: '6px 12px',
+                  border: '1px solid #ddd',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  backgroundColor: statusFilter === 'all' ? '#3498db' : '#fff',
+                  color: statusFilter === 'all' ? 'white' : '#333',
+                  fontWeight: statusFilter === 'all' ? 'bold' : 'normal'
+                }}
+              >
+                {t('allGroups')} ({state.groups?.length || 0})
+              </button>
+              <button
+                onClick={() => setStatusFilter('available')}
+                style={{
+                  padding: '6px 12px',
+                  border: '1px solid #ddd',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  backgroundColor: statusFilter === 'available' ? '#2ecc71' : '#fff',
+                  color: statusFilter === 'available' ? 'white' : '#333',
+                  fontWeight: statusFilter === 'available' ? 'bold' : 'normal'
+                }}
+              >
+                🟢 {t('available')} ({availableGroups.length})
+              </button>
+              <button
+                onClick={() => setStatusFilter('partiallySeated')}
+                style={{
+                  padding: '6px 12px',
+                  border: '1px solid #ddd',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  backgroundColor: statusFilter === 'partiallySeated' ? '#f39c12' : '#fff',
+                  color: statusFilter === 'partiallySeated' ? 'white' : '#333',
+                  fontWeight: statusFilter === 'partiallySeated' ? 'bold' : 'normal'
+                }}
+              >
+                🟡 {t('partiallySeated')} ({partiallySeatedGroups.length})
+              </button>
+              <button
+                onClick={() => setStatusFilter('fullySeated')}
+                style={{
+                  padding: '6px 12px',
+                  border: '1px solid #ddd',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  backgroundColor: statusFilter === 'fullySeated' ? '#e74c3c' : '#fff',
+                  color: statusFilter === 'fullySeated' ? 'white' : '#333',
+                  fontWeight: statusFilter === 'fullySeated' ? 'bold' : 'normal'
+                }}
+              >
+                🔴 {t('fullySeated')} ({seatedGroups.length})
+              </button>
+            </div>
           </div>
 
           {/* Content */}
@@ -445,115 +540,42 @@ const GroupsPanel = () => {
             maxHeight: 'calc(80vh - 150px)',
             overflow: 'auto'
           }}>
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr 1fr',
-              gap: '15px',
-              height: '100%'
-            }}>
-              {/* Available Groups */}
-              <div>
-                <h4 style={{
-                  margin: '0 0 15px 0',
-                  color: '#2ecc71',
-                  fontSize: '16px',
-                  fontWeight: 'bold',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}>
-                  🟢 {t('availableGroups')} ({filteredAvailableGroups.length})
-                </h4>
-                <div style={{
-                  maxHeight: 'calc(80vh - 200px)',
-                  overflow: 'auto'
-                }}>
-                  {filteredAvailableGroups.length === 0 ? (
-                    <div style={{
-                      textAlign: 'center',
-                      padding: '20px',
-                      color: '#95a5a6',
-                      fontSize: '12px',
-                      fontStyle: 'italic'
-                    }}>
-                      {t('noAvailableGroups')}
-                    </div>
-                  ) : (
-                    <div>
-                      {filteredAvailableGroups.map(group => renderGroupCard(group, false))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Partially Seated Groups */}
-              <div>
-                <h4 style={{
-                  margin: '0 0 15px 0',
-                  color: '#f39c12',
-                  fontSize: '16px',
-                  fontWeight: 'bold',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}>
-                  🟡 {t('partiallySeatedGroups')} ({filteredPartiallySeatedGroups.length})
-                </h4>
-                <div style={{
-                  maxHeight: 'calc(80vh - 200px)',
-                  overflow: 'auto'
-                }}>
-                  {filteredPartiallySeatedGroups.length === 0 ? (
-                    <div style={{
-                      textAlign: 'center',
-                      padding: '20px',
-                      color: '#95a5a6',
-                      fontSize: '12px',
-                      fontStyle: 'italic'
-                    }}>
-                      {t('noPartiallySeatedGroups')}
-                    </div>
-                  ) : (
-                    <div>
-                      {filteredPartiallySeatedGroups.map(group => renderGroupCard(group, 'partial'))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Fully Seated Groups */}
-              <div>
-                <h4 style={{
-                  margin: '0 0 15px 0',
-                  color: '#e74c3c',
-                  fontSize: '16px',
-                  fontWeight: 'bold',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}>
-                  🔴 {t('fullySeatedGroups')} ({filteredSeatedGroups.length})
-                </h4>
-                <div style={{
-                  maxHeight: 'calc(80vh - 200px)',
-                  overflow: 'auto'
-                }}>
-                  {filteredSeatedGroups.length === 0 ? (
-                    <div style={{
-                      textAlign: 'center',
-                      padding: '20px',
-                      color: '#95a5a6',
-                      fontSize: '12px',
-                      fontStyle: 'italic'
-                    }}>
-                      {t('noSeatedGroups')}
-                    </div>
-                  ) : (
-                    <div>
-                      {filteredSeatedGroups.map(group => renderGroupCard(group, true))}
-                    </div>
-                  )}
-                </div>
+            {/* Show filtered groups in a single section */}
+            <div>
+              <h4 style={{
+                margin: '0 0 15px 0',
+                color: '#333',
+                fontSize: '16px',
+                fontWeight: 'bold',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                📋 {t('filteredGroups')} ({filteredAvailableGroups.length + filteredPartiallySeatedGroups.length + filteredSeatedGroups.length})
+              </h4>
+              <div style={{
+                maxHeight: 'calc(80vh - 200px)',
+                overflow: 'auto'
+              }}>
+                {filteredAvailableGroups.length === 0 && filteredPartiallySeatedGroups.length === 0 && filteredSeatedGroups.length === 0 ? (
+                  <div style={{
+                    textAlign: 'center',
+                    padding: '20px',
+                    color: '#95a5a6',
+                    fontSize: '12px',
+                    fontStyle: 'italic'
+                  }}>
+                    {t('noGroupsFound')}
+                  </div>
+                ) : (
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+                    gap: '15px'
+                  }}>
+                    {[...filteredAvailableGroups, ...filteredPartiallySeatedGroups, ...filteredSeatedGroups].map(group => renderGroupCard(group, false))}
+                  </div>
+                )}
               </div>
             </div>
           </div>

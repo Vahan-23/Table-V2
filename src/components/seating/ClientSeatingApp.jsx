@@ -19,6 +19,7 @@ import MobileSeatingCanvas from './MobileSeatingCanvas';
 import MobileGroupsPanel from './MobileGroupsPanel';
 import StatisticsPanel from './StatisticsPanel';
 import Notification from './Notification';
+import SeatingModal from './SeatingModal';
 
 // Компонент для отображения стола
 const TableComponent = ({ 
@@ -776,7 +777,8 @@ const ClientSeatingAppContent = () => {
         </div>
       </div>
 
-      {hallData && (
+      {/* Desktop drag hint - hidden on mobile */}
+      {hallData && windowWidth > 768 && (
         <div style={{
           position: 'absolute',
           bottom: '15px',
@@ -790,8 +792,7 @@ const ClientSeatingAppContent = () => {
           zIndex: 10,
           textAlign: 'center',
           pointerEvents: 'none',
-          opacity: '0.8',
-          display: windowWidth <= 768 ? 'block' : 'none'
+          opacity: '0.8'
         }}>
           {t('dragGroupToTable')}
         </div>
@@ -974,6 +975,9 @@ const ClientSeatingAppContent = () => {
 
       {/* Notification Component */}
       <Notification />
+      
+      {/* Seating Modal for People Selection */}
+      <SeatingModal />
     </div>
   );
 };

@@ -64,7 +64,7 @@ export const useTables = () => {
     const availableSeatsCount = getAvailableSeats(tableId);
 
     if (availableSeatsCount < peopleToSeat.length) {
-      // Вместо alert открываем модальное окно для выбора людей
+      // Открываем модальное окно для выбора людей
       dispatch({ type: actions.SET_SHOW_SEATING_MODAL, payload: true });
       dispatch({ type: actions.SET_SELECTED_GROUP_FOR_SEATING, payload: groupId });
       dispatch({ type: actions.SET_TARGET_TABLE_FOR_SEATING, payload: tableId });
@@ -180,13 +180,11 @@ export const useTables = () => {
         }
 
         if (availableSeats < group.members.length) {
-          dispatch({ 
-            type: actions.SET_NOTIFICATION, 
-            payload: {
-              type: 'error',
-              message: t('notEnoughSeats')
-            }
-          });
+          // Открываем модаль для выбора людей вместо показа ошибки
+          dispatch({ type: actions.SET_SHOW_SEATING_MODAL, payload: true });
+          dispatch({ type: actions.SET_SELECTED_GROUP_FOR_SEATING, payload: group.id });
+          dispatch({ type: actions.SET_TARGET_TABLE_FOR_SEATING, payload: table.id });
+          dispatch({ type: actions.SET_AVAILABLE_SEATS_FOR_SEATING, payload: availableSeats });
           return;
         }
         
@@ -432,10 +430,26 @@ export const useTables = () => {
     return hallData.tables.filter(table => table.enabled === false);
   }, [hallData]);
 
-  // Удаление всех людей со всех столов
+  // Удаление всех людей со всех столов и возврат их в группы
   const clearAllTables = useCallback(() => {
     if (!hallData?.tables) return;
 
+    // Собираем всех людей со всех столов
+    const peopleToReturn = [];
+    hallData.tables.forEach(table => {
+      if (table.people) {
+        table.people.forEach(person => {
+          if (person && person.name && person.groupId) {
+            peopleToReturn.push({
+              name: person.name,
+              groupId: person.groupId
+            });
+          }
+        });
+      }
+    });
+
+    // Очищаем все столы
     const updatedTables = hallData.tables.map(table => ({
       ...table,
       people: table.people ? table.people.map(() => null) : []
@@ -446,9 +460,43 @@ export const useTables = () => {
       tables: updatedTables
     };
 
+    // Обновляем группы - возвращаем людей в их группы
+    const updatedGroups = state.groups.map(group => {
+      const peopleFromThisGroup = peopleToReturn.filter(p => p.groupId === group.id);
+      const peopleNames = peopleFromThisGroup.map(p => p.name);
+      
+      // Добавляем людей обратно в группу, избегая дубликатов
+      const updatedMembers = [...group.members];
+      peopleNames.forEach(name => {
+        if (!updatedMembers.includes(name)) {
+          updatedMembers.push(name);
+        }
+      });
+
+      return {
+        ...group,
+        members: updatedMembers
+      };
+    });
+
+    // Сохраняем обновленные данные
     dispatch({ type: actions.SET_HALL_DATA, payload: updatedHallData });
+    dispatch({ type: actions.SET_GROUPS, payload: updatedGroups });
+    
     localStorage.setItem('hallData', JSON.stringify(updatedHallData));
-  }, [hallData, dispatch, actions]);
+    localStorage.setItem('seatingGroups', JSON.stringify(updatedGroups));
+
+    // Показываем уведомление о количестве возвращенных людей
+    if (peopleToReturn.length > 0) {
+      dispatch({ 
+        type: actions.SET_NOTIFICATION, 
+        payload: {
+          type: 'success',
+          message: t('peopleReturnedToGroups').replace('{count}', peopleToReturn.length)
+        }
+      });
+    }
+  }, [hallData, state.groups, dispatch, actions]);
 
   return {
     hallData,

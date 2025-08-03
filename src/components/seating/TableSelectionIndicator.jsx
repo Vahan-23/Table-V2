@@ -27,10 +27,12 @@ const TableSelectionIndicator = () => {
   
   const {
     isTableSelectionMode,
-    selectedGroupForSeating
+    selectedGroupForSeating,
+    showSeatingModal
   } = state;
 
-  if (!isTableSelectionMode || !selectedGroupForSeating) return null;
+  // Скрываем индикатор если открыт модаль выбора людей
+  if (!isTableSelectionMode || !selectedGroupForSeating || showSeatingModal) return null;
 
   const group = state.groups.find(g => g.id === selectedGroupForSeating);
   if (!group) return null;
