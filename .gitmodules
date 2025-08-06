@@ -1,0 +1,3 @@
+[submodule "batsik-am"]
+	path = batsik-am
+	url = https://github.com/Vahan-23/batsik-am.git
