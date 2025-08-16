@@ -121,7 +121,7 @@ export const useGroups = () => {
     const availableColor = colors.find(color => !usedColors.includes(color)) || '#95a5a6';
 
     const newGroup = {
-      id: 'group_' + Date.now(),
+      id: 'group_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
       name: groupName.trim(),
       color: availableColor,
       members: [...groupMembers]

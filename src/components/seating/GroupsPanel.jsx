@@ -6,6 +6,7 @@ import { useTables } from './useTables';
 import CreateGroupModal from './CreateGroupModal';
 import EditGroupModal from './EditGroupModal';
 import GroupDetailsModal from './GroupDetailsModal';
+import ImportJsonModal from './ImportJsonModal';
 
 const GroupsPanel = () => {
   const { state, dispatch, actions } = useSeating();
@@ -96,6 +97,7 @@ const GroupsPanel = () => {
   const filteredSeatedGroups = filterGroupsBySearch(seatedGroups);
 
   const handleDragStart = (e, group) => {
+    console.log('handleDragStart для группы:', group);
     dispatch({ type: actions.SET_DRAGGED_GROUP, payload: group });
     e.dataTransfer.effectAllowed = 'move';
   };
@@ -402,9 +404,70 @@ const GroupsPanel = () => {
                 ➕
               </button>
               <button
-                onClick={() => dispatch({ type: actions.SET_SHOW_GROUPS_PANEL, payload: false })}
+                onClick={() => dispatch({ type: actions.SET_SHOW_IMPORT_JSON_MODAL, payload: true })}
+                style={{
+                  backgroundColor: '#9b59b6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '6px 12px',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+                title="Импорт гостей из JSON"
+              >
+                📥
+              </button>
+              <button
+                onClick={() => dispatch({ type: actions.CREATE_TEST_GROUPS })}
+                style={{
+                  backgroundColor: '#f39c12',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '6px 12px',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+                title="Создать тестовые группы"
+              >
+                🧪
+              </button>
+              <button
+                onClick={() => {
+                  if (window.confirm('Вы уверены, что хотите удалить все группы?')) {
+                    dispatch({ type: actions.CLEAR_ALL_GROUPS });
+                  }
+                }}
                 style={{
                   backgroundColor: '#e74c3c',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '6px 12px',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+                title="Удалить все группы"
+              >
+                🗑️
+              </button>
+              <button
+                onClick={() => dispatch({ type: actions.SET_SHOW_GROUPS_PANEL, payload: false })}
+                style={{
+                  backgroundColor: '#95a5a6',
                   color: 'white',
                   border: 'none',
                   borderRadius: '6px',
@@ -678,6 +741,58 @@ const GroupsPanel = () => {
                 ➕
               </button>
               <button
+                onClick={() => dispatch({ type: actions.SET_SHOW_IMPORT_JSON_MODAL, payload: true })}
+                style={{
+                  backgroundColor: '#9b59b6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '6px 12px',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  fontWeight: 'bold'
+                }}
+                title="Импорт гостей из JSON"
+              >
+                📥
+              </button>
+              <button
+                onClick={() => dispatch({ type: actions.CREATE_TEST_GROUPS })}
+                style={{
+                  backgroundColor: '#f39c12',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '6px 12px',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  fontWeight: 'bold'
+                }}
+                title="Создать тестовые группы"
+              >
+                🧪
+              </button>
+              <button
+                onClick={() => {
+                  if (window.confirm('Вы уверены, что хотите удалить все группы?')) {
+                    dispatch({ type: actions.CLEAR_ALL_GROUPS });
+                  }
+                }}
+                style={{
+                  backgroundColor: '#e74c3c',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '6px 12px',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  fontWeight: 'bold'
+                }}
+                title="Удалить все группы"
+              >
+                🗑️
+              </button>
+              <button
                 onClick={() => setIsExpanded(false)}
                 style={{
                   backgroundColor: '#e74c3c',
@@ -815,6 +930,7 @@ const GroupsPanel = () => {
       <CreateGroupModal />
       <EditGroupModal />
       <GroupDetailsModal />
+      <ImportJsonModal />
     </>
   );
 };

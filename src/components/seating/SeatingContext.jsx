@@ -79,8 +79,11 @@ const ACTIONS = {
   SET_SHOW_GROUPS_PANEL: 'SET_SHOW_GROUPS_PANEL',
   SET_SHOW_MOBILE_SEATING_CANVAS: 'SET_SHOW_MOBILE_SEATING_CANVAS',
   SET_TABLE_SELECTION_MODE: 'SET_TABLE_SELECTION_MODE',
+  SET_SHOW_IMPORT_JSON_MODAL: 'SET_SHOW_IMPORT_JSON_MODAL',
   SET_NOTIFICATION: 'SET_NOTIFICATION',
-  CLEAR_NOTIFICATION: 'CLEAR_NOTIFICATION'
+  CLEAR_NOTIFICATION: 'CLEAR_NOTIFICATION',
+  CREATE_TEST_GROUPS: 'CREATE_TEST_GROUPS',
+  CLEAR_ALL_GROUPS: 'CLEAR_ALL_GROUPS'
 };
 
 // Начальное состояние
@@ -165,6 +168,9 @@ const initialState = {
   // Режим выбора стола для рассадки группы
   isTableSelectionMode: false,
   
+  // Модальное окно импорта JSON
+  showImportJsonModal: false,
+  
   // Уведомления
   notification: null
 };
@@ -200,7 +206,7 @@ function generateDefaultGroupsAndPeople() {
       indices.splice(idx, 1);
     }
     groups.push({
-      id: `group_${g + 1}`,
+      id: `group_${Date.now()}_${g + 1}_${Math.random().toString(36).substr(2, 9)}`,
       name: `Group ${g + 1}`,
       color: GROUP_COLORS[g % GROUP_COLORS.length],
       members: groupIndices.map(i => people[i])
@@ -215,9 +221,9 @@ let DEFAULT_GROUPS = [];
 let TEST_PEOPLE = [];
 if (!localStorage.getItem('seatingGroups')) {
   const generated = generateDefaultGroupsAndPeople();
-  DEFAULT_GROUPS = generated.groups;
   TEST_PEOPLE = generated.people;
-  initialState.groups = DEFAULT_GROUPS;
+  // Не создаем группы по умолчанию
+  initialState.groups = [];
 }
 // --- Default groups/people logic end ---
 
@@ -511,6 +517,9 @@ function seatingReducer(state, action) {
     case ACTIONS.SET_SHOW_GROUPS_PANEL:
       return { ...state, showGroupsPanel: action.payload };
       
+    case ACTIONS.SET_SHOW_IMPORT_JSON_MODAL:
+      return { ...state, showImportJsonModal: action.payload };
+      
     case ACTIONS.SET_SHOW_MOBILE_SEATING_CANVAS:
       return { ...state, showMobileSeatingCanvas: action.payload };
       
@@ -534,6 +543,7 @@ function seatingReducer(state, action) {
         showMemberSelectionModal: false,
         showSeatingModal: false,
         showPeopleSelector: false,
+        showImportJsonModal: false,
         selectedChair: null,
         selectedTable: null,
         selectedGroupForDetails: null,
@@ -552,6 +562,29 @@ function seatingReducer(state, action) {
         personSearchTerm: '',
         showPersonSearch: true,
         selectedPersonFromGroup: null
+      };
+      
+    case ACTIONS.CREATE_TEST_GROUPS:
+      const generated = generateDefaultGroupsAndPeople();
+      localStorage.setItem('seatingGroups', JSON.stringify(generated.groups));
+      return { 
+        ...state, 
+        groups: generated.groups,
+        notification: {
+          type: 'success',
+          message: `Создано ${generated.groups.length} тестовых групп с ${generated.people.length} участниками`
+        }
+      };
+      
+    case ACTIONS.CLEAR_ALL_GROUPS:
+      localStorage.removeItem('seatingGroups');
+      return { 
+        ...state, 
+        groups: [],
+        notification: {
+          type: 'success',
+          message: 'Все группы удалены'
+        }
       };
       
     default:
@@ -603,6 +636,17 @@ export const SeatingProvider = ({ children }) => {
   useEffect(() => {
     localStorage.setItem('seatingLanguage', state.language);
   }, [state.language]);
+
+  // Автоматическое очищение уведомлений
+  useEffect(() => {
+    if (state.notification) {
+      const timer = setTimeout(() => {
+        dispatch({ type: ACTIONS.CLEAR_NOTIFICATION });
+      }, 3000); // Уведомление исчезает через 3 секунды
+      
+      return () => clearTimeout(timer);
+    }
+  }, [state.notification, dispatch]);
 
   // Обработчик изменения размера окна
   useEffect(() => {

@@ -25,7 +25,11 @@ export const useTables = () => {
 
   // Рассадка группы за столом
   const seatGroupAtTable = useCallback((groupId, tableId, selectedPeople = null) => {
+    console.log('seatGroupAtTable вызвана с:', { groupId, tableId, selectedPeople });
+    
     const group = state.groups.find(g => g.id === groupId);
+    console.log('Найденная группа:', group);
+    
     if (!group) {
       alert('Группа не найдена');
       return;
@@ -365,9 +369,12 @@ export const useTables = () => {
     e.preventDefault();
     dispatch({ type: actions.SET_DRAG_OVER_TABLE, payload: null });
 
+    console.log('handleTableDrop вызвана для стола:', tableId);
+    console.log('draggedGroup:', state.draggedGroup);
+
     if (!state.draggedGroup) return;
 
-    const availableSeats = getAvailableSeats(tableId);
+    const availableSeatsCount = getAvailableSeats(tableId);
 
     if (state.draggedGroup.members.length === 0) {
       dispatch({ 
@@ -380,7 +387,7 @@ export const useTables = () => {
       return;
     }
 
-    if (availableSeats.length === 0) {
+    if (availableSeatsCount === 0) {
       dispatch({ 
         type: actions.SET_NOTIFICATION, 
         payload: {
@@ -391,13 +398,13 @@ export const useTables = () => {
       return;
     }
 
-    if (state.draggedGroup.members.length > availableSeats.length) {
+    if (state.draggedGroup.members.length > availableSeatsCount) {
       dispatch({
         type: actions.SET_PENDING_SEATING,
         payload: {
           groupId: state.draggedGroup.id,
           tableId: tableId,
-          availableSeats: availableSeats.length
+          availableSeats: availableSeatsCount
         }
       });
       dispatch({ type: actions.SET_SELECTED_MEMBERS, payload: [] });

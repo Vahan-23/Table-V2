@@ -3,6 +3,7 @@ import { useSeating } from './SeatingContext';
 import { useTranslations } from './useTranslations';
 import { useFileUpload } from './useFileUpload';
 import { useTables } from './useTables';
+import ImportJsonModal from './ImportJsonModal';
 
 const Header = () => {
   const { state, dispatch, actions } = useSeating();
@@ -135,6 +136,105 @@ const Header = () => {
                   maxWidth: '200px'
                 }}>{error}</div>}
               </div>
+
+              {/* Import Guests Button */}
+              <button
+                onClick={() => dispatch({ type: actions.SET_SHOW_IMPORT_JSON_MODAL, payload: true })}
+                style={{
+                  backgroundColor: '#9b59b6',
+                  color: 'white',
+                  border: '3px solid white',
+                  borderRadius: '8px',
+                  padding: '8px 16px',
+                  cursor: 'pointer',
+                  fontSize: '16px',
+                  fontWeight: 'bold',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  boxShadow: '0 4px 8px rgba(0,0,0,0.3)',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.transform = 'scale(1.05)';
+                  e.target.style.boxShadow = '0 6px 12px rgba(0,0,0,0.4)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.transform = 'scale(1)';
+                  e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.3)';
+                }}
+                title="Импорт гостей из JSON"
+              >
+                📥 {t('importGuests') || 'Импорт гостей'}
+              </button>
+
+              {/* Test Groups Button */}
+              <button
+                onClick={() => dispatch({ type: actions.CREATE_TEST_GROUPS })}
+                style={{
+                  backgroundColor: '#f39c12',
+                  color: 'white',
+                  border: '3px solid white',
+                  borderRadius: '8px',
+                  padding: '8px 16px',
+                  cursor: 'pointer',
+                  fontSize: '16px',
+                  fontWeight: 'bold',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  boxShadow: '0 4px 8px rgba(0,0,0,0.3)',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.transform = 'scale(1.05)';
+                  e.target.style.boxShadow = '0 6px 12px rgba(0,0,0,0.4)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.transform = 'scale(1)';
+                  e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.3)';
+                }}
+                title="Создать тестовые группы"
+              >
+                🧪 Тестовые группы
+              </button>
+
+              {/* Clear All Groups Button */}
+              {state.groups && state.groups.length > 0 && (
+                <button
+                  onClick={() => {
+                    if (window.confirm('Вы уверены, что хотите удалить все группы?')) {
+                      dispatch({ type: actions.CLEAR_ALL_GROUPS });
+                    }
+                  }}
+                  style={{
+                    backgroundColor: '#e74c3c',
+                    color: 'white',
+                    border: '3px solid white',
+                    borderRadius: '8px',
+                    padding: '8px 16px',
+                    cursor: 'pointer',
+                    fontSize: '16px',
+                    fontWeight: 'bold',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    boxShadow: '0 4px 8px rgba(0,0,0,0.3)',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.transform = 'scale(1.05)';
+                    e.target.style.boxShadow = '0 6px 12px rgba(0,0,0,0.4)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.transform = 'scale(1)';
+                    e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.3)';
+                  }}
+                  title="Удалить все группы"
+                >
+                  🗑️ Удалить все
+                </button>
+              )}
 
               {/* Statistics */}
               {state.groups && state.groups.length > 0 && (
@@ -861,6 +961,9 @@ const Header = () => {
           </div>
         </div>
       )}
+
+      {/* Import JSON Modal */}
+      <ImportJsonModal />
     </>
   );
 };
