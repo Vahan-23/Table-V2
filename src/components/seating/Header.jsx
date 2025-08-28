@@ -1,9 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useSeating } from './SeatingContext';
 import { useTranslations } from './useTranslations';
 import { useFileUpload } from './useFileUpload';
 import { useTables } from './useTables';
 import ImportJsonModal from './ImportJsonModal';
+import ExportToA5Modal from './ExportToA5Modal';
+import ExportToHDTemplateModal from './ExportToHDTemplateModal';
+import { useExportToA5 } from './useExportToA5';
+import { useExportToHDTemplate } from './useExportToHDTemplate';
 
 const Header = () => {
   const { state, dispatch, actions } = useSeating();
@@ -11,10 +15,52 @@ const Header = () => {
   const { isLoading, error, handleFileUpload } = useFileUpload();
   const { clearAllTables } = useTables();
   const { hallData, windowWidth, showMobileMenu, isBurgerOpen, showTableControls } = state;
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [showHDExportModal, setShowHDExportModal] = useState(false);
+  
+  // Добавляем хуки для экспорта
+  const { exportToTableDesignV2, exportToPDFTableDesignV2 } = useExportToA5();
+  const { exportToPDF: exportToHDTemplatePDF, exportToHTML: exportToHDTemplateHTML } = useExportToHDTemplate();
 
   const handleLanguageChange = () => {
     const newLanguage = language === 'ru' ? 'hy' : 'ru';
     dispatch({ type: actions.SET_LANGUAGE, payload: newLanguage });
+  };
+
+  const handleQuickExportTableDesignV2 = () => {
+    try {
+      exportToTableDesignV2();
+    } catch (error) {
+      console.error('Ошибка при быстром экспорте:', error);
+      alert('Ошибка при экспорте. Попробуйте использовать модальное окно экспорта.');
+    }
+  };
+
+  const handleQuickExportPDFTableDesignV2 = async () => {
+    try {
+      await exportToPDFTableDesignV2();
+    } catch (error) {
+      console.error('Ошибка при быстром экспорте PDF:', error);
+      alert('Ошибка при экспорте PDF. Попробуйте использовать модальное окно экспорта.');
+    }
+  };
+
+  const handleQuickExportHDTemplate = () => {
+    try {
+      exportToHDTemplateHTML();
+    } catch (error) {
+      console.error('Ошибка при быстром экспорте HD шаблона:', error);
+      alert('Ошибка при экспорте HD шаблона. Попробуйте использовать модальное окно экспорта.');
+    }
+  };
+
+  const handleQuickExportPDFHDTemplate = async () => {
+    try {
+      await exportToHDTemplatePDF();
+    } catch (error) {
+      console.error('Ошибка при быстром экспорте PDF HD шаблона:', error);
+      alert('Ошибка при экспорте PDF HD шаблона. Попробуйте использовать модальное окно экспорта.');
+    }
   };
 
   const toggleMobileMenu = () => {
@@ -54,7 +100,7 @@ const Header = () => {
          top: 0,
          left: 0,
          right: 0,
-         padding: '10px 15px',
+         padding: '8px 12px',
          backgroundColor: '#0a0a1d',
          color: 'white',
          boxShadow: '0 2px 10px rgba(0, 0, 0, 0.2)',
@@ -66,107 +112,108 @@ const Header = () => {
         {/* Desktop Header */}
         {windowWidth > 768 ? (
           <>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1 }}>
               <div style={{
-                fontSize: '20px',
+                fontSize: '18px',
                 fontWeight: 'bold',
                 whiteSpace: 'nowrap'
               }}>
                 {hallData?.name || t('guestSeating')}
               </div>
 
-              {/* Import button */}
-              <div className="import-container">
-                <input
-                  type="file"
-                  accept=".json"
-                  onChange={handleFileUpload}
-                  id="import-file"
-                  className="file-input"
-                  style={{ display: 'none' }}
-                />
-                <label
-                  htmlFor="import-file"
-                  className="import-button"
-                  style={{
-                    backgroundColor: '#3498db',
+              {/* Import buttons group */}
+              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                <div className="import-container">
+                  <input
+                    type="file"
+                    accept=".json"
+                    onChange={handleFileUpload}
+                    id="import-file"
+                    className="file-input"
+                    style={{ display: 'none' }}
+                  />
+                  <label
+                    htmlFor="import-file"
+                    className="import-button"
+                    style={{
+                      backgroundColor: '#3498db',
+                      color: 'white',
+                      border: '2px solid white',
+                      borderRadius: '6px',
+                      padding: '6px 12px',
+                      cursor: 'pointer',
+                      fontSize: '13px',
+                      fontWeight: 'bold',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.transform = 'scale(1.05)';
+                      e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.4)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.transform = 'scale(1)';
+                      e.target.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
+                    }}
+                  >
+                    📁 {t('loadPlan')}
+                  </label>
+                  {isLoading && <div style={{
+                    position: 'absolute',
+                    top: '60px',
+                    left: '0',
                     color: 'white',
-                    border: '3px solid white',
-                    borderRadius: '8px',
-                    padding: '8px 16px',
+                    fontSize: '11px',
+                    backgroundColor: 'rgba(0,0,0,0.8)',
+                    padding: '4px 8px',
+                    borderRadius: '4px'
+                  }}>{t('loading')}</div>}
+                  {error && <div style={{
+                    position: 'absolute',
+                    top: '60px',
+                    left: '0',
+                    color: '#ff6b6b',
+                    fontSize: '11px',
+                    backgroundColor: 'rgba(0,0,0,0.8)',
+                    padding: '4px 8px',
+                    borderRadius: '4px',
+                    maxWidth: '180px'
+                  }}>{error}</div>}
+                </div>
+
+                <button
+                  onClick={() => dispatch({ type: actions.SET_SHOW_IMPORT_JSON_MODAL, payload: true })}
+                  style={{
+                    backgroundColor: '#9b59b6',
+                    color: 'white',
+                    border: '2px solid white',
+                    borderRadius: '6px',
+                    padding: '6px 12px',
                     cursor: 'pointer',
-                    fontSize: '16px',
+                    fontSize: '13px',
                     fontWeight: 'bold',
                     display: 'inline-flex',
                     alignItems: 'center',
-                    gap: '5px',
-                    boxShadow: '0 4px 8px rgba(0,0,0,0.3)',
+                    gap: '4px',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
                     transition: 'all 0.2s'
                   }}
                   onMouseEnter={(e) => {
                     e.target.style.transform = 'scale(1.05)';
-                    e.target.style.boxShadow = '0 6px 12px rgba(0,0,0,0.4)';
+                    e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.4)';
                   }}
                   onMouseLeave={(e) => {
                     e.target.style.transform = 'scale(1)';
-                    e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.3)';
+                    e.target.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
                   }}
+                  title="Импорт гостей из JSON"
                 >
-                  📁 {t('loadPlan')}
-                </label>
-                {isLoading && <div style={{
-                  position: 'absolute',
-                  top: '70px',
-                  left: '0',
-                  color: 'white',
-                  fontSize: '12px',
-                  backgroundColor: 'rgba(0,0,0,0.8)',
-                  padding: '5px 10px',
-                  borderRadius: '4px'
-                }}>{t('loading')}</div>}
-                {error && <div style={{
-                  position: 'absolute',
-                  top: '70px',
-                  left: '0',
-                  color: '#ff6b6b',
-                  fontSize: '12px',
-                  backgroundColor: 'rgba(0,0,0,0.8)',
-                  padding: '5px 10px',
-                  borderRadius: '4px',
-                  maxWidth: '200px'
-                }}>{error}</div>}
+                  📥 Гости
+                </button>
               </div>
-
-              {/* Import Guests Button */}
-              <button
-                onClick={() => dispatch({ type: actions.SET_SHOW_IMPORT_JSON_MODAL, payload: true })}
-                style={{
-                  backgroundColor: '#9b59b6',
-                  color: 'white',
-                  border: '3px solid white',
-                  borderRadius: '8px',
-                  padding: '8px 16px',
-                  cursor: 'pointer',
-                  fontSize: '16px',
-                  fontWeight: 'bold',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '5px',
-                  boxShadow: '0 4px 8px rgba(0,0,0,0.3)',
-                  transition: 'all 0.2s'
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.transform = 'scale(1.05)';
-                  e.target.style.boxShadow = '0 6px 12px rgba(0,0,0,0.4)';
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.transform = 'scale(1)';
-                  e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.3)';
-                }}
-                title="Импорт гостей из JSON"
-              >
-                📥 {t('importGuests') || 'Импорт гостей'}
-              </button>
 
               {/* Test Groups Button */}
               <button
@@ -174,29 +221,29 @@ const Header = () => {
                 style={{
                   backgroundColor: '#f39c12',
                   color: 'white',
-                  border: '3px solid white',
-                  borderRadius: '8px',
-                  padding: '8px 16px',
+                  border: '2px solid white',
+                  borderRadius: '6px',
+                  padding: '6px 12px',
                   cursor: 'pointer',
-                  fontSize: '16px',
+                  fontSize: '13px',
                   fontWeight: 'bold',
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '5px',
-                  boxShadow: '0 4px 8px rgba(0,0,0,0.3)',
+                  gap: '4px',
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
                   transition: 'all 0.2s'
                 }}
                 onMouseEnter={(e) => {
                   e.target.style.transform = 'scale(1.05)';
-                  e.target.style.boxShadow = '0 6px 12px rgba(0,0,0,0.4)';
+                  e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.4)';
                 }}
                 onMouseLeave={(e) => {
                   e.target.style.transform = 'scale(1)';
-                  e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.3)';
+                  e.target.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
                 }}
                 title="Создать тестовые группы"
               >
-                🧪 Тестовые группы
+                🧪 Тест
               </button>
 
               {/* Clear All Groups Button */}
@@ -210,30 +257,243 @@ const Header = () => {
                   style={{
                     backgroundColor: '#e74c3c',
                     color: 'white',
-                    border: '3px solid white',
-                    borderRadius: '8px',
-                    padding: '8px 16px',
+                    border: '2px solid white',
+                    borderRadius: '6px',
+                    padding: '6px 12px',
                     cursor: 'pointer',
-                    fontSize: '16px',
+                    fontSize: '13px',
                     fontWeight: 'bold',
                     display: 'inline-flex',
                     alignItems: 'center',
-                    gap: '5px',
-                    boxShadow: '0 4px 8px rgba(0,0,0,0.3)',
+                    gap: '4px',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
                     transition: 'all 0.2s'
                   }}
                   onMouseEnter={(e) => {
                     e.target.style.transform = 'scale(1.05)';
-                    e.target.style.boxShadow = '0 6px 12px rgba(0,0,0,0.4)';
+                    e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.4)';
                   }}
                   onMouseLeave={(e) => {
                     e.target.style.transform = 'scale(1)';
-                    e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.3)';
+                    e.target.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
                   }}
                   title="Удалить все группы"
                 >
-                  🗑️ Удалить все
+                  🗑️ Группы
                 </button>
+              )}
+
+              {/* Export buttons group */}
+              {hallData && (
+                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                  <button
+                    onClick={() => setShowExportModal(true)}
+                    style={{
+                      backgroundColor: '#648767',
+                      color: 'white',
+                      border: '2px solid white',
+                      borderRadius: '6px',
+                      padding: '6px 12px',
+                      cursor: 'pointer',
+                      fontSize: '13px',
+                      fontWeight: 'bold',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.transform = 'scale(1.05)';
+                      e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.4)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.transform = 'scale(1)';
+                      e.target.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
+                    }}
+                    title="Экспорт в A5"
+                  >
+                    📄 A5
+                  </button>
+                  
+                  <button
+                    onClick={() => setShowHDExportModal(true)}
+                    style={{
+                      backgroundColor: '#9b59b6',
+                      color: 'white',
+                      border: '2px solid white',
+                      borderRadius: '6px',
+                      padding: '6px 12px',
+                      cursor: 'pointer',
+                      fontSize: '13px',
+                      fontWeight: 'bold',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.transform = 'scale(1.05)';
+                      e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.4)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.transform = 'scale(1)';
+                      e.target.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
+                    }}
+                    title="Экспорт HD шаблона"
+                  >
+                    🌸 HD
+                  </button>
+                  
+                  <button
+                    onClick={handleQuickExportTableDesignV2}
+                    disabled={!hallData?.tables?.some(table => table.people?.some(person => person))}
+                    style={{
+                      backgroundColor: hallData?.tables?.some(table => table.people?.some(person => person)) ? '#e67e22' : '#95a5a6',
+                      color: 'white',
+                      border: '2px solid white',
+                      borderRadius: '6px',
+                      padding: '6px 10px',
+                      cursor: hallData?.tables?.some(table => table.people?.some(person => person)) ? 'pointer' : 'not-allowed',
+                      fontSize: '12px',
+                      fontWeight: 'bold',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+                      transition: 'all 0.2s',
+                      opacity: hallData?.tables?.some(table => table.people?.some(person => person)) ? 1 : 0.5
+                    }}
+                    onMouseEnter={(e) => {
+                      if (hallData?.tables?.some(table => table.people?.some(person => person))) {
+                        e.target.style.transform = 'scale(1.05)';
+                        e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.4)';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.transform = 'scale(1)';
+                      e.target.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
+                    }}
+                    title={hallData?.tables?.some(table => table.people?.some(person => person)) 
+                      ? "Быстрый экспорт по шаблону A5" 
+                      : "Нет данных для экспорта"
+                    }
+                  >
+                    🎨 A5
+                  </button>
+
+                  <button
+                    onClick={handleQuickExportPDFTableDesignV2}
+                    disabled={!hallData?.tables?.some(table => table.people?.some(person => person))}
+                    style={{
+                      backgroundColor: hallData?.tables?.some(table => table.people?.some(person => person)) ? '#e74c3c' : '#95a5a6',
+                      color: 'white',
+                      border: '2px solid white',
+                      borderRadius: '6px',
+                      padding: '6px 10px',
+                      cursor: hallData?.tables?.some(table => table.people?.some(person => person)) ? 'pointer' : 'not-allowed',
+                      fontSize: '12px',
+                      fontWeight: 'bold',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+                      transition: 'all 0.2s',
+                      opacity: hallData?.tables?.some(table => table.people?.some(person => person)) ? 1 : 0.5
+                    }}
+                    onMouseEnter={(e) => {
+                      if (hallData?.tables?.some(table => table.people?.some(person => person))) {
+                        e.target.style.transform = 'scale(1.05)';
+                        e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.4)';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.transform = 'scale(1)';
+                      e.target.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
+                    }}
+                    title={hallData?.tables?.some(table => table.people?.some(person => person)) 
+                      ? "Быстрый экспорт PDF по шаблону A5" 
+                      : "Нет данных для экспорта"
+                    }
+                  >
+                    📄 PDF
+                  </button>
+
+                  <button
+                    onClick={handleQuickExportHDTemplate}
+                    disabled={!hallData?.tables?.some(table => table.people?.some(person => person))}
+                    style={{
+                      backgroundColor: hallData?.tables?.some(table => table.people?.some(person => person)) ? '#9b59b6' : '#95a5a6',
+                      color: 'white',
+                      border: '2px solid white',
+                      borderRadius: '6px',
+                      padding: '6px 10px',
+                      cursor: hallData?.tables?.some(table => table.people?.some(person => person)) ? 'pointer' : 'not-allowed',
+                      fontSize: '12px',
+                      fontWeight: 'bold',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+                      transition: 'all 0.2s',
+                      opacity: hallData?.tables?.some(table => table.people?.some(person => person)) ? 1 : 0.5
+                    }}
+                    onMouseEnter={(e) => {
+                      if (hallData?.tables?.some(table => table.people?.some(person => person))) {
+                        e.target.style.transform = 'scale(1.05)';
+                        e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.4)';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.transform = 'scale(1)';
+                      e.target.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
+                    }}
+                    title={hallData?.tables?.some(table => table.people?.some(person => person)) 
+                      ? "Быстрый экспорт HD шаблона" 
+                      : "Нет данных для экспорта"
+                    }
+                  >
+                    🌸 HD
+                  </button>
+
+                  <button
+                    onClick={handleQuickExportPDFHDTemplate}
+                    disabled={!hallData?.tables?.some(table => table.people?.some(person => person))}
+                    style={{
+                      backgroundColor: hallData?.tables?.some(table => table.people?.some(person => person)) ? '#8e44ad' : '#95a5a6',
+                      color: 'white',
+                      border: '2px solid white',
+                      borderRadius: '6px',
+                      padding: '6px 10px',
+                      cursor: hallData?.tables?.some(table => table.people?.some(person => person)) ? 'pointer' : 'not-allowed',
+                      fontSize: '12px',
+                      fontWeight: 'bold',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+                      transition: 'all 0.2s',
+                      opacity: hallData?.tables?.some(table => table.people?.some(person => person)) ? 1 : 0.5
+                    }}
+                    onMouseEnter={(e) => {
+                      if (hallData?.tables?.some(table => table.people?.some(person => person))) {
+                        e.target.style.transform = 'scale(1.05)';
+                        e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.4)';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.transform = 'scale(1)';
+                      e.target.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
+                    }}
+                    title={hallData?.tables?.some(table => table.people?.some(person => person)) 
+                      ? "Быстрый экспорт PDF HD шаблона" 
+                      : "Нет данных для экспорта"
+                    }
+                  >
+                    📄 PDF
+                  </button>
+                </div>
               )}
 
               {/* Statistics */}
@@ -241,11 +501,11 @@ const Header = () => {
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '8px',
-                  fontSize: '12px',
+                  gap: '6px',
+                  fontSize: '11px',
                   backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                  padding: '6px 12px',
-                  borderRadius: '6px',
+                  padding: '4px 8px',
+                  borderRadius: '4px',
                   border: '1px solid rgba(255, 255, 255, 0.2)'
                 }}>
                   <span style={{ color: '#3498db', fontWeight: 'bold' }}>
@@ -257,147 +517,148 @@ const Header = () => {
                       return total + (table.people?.filter(person => person).length || 0);
                     }, 0) || 0}
                   </span>
-                  <span style={{ color: '#95a5a6', fontSize: '10px' }}>
+                  <span style={{ color: '#95a5a6', fontSize: '9px' }}>
                     {t('people')}
                   </span>
                 </div>
               )}
             </div>
 
-            {/* Table Controls Button */}
-            {hallData && (
-              <button
-                onClick={toggleTableControls}
-                style={{
-                  backgroundColor: showTableControls ? '#e74c3c' : '#2ecc71',
-                  color: 'white',
-                  border: '3px solid white',
-                  borderRadius: '8px',
-                  padding: '8px 12px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: 'bold',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '5px',
-                  transition: 'all 0.2s',
-                  boxShadow: '0 4px 8px rgba(0,0,0,0.3)'
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.transform = 'scale(1.05)';
-                  e.target.style.boxShadow = '0 6px 12px rgba(0,0,0,0.4)';
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.transform = 'scale(1)';
-                  e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.3)';
-                }}
-                title={showTableControls ? t('hideTableControls') : t('showTableControls')}
-              >
-                {showTableControls ? '🔴' : '🟢'} {showTableControls ? t('hideTableControls') : t('tableControls')}
-              </button>
-            )}
+            {/* Right side controls */}
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              {/* Table Controls Button */}
+              {hallData && (
+                <button
+                  onClick={toggleTableControls}
+                  style={{
+                    backgroundColor: showTableControls ? '#e74c3c' : '#2ecc71',
+                    color: 'white',
+                    border: '2px solid white',
+                    borderRadius: '6px',
+                    padding: '6px 10px',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    fontWeight: 'bold',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    transition: 'all 0.2s',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.3)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.transform = 'scale(1.05)';
+                    e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.4)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.transform = 'scale(1)';
+                    e.target.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
+                  }}
+                  title={showTableControls ? t('hideTableControls') : t('showTableControls')}
+                >
+                  {showTableControls ? '🔴' : '🟢'} {showTableControls ? t('hideTableControls') : t('tableControls')}
+                </button>
+              )}
 
-            {/* Statistics Toggle Button */}
-            {state.groups && state.groups.length > 0 && (
-              <button
-                onClick={toggleStatistics}
-                style={{
-                  backgroundColor: state.showStatistics ? '#e74c3c' : '#2ecc71',
-                  color: 'white',
-                  border: '3px solid white',
-                  borderRadius: '8px',
-                  padding: '8px 12px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: 'bold',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '5px',
-                  transition: 'all 0.2s',
-                  boxShadow: '0 4px 8px rgba(0,0,0,0.3)'
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.transform = 'scale(1.05)';
-                  e.target.style.boxShadow = '0 6px 12px rgba(0,0,0,0.4)';
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.transform = 'scale(1)';
-                  e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.3)';
-                }}
-                title={state.showStatistics ? t('hideStatistics') : t('showStatistics')}
-              >
-                📊 {state.showStatistics ? t('hideStatistics') : t('showStatistics')}
-              </button>
-            )}
+              {/* Statistics Toggle Button */}
+              {state.groups && state.groups.length > 0 && (
+                <button
+                  onClick={toggleStatistics}
+                  style={{
+                    backgroundColor: state.showStatistics ? '#e74c3c' : '#2ecc71',
+                    color: 'white',
+                    border: '2px solid white',
+                    borderRadius: '6px',
+                    padding: '6px 10px',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    fontWeight: 'bold',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    transition: 'all 0.2s',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.3)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.transform = 'scale(1.05)';
+                    e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.4)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.transform = 'scale(1)';
+                    e.target.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
+                  }}
+                  title={state.showStatistics ? t('hideStatistics') : t('showStatistics')}
+                >
+                  📊 {state.showStatistics ? t('hideStatistics') : t('showStatistics')}
+                </button>
+              )}
 
-            {/* Groups Panel Toggle Button */}
-            {state.groups && state.groups.length > 0 && (
-              <button
-                onClick={toggleGroupsPanel}
-                style={{
-                  backgroundColor: state.showGroupsPanel ? '#e74c3c' : '#2ecc71',
-                  color: 'white',
-                  border: '3px solid white',
-                  borderRadius: '8px',
-                  padding: '8px 12px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: 'bold',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '5px',
-                  transition: 'all 0.2s',
-                  boxShadow: '0 4px 8px rgba(0,0,0,0.3)'
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.transform = 'scale(1.05)';
-                  e.target.style.boxShadow = '0 6px 12px rgba(0,0,0,0.4)';
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.transform = 'scale(1)';
-                  e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.3)';
-                }}
-                title={state.showGroupsPanel ? t('hideGroups') : t('showGroups')}
-              >
-                👥 {state.showGroupsPanel ? t('hideGroups') : t('showGroups')}
-              </button>
-            )}
+              {/* Groups Panel Toggle Button */}
+              {state.groups && state.groups.length > 0 && (
+                <button
+                  onClick={toggleGroupsPanel}
+                  style={{
+                    backgroundColor: state.showGroupsPanel ? '#e74c3c' : '#2ecc71',
+                    color: 'white',
+                    border: '2px solid white',
+                    borderRadius: '6px',
+                    padding: '6px 10px',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    fontWeight: 'bold',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    transition: 'all 0.2s',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.3)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.transform = 'scale(1.05)';
+                    e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.4)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.transform = 'scale(1)';
+                    e.target.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
+                  }}
+                  title={state.showGroupsPanel ? t('hideGroups') : t('showGroups')}
+                >
+                  👥 {state.showGroupsPanel ? t('hideGroups') : t('showGroups')}
+                </button>
+              )}
 
-            {/* Clear All Tables Button */}
-            {hallData && (
-              <button
-                onClick={handleClearAllTables}
-                style={{
-                  backgroundColor: '#e74c3c',
-                  color: 'white',
-                  border: '3px solid white',
-                  borderRadius: '8px',
-                  padding: '8px 12px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: 'bold',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '5px',
-                  transition: 'all 0.2s',
-                  boxShadow: '0 4px 8px rgba(0,0,0,0.3)'
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.transform = 'scale(1.05)';
-                  e.target.style.boxShadow = '0 6px 12px rgba(0,0,0,0.4)';
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.transform = 'scale(1)';
-                  e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.3)';
-                }}
-                title={t('clearAllTables')}
-              >
-                🗑️ {t('clearAllTables')}
-              </button>
-            )}
+              {/* Clear All Tables Button */}
+              {hallData && (
+                <button
+                  onClick={handleClearAllTables}
+                  style={{
+                    backgroundColor: '#e74c3c',
+                    color: 'white',
+                    border: '2px solid white',
+                    borderRadius: '6px',
+                    padding: '6px 10px',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    fontWeight: 'bold',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    transition: 'all 0.2s',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.3)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.transform = 'scale(1.05)';
+                    e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.4)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.transform = 'scale(1)';
+                    e.target.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
+                  }}
+                  title={t('clearAllTables')}
+                >
+                  🗑️ {t('clearAllTables')}
+                </button>
+              )}
 
-            {/* Language switcher */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              {/* Language switcher */}
               <button
                 onClick={handleLanguageChange}
                 style={{
@@ -407,29 +668,29 @@ const Header = () => {
                   backgroundSize: 'cover',
                   backgroundPosition: 'center',
                   color: 'white',
-                  border: '3px solid white',
-                  borderRadius: '8px',
-                  padding: '10px 15px',
+                  border: '2px solid white',
+                  borderRadius: '6px',
+                  padding: '8px 12px',
                   cursor: 'pointer',
-                  fontSize: '16px',
+                  fontSize: '14px',
                   fontWeight: 'bold',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '8px',
+                  gap: '6px',
                   transition: 'all 0.3s ease',
-                  boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
-                  minWidth: '110px',
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
+                  minWidth: '90px',
                   justifyContent: 'center',
                   position: 'relative',
                   overflow: 'hidden',
                 }}
                 onMouseEnter={(e) => {
                   e.target.style.transform = 'scale(1.05)';
-                  e.target.style.boxShadow = '0 6px 12px rgba(0,0,0,0.3)';
+                  e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.3)';
                 }}
                 onMouseLeave={(e) => {
                   e.target.style.transform = 'scale(1)';
-                  e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.2)';
+                  e.target.style.boxShadow = '0 2px 6px rgba(0,0,0,0.2)';
                 }}
               >
                 <span style={{
@@ -942,6 +1203,232 @@ const Header = () => {
                </div>
              )}
 
+             {/* Quick Export Button - Mobile */}
+             {hallData && (
+               <div style={{ marginBottom: '15px' }}>
+                 <h3 style={{
+                   margin: '0 0 8px 0',
+                   color: 'white',
+                   fontSize: '14px',
+                   display: 'flex',
+                   alignItems: 'center',
+                   gap: '6px'
+                 }}>
+                   🎨 {t('exportTableDesignV2') || 'Шаблон A5'}
+                 </h3>
+                 <button
+                   onClick={() => {
+                     handleQuickExportTableDesignV2();
+                     closeMobileMenu();
+                   }}
+                   disabled={!hallData?.tables?.some(table => table.people?.some(person => person))}
+                   style={{
+                     width: '100%',
+                     padding: '8px',
+                     backgroundColor: hallData?.tables?.some(table => table.people?.some(person => person)) ? '#e67e22' : '#95a5a6',
+                     color: 'white',
+                     border: '1px solid rgba(255,255,255,0.3)',
+                     borderRadius: '6px',
+                     cursor: hallData?.tables?.some(table => table.people?.some(person => person)) ? 'pointer' : 'not-allowed',
+                     fontSize: '12px',
+                     fontWeight: 'bold',
+                     transition: 'all 0.2s ease',
+                     opacity: hallData?.tables?.some(table => table.people?.some(person => person)) ? 1 : 0.5
+                   }}
+                   onTouchStart={(e) => {
+                     if (hallData?.tables?.some(table => table.people?.some(person => person))) {
+                       e.target.style.transform = 'scale(0.95)';
+                     }
+                   }}
+                   onTouchEnd={(e) => {
+                     e.target.style.transform = 'scale(1)';
+                   }}
+                 >
+                   🎨 {t('exportTableDesignV2') || 'Шаблон A5'}
+                 </button>
+               </div>
+             )}
+
+             {/* Quick Export PDF Button - Mobile */}
+             {hallData && (
+               <div style={{ marginBottom: '15px' }}>
+                 <h3 style={{
+                   margin: '0 0 8px 0',
+                   color: 'white',
+                   fontSize: '14px',
+                   display: 'flex',
+                   alignItems: 'center',
+                   gap: '6px'
+                 }}>
+                   📄 {t('exportPDFTableDesignV2') || 'Шаблон A5 (PDF)'}
+                 </h3>
+                 <button
+                   onClick={() => {
+                     handleQuickExportPDFTableDesignV2();
+                     closeMobileMenu();
+                   }}
+                   disabled={!hallData?.tables?.some(table => table.people?.some(person => person))}
+                   style={{
+                     width: '100%',
+                     padding: '8px',
+                     backgroundColor: hallData?.tables?.some(table => table.people?.some(person => person)) ? '#e74c3c' : '#95a5a6',
+                     color: 'white',
+                     border: '1px solid rgba(255,255,255,0.3)',
+                     borderRadius: '6px',
+                     cursor: hallData?.tables?.some(table => table.people?.some(person => person)) ? 'pointer' : 'not-allowed',
+                     fontSize: '12px',
+                     fontWeight: 'bold',
+                     transition: 'all 0.2s ease',
+                     opacity: hallData?.tables?.some(table => table.people?.some(person => person)) ? 1 : 0.5
+                   }}
+                   onTouchStart={(e) => {
+                     if (hallData?.tables?.some(table => table.people?.some(person => person))) {
+                       e.target.style.transform = 'scale(0.95)';
+                     }
+                   }}
+                   onTouchEnd={(e) => {
+                     e.target.style.transform = 'scale(1)';
+                   }}
+                 >
+                   📄 {t('exportPDFTableDesignV2') || 'Шаблон A5 (PDF)'}
+                 </button>
+               </div>
+             )}
+
+             {/* Quick Export HD Template Button - Mobile */}
+             {hallData && (
+               <div style={{ marginBottom: '15px' }}>
+                 <h3 style={{
+                   margin: '0 0 8px 0',
+                   color: 'white',
+                   fontSize: '14px',
+                   display: 'flex',
+                   alignItems: 'center',
+                   gap: '6px'
+                 }}>
+                   🌸 HD Шаблон
+                 </h3>
+                 <button
+                   onClick={() => {
+                     handleQuickExportHDTemplate();
+                     closeMobileMenu();
+                   }}
+                   disabled={!hallData?.tables?.some(table => table.people?.some(person => person))}
+                   style={{
+                     width: '100%',
+                     padding: '8px',
+                     backgroundColor: hallData?.tables?.some(table => table.people?.some(person => person)) ? '#9b59b6' : '#95a5a6',
+                     color: 'white',
+                     border: '1px solid rgba(255,255,255,0.3)',
+                     borderRadius: '6px',
+                     cursor: hallData?.tables?.some(table => table.people?.some(person => person)) ? 'pointer' : 'not-allowed',
+                     fontSize: '12px',
+                     fontWeight: 'bold',
+                     transition: 'all 0.2s ease',
+                     opacity: hallData?.tables?.some(table => table.people?.some(person => person)) ? 1 : 0.5
+                   }}
+                   onTouchStart={(e) => {
+                     if (hallData?.tables?.some(table => table.people?.some(person => person))) {
+                       e.target.style.transform = 'scale(0.95)';
+                     }
+                   }}
+                   onTouchEnd={(e) => {
+                     e.target.style.transform = 'scale(1)';
+                   }}
+                 >
+                   🌸 HD Шаблон
+                 </button>
+               </div>
+             )}
+
+             {/* Quick Export PDF HD Template Button - Mobile */}
+             {hallData && (
+               <div style={{ marginBottom: '15px' }}>
+                 <h3 style={{
+                   margin: '0 0 8px 0',
+                   color: 'white',
+                   fontSize: '14px',
+                   display: 'flex',
+                   alignItems: 'center',
+                   gap: '6px'
+                 }}>
+                   📄 PDF HD Шаблон
+                 </h3>
+                 <button
+                   onClick={() => {
+                     handleQuickExportPDFHDTemplate();
+                     closeMobileMenu();
+                   }}
+                   disabled={!hallData?.tables?.some(table => table.people?.some(person => person))}
+                   style={{
+                     width: '100%',
+                     padding: '8px',
+                     backgroundColor: hallData?.tables?.some(table => table.people?.some(person => person)) ? '#8e44ad' : '#95a5a6',
+                     color: 'white',
+                     border: '1px solid rgba(255,255,255,0.3)',
+                     borderRadius: '6px',
+                     cursor: hallData?.tables?.some(table => table.people?.some(person => person)) ? 'pointer' : 'not-allowed',
+                     fontSize: '12px',
+                     fontWeight: 'bold',
+                     transition: 'all 0.2s ease',
+                     opacity: hallData?.tables?.some(table => table.people?.some(person => person)) ? 1 : 0.5
+                   }}
+                   onTouchStart={(e) => {
+                     if (hallData?.tables?.some(table => table.people?.some(person => person))) {
+                       e.target.style.transform = 'scale(0.95)';
+                     }
+                   }}
+                   onTouchEnd={(e) => {
+                     e.target.style.transform = 'scale(1)';
+                   }}
+                 >
+                   📄 PDF HD Шаблон
+                 </button>
+               </div>
+             )}
+
+             {/* Export Modal Button - Mobile */}
+             {hallData && (
+               <div style={{ marginBottom: '15px' }}>
+                 <h3 style={{
+                   margin: '0 0 8px 0',
+                   color: 'white',
+                   fontSize: '14px',
+                   display: 'flex',
+                   alignItems: 'center',
+                   gap: '6px'
+                 }}>
+                   📄 {t('exportToA5') || 'Экспорт в A5'}
+                 </h3>
+                 <button
+                   onClick={() => {
+                     setShowExportModal(true);
+                     closeMobileMenu();
+                   }}
+                   style={{
+                     width: '100%',
+                     padding: '8px',
+                     backgroundColor: '#648767',
+                     color: 'white',
+                     border: '1px solid rgba(255,255,255,0.3)',
+                     borderRadius: '6px',
+                     cursor: 'pointer',
+                     fontSize: '12px',
+                     fontWeight: 'bold',
+                     transition: 'all 0.2s ease'
+                   }}
+                   onTouchStart={(e) => {
+                     e.target.style.transform = 'scale(0.95)';
+                   }}
+                   onTouchEnd={(e) => {
+                     e.target.style.transform = 'scale(1)';
+                   }}
+                 >
+                   📄 {t('exportToA5') || 'Экспорт в A5'}
+                 </button>
+               </div>
+             )}
+
              <button
                onClick={closeMobileMenu}
                style={{
@@ -964,6 +1451,18 @@ const Header = () => {
 
       {/* Import JSON Modal */}
       <ImportJsonModal />
+      
+      {/* Export to A5 Modal */}
+      <ExportToA5Modal 
+        isOpen={showExportModal} 
+        onClose={() => setShowExportModal(false)} 
+      />
+      
+      {/* Export to HD Template Modal */}
+      <ExportToHDTemplateModal 
+        isOpen={showHDExportModal} 
+        onClose={() => setShowHDExportModal(false)} 
+      />
     </>
   );
 };

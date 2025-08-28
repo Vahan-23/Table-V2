@@ -248,7 +248,26 @@ const translations = {
                 allPeopleUsed: 'Все люди уже рассажены',
                 selectPeopleForSeating: 'Выберите людей для рассадки',
     seatSelectedPeople: 'Рассадить выбранных',
-    willNotFit: 'не поместится'
+    willNotFit: 'не поместится',
+    
+    // Export to A5
+    exportToA5: 'Экспорт в A5',
+    exportToA4: 'Экспорт в A4',
+    exportTableDesignV2: 'Шаблон A5',
+    exportPDFTableDesignV2: 'Шаблон A5 (PDF)',
+    noTablesToExport: 'Нет столов для экспорта',
+    exportHint: 'Добавьте гостей за столы для экспорта',
+    preview: 'Предпросмотр',
+    exportOptions: 'Настройки экспорта',
+    pdfDescription: 'Для печати и отправки',
+    htmlDescription: 'Для веб-просмотра',
+    export: 'Экспорт',
+    exporting: 'Экспорт...',
+    print: 'Печать',
+    totalTables: 'Всего столов',
+    totalGuests: 'Всего гостей',
+    moreTables: 'столов',
+    exportError: 'Ошибка при экспорте'
   },
   hy: {
     // Header
@@ -499,7 +518,26 @@ const translations = {
     peopleReturnedToGroups: 'Վերադարձվել է {count} մարդ իրենց խմբերը',
                 allTablesCleared: 'Բոլոր սեղանները մաքրված են',
     seatSelectedPeople: 'Տեղադրել ընտրվածներին',
-    willNotFit: 'չի տեղավորվի'
+    willNotFit: 'չի տեղավորվի',
+    
+    // Export to A5
+    exportToA5: 'A5-ի արտահանում',
+    exportToA4: 'A4-ի արտահանում',
+    exportTableDesignV2: 'A5 շարահյուսություն',
+    exportPDFTableDesignV2: 'A5 շարահյուսություն (PDF)',
+    noTablesToExport: 'Արտահանման համար սեղաններ չկան',
+    exportHint: 'Ավելացրեք հյուրեր սեղանների մոտ արտահանման համար',
+    preview: 'Նախադիտում',
+    exportOptions: 'Արտահանման ընտրանքներ',
+    pdfDescription: 'Տպագրության և ուղարկման համար',
+    htmlDescription: 'Վեբ դիտման համար',
+    export: 'Արտահանում',
+    exporting: 'Արտահանում...',
+    print: 'Տպագրություն',
+    totalTables: 'Ընդամենը սեղաններ',
+    totalGuests: 'Ընդամենը հյուրեր',
+    moreTables: 'սեղաններ',
+    exportError: 'Սխալ արտահանման ժամանակ'
   }
 };
 
