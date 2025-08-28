@@ -1,6 +1,39 @@
-# Getting Started with Create React App
+# Table-V2 Seating Application
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+
+## Environment Configuration
+
+### Backend API Configuration
+
+The seating data persistence can be configured to use a backend API by setting the `REACT_APP_API_BASE_URL` environment variable.
+
+Create a `.env` file in the project root:
+
+```bash
+# Backend API Base URL
+REACT_APP_API_BASE_URL=http://localhost:3001
+
+# Public Path for static assets (optional)
+REACT_APP_PUBLIC_PATH=/test/seating/
+```
+
+**Backend API Examples:**
+- Local development: `REACT_APP_API_BASE_URL=http://localhost:3001`
+- Production: `REACT_APP_API_BASE_URL=https://api.yourdomain.com`
+- Same domain (relative URLs): Leave empty or don't set the variable
+
+**Public Path Examples:**
+- Subdirectory deployment: `REACT_APP_PUBLIC_PATH=/my-app/`
+- Root deployment: `REACT_APP_PUBLIC_PATH=/`
+- Default (if not set): `/test/seating/`
+
+**Required API Endpoints:**
+- `GET /api/named_value?name=<key>` - Load persisted data
+- `PUT /api/named_value` - Save persisted data (body: `{name, value}`)
+- `DELETE /api/named_value` - Remove persisted data (body: `{name}`)
+
+If the backend is unavailable or the user is not authenticated, the application will automatically fall back to localStorage.
 
 ## Available Scripts
 

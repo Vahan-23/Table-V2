@@ -1,5 +1,6 @@
 import { useCallback, useMemo } from 'react';
 import { useSeating, TEST_PEOPLE } from './SeatingContext';
+import persistentStorage from './persistentStorage';
 
 export const useGroups = () => {
   const { state, dispatch, actions } = useSeating();
@@ -129,9 +130,9 @@ export const useGroups = () => {
 
     dispatch({ type: actions.ADD_GROUP, payload: newGroup });
     
-    // Сохранение в localStorage
+    // Сохранение в backend/localStorage
     const updatedGroups = [...groups, newGroup];
-    localStorage.setItem('seatingGroups', JSON.stringify(updatedGroups));
+    persistentStorage.save('seatingGroups', updatedGroups);
   }, [groups, dispatch, actions]);
 
   // Обновление группы
@@ -144,11 +145,11 @@ export const useGroups = () => {
     
     dispatch({ type: actions.UPDATE_GROUP, payload: updatedGroup });
     
-    // Сохранение в localStorage
+    // Сохранение в backend/localStorage
     const updatedGroups = groups.map(group =>
       group.id === groupId ? { ...group, name: groupName, members: groupMembers } : group
     );
-    localStorage.setItem('seatingGroups', JSON.stringify(updatedGroups));
+    persistentStorage.save('seatingGroups', updatedGroups);
   }, [groups, dispatch, actions]);
 
   // Удаление группы
@@ -186,12 +187,12 @@ export const useGroups = () => {
       };
 
       dispatch({ type: actions.SET_HALL_DATA, payload: updatedHallData });
-      localStorage.setItem('hallData', JSON.stringify(updatedHallData));
+      persistentStorage.save('hallData', updatedHallData);
     }
 
-    // Сохранение в localStorage
+    // Сохранение в backend/localStorage
     const updatedGroups = groups.filter(g => g.id !== groupId);
-    localStorage.setItem('seatingGroups', JSON.stringify(updatedGroups));
+    persistentStorage.save('seatingGroups', updatedGroups);
   }, [groups, hallData, usedPeople, dispatch, actions]);
 
   // Освобождение группы
@@ -229,7 +230,7 @@ export const useGroups = () => {
     };
 
     dispatch({ type: actions.SET_HALL_DATA, payload: updatedHallData });
-    localStorage.setItem('hallData', JSON.stringify(updatedHallData));
+    persistentStorage.save('hallData', updatedHallData);
 
     // Возврат участников в группу
     const updatedGroups = groups.map(g => {
@@ -246,7 +247,7 @@ export const useGroups = () => {
     });
 
     dispatch({ type: actions.SET_GROUPS, payload: updatedGroups });
-    localStorage.setItem('seatingGroups', JSON.stringify(updatedGroups));
+    persistentStorage.save('seatingGroups', updatedGroups);
   }, [groups, hallData, dispatch, actions]);
 
   // Функции для работы с модальными окнами

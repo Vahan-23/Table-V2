@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { useSeating } from './SeatingContext';
+import persistentStorage from './persistentStorage';
 
 export const useFileUpload = () => {
   const { state, dispatch, actions } = useSeating();
@@ -31,7 +32,7 @@ export const useFileUpload = () => {
           dispatch({ type: actions.SET_ZOOM, payload: canvasZoom });
         }
 
-        localStorage.setItem('hallData', JSON.stringify(parsedData));
+        persistentStorage.save('hallData', parsedData);
         dispatch({ type: actions.SET_LOADING, payload: false });
 
       } catch (error) {

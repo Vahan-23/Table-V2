@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { useSeating } from './SeatingContext';
 import { useTranslations } from './useTranslations';
 import { useGroups } from './useGroups';
+import persistentStorage from './persistentStorage';
 
 export const useTables = () => {
   const { state, dispatch, actions } = useSeating();
@@ -112,7 +113,7 @@ export const useTables = () => {
     };
 
     dispatch({ type: actions.SET_HALL_DATA, payload: updatedHallData });
-    localStorage.setItem('hallData', JSON.stringify(updatedHallData));
+    persistentStorage.save('hallData', updatedHallData);
 
     // Удаляем рассаженных людей из группы
     const updatedGroups = state.groups.map(g => {
@@ -128,8 +129,7 @@ export const useTables = () => {
     });
 
     dispatch({ type: actions.SET_GROUPS, payload: updatedGroups });
-    localStorage.setItem('seatingGroups', JSON.stringify(updatedGroups));
-    // localStorage.setItem('seatingGroups', JSON.stringify(updatedGroups));
+    persistentStorage.save('seatingGroups', updatedGroups);
 
     // Сброс модальных окон
     dispatch({ type: actions.RESET_MODALS });
@@ -299,7 +299,7 @@ export const useTables = () => {
     };
 
     dispatch({ type: actions.SET_HALL_DATA, payload: updatedHallData });
-    localStorage.setItem('hallData', JSON.stringify(updatedHallData));
+    persistentStorage.save('hallData', updatedHallData);
 
     // Сброс модального окна
     dispatch({ type: actions.RESET_MODALS });
@@ -323,7 +323,7 @@ export const useTables = () => {
       });
 
       dispatch({ type: actions.SET_GROUPS, payload: updatedGroups });
-      localStorage.setItem('seatingGroups', JSON.stringify(updatedGroups));
+      persistentStorage.save('seatingGroups', updatedGroups);
     }
 
     // Удаление человека со стола
@@ -346,7 +346,7 @@ export const useTables = () => {
     };
 
     dispatch({ type: actions.SET_HALL_DATA, payload: updatedHallData });
-    localStorage.setItem('hallData', JSON.stringify(updatedHallData));
+    persistentStorage.save('hallData', updatedHallData);
 
     // Сброс модального окна
     dispatch({ type: actions.RESET_MODALS });
@@ -492,8 +492,8 @@ export const useTables = () => {
     dispatch({ type: actions.SET_HALL_DATA, payload: updatedHallData });
     dispatch({ type: actions.SET_GROUPS, payload: updatedGroups });
     
-    localStorage.setItem('hallData', JSON.stringify(updatedHallData));
-    localStorage.setItem('seatingGroups', JSON.stringify(updatedGroups));
+    persistentStorage.save('hallData', updatedHallData);
+    persistentStorage.save('seatingGroups', updatedGroups);
 
     // Показываем уведомление о количестве возвращенных людей
     if (peopleToReturn.length > 0) {
