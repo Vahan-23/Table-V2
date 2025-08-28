@@ -4,6 +4,8 @@ This project was bootstrapped with [Create React App](https://github.com/faceboo
 
 ## Environment Configuration
 
+## REACT_APP_API_BASE_URL=https://mijocarum.qanaqer.work REACT_APP_PUBLIC_PATH=/test/seating/ npm run build
+
 ### Backend API Configuration
 
 The seating data persistence can be configured to use a backend API by setting the `REACT_APP_API_BASE_URL` environment variable.

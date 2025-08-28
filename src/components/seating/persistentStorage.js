@@ -155,10 +155,9 @@ class PersistentStorage {
 
     // Try to remove from backend
     try {
-      const response = await fetch(`${this.baseUrl}/api/named_value`, {
+      const response = await fetch(`${this.baseUrl}/api/named_value?name=${encodeURIComponent(key)}`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: key })
       });
 
       const data = await response.json();
