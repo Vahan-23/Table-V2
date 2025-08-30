@@ -45,6 +45,23 @@ REACT_APP_PUBLIC_URL=/seating
 
 If the backend is unavailable or the user is not authenticated, the application will automatically fall back to localStorage.
 
+### URL Utilities
+
+The application includes URL utilities in `src/utils/baseUrl.js` for proper handling of subpath deployments:
+
+```javascript
+import { getAssetUrl, getApiUrl, getBaseUrl } from './utils/baseUrl';
+
+// Get asset URLs (for images in /public folder)
+const logoUrl = getAssetUrl('/logo.png');
+
+// Get API URLs
+const apiEndpoint = getApiUrl('/api/data');
+
+// Get base URL
+const baseUrl = getBaseUrl(); // e.g., "https://mijocarum.qanaqer.work/seating"
+```
+
 ## Available Scripts
 
 In the project directory, you can run:

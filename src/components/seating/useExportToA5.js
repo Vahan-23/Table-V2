@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { useSeating } from './SeatingContext';
 import { useTranslations } from './useTranslations';
+import { getAssetUrl } from '../../utils/baseUrl';
 
 export const useExportToA5 = () => {
   const { state } = useSeating();
@@ -10,8 +11,8 @@ export const useExportToA5 = () => {
   // Предварительная загрузка изображений для TableDesignV2
   const preloadTableDesignV2Images = useCallback(async () => {
     const imageUrls = [
-      `${window.location.origin}/fonTa.jpg`,
-      `${window.location.origin}/cveta.PNG`
+      getAssetUrl('/fonTa.jpg'),
+      getAssetUrl('/cveta.PNG')
     ];
 
     const imagePromises = imageUrls.map(url => {
@@ -433,9 +434,9 @@ export const useExportToA5 = () => {
     const tablePages = tables.map(table => `
       <div class="a5-page">
         <!-- Фоновое изображение как img элемент для лучшей совместимости с html2canvas -->
-        <img src="${window.location.origin}/fonTa.jpg" class="background-image" alt="фон" />
-        <img src="${window.location.origin}/cveta.PNG" class="corner-decoration top-left" alt="декорация" />
-        <img src="${window.location.origin}/cveta.PNG" class="corner-decoration bottom-right" alt="декорация" />
+        <img src="${getAssetUrl('/fonTa.jpg')}" class="background-image" alt="фон" />
+        <img src="${getAssetUrl('/cveta.PNG')}" class="corner-decoration top-left" alt="декорация" />
+        <img src="${getAssetUrl('/cveta.PNG')}" class="corner-decoration bottom-right" alt="декорация" />
         <div class="table-title">СТОЛ №${table.tableNumber}</div>
         <div class="guests-list">
           ${table.people.map(guest => `<div class="guest-name">${guest}</div>`).join('')}

@@ -5,7 +5,6 @@ module.exports = function override(config, env) {
   // Default to original config values if not set
   
   const publicPath = process.env.REACT_APP_PUBLIC_PATH || config.output.publicPath;
-  const publicUrl = process.env.REACT_APP_PUBLIC_URL || process.env.PUBLIC_URL;
   
   // Normalize publicPath - ensure it starts and ends with '/'
   const normalizedPublicPath = publicPath.startsWith('/') ? publicPath : `/${publicPath}`;
@@ -13,14 +12,6 @@ module.exports = function override(config, env) {
   
   // Set webpack publicPath for asset loading
   config.output.publicPath = finalPublicPath;
-  
-  // Set PUBLIC_URL for React (similar to Vite's base)
-  if (publicUrl) {
-    const normalizedPublicUrl = publicUrl.startsWith('/') ? publicUrl : `/${publicUrl}`;
-    const finalPublicUrl = normalizedPublicUrl.endsWith('/') ? normalizedPublicUrl.slice(0, -1) : normalizedPublicUrl;
-    process.env.PUBLIC_URL = finalPublicUrl;
-    console.log(`Setting PUBLIC_URL to: ${finalPublicUrl}`);
-  }
   
   console.log(`Setting publicPath to: ${finalPublicPath}`);
 

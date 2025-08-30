@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { useSeating } from './SeatingContext';
 import { useTranslations } from './useTranslations';
+import { getAssetUrl } from '../../utils/baseUrl';
 
 export const useExportToHDTemplate = () => {
   const { state } = useSeating();
@@ -10,8 +11,8 @@ export const useExportToHDTemplate = () => {
   // Предварительная загрузка изображений для HD шаблона
   const preloadHDTemplateImages = useCallback(async () => {
     const imageUrls = [
-      `${window.location.origin}/HDfon.jpg`,
-      `${window.location.origin}/HDtsaxik.png`
+      getAssetUrl('/HDfon.jpg'),
+      getAssetUrl('/HDtsaxik.png')
     ];
 
     const imagePromises = imageUrls.map(url => {
@@ -52,10 +53,10 @@ export const useExportToHDTemplate = () => {
     const tablePages = tables.map(table => `
       <div class="hd-a5-page">
         <!-- Фоновое изображение -->
-        <img src="${window.location.origin}/HDfon.jpg" class="hd-background-image" alt="HD фон" />
+        <img src="${getAssetUrl('/HDfon.jpg')}" class="hd-background-image" alt="HD фон" />
         <!-- Декоративные цветы -->
-        <img src="${window.location.origin}/HDtsaxik.png" class="hd-flower-decoration top-left" alt="цветок" />
-        <img src="${window.location.origin}/HDtsaxik.png" class="hd-bottom-flower" alt="цветок" />
+        <img src="${getAssetUrl('/HDtsaxik.png')}" class="hd-flower-decoration top-left" alt="цветок" />
+        <img src="${getAssetUrl('/HDtsaxik.png')}" class="hd-bottom-flower" alt="цветок" />
         <div class="hd-table-title">СТОЛ №${table.tableNumber}</div>
         <div class="hd-guests-list">
           ${table.people.map(guest => `<div class="hd-guest-name">${guest}</div>`).join('')}
@@ -546,10 +547,10 @@ export const useExportToHDTemplate = () => {
     const guestCards = guests.map(guest => `
       <div class="hd-guest-card">
         <!-- Фоновое изображение -->
-        <img src="${window.location.origin}/HDfon.jpg" class="hd-card-background-image" alt="HD фон" />
+        <img src="${getAssetUrl('/HDfon.jpg')}" class="hd-card-background-image" alt="HD фон" />
         <!-- Декоративные цветы -->
-        <img src="${window.location.origin}/HDtsaxik.png" class="hd-card-flower-decoration top-left" alt="цветок" />
-        <img src="${window.location.origin}/HDtsaxik.png" class="hd-card-bottom-flower" alt="цветок" />
+        <img src="${getAssetUrl('/HDtsaxik.png')}" class="hd-card-flower-decoration top-left" alt="цветок" />
+        <img src="${getAssetUrl('/HDtsaxik.png')}" class="hd-card-bottom-flower" alt="цветок" />
         <div class="hd-guest-name">${guest.name}</div>
         <div class="hd-guest-thanks">Спасибо, что нашли время присутствовать на нашем празднике</div>
         <div class="hd-guest-signature">С любовью,<br>Василий и София</div>
@@ -745,10 +746,10 @@ export const useExportToHDTemplate = () => {
     const tableNumbers = tables.map(table => `
       <div class="hd-table-number">
         <!-- Фоновое изображение -->
-        <img src="${window.location.origin}/HDfon.jpg" class="hd-number-background-image" alt="HD фон" />
+        <img src="${getAssetUrl('/HDfon.jpg')}" class="hd-number-background-image" alt="HD фон" />
         <!-- Декоративные цветы -->
-        <img src="${window.location.origin}/HDtsaxik.png" class="hd-number-flower-decoration top-left" alt="цветок" />
-        <img src="${window.location.origin}/HDtsaxik.png" class="hd-number-bottom-flower" alt="цветок" />
+        <img src="${getAssetUrl('/HDtsaxik.png')}" class="hd-number-flower-decoration top-left" alt="цветок" />
+        <img src="${getAssetUrl('/HDtsaxik.png')}" class="hd-number-bottom-flower" alt="цветок" />
         <div class="hd-table-title">${table.tableNumber}</div>
       </div>
     `).join('');
