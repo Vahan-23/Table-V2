@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useEffect } from 'react';
 import { useSeating, TEST_PEOPLE } from './SeatingContext';
 import persistentStorage from './persistentStorage';
 
