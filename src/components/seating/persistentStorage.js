@@ -15,6 +15,9 @@ class PersistentStorage {
     this.debounceTimers = new Map();
     this.debounceDelay = 500; // 500ms debounce
     
+    // Request chaining for handling rapid successive calls
+    this.requestQueues = new Map(); // key -> { isProcessing, pendingValue, pendingResolvers }
+    
     // Get backend base URL from environment variable
     // Falls back to empty string (relative URLs) if not set
     this.baseUrl = process.env.REACT_APP_API_BASE_URL || '';
@@ -56,7 +59,7 @@ class PersistentStorage {
   }
 
   /**
-   * Save data to backend with debouncing, also save to localStorage as backup
+   * Save data to backend with request chaining for rapid successive calls
    * @param {string} key - Storage key
    * @param {*} value - Value to store
    * @returns {Promise<boolean>} Success status
@@ -65,48 +68,107 @@ class PersistentStorage {
     // Save to localStorage immediately as backup
     this.saveToLocalStorage(key, value);
 
-    // Debounce backend saves
     return new Promise((resolve) => {
-      // Clear existing timer for this key
-      if (this.debounceTimers.has(key)) {
-        clearTimeout(this.debounceTimers.get(key));
+      // Get or create queue for this key
+      if (!this.requestQueues.has(key)) {
+        this.requestQueues.set(key, {
+          isProcessing: false,
+          pendingValue: null,
+          pendingResolvers: []
+        });
       }
 
-      // Set new debounced timer
-      const timer = setTimeout(async () => {
-        try {
-          const response = await fetch(`${this.baseUrl}/api/named_value`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-              name: key,
-              value: value 
-            })
-          });
+      const queue = this.requestQueues.get(key);
+      
+      // Update the pending value (this ensures only the latest value is saved)
+      queue.pendingValue = value;
+      queue.pendingResolvers.push(resolve);
 
-          const data = await response.json();
-          
-          if (data.success) {
-            console.log(`✅ Successfully persisted ${key} to backend`);
-            resolve(true);
-          } else if (data.error === 'Authentication required') {
-            console.warn(`User not authenticated - ${key} saved only to localStorage`);
-            resolve(false);
-          } else {
-            console.error(`Failed to persist ${key} to backend:`, data.error);
-            resolve(false);
-          }
-        } catch (error) {
-          console.error(`Failed to persist ${key} to backend:`, error);
-          resolve(false);
-        }
-
-        // Clean up timer reference
-        this.debounceTimers.delete(key);
-      }, this.debounceDelay);
-
-      this.debounceTimers.set(key, timer);
+      // If not currently processing, start processing
+      if (!queue.isProcessing) {
+        this._processQueue(key);
+      }
     });
+  }
+
+  /**
+   * Process the request queue for a specific key
+   * @private
+   * @param {string} key - Storage key
+   */
+  async _processQueue(key) {
+    const queue = this.requestQueues.get(key);
+    if (!queue) return;
+
+    queue.isProcessing = true;
+
+    try {
+      // Wait for debounce delay to collect any additional rapid calls
+      await new Promise(resolve => setTimeout(resolve, this.debounceDelay));
+
+      // Get the latest value and all pending resolvers
+      const valueToSave = queue.pendingValue;
+      const resolvers = [...queue.pendingResolvers];
+      
+      // Clear pending state
+      queue.pendingValue = null;
+      queue.pendingResolvers = [];
+
+      // Make the actual backend request
+      let success = false;
+      try {
+        const response = await fetch(`${this.baseUrl}/api/named_value`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            name: key,
+            value: valueToSave 
+          })
+        });
+
+        const data = await response.json();
+        
+        if (data.success) {
+          console.log(`✅ Successfully persisted ${key} to backend (processed ${resolvers.length} queued requests)`);
+          success = true;
+        } else if (data.error === 'Authentication required') {
+          console.warn(`User not authenticated - ${key} saved only to localStorage`);
+          success = false;
+        } else {
+          console.error(`Failed to persist ${key} to backend:`, data.error);
+          success = false;
+        }
+      } catch (error) {
+        console.error(`Failed to persist ${key} to backend:`, error);
+        success = false;
+      }
+
+      // Resolve all pending promises with the same result
+      resolvers.forEach(resolve => resolve(success));
+
+      // Check if more requests came in while we were processing
+      if (queue.pendingResolvers.length > 0) {
+        // More requests came in, process them
+        this._processQueue(key);
+      } else {
+        // No more pending requests
+        queue.isProcessing = false;
+        
+        // Clean up empty queue
+        if (queue.pendingResolvers.length === 0 && queue.pendingValue === null) {
+          this.requestQueues.delete(key);
+        }
+      }
+    } catch (error) {
+      console.error(`Error processing queue for ${key}:`, error);
+      
+      // Resolve all pending promises with failure
+      const resolvers = [...queue.pendingResolvers];
+      queue.pendingResolvers = [];
+      resolvers.forEach(resolve => resolve(false));
+      
+      queue.isProcessing = false;
+    }
   }
 
   /**
@@ -176,13 +238,22 @@ class PersistentStorage {
   }
 
   /**
-   * Clear all pending debounced saves
+   * Clear all pending debounced saves and request queues
    */
   clearPendingSaves() {
+    // Clear old debounce timers (kept for compatibility)
     for (const timer of this.debounceTimers.values()) {
       clearTimeout(timer);
     }
     this.debounceTimers.clear();
+    
+    // Clear request queues and resolve pending promises
+    for (const [key, queue] of this.requestQueues.entries()) {
+      // Resolve all pending promises with failure status
+      queue.pendingResolvers.forEach(resolve => resolve(false));
+      console.log(`Cleared pending requests for ${key}`);
+    }
+    this.requestQueues.clear();
   }
 
   /**
@@ -190,10 +261,21 @@ class PersistentStorage {
    * @returns {Object} Configuration details
    */
   getConfig() {
+    const queueInfo = {};
+    for (const [key, queue] of this.requestQueues.entries()) {
+      queueInfo[key] = {
+        isProcessing: queue.isProcessing,
+        pendingRequests: queue.pendingResolvers.length,
+        hasPendingValue: queue.pendingValue !== null
+      };
+    }
+
     return {
       baseUrl: this.baseUrl,
       debounceDelay: this.debounceDelay,
-      pendingSaves: this.debounceTimers.size,
+      pendingSaves: this.debounceTimers.size, // Legacy
+      activeQueues: this.requestQueues.size,
+      queueDetails: queueInfo,
       usingRelativeUrls: !this.baseUrl
     };
   }
