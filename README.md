@@ -16,8 +16,11 @@ Create a `.env` file in the project root:
 # Backend API Base URL
 REACT_APP_API_BASE_URL=http://localhost:3001
 
-# Public Path for static assets (optional)
-REACT_APP_PUBLIC_PATH=/test/seating/
+# Public Path for static assets (webpack publicPath)
+REACT_APP_PUBLIC_PATH=/seating/
+
+# Public URL for React app (similar to Vite's base)
+REACT_APP_PUBLIC_URL=/seating
 ```
 
 **Backend API Examples:**
@@ -29,6 +32,11 @@ REACT_APP_PUBLIC_PATH=/test/seating/
 - Subdirectory deployment: `REACT_APP_PUBLIC_PATH=/my-app/`
 - Root deployment: `REACT_APP_PUBLIC_PATH=/`
 - Default (if not set): `/test/seating/`
+
+**Public URL Examples (similar to Vite's base):**
+- Subdirectory deployment: `REACT_APP_PUBLIC_URL=/seating`
+- Root deployment: `REACT_APP_PUBLIC_URL=/`
+- CDN deployment: `REACT_APP_PUBLIC_URL=https://cdn.example.com/seating`
 
 **Required API Endpoints:**
 - `GET /api/named_value?name=<key>` - Load persisted data
