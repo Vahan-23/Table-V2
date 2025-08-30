@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
+import persistentStorage from './seating/persistentStorage';
 
 // Тестовые люди для выбора
 const TEST_PEOPLE = [
@@ -697,7 +698,7 @@ const selectPersonFromSearch = (personData) => {
         tables: updatedTables
       };
 
-      localStorage.setItem('hallData', JSON.stringify(updatedHallData));
+      persistentStorage.save('hallData', updatedHallData);
       return updatedHallData;
     });
 
@@ -715,7 +716,7 @@ const selectPersonFromSearch = (personData) => {
     });
 
     setGroups(updatedGroups);
-    localStorage.setItem('seatingGroups', JSON.stringify(updatedGroups));
+    persistentStorage.save('seatingGroups', updatedGroups);
   };
 
   const seatGroupAtTable = (groupId, tableId, selectedPeople = null) => {
@@ -769,7 +770,7 @@ const selectPersonFromSearch = (personData) => {
         shapes: shapes
       };
 
-      localStorage.setItem('hallData', JSON.stringify(updatedHallData));
+      persistentStorage.save('hallData', updatedHallData);
       return updatedHallData;
     });
 
@@ -784,7 +785,7 @@ const selectPersonFromSearch = (personData) => {
     });
 
     setGroups(updatedGroups);
-    localStorage.setItem('seatingGroups', JSON.stringify(updatedGroups));
+    persistentStorage.save('seatingGroups', updatedGroups);
 
     setShowSeatingModal(false);
     setSelectedGroupForSeating(null);
@@ -921,59 +922,58 @@ const selectPersonFromSearch = (personData) => {
 
   // Загрузка данных
   useEffect(() => {
-    const savedHallData = localStorage.getItem('hallData');
-    const savedGroups = localStorage.getItem('seatingGroups');
-    const savedLanguage = localStorage.getItem('seatingLanguage');
-
-    if (savedLanguage && (savedLanguage === 'ru' || savedLanguage === 'hy')) {
-      setLanguage(savedLanguage);
-    }
-
-    if (savedHallData) {
+    const loadInitialData = async () => {
       try {
-        const parsedData = JSON.parse(savedHallData);
-        setHallData(parsedData);
-
-        if (parsedData.shapes && Array.isArray(parsedData.shapes)) {
-          setShapes(parsedData.shapes);
+        // Load language
+        const savedLanguage = await persistentStorage.load('seatingLanguage', 'ru');
+        if (savedLanguage && (savedLanguage === 'ru' || savedLanguage === 'hy')) {
+          setLanguage(savedLanguage);
         }
 
-        if (parsedData.canvasData && parsedData.canvasData.zoom) {
-          const canvasZoom = Math.max(parsedData.canvasData.zoom, 0.1);
-          setZoom(canvasZoom);
-          zoomRef.current = canvasZoom;
-        }
-      } catch (e) {
-        console.error("Error loading saved hall data:", e);
-      }
-    }
+        // Load hall data
+        const savedHallData = await persistentStorage.load('hallData', null);
+        if (savedHallData) {
+          setHallData(savedHallData);
 
-    if (savedGroups) {
-      try {
-        const parsedGroups = JSON.parse(savedGroups);
-        setGroups(parsedGroups);
-
-        const allUsedPeople = [];
-        parsedGroups.forEach(group => {
-          if (group.members) {
-            group.members.forEach(member => {
-              if (TEST_PEOPLE.includes(member)) {
-                allUsedPeople.push(member);
-              }
-            });
+          if (savedHallData.shapes && Array.isArray(savedHallData.shapes)) {
+            setShapes(savedHallData.shapes);
           }
-        });
-        setUsedPeople(allUsedPeople);
 
-      } catch (e) {
-        console.error("Error loading groups:", e);
+          if (savedHallData.canvasData && savedHallData.canvasData.zoom) {
+            const canvasZoom = Math.max(savedHallData.canvasData.zoom, 0.1);
+            setZoom(canvasZoom);
+            zoomRef.current = canvasZoom;
+          }
+        }
+
+        // Load groups
+        const savedGroups = await persistentStorage.load('seatingGroups', []);
+        if (savedGroups && Array.isArray(savedGroups)) {
+          setGroups(savedGroups);
+
+          const allUsedPeople = [];
+          savedGroups.forEach(group => {
+            if (group.members) {
+              group.members.forEach(member => {
+                if (TEST_PEOPLE.includes(member)) {
+                  allUsedPeople.push(member);
+                }
+              });
+            }
+          });
+          setUsedPeople(allUsedPeople);
+        }
+      } catch (error) {
+        console.error("Error loading initial data:", error);
       }
-    }
+    };
+
+    loadInitialData();
   }, []);
 
-  // Save language to localStorage
+  // Save language to backend/localStorage
   useEffect(() => {
-    localStorage.setItem('seatingLanguage', language);
+    persistentStorage.save('seatingLanguage', language);
   }, [language]);
 
   useEffect(() => {
@@ -1057,7 +1057,7 @@ const selectPersonFromSearch = (personData) => {
           zoomRef.current = canvasZoom;
         }
 
-        localStorage.setItem('hallData', JSON.stringify(parsedData));
+        persistentStorage.save('hallData', parsedData);
         setIsLoading(false);
 
       } catch (error) {
@@ -1118,7 +1118,7 @@ const selectPersonFromSearch = (personData) => {
     });
 
     setGroups(updatedGroups);
-    localStorage.setItem('seatingGroups', JSON.stringify(updatedGroups));
+    persistentStorage.save('seatingGroups', updatedGroups);
 
     setHallData(prevData => {
       const updatedTables = prevData.tables.map(t => {
@@ -1145,7 +1145,7 @@ const selectPersonFromSearch = (personData) => {
         shapes: shapes
       };
 
-      localStorage.setItem('hallData', JSON.stringify(updatedHallData));
+      persistentStorage.save('hallData', updatedHallData);
       return updatedHallData;
     });
 
@@ -1167,7 +1167,7 @@ const selectPersonFromSearch = (personData) => {
       });
 
       setGroups(updatedGroups);
-      localStorage.setItem('seatingGroups', JSON.stringify(updatedGroups));
+      persistentStorage.save('seatingGroups', updatedGroups);
     }
 
     setHallData(prevData => {
@@ -1190,7 +1190,7 @@ const selectPersonFromSearch = (personData) => {
         shapes: shapes
       };
 
-      localStorage.setItem('hallData', JSON.stringify(updatedHallData));
+      persistentStorage.save('hallData', updatedHallData);
       return updatedHallData;
     });
 
@@ -1279,7 +1279,7 @@ const selectPersonFromSearch = (personData) => {
 
     const updatedGroups = [...groups, newGroup];
     setGroups(updatedGroups);
-    localStorage.setItem('seatingGroups', JSON.stringify(updatedGroups));
+    persistentStorage.save('seatingGroups', updatedGroups);
 
     resetAddGroupModal();
   };
@@ -1302,7 +1302,7 @@ const selectPersonFromSearch = (personData) => {
     });
 
     setGroups(updatedGroups);
-    localStorage.setItem('seatingGroups', JSON.stringify(updatedGroups));
+    persistentStorage.save('seatingGroups', updatedGroups);
 
     resetEditGroupModal();
   };
@@ -1319,7 +1319,7 @@ const selectPersonFromSearch = (personData) => {
 
     const updatedGroups = groups.filter(g => g.id !== groupId);
     setGroups(updatedGroups);
-    localStorage.setItem('seatingGroups', JSON.stringify(updatedGroups));
+    persistentStorage.save('seatingGroups', updatedGroups);
 
     setHallData(prevData => {
       const updatedTables = prevData.tables.map(table => {
@@ -1338,7 +1338,7 @@ const selectPersonFromSearch = (personData) => {
         tables: updatedTables
       };
 
-      localStorage.setItem('hallData', JSON.stringify(updatedHallData));
+      persistentStorage.save('hallData', updatedHallData);
       return updatedHallData;
     });
   };
