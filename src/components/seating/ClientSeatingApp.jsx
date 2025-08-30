@@ -115,6 +115,10 @@ const TableComponent = ({
 
           {isOccupied && person && person.name && (
             <div
+              onClick={(e) => {
+                e.stopPropagation();
+                onChairClick(table.id, i);
+              }}
               style={{
                 position: 'absolute',
                 left: `${x - chairSize * 0.7}px`,
@@ -128,12 +132,24 @@ const TableComponent = ({
                 borderRadius: '3px',
                 padding: '2px',
                 zIndex: 2,
-                pointerEvents: 'none',
+                pointerEvents: 'auto',
                 border: '1px solid #ccc',
-                boxShadow: '0 1px 2px rgba(0,0,0,0.2)'
+                boxShadow: '0 1px 2px rgba(0,0,0,0.2)',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.backgroundColor = 'rgba(255, 255, 255, 1)';
+                e.target.style.transform = 'scale(1.05)';
+                e.target.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.95)';
+                e.target.style.transform = 'scale(1)';
+                e.target.style.boxShadow = '0 1px 2px rgba(0,0,0,0.2)';
               }}
             >
-              {person.name}
+              ✏️ {person.name}
             </div>
           )}
         </div>
@@ -195,6 +211,10 @@ const TableComponent = ({
 
           {isOccupied && person && person.name && (
             <div
+              onClick={(e) => {
+                e.stopPropagation();
+                onChairClick(table.id, currentChairIndex);
+              }}
               style={{
                 position: 'absolute',
                 left: `${x - chairSize * 0.7}px`,
@@ -208,12 +228,24 @@ const TableComponent = ({
                 borderRadius: '3px',
                 padding: '2px',
                 zIndex: 2,
-                pointerEvents: 'none',
+                pointerEvents: 'auto',
                 border: '1px solid #ccc',
-                boxShadow: '0 1px 2px rgba(0,0,0,0.2)'
+                boxShadow: '0 1px 2px rgba(0,0,0,0.2)',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.backgroundColor = 'rgba(255, 255, 255, 1)';
+                e.target.style.transform = 'scale(1.05)';
+                e.target.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.95)';
+                e.target.style.transform = 'scale(1)';
+                e.target.style.boxShadow = '0 1px 2px rgba(0,0,0,0.2)';
               }}
             >
-              {person.name}
+              ✏️ {person.name}
             </div>
           )}
         </div>
@@ -262,6 +294,10 @@ const TableComponent = ({
 
           {isOccupied && person && person.name && (
             <div
+              onClick={(e) => {
+                e.stopPropagation();
+                onChairClick(table.id, currentChairIndex);
+              }}
               style={{
                 position: 'absolute',
                 left: `${x - chairSize * 0.7}px`,
@@ -275,12 +311,24 @@ const TableComponent = ({
                 borderRadius: '3px',
                 padding: '2px',
                 zIndex: 2,
-                pointerEvents: 'none',
+                pointerEvents: 'auto',
                 border: '1px solid #ccc',
-                boxShadow: '0 1px 2px rgba(0,0,0,0.2)'
+                boxShadow: '0 1px 2px rgba(0,0,0,0.2)',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.backgroundColor = 'rgba(255, 255, 255, 1)';
+                e.target.style.transform = 'scale(1.05)';
+                e.target.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.95)';
+                e.target.style.transform = 'scale(1)';
+                e.target.style.boxShadow = '0 1px 2px rgba(0,0,0,0.2)';
               }}
             >
-              {person.name}
+              ✏️ {person.name}
             </div>
           )}
         </div>

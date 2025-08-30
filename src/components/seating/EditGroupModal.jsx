@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useSeating } from './SeatingContext';
 import { useTranslations } from './useTranslations';
 import { useGroups } from './useGroups';
@@ -7,6 +7,9 @@ const EditGroupModal = () => {
   const { state, dispatch, actions } = useSeating();
   const { t } = useTranslations();
   const { updateGroup, getFilteredPeople, TEST_PEOPLE } = useGroups();
+  
+  const [editingMemberIndex, setEditingMemberIndex] = useState(null);
+  const [editingMemberName, setEditingMemberName] = useState('');
 
   const {
     showEditGroupModal,
@@ -65,6 +68,43 @@ const EditGroupModal = () => {
         payload: usedPeople.filter(person => person !== memberToRemove)
       });
     }
+  };
+
+  const handleStartEditMember = (index, memberName) => {
+    setEditingMemberIndex(index);
+    setEditingMemberName(memberName);
+  };
+
+  const handleSaveMemberEdit = (index) => {
+    if (editingMemberName.trim() && !editGroupMembers.includes(editingMemberName.trim())) {
+      const updatedMembers = [...editGroupMembers];
+      updatedMembers[index] = editingMemberName.trim();
+      dispatch({ type: actions.SET_EDIT_GROUP_MEMBERS, payload: updatedMembers });
+      
+      // Если старое имя было в списке доступных, возвращаем его
+      const oldMemberName = editGroupMembers[index];
+      if (TEST_PEOPLE.includes(oldMemberName)) {
+        dispatch({ 
+          type: actions.SET_USED_PEOPLE, 
+          payload: [...usedPeople, oldMemberName]
+        });
+      }
+      
+      // Если новое имя было в списке доступных, убираем его
+      if (TEST_PEOPLE.includes(editingMemberName.trim())) {
+        dispatch({ 
+          type: actions.SET_USED_PEOPLE, 
+          payload: usedPeople.filter(person => person !== editingMemberName.trim())
+        });
+      }
+    }
+    setEditingMemberIndex(null);
+    setEditingMemberName('');
+  };
+
+  const handleCancelMemberEdit = () => {
+    setEditingMemberIndex(null);
+    setEditingMemberName('');
   };
 
   const handleUpdateGroup = () => {
@@ -291,6 +331,14 @@ const EditGroupModal = () => {
             }}>
               {t('members')} ({editGroupMembers.length})
             </h4>
+            <p style={{
+              margin: '0 0 10px 0',
+              fontSize: '11px',
+              color: '#999',
+              fontStyle: 'italic'
+            }}>
+              💡 Кликните на ✏️ для редактирования имени участника
+            </p>
             
             {editGroupMembers.length === 0 ? (
               <div style={{
@@ -325,21 +373,94 @@ const EditGroupModal = () => {
                       backgroundColor: '#f9f9f9'
                     }}
                   >
-                    <span style={{ fontSize: '14px' }}>{member}</span>
-                    <button
-                      onClick={() => handleRemoveMember(index)}
-                      style={{
-                        backgroundColor: '#e74c3c',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '3px',
-                        padding: '4px 8px',
-                        cursor: 'pointer',
-                        fontSize: '12px'
-                      }}
-                    >
-                      ×
-                    </button>
+                    {editingMemberIndex === index ? (
+                      <div style={{ display: 'flex', gap: '8px', flex: 1 }}>
+                        <input
+                          type="text"
+                          value={editingMemberName}
+                          onChange={(e) => setEditingMemberName(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              handleSaveMemberEdit(index);
+                            } else if (e.key === 'Escape') {
+                              handleCancelMemberEdit();
+                            }
+                          }}
+                          style={{
+                            flex: 1,
+                            padding: '6px',
+                            border: '1px solid #3498db',
+                            borderRadius: '3px',
+                            fontSize: '14px'
+                          }}
+                          autoFocus
+                        />
+                        <button
+                          onClick={() => handleSaveMemberEdit(index)}
+                          style={{
+                            backgroundColor: '#27ae60',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '3px',
+                            padding: '4px 8px',
+                            cursor: 'pointer',
+                            fontSize: '12px'
+                          }}
+                        >
+                          ✓
+                        </button>
+                        <button
+                          onClick={handleCancelMemberEdit}
+                          style={{
+                            backgroundColor: '#95a5a6',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '3px',
+                            padding: '4px 8px',
+                            cursor: 'pointer',
+                            fontSize: '12px'
+                          }}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <span style={{ fontSize: '14px', flex: 1 }}>{member}</span>
+                        <div style={{ display: 'flex', gap: '4px' }}>
+                          <button
+                            onClick={() => handleStartEditMember(index, member)}
+                            style={{
+                              backgroundColor: '#3498db',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '3px',
+                              padding: '4px 8px',
+                              cursor: 'pointer',
+                              fontSize: '12px'
+                            }}
+                            title="Редактировать имя"
+                          >
+                            ✏️
+                          </button>
+                          <button
+                            onClick={() => handleRemoveMember(index)}
+                            style={{
+                              backgroundColor: '#e74c3c',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '3px',
+                              padding: '4px 8px',
+                              cursor: 'pointer',
+                              fontSize: '12px'
+                            }}
+                            title="Удалить участника"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      </>
+                    )}
                   </div>
                 ))}
               </div>

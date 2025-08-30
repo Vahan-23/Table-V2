@@ -86,7 +86,12 @@ const PersonModal = () => {
            borderBottom: '1px solid #eee',
            paddingBottom: '10px'
          }}>
-           <h3 style={{ margin: 0, color: '#333' }}>{t('guestName')}</h3>
+           <h3 style={{ margin: 0, color: '#333' }}>
+             {selectedChair && state.hallData?.tables?.find(t => t.id === selectedChair.tableId)?.people?.[selectedChair.chairIndex] 
+               ? '✏️ Редактирование гостя' 
+               : '➕ Добавление гостя'
+             }
+           </h3>
            <button
              onClick={handleClose}
              style={{
@@ -199,7 +204,7 @@ const PersonModal = () => {
            </div>
          </div> */}
 
-        {/* Секция для ввода имени и выбора группы - ОТКЛЮЧЕНА
+        {/* Секция для ввода имени и выбора группы */}
         <div style={{ 
           marginBottom: '15px',
           border: '2px solid #3498db',
@@ -214,13 +219,16 @@ const PersonModal = () => {
             color: '#2c3e50',
             fontSize: '16px'
           }}>
-            ✏️ {t('enterName')}
+            ✏️ {t('enterName')} {selectedChair && state.hallData?.tables?.find(t => t.id === selectedChair.tableId)?.people?.[selectedChair.chairIndex] ? '(редактирование)' : '(новый гость)'}
           </label>
           <input
             type="text"
             value={personName}
             onChange={handlePersonNameChange}
-            placeholder={t('enterName')}
+            placeholder={selectedChair && state.hallData?.tables?.find(t => t.id === selectedChair.tableId)?.people?.[selectedChair.chairIndex] 
+              ? 'Введите новое имя гостя...' 
+              : t('enterName')
+            }
             autoFocus
             style={{
               width: '100%',
@@ -272,10 +280,27 @@ const PersonModal = () => {
             ))}
           </select>
         </div>
-        */}
 
         <div style={{ marginBottom: '20px' }}>
-          {/* Кнопка "Выбрать из групп" - ОТКЛЮЧЕНА
+          {/* Информация о текущем госте */}
+          {selectedChair && state.hallData?.tables?.find(t => t.id === selectedChair.tableId)?.people?.[selectedChair.chairIndex] && (
+            <div style={{
+              marginBottom: '15px',
+              padding: '12px',
+              backgroundColor: '#e8f5e8',
+              borderRadius: '6px',
+              border: '1px solid #4caf50'
+            }}>
+              <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#2e7d32', marginBottom: '5px' }}>
+                📍 Текущий гость на этом месте:
+              </div>
+              <div style={{ fontSize: '13px', color: '#388e3c' }}>
+                {state.hallData.tables.find(t => t.id === selectedChair.tableId)?.people?.[selectedChair.chairIndex]?.name}
+              </div>
+            </div>
+          )}
+
+          {/* Кнопка "Выбрать из групп" */}
           <button
             onClick={() => dispatch({ type: actions.SET_SHOW_PERSON_SEARCH, payload: !showPersonSearch })}
             style={{
@@ -291,7 +316,6 @@ const PersonModal = () => {
           >
             {t('selectFromGroups')}
           </button>
-          */}
 
           {/* Список людей всегда видим */}
           <div style={{
@@ -421,7 +445,7 @@ const PersonModal = () => {
               fontSize: '14px'
             }}
           >
-            {t('save')}
+            {selectedChair && state.hallData?.tables?.find(t => t.id === selectedChair.tableId)?.people?.[selectedChair.chairIndex] ? 'Обновить' : t('save')}
           </button>
         </div>
       </div>

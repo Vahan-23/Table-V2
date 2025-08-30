@@ -70,11 +70,17 @@ const ImportJsonModal = () => {
       let totalGuests = 0;
 
       guests.forEach((guest, index) => {
-        const groupName = `Группа ${guest.group_description || `Гость ${index + 1}`}`;
+        // Используем полное имя для названия группы, если оно есть
+        const groupName = guest.guest_fullname && guest.guest_fullname.trim() 
+          ? guest.guest_fullname.trim() 
+          : `Группа ${guest.group_description || `Гость ${index + 1}`}`;
+        
         const members = [];
 
-        // Добавляем основного гостя (обязательно)
-        if (guest.guest_name && guest.guest_name.trim()) {
+        // Добавляем основного гостя, используя полное имя если есть, иначе короткое
+        if (guest.guest_fullname && guest.guest_fullname.trim()) {
+          members.push(guest.guest_fullname.trim());
+        } else if (guest.guest_name && guest.guest_name.trim()) {
           members.push(guest.guest_name.trim());
         }
 
@@ -100,7 +106,7 @@ const ImportJsonModal = () => {
         type: actions.SET_NOTIFICATION,
         payload: {
           type: 'success',
-          message: `Импортировано ${groupsCreated} групп с ${totalGuests} гостями`
+          message: `Импортировано ${groupsCreated} групп с ${totalGuests} гостями (группы созданы по полным именам)`
         }
       });
 
@@ -161,7 +167,7 @@ const ImportJsonModal = () => {
           paddingBottom: '15px'
         }}>
           <h2 style={{ margin: 0, color: '#2c3e50', fontSize: '20px' }}>
-            📥 Импорт гостей из JSON
+            📥 Импорт групп из JSON
           </h2>
           <button
             onClick={handleClose}
@@ -191,7 +197,7 @@ const ImportJsonModal = () => {
             fontWeight: 'bold',
             color: '#2c3e50'
           }}>
-            Выберите JSON файл:
+            Выберите JSON файл с гостями:
           </label>
           <input
             ref={fileInputRef}
@@ -213,7 +219,7 @@ const ImportJsonModal = () => {
             color: '#7f8c8d',
             fontStyle: 'italic'
           }}>
-            Или вставьте JSON текст в поле ниже
+            Или вставьте JSON текст в поле ниже. Группы будут созданы по полным именам гостей.
           </p>
         </div>
 
@@ -225,12 +231,12 @@ const ImportJsonModal = () => {
             fontWeight: 'bold',
             color: '#2c3e50'
           }}>
-            JSON текст:
+            JSON текст с гостями:
           </label>
           <textarea
             value={jsonText}
             onChange={handleJsonChange}
-            placeholder="Вставьте JSON с данными гостей..."
+            placeholder="Вставьте JSON с данными гостей (группы будут созданы по полным именам)..."
             style={{
               width: '100%',
               minHeight: '150px',
@@ -262,7 +268,7 @@ const ImportJsonModal = () => {
         {previewData && (
           <div style={{ marginBottom: '20px' }}>
             <h3 style={{ margin: '0 0 15px 0', color: '#2c3e50' }}>
-              📋 Предварительный просмотр:
+              📋 Предварительный просмотр групп:
             </h3>
             <div style={{
               backgroundColor: '#f8f9fa',
@@ -286,7 +292,8 @@ const ImportJsonModal = () => {
                 <strong>Всего участников:</strong> {
                   previewData.guests?.reduce((total, guest) => {
                     let count = 0;
-                    if (guest.guest_name && guest.guest_name.trim()) count++;
+                    if (guest.guest_fullname && guest.guest_fullname.trim()) count++;
+                    else if (guest.guest_name && guest.guest_name.trim()) count++;
                     if (guest.second_guest && guest.has_spouse && guest.second_guest.trim()) count++;
                     return total + count;
                   }, 0) || 0
@@ -295,11 +302,17 @@ const ImportJsonModal = () => {
               
               {/* Sample guests */}
               <div style={{ marginTop: '15px' }}>
-                <strong>Примеры гостей:</strong>
+                <strong>Примеры групп для создания:</strong>
                 <div style={{ marginTop: '8px' }}>
                   {previewData.guests?.slice(0, 3).map((guest, index) => {
                     const members = [];
-                    if (guest.guest_name && guest.guest_name.trim()) {
+                    const groupName = guest.guest_fullname && guest.guest_fullname.trim() 
+                      ? guest.guest_fullname.trim() 
+                      : `Группа ${guest.group_description || `Гость ${index + 1}`}`;
+                    
+                    if (guest.guest_fullname && guest.guest_fullname.trim()) {
+                      members.push(guest.guest_fullname.trim());
+                    } else if (guest.guest_name && guest.guest_name.trim()) {
                       members.push(guest.guest_name.trim());
                     }
                     if (guest.second_guest && guest.has_spouse && guest.second_guest.trim()) {
@@ -314,15 +327,22 @@ const ImportJsonModal = () => {
                         marginBottom: '5px',
                         fontSize: '13px'
                       }}>
-                        <strong>{guest.guest_name || 'Без имени'}</strong> 
+                        <div style={{ fontWeight: 'bold', color: '#2c3e50' }}>
+                          Группа: {groupName}
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#7f8c8d', marginTop: '2px' }}>
+                          {guest.guest_fullname ? 'Полное имя' : 'Короткое имя'}: {guest.guest_name || 'Без имени'}
+                        </div>
                         {guest.has_spouse && guest.second_guest && (
-                          <span style={{ color: '#7f8c8d' }}> + {guest.second_guest}</span>
+                          <div style={{ fontSize: '12px', color: '#7f8c8d' }}>
+                            + {guest.second_guest}
+                          </div>
                         )}
-                        <span style={{ color: '#27ae60', marginLeft: '10px' }}>
-                          (будет {members.length} чел.)
+                        <span style={{ color: '#27ae60', marginTop: '5px', display: 'block' }}>
+                          Участников: {members.length} чел.
                         </span>
                         {members.length === 0 && (
-                          <span style={{ color: '#e74c3c', marginLeft: '10px' }}>
+                          <span style={{ color: '#e74c3c', marginTop: '5px', display: 'block' }}>
                             ⚠️ Группа не будет создана
                           </span>
                         )}
@@ -331,7 +351,7 @@ const ImportJsonModal = () => {
                   })}
                   {previewData.guests?.length > 3 && (
                     <div style={{ color: '#7f8c8d', fontSize: '12px', fontStyle: 'italic' }}>
-                      ... и еще {previewData.guests.length - 3} гостей
+                      ... и еще {previewData.guests.length - 3} групп
                     </div>
                   )}
                 </div>
