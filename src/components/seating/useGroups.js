@@ -109,6 +109,12 @@ export const useGroups = () => {
     );
   }, [groups, state.personSearchTerm, hallData]);
 
+  useEffect(() => {
+    if (groups.length > 0) {
+      persistentStorage.save('seatingGroups', groups);
+    }
+  }, [groups]); 
+  
   // Добавление группы
   const addGroup = useCallback((groupName, groupMembers) => {
     const colors = [
@@ -129,10 +135,6 @@ export const useGroups = () => {
     };
 
     dispatch({ type: actions.ADD_GROUP, payload: newGroup });
-    
-    // Сохранение в backend/localStorage
-    const updatedGroups = [...groups, newGroup];
-    persistentStorage.save('seatingGroups', updatedGroups);
   }, [groups, dispatch, actions]);
 
   // Обновление группы
