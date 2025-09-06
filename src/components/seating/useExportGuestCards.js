@@ -367,7 +367,7 @@ export const useExportGuestCards = () => {
        <div class="guest-card">
          <div class="corner-decoration top-left"></div>
          <div class="guest-name">${guest.name}</div>
-         <div class="guest-thanks">Спасибо, что нашли время присутствовать на нашем празднике</div>
+         <div class="guest-thanks">Спасибо, что разделили с нами этот день</div>
          <div class="guest-signature">С любовью,<br>Василий и София</div>
        </div>
      `).join('');
@@ -443,16 +443,17 @@ export const useExportGuestCards = () => {
           }
           
           .guest-thanks {
-            font-size: 22px;
+            font-size: 28px;
             color: #5f4f3c;
-            font-weight: 400;
+            font-weight: 600;
             font-family: 'Caveat', 'Marck Script', cursive;
             margin-bottom: 18mm;
             text-align: center;
             max-width: 85mm;
-            line-height: 1.4;
+            line-height: 1.3;
             z-index: 3;
             position: relative;
+            text-shadow: 0 1px 2px rgba(139, 69, 19, 0.2);
           }
           
           .guest-signature {
@@ -544,7 +545,7 @@ export const useExportGuestCards = () => {
             }
             
             .guest-thanks {
-              font-size: 22px;
+              font-size: 28px;
               margin-bottom: 18mm;
             }
             
