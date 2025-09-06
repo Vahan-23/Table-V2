@@ -66,9 +66,10 @@ const GroupsPanel = () => {
     if (searchTerm.trim()) {
       filtered = filtered.filter(group => 
         group.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        group.members?.some(member => 
-          member.toLowerCase().includes(searchTerm.toLowerCase())
-        )
+        group.members?.some(member => {
+          const memberName = typeof member === 'string' ? member : member.name;
+          return memberName.toLowerCase().includes(searchTerm.toLowerCase());
+        })
       );
     }
     
@@ -256,13 +257,19 @@ const GroupsPanel = () => {
               {group.members.length} {t('people')}
             </div>
             <div style={{ fontSize: '11px', color: '#888' }}>
-              {group.members?.slice(0, 2).join(', ')}
+              {group.members?.slice(0, 2).map(member => {
+                const memberName = typeof member === 'string' ? member : member.name;
+                return memberName;
+              }).join(', ')}
               {group.members && group.members.length > 2 && ` +${group.members.length - 2}`}
             </div>
           </div>
         ) : (
           <>
-            {group.members?.slice(0, 3).join(', ')}
+            {group.members?.slice(0, 3).map(member => {
+              const memberName = typeof member === 'string' ? member : member.name;
+              return memberName;
+            }).join(', ')}
             {group.members && group.members.length > 3 && ` +${group.members.length - 3}`}
           </>
         )}

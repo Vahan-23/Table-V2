@@ -76,9 +76,10 @@ const MobileGroupsPanel = () => {
     if (searchTerm.trim()) {
       filtered = filtered.filter(group => 
         group.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        group.members?.some(member => 
-          member.toLowerCase().includes(searchTerm.toLowerCase())
-        )
+        group.members?.some(member => {
+          const memberName = typeof member === 'string' ? member : member.name;
+          return memberName.toLowerCase().includes(searchTerm.toLowerCase());
+        })
       );
     }
     
@@ -355,7 +356,10 @@ const MobileGroupsPanel = () => {
                               marginBottom: '8px',
                               lineHeight: '1.2'
                             }}>
-                              {group.members.slice(0, 1).join(', ')}
+                              {group.members.slice(0, 1).map(member => {
+                                const memberName = typeof member === 'string' ? member : member.name;
+                                return memberName;
+                              }).join(', ')}
                               {group.members.length > 1 && ` +${group.members.length - 1}`}
                             </div>
 
@@ -510,7 +514,10 @@ const MobileGroupsPanel = () => {
                               marginBottom: '8px',
                               lineHeight: '1.2'
                             }}>
-                              {group.members.slice(0, 1).join(', ')}
+                              {group.members.slice(0, 1).map(member => {
+                                const memberName = typeof member === 'string' ? member : member.name;
+                                return memberName;
+                              }).join(', ')}
                               {group.members.length > 1 && ` +${group.members.length - 1}`}
                             </div>
 
@@ -682,7 +689,10 @@ const MobileGroupsPanel = () => {
                               marginBottom: '8px',
                               lineHeight: '1.2'
                             }}>
-                              {group.members.slice(0, 1).join(', ')}
+                              {group.members.slice(0, 1).map(member => {
+                                const memberName = typeof member === 'string' ? member : member.name;
+                                return memberName;
+                              }).join(', ')}
                               {group.members.length > 1 && ` +${group.members.length - 1}`}
                             </div>
 

@@ -343,7 +343,7 @@ export const useExportToHDTemplate = () => {
         return {
           id: table.id,
           tableNumber,
-          people: people.map(person => person.name),
+          people: people.map(person => person.fullName || person.name), // Используем полное имя для PDF
           chairCount: table.chairCount || (table.chairs ? table.chairs.length : 12),
           occupiedSeats: people.length,
           shape: table.shape || 'round'
@@ -519,7 +519,7 @@ export const useExportToHDTemplate = () => {
         const people = table.people?.filter(person => person !== null && person !== undefined) || [];
         people.forEach(person => {
           allGuests.push({
-            name: person.name,
+            name: person.name, // Используем только короткое имя для карточек гостей
             tableNumber: table.tableNumber || table.id
           });
         });

@@ -79,15 +79,24 @@ const ImportJsonModal = () => {
 
         // Добавляем основного гостя, используя полное имя если есть, иначе короткое
         if (guest.guest_fullname && guest.guest_fullname.trim()) {
-          members.push(guest.guest_fullname.trim());
+          members.push({
+            name: guest.guest_name?.trim() || guest.guest_fullname.trim(),
+            fullName: guest.guest_fullname.trim()
+          });
         } else if (guest.guest_name && guest.guest_name.trim()) {
-          members.push(guest.guest_name.trim());
+          members.push({
+            name: guest.guest_name.trim(),
+            fullName: guest.guest_name.trim()
+          });
         }
 
         // Добавляем второго гостя, если есть
         if (guest.second_guest && guest.has_spouse && guest.second_guest.trim()) {
           // Добавляем полную строку second_guest как гостя
-          members.push(guest.second_guest.trim());
+          members.push({
+            name: guest.second_guest.trim(),
+            fullName: guest.second_guest.trim()
+          });
         }
 
         // Создаем группу только если есть участники

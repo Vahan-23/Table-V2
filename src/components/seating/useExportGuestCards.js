@@ -18,7 +18,7 @@ export const useExportGuestCards = () => {
         const people = table.people?.filter(person => person !== null && person !== undefined) || [];
         people.forEach(person => {
           allGuests.push({
-            name: person.name,
+            name: person.name, // Используем только короткое имя для карточек
             tableNumber: table.tableNumber || table.id
           });
         });

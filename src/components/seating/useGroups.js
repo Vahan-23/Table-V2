@@ -90,9 +90,10 @@ export const useGroups = () => {
       if (group.members && group.members.length > 0) {
         group.members.forEach(member => {
           // Проверяем, не рассажен ли уже этот человек
-          if (!seatedPeople.includes(member)) {
+          const memberName = typeof member === 'string' ? member : member.name;
+          if (!seatedPeople.includes(memberName)) {
             peopleFromGroups.push({
-              name: member,
+              name: memberName,
               groupId: group.id,
               groupName: group.name,
               groupColor: group.color
@@ -127,11 +128,24 @@ export const useGroups = () => {
     const usedColors = groups.map(g => g.color);
     const availableColor = colors.find(color => !usedColors.includes(color)) || '#95a5a6';
 
+    // Обрабатываем как старые строки, так и новые объекты
+    const processedMembers = groupMembers.map(member => {
+      if (typeof member === 'string') {
+        return { name: member, fullName: member }; // Конвертируем строки в объекты
+      } else if (member && typeof member === 'object' && member.name) {
+        return { 
+          name: member.name, 
+          fullName: member.fullName || member.name 
+        };
+      }
+      return member;
+    });
+
     const newGroup = {
       id: 'group_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
       name: groupName.trim(),
       color: availableColor,
-      members: [...groupMembers]
+      members: processedMembers
     };
 
     dispatch({ type: actions.ADD_GROUP, payload: newGroup });
@@ -159,9 +173,10 @@ export const useGroups = () => {
     const groupToRemove = groups.find(g => g.id === groupId);
 
     if (groupToRemove && groupToRemove.members) {
-      const peopleToFree = groupToRemove.members.filter(member =>
-        TEST_PEOPLE.includes(member)
-      );
+      const peopleToFree = groupToRemove.members.filter(member => {
+        const memberName = typeof member === 'string' ? member : member.name;
+        return TEST_PEOPLE.includes(memberName);
+      });
       dispatch({ 
         type: actions.SET_USED_PEOPLE, 
         payload: usedPeople.filter(person => !peopleToFree.includes(person))
@@ -237,7 +252,11 @@ export const useGroups = () => {
     // Возврат участников в группу
     const updatedGroups = groups.map(g => {
       if (g.id === groupId) {
-        const allMembers = [...(g.members || []), ...groupMembers];
+        // Конвертируем существующих участников в строки для совместимости
+        const existingMembers = (g.members || []).map(member => 
+          typeof member === 'string' ? member : member.name
+        );
+        const allMembers = [...existingMembers, ...groupMembers];
         const uniqueMembers = [...new Set(allMembers)];
 
         return {

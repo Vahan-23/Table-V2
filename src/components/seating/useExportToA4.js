@@ -20,7 +20,7 @@ export const useExportToA5 = () => {
         return {
           id: table.id,
           tableNumber,
-          people: people.map(person => person.name),
+          people: people.map(person => person.fullName || person.name), // Используем полное имя для PDF
           chairCount: table.chairCount || (table.chairs ? table.chairs.length : 12),
           occupiedSeats: people.length,
           shape: table.shape || 'round'
