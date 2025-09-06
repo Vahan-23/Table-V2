@@ -70,44 +70,27 @@ const ImportJsonModal = () => {
       let totalGuests = 0;
 
       guests.forEach((guest, index) => {
-        // Используем полное имя для названия группы, если оно есть
+        // Каждый гость создается как отдельная группа
         const groupName = guest.guest_fullname && guest.guest_fullname.trim() 
           ? guest.guest_fullname.trim() 
-          : `Группа ${guest.group_description || `Гость ${index + 1}`}`;
+          : guest.guest_name?.trim() || `Гость ${index + 1}`;
         
-        const members = [];
+        // Определяем пол гостя
+        const guestGender = guest.guest_gender === 'արական' ? 'мужской' : 
+                           guest.guest_gender === 'женский' ? 'женский' : 
+                           guest.guest_gender === 'смешанный' ? 'мужской' : 'мужской';
 
-        // Добавляем основного гостя, используя полное имя если есть, иначе короткое
-        if (guest.guest_fullname && guest.guest_fullname.trim()) {
-          members.push({
-            name: guest.guest_name?.trim() || guest.guest_fullname.trim(),
-            fullName: guest.guest_fullname.trim()
-          });
-        } else if (guest.guest_name && guest.guest_name.trim()) {
-          members.push({
-            name: guest.guest_name.trim(),
-            fullName: guest.guest_name.trim()
-          });
-        }
+        // Создаем группу с одним гостем
+        const members = [{
+          name: guest.guest_name?.trim() || guest.guest_fullname?.trim() || `Гость ${index + 1}`,
+          fullName: guest.guest_fullname?.trim() || guest.guest_name?.trim() || `Гость ${index + 1}`,
+          gender: guestGender
+        }];
 
-        // Добавляем второго гостя, если есть
-        if (guest.second_guest && guest.has_spouse && guest.second_guest.trim()) {
-          // Добавляем полную строку second_guest как гостя
-          members.push({
-            name: guest.second_guest.trim(),
-            fullName: guest.second_guest.trim()
-          });
-        }
-
-        // Создаем группу только если есть участники
-        if (members.length > 0) {
-          console.log(`Создаем группу "${groupName}" с участниками:`, members);
-          addGroup(groupName, members);
-          groupsCreated++;
-          totalGuests += members.length;
-        } else {
-          console.warn(`Пропускаем гостя ${index + 1}: нет валидных имен`);
-        }
+        console.log(`Создаем группу "${groupName}" с участником:`, members[0]);
+        addGroup(groupName, members);
+        groupsCreated++;
+        totalGuests += members.length;
       });
 
       // Показываем уведомление об успехе

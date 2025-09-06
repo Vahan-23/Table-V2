@@ -96,10 +96,15 @@ export const useTables = () => {
             // Обрабатываем как старые строки, так и новые объекты
             const memberName = typeof member === 'string' ? member : member.name;
             const memberFullName = typeof member === 'string' ? member : (member.fullName || member.name);
+            const memberGender = typeof member === 'string' ? 'мужской' : (member.gender || 'мужской');
+            
+            
+            
             
             updatedPeople[seatIndex] = {
               name: memberName,
               fullName: memberFullName,
+              gender: memberGender,
               groupId: groupId,
               isMainGuest: true
             };
@@ -168,6 +173,10 @@ export const useTables = () => {
         payload: table.people[chairIndex].fullName || table.people[chairIndex].name || '' 
       });
       dispatch({ 
+        type: actions.SET_PERSON_GENDER, 
+        payload: table.people[chairIndex].gender || 'мужской' 
+      });
+      dispatch({ 
         type: actions.SET_SELECTED_GROUP, 
         payload: table.people[chairIndex].groupId || '' 
       });
@@ -175,6 +184,7 @@ export const useTables = () => {
       // Если стул свободен - готовим для добавления нового гостя
       dispatch({ type: actions.SET_PERSON_NAME, payload: '' });
       dispatch({ type: actions.SET_PERSON_FULL_NAME, payload: '' });
+      dispatch({ type: actions.SET_PERSON_GENDER, payload: 'мужской' });
       dispatch({ type: actions.SET_SELECTED_GROUP, payload: '' });
     }
 
@@ -301,6 +311,7 @@ export const useTables = () => {
         tablePeople[chairIndex] = {
           name: state.personName.trim(),
           fullName: state.personFullName?.trim() || state.personName.trim(),
+          gender: state.personGender || 'мужской',
           groupId: state.selectedGroup,
           isMainGuest: true
         };
@@ -337,7 +348,8 @@ export const useTables = () => {
           // Создаем объект для возврата в группу
           const memberToReturn = {
             name: currentPerson.name,
-            fullName: currentPerson.fullName || currentPerson.name
+            fullName: currentPerson.fullName || currentPerson.name,
+            gender: currentPerson.gender || 'мужской'
           };
           
           return {
@@ -478,6 +490,7 @@ export const useTables = () => {
             peopleToReturn.push({
               name: person.name,
               fullName: person.fullName || person.name,
+              gender: person.gender || 'мужской',
               groupId: person.groupId
             });
           }
@@ -505,7 +518,8 @@ export const useTables = () => {
       peopleFromThisGroup.forEach(person => {
         const memberToAdd = {
           name: person.name,
-          fullName: person.fullName || person.name
+          fullName: person.fullName || person.name,
+          gender: person.gender || 'мужской'
         };
         
         // Проверяем, нет ли уже такого участника

@@ -131,11 +131,12 @@ export const useGroups = () => {
     // Обрабатываем как старые строки, так и новые объекты
     const processedMembers = groupMembers.map(member => {
       if (typeof member === 'string') {
-        return { name: member, fullName: member }; // Конвертируем строки в объекты
+        return { name: member, fullName: member, gender: 'мужской' }; // Конвертируем строки в объекты
       } else if (member && typeof member === 'object' && member.name) {
         return { 
           name: member.name, 
-          fullName: member.fullName || member.name 
+          fullName: member.fullName || member.name,
+          gender: member.gender || 'мужской'
         };
       }
       return member;

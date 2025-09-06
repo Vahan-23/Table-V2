@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { useSeating } from './SeatingContext';
+import { useSeating, isFemaleGender } from './SeatingContext';
 import { useTranslations } from './useTranslations';
 
 export const useExportGuestCards = () => {
@@ -19,6 +19,7 @@ export const useExportGuestCards = () => {
         people.forEach(person => {
           allGuests.push({
             name: person.name, // Используем только короткое имя для карточек
+            gender: person.gender || 'мужской',
             tableNumber: table.tableNumber || table.id
           });
         });
@@ -363,14 +364,17 @@ export const useExportGuestCards = () => {
 
   // Генерация HTML контента для карточек гостей
   const generateGuestCardsContent = (guests) => {
-         const guestCards = guests.map(guest => `
+         const guestCards = guests.map(guest => {
+           const greeting = isFemaleGender(guest.gender) ? 'Дорогая' : 'Дорогой';
+           return `
        <div class="guest-card">
          <div class="corner-decoration top-left"></div>
-         <div class="guest-name">${guest.name}</div>
+         <div class="guest-name">${greeting} ${guest.name}</div>
          <div class="guest-thanks">Спасибо, что разделили с нами этот день</div>
          <div class="guest-signature">С любовью,<br>Василий и София</div>
        </div>
-     `).join('');
+     `;
+         }).join('');
 
     return `
       <!DOCTYPE html>
