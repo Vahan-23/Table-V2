@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { useSeating } from './SeatingContext';
+import { useSeating, isFemaleGender } from './SeatingContext';
 import { useTranslations } from './useTranslations';
 import { getAssetUrl } from '../../utils/baseUrl';
 
@@ -520,6 +520,7 @@ export const useExportToHDTemplate = () => {
         people.forEach(person => {
           allGuests.push({
             name: person.name, // Используем только короткое имя для карточек гостей
+            gender: person.gender || 'мужской',
             tableNumber: table.tableNumber || table.id
           });
         });
@@ -544,18 +545,21 @@ export const useExportToHDTemplate = () => {
 
   // Генерация HTML контента для карточек гостей в HD-стиле
   const generateHDGuestCardsContent = useCallback((guests) => {
-    const guestCards = guests.map(guest => `
+    const guestCards = guests.map(guest => {
+      const greeting = isFemaleGender(guest.gender) ? 'Дорогая' : 'Дорогой';
+      return `
       <div class="hd-guest-card">
         <!-- Фоновое изображение -->
         <img src="${getAssetUrl('/HDfon.jpg')}" class="hd-card-background-image" alt="HD фон" />
         <!-- Декоративные цветы -->
         <img src="${getAssetUrl('/HDtsaxik.png')}" class="hd-card-flower-decoration top-left" alt="цветок" />
         <img src="${getAssetUrl('/HDtsaxik.png')}" class="hd-card-bottom-flower" alt="цветок" />
-        <div class="hd-guest-name">${guest.name}</div>
+        <div class="hd-guest-name">${greeting} ${guest.name}</div>
         <div class="hd-guest-thanks">Спасибо, что разделили с нами этот день</div>
         <div class="hd-guest-signature">С любовью,<br>Василий и София</div>
       </div>
-    `).join('');
+    `;
+    }).join('');
 
     return `
       <!DOCTYPE html>

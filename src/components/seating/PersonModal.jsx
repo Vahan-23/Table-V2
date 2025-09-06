@@ -15,6 +15,7 @@ const PersonModal = () => {
     selectedChair,
     personName,
     personFullName,
+    personGender,
     selectedGroup,
     selectedPersonFromGroup,
     personSearchTerm,
@@ -46,6 +47,10 @@ const PersonModal = () => {
     dispatch({ type: actions.SET_PERSON_FULL_NAME, payload: e.target.value });
   };
 
+  const handlePersonGenderChange = (e) => {
+    dispatch({ type: actions.SET_PERSON_GENDER, payload: e.target.value });
+  };
+
   const handleGroupChange = (e) => {
     dispatch({ type: actions.SET_SELECTED_GROUP, payload: e.target.value });
   };
@@ -58,6 +63,7 @@ const PersonModal = () => {
     dispatch({ type: actions.SET_SELECTED_PERSON_FROM_GROUP, payload: personData });
     dispatch({ type: actions.SET_PERSON_NAME, payload: personData.name });
     dispatch({ type: actions.SET_PERSON_FULL_NAME, payload: personData.fullName || personData.name });
+    dispatch({ type: actions.SET_PERSON_GENDER, payload: personData.gender || 'мужской' });
     dispatch({ type: actions.SET_SELECTED_GROUP, payload: personData.groupId });
     dispatch({ type: actions.SET_SHOW_PERSON_SEARCH, payload: false });
   };
@@ -309,6 +315,50 @@ const PersonModal = () => {
               e.target.style.boxShadow = 'none';
             }}
           />
+        </div>
+
+        {/* Поле для выбора пола */}
+        <div style={{ 
+          marginBottom: '15px',
+          border: '2px solid #9b59b6',
+          borderRadius: '8px',
+          padding: '15px',
+          backgroundColor: '#f4f0f7'
+        }}>
+          <label style={{
+            display: 'block',
+            marginBottom: '8px',
+            fontWeight: 'bold',
+            color: '#8e44ad',
+            fontSize: '16px'
+          }}>
+            👤 Пол гостя
+          </label>
+          <select
+            value={personGender || 'мужской'}
+            onChange={handlePersonGenderChange}
+            style={{
+              width: '100%',
+              padding: '12px',
+              border: '2px solid #9b59b6',
+              borderRadius: '6px',
+              fontSize: '16px',
+              boxSizing: 'border-box',
+              backgroundColor: 'white',
+              transition: 'all 0.2s ease'
+            }}
+            onFocus={(e) => {
+              e.target.style.borderColor = '#8e44ad';
+              e.target.style.boxShadow = '0 0 8px rgba(155, 89, 182, 0.3)';
+            }}
+            onBlur={(e) => {
+              e.target.style.borderColor = '#9b59b6';
+              e.target.style.boxShadow = 'none';
+            }}
+          >
+            <option value="мужской">👨 Мужской</option>
+            <option value="женский">👩 Женский</option>
+          </select>
         </div>
 
         <div style={{ marginBottom: '15px' }}>

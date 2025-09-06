@@ -28,6 +28,7 @@ const ACTIONS = {
   SET_EDITING_GROUP: 'SET_EDITING_GROUP',
   SET_PERSON_NAME: 'SET_PERSON_NAME',
   SET_PERSON_FULL_NAME: 'SET_PERSON_FULL_NAME',
+  SET_PERSON_GENDER: 'SET_PERSON_GENDER',
   SET_SELECTED_GROUP: 'SET_SELECTED_GROUP',
   SET_NEW_GROUP_NAME: 'SET_NEW_GROUP_NAME',
   SET_GROUP_MEMBERS: 'SET_GROUP_MEMBERS',
@@ -124,6 +125,7 @@ const initialState = {
   // Формы
   personName: '',
   personFullName: '',
+  personGender: '',
   selectedGroup: '',
   newGroupName: '',
   groupMembers: [],
@@ -307,6 +309,9 @@ function seatingReducer(state, action) {
       
     case ACTIONS.SET_PERSON_FULL_NAME:
       return { ...state, personFullName: action.payload };
+      
+    case ACTIONS.SET_PERSON_GENDER:
+      return { ...state, personGender: action.payload };
       
     case ACTIONS.SET_SELECTED_GROUP:
       return { ...state, selectedGroup: action.payload };
@@ -558,6 +563,8 @@ function seatingReducer(state, action) {
         pendingSeating: null,
         selectedMembers: [],
         personName: '',
+        personFullName: '',
+        personGender: '',
         selectedGroup: '',
         newGroupName: '',
         groupMembers: [],
@@ -675,6 +682,11 @@ export const SeatingProvider = ({ children }) => {
       {children}
     </SeatingContext.Provider>
   );
+};
+
+// Вспомогательная функция для определения пола
+export const isFemaleGender = (gender) => {
+  return gender === 'женский';
 };
 
 // Хук для использования контекста

@@ -1,5 +1,5 @@
 import React from 'react';
-import { useSeating } from './SeatingContext';
+import { useSeating, isFemaleGender } from './SeatingContext';
 import { useTranslations } from './useTranslations';
 import { useTables } from './useTables';
 import { useGroups } from './useGroups';
@@ -241,7 +241,7 @@ const MobileSeatingCanvas = () => {
                         margin: '2px',
                         fontSize: '11px'
                       }}>
-                        {person.name}{person.fullName && person.fullName !== person.name ? ` (${person.fullName})` : ''}
+                        {isFemaleGender(person.gender) ? '👩' : '👨'} {person.name}{person.fullName && person.fullName !== person.name ? ` (${person.fullName})` : ''}
                       </span>
                     ))}
                   </div>
