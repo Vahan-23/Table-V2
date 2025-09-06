@@ -558,6 +558,100 @@ export const useTables = () => {
     }
   }, [hallData, state.groups, dispatch, actions]);
 
+  // Очистка конкретного стола и возврат гостей в группы
+  const clearTable = useCallback((tableId) => {
+    if (!hallData?.tables) return;
+
+    const table = hallData.tables.find(t => t.id === tableId);
+    if (!table || !table.people) return;
+
+    // Собираем всех людей с этого стола
+    const peopleToReturn = [];
+    table.people.forEach(person => {
+      if (person && person.name && person.groupId) {
+        peopleToReturn.push({
+          name: person.name,
+          fullName: person.fullName || person.name,
+          gender: person.gender || 'мужской',
+          groupId: person.groupId
+        });
+      }
+    });
+
+    if (peopleToReturn.length === 0) {
+      dispatch({ 
+        type: actions.SET_NOTIFICATION, 
+        payload: {
+          type: 'info',
+          message: 'Стол уже пустой'
+        }
+      });
+      return;
+    }
+
+    // Очищаем стол
+    const updatedTables = hallData.tables.map(t => 
+      t.id === tableId 
+        ? { ...t, people: t.people.map(() => null) }
+        : t
+    );
+
+    const updatedHallData = {
+      ...hallData,
+      tables: updatedTables
+    };
+
+    // Обновляем группы - возвращаем людей в их группы
+    const updatedGroups = state.groups.map(group => {
+      const peopleFromThisGroup = peopleToReturn.filter(p => p.groupId === group.id);
+      
+      if (peopleFromThisGroup.length === 0) {
+        return group;
+      }
+
+      // Добавляем людей обратно в группу, избегая дубликатов
+      const updatedMembers = [...group.members];
+      peopleFromThisGroup.forEach(person => {
+        const memberToAdd = {
+          name: person.name,
+          fullName: person.fullName || person.name,
+          gender: person.gender || 'мужской'
+        };
+        
+        // Проверяем, нет ли уже такого участника
+        const exists = updatedMembers.some(member => {
+          const memberName = typeof member === 'string' ? member : member.name;
+          return memberName === person.name;
+        });
+        
+        if (!exists) {
+          updatedMembers.push(memberToAdd);
+        }
+      });
+
+      return {
+        ...group,
+        members: updatedMembers
+      };
+    });
+
+    // Сохраняем обновленные данные
+    dispatch({ type: actions.SET_HALL_DATA, payload: updatedHallData });
+    dispatch({ type: actions.SET_GROUPS, payload: updatedGroups });
+    
+    persistentStorage.save('hallData', updatedHallData);
+    persistentStorage.save('seatingGroups', updatedGroups);
+
+    // Показываем уведомление
+    dispatch({ 
+      type: actions.SET_NOTIFICATION, 
+      payload: {
+        type: 'success',
+        message: `Стол "${table.name || table.id}" очищен. Возвращено гостей: ${peopleToReturn.length}`
+      }
+    });
+  }, [hallData, state.groups, dispatch, actions]);
+
   return {
     hallData,
     getAvailableSeats,
@@ -573,6 +667,7 @@ export const useTables = () => {
     setTableEnabled,
     getActiveTables,
     getDisabledTables,
-    clearAllTables
+    clearAllTables,
+    clearTable
   };
 }; 
