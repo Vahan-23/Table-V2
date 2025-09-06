@@ -552,7 +552,7 @@ export const useExportToHDTemplate = () => {
         <img src="${getAssetUrl('/HDtsaxik.png')}" class="hd-card-flower-decoration top-left" alt="цветок" />
         <img src="${getAssetUrl('/HDtsaxik.png')}" class="hd-card-bottom-flower" alt="цветок" />
         <div class="hd-guest-name">${guest.name}</div>
-        <div class="hd-guest-thanks">Спасибо, что нашли время присутствовать на нашем празднике</div>
+        <div class="hd-guest-thanks">Спасибо, что разделили с нами этот день</div>
         <div class="hd-guest-signature">С любовью,<br>Василий и София</div>
       </div>
     `).join('');
@@ -685,16 +685,17 @@ export const useExportToHDTemplate = () => {
           }
           
           .hd-guest-thanks {
-            font-size: 22px;
+            font-size: 28px;
             color: #5f4f3c;
-            font-weight: 400;
+            font-weight: 600;
             font-family: 'Caveat', 'Marck Script', cursive;
             margin-bottom: 18mm;
             text-align: center;
             max-width: 85mm;
-            line-height: 1.4;
+            line-height: 1.3;
             z-index: 4;
             position: relative;
+            text-shadow: 0 1px 2px rgba(139, 69, 19, 0.2);
           }
           
           .hd-guest-signature {
@@ -724,7 +725,7 @@ export const useExportToHDTemplate = () => {
             }
             
             .hd-guest-thanks {
-              font-size: 22px;
+              font-size: 28px;
               margin-bottom: 18mm;
             }
             
