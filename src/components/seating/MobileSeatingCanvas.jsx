@@ -241,7 +241,7 @@ const MobileSeatingCanvas = () => {
                         margin: '2px',
                         fontSize: '11px'
                       }}>
-                        {person.name}
+                        {person.name}{person.fullName && person.fullName !== person.name ? ` (${person.fullName})` : ''}
                       </span>
                     ))}
                   </div>

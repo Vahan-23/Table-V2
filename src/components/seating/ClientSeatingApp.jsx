@@ -149,7 +149,7 @@ const TableComponent = ({
                 e.target.style.boxShadow = '0 1px 2px rgba(0,0,0,0.2)';
               }}
             >
-              ✏️ {person.name}
+              ✏️ {person.name}{person.fullName && person.fullName !== person.name ? ` (${person.fullName})` : ''}
             </div>
           )}
         </div>
@@ -245,7 +245,7 @@ const TableComponent = ({
                 e.target.style.boxShadow = '0 1px 2px rgba(0,0,0,0.2)';
               }}
             >
-              ✏️ {person.name}
+              ✏️ {person.name}{person.fullName && person.fullName !== person.name ? ` (${person.fullName})` : ''}
             </div>
           )}
         </div>
@@ -328,7 +328,7 @@ const TableComponent = ({
                 e.target.style.boxShadow = '0 1px 2px rgba(0,0,0,0.2)';
               }}
             >
-              ✏️ {person.name}
+              ✏️ {person.name}{person.fullName && person.fullName !== person.name ? ` (${person.fullName})` : ''}
             </div>
           )}
         </div>

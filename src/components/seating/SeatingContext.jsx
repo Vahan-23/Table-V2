@@ -27,6 +27,7 @@ const ACTIONS = {
   SET_SELECTED_GROUP_FOR_SEATING: 'SET_SELECTED_GROUP_FOR_SEATING',
   SET_EDITING_GROUP: 'SET_EDITING_GROUP',
   SET_PERSON_NAME: 'SET_PERSON_NAME',
+  SET_PERSON_FULL_NAME: 'SET_PERSON_FULL_NAME',
   SET_SELECTED_GROUP: 'SET_SELECTED_GROUP',
   SET_NEW_GROUP_NAME: 'SET_NEW_GROUP_NAME',
   SET_GROUP_MEMBERS: 'SET_GROUP_MEMBERS',
@@ -122,6 +123,7 @@ const initialState = {
   
   // Формы
   personName: '',
+  personFullName: '',
   selectedGroup: '',
   newGroupName: '',
   groupMembers: [],
@@ -302,6 +304,9 @@ function seatingReducer(state, action) {
       
     case ACTIONS.SET_PERSON_NAME:
       return { ...state, personName: action.payload };
+      
+    case ACTIONS.SET_PERSON_FULL_NAME:
+      return { ...state, personFullName: action.payload };
       
     case ACTIONS.SET_SELECTED_GROUP:
       return { ...state, selectedGroup: action.payload };

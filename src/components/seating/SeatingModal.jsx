@@ -132,7 +132,10 @@ const SeatingModal = () => {
                   });
                 }
               });
-              return group.members.filter(member => !seatedPeople.includes(member)).length;
+              return group.members.filter(member => {
+                const memberName = typeof member === 'string' ? member : member.name;
+                return !seatedPeople.includes(memberName);
+              }).length;
             })()}
           </div>
           <div style={{ marginBottom: '10px' }}>
@@ -197,10 +200,14 @@ const SeatingModal = () => {
                          }
                        });
                        
-                       const unseatedPeople = group.members.filter(member => !seatedPeople.includes(member));
+                       const unseatedPeople = group.members.filter(member => {
+                         const memberName = typeof member === 'string' ? member : member.name;
+                         return !seatedPeople.includes(memberName);
+                       });
                        
                        return unseatedPeople.map((person, index) => {
-                         const isSelected = selectedPeople.includes(person);
+                         const personName = typeof person === 'string' ? person : person.name;
+                         const isSelected = selectedPeople.includes(personName);
                          
                          // Человек "красный" только если он не выбран И уже выбрано максимальное количество людей
                          const isOverLimit = !isSelected && selectedPeople.length >= availableSeatsForSeating;
@@ -208,7 +215,7 @@ const SeatingModal = () => {
             return (
               <div
                 key={index}
-                onClick={() => handlePersonToggle(person)}
+                onClick={() => handlePersonToggle(personName)}
                 style={{
                   padding: '10px',
                   border: isOverLimit ? '1px solid #e74c3c' : '1px solid #eee',
@@ -252,7 +259,11 @@ const SeatingModal = () => {
                   fontWeight: isSelected ? 'bold' : 'normal',
                   color: isOverLimit ? '#e74c3c' : 'inherit'
                 }}>
-                                     {person}
+                  {(() => {
+                    const personName = typeof person === 'string' ? person : person.name;
+                    const personFullName = typeof person === 'string' ? person : (person.fullName || person.name);
+                    return personName + (personFullName && personFullName !== personName ? ` (${personFullName})` : '');
+                  })()}
                    {isOverLimit && (
                      <span style={{
                        fontSize: '11px',

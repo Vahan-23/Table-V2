@@ -49,7 +49,10 @@ export const useTables = () => {
         }
       });
       
-      return group.members.filter(member => !seatedPeople.includes(member));
+      return group.members.filter(member => {
+        const memberName = typeof member === 'string' ? member : member.name;
+        return !seatedPeople.includes(memberName);
+      });
     };
 
     const peopleToSeat = selectedPeople || getUnseatedPeopleFromGroup(groupId);
@@ -83,15 +86,20 @@ export const useTables = () => {
         const updatedPeople = [...(table.people || [])];
         let seatIndex = 0;
 
-        peopleToSeat.forEach((memberName) => {
+        peopleToSeat.forEach((member) => {
           // Находим свободное место
           while (seatIndex < updatedPeople.length && updatedPeople[seatIndex] !== null && updatedPeople[seatIndex] !== undefined) {
             seatIndex++;
           }
           
           if (seatIndex < updatedPeople.length) {
+            // Обрабатываем как старые строки, так и новые объекты
+            const memberName = typeof member === 'string' ? member : member.name;
+            const memberFullName = typeof member === 'string' ? member : (member.fullName || member.name);
+            
             updatedPeople[seatIndex] = {
               name: memberName,
+              fullName: memberFullName,
               groupId: groupId,
               isMainGuest: true
             };
@@ -118,7 +126,13 @@ export const useTables = () => {
     // Удаляем рассаженных людей из группы
     const updatedGroups = state.groups.map(g => {
       if (g.id === groupId) {
-        const newMembers = g.members.filter(member => !peopleToSeat.includes(member));
+        const newMembers = g.members.filter(member => {
+          const memberName = typeof member === 'string' ? member : member.name;
+          return !peopleToSeat.some(person => {
+            const personName = typeof person === 'string' ? person : person.name;
+            return personName === memberName;
+          });
+        });
         console.log(`🪑 РАССАЖАЕМ: ${g.name} - было ${g.members.length} людей, стало ${newMembers.length}`);
         return {
           ...g,
@@ -150,12 +164,17 @@ export const useTables = () => {
         payload: table.people[chairIndex].name || '' 
       });
       dispatch({ 
+        type: actions.SET_PERSON_FULL_NAME, 
+        payload: table.people[chairIndex].fullName || table.people[chairIndex].name || '' 
+      });
+      dispatch({ 
         type: actions.SET_SELECTED_GROUP, 
         payload: table.people[chairIndex].groupId || '' 
       });
     } else {
       // Если стул свободен - готовим для добавления нового гостя
       dispatch({ type: actions.SET_PERSON_NAME, payload: '' });
+      dispatch({ type: actions.SET_PERSON_FULL_NAME, payload: '' });
       dispatch({ type: actions.SET_SELECTED_GROUP, payload: '' });
     }
 
@@ -281,6 +300,7 @@ export const useTables = () => {
 
         tablePeople[chairIndex] = {
           name: state.personName.trim(),
+          fullName: state.personFullName?.trim() || state.personName.trim(),
           groupId: state.selectedGroup,
           isMainGuest: true
         };
@@ -314,9 +334,15 @@ export const useTables = () => {
     if (currentPerson && currentPerson.groupId) {
       const updatedGroups = state.groups.map(group => {
         if (group.id === currentPerson.groupId) {
+          // Создаем объект для возврата в группу
+          const memberToReturn = {
+            name: currentPerson.name,
+            fullName: currentPerson.fullName || currentPerson.name
+          };
+          
           return {
             ...group,
-            members: [...group.members, currentPerson.name]
+            members: [...group.members, memberToReturn]
           };
         }
         return group;
@@ -451,6 +477,7 @@ export const useTables = () => {
           if (person && person.name && person.groupId) {
             peopleToReturn.push({
               name: person.name,
+              fullName: person.fullName || person.name,
               groupId: person.groupId
             });
           }
@@ -472,13 +499,23 @@ export const useTables = () => {
     // Обновляем группы - возвращаем людей в их группы
     const updatedGroups = state.groups.map(group => {
       const peopleFromThisGroup = peopleToReturn.filter(p => p.groupId === group.id);
-      const peopleNames = peopleFromThisGroup.map(p => p.name);
       
       // Добавляем людей обратно в группу, избегая дубликатов
       const updatedMembers = [...group.members];
-      peopleNames.forEach(name => {
-        if (!updatedMembers.includes(name)) {
-          updatedMembers.push(name);
+      peopleFromThisGroup.forEach(person => {
+        const memberToAdd = {
+          name: person.name,
+          fullName: person.fullName || person.name
+        };
+        
+        // Проверяем, нет ли уже такого участника
+        const exists = updatedMembers.some(member => {
+          const memberName = typeof member === 'string' ? member : member.name;
+          return memberName === person.name;
+        });
+        
+        if (!exists) {
+          updatedMembers.push(memberToAdd);
         }
       });
 
