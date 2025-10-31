@@ -154,17 +154,50 @@ export const useGroups = () => {
 
   // Обновление группы
   const updateGroup = useCallback((groupId, groupName, groupMembers) => {
+    // Находим оригинальную группу для сохранения данных о членах
+    const originalGroup = groups.find(g => g.id === groupId);
+    
+    // Конвертируем строки обратно в объекты, сохраняя информацию из оригинальной группы
+    const processedMembers = groupMembers.map(memberName => {
+      // Если memberName уже объект, возвращаем как есть
+      if (typeof memberName !== 'string') {
+        return memberName;
+      }
+      
+      // Ищем члена в оригинальной группе с таким именем
+      const originalMember = originalGroup?.members?.find(m => {
+        const origName = typeof m === 'string' ? m : m.name;
+        return origName === memberName;
+      });
+      
+      // Если нашли оригинального члена с дополнительной информацией, используем её
+      if (originalMember && typeof originalMember === 'object') {
+        return {
+          name: memberName,
+          fullName: originalMember.fullName || memberName,
+          gender: originalMember.gender || 'мужской'
+        };
+      }
+      
+      // Иначе создаем новый объект
+      return {
+        name: memberName,
+        fullName: memberName,
+        gender: 'мужской'
+      };
+    });
+    
     const updatedGroup = {
       id: groupId,
       name: groupName,
-      members: groupMembers
+      members: processedMembers
     };
     
     dispatch({ type: actions.UPDATE_GROUP, payload: updatedGroup });
     
     // Сохранение в backend/localStorage
     const updatedGroups = groups.map(group =>
-      group.id === groupId ? { ...group, name: groupName, members: groupMembers } : group
+      group.id === groupId ? { ...group, name: groupName, members: processedMembers } : group
     );
     persistentStorage.save('seatingGroups', updatedGroups);
   }, [groups, dispatch, actions]);
