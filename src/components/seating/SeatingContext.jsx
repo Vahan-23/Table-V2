@@ -162,10 +162,10 @@ const initialState = {
   availableSeatsForSeating: 0,
   
   // Показ статистики
-  showStatistics: true,
+  showStatistics: false,
   
   // Показ панели групп
-  showGroupsPanel: true,
+  showGroupsPanel: false,
   
   // Мобильная рассадка
   showMobileSeatingCanvas: false,

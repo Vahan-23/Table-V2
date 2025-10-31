@@ -1,0 +1,702 @@
+{
+  "event_id": "6",
+  "export_date": "2025-10-31T12:37:18.869329",
+  "export_language": "ru",
+  "guests": [
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "мужской",
+      "guest_name": "Գևորգյան",
+      "guest_fullname": "Գևորգյան",
+      "has_spouse": false,
+      "second_guest": null
+    },
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "мужской",
+      "guest_name": "Արտեմ",
+      "guest_fullname": "Արտեմ",
+      "has_spouse": false,
+      "second_guest": null
+    },
+    {
+      "group_description": "2 человека",
+      "group_size": 2,
+      "guest_gender": "мужской",
+      "guest_name": "Արամ",
+      "guest_fullname": "Արամ",
+      "has_spouse": true,
+      "second_guest": "Արամ Կին"
+    },
+    {
+      "group_description": "2 человека",
+      "group_size": 2,
+      "guest_gender": "мужской",
+      "guest_name": "Արման",
+      "guest_fullname": "Արման",
+      "has_spouse": true,
+      "second_guest": "Արման կին"
+    },
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "мужской",
+      "guest_name": "Ռուբեն",
+      "guest_fullname": "Ռուբեն",
+      "has_spouse": false,
+      "second_guest": null
+    },
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "мужской",
+      "guest_name": "Պուճուր Սերգեյ",
+      "guest_fullname": "Պուճուր Սերգեյ",
+      "has_spouse": false,
+      "second_guest": null
+    },
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "мужской",
+      "guest_name": "Դավո Կիսադիրայվդ",
+      "guest_fullname": "Դավո Կիսադիրայվդ",
+      "has_spouse": false,
+      "second_guest": null
+    },
+    {
+      "group_description": "2 человека",
+      "group_size": 2,
+      "guest_gender": "мужской",
+      "guest_name": "Արծվի",
+      "guest_fullname": "Արծվի",
+      "has_spouse": true,
+      "second_guest": "Արծվի Կին"
+    },
+    {
+      "group_description": "2 человека",
+      "group_size": 2,
+      "guest_gender": "мужской",
+      "guest_name": "Հարութ  կանֆետ",
+      "guest_fullname": "Հարութ  կանֆետ",
+      "has_spouse": true,
+      "second_guest": "Հարութ  կին"
+    },
+    {
+      "group_description": "2 человека",
+      "group_size": 2,
+      "guest_gender": "мужской",
+      "guest_name": "Մերուժ",
+      "guest_fullname": "Մերուժ",
+      "has_spouse": true,
+      "second_guest": "Մերուժ Կին"
+    },
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "мужской",
+      "guest_name": "Արթուր 1",
+      "guest_fullname": "Արթուր 1",
+      "has_spouse": false,
+      "second_guest": null
+    },
+    {
+      "group_description": "2 человека",
+      "group_size": 2,
+      "guest_gender": "мужской",
+      "guest_name": "Սուրո 1",
+      "guest_fullname": "Սուրո 1",
+      "has_spouse": true,
+      "second_guest": "Սուր կին"
+    },
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "мужской",
+      "guest_name": "Դավո Ռուբո",
+      "guest_fullname": "Դավո Ռուբո",
+      "has_spouse": false,
+      "second_guest": null
+    },
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "мужской",
+      "guest_name": "Անդո ՊՆ",
+      "guest_fullname": "Անդո ՊՆ",
+      "has_spouse": false,
+      "second_guest": null
+    },
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "мужской",
+      "guest_name": "Արամ կուրս",
+      "guest_fullname": "Արամ կուրս",
+      "has_spouse": false,
+      "second_guest": null
+    },
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "женский",
+      "guest_name": "Տիկո Կուրս",
+      "guest_fullname": "Տիկո Կուրս",
+      "has_spouse": false,
+      "second_guest": null
+    },
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "мужской",
+      "guest_name": "Սամո գիժ",
+      "guest_fullname": "Սամո գիժ",
+      "has_spouse": false,
+      "second_guest": null
+    },
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "мужской",
+      "guest_name": "Արմեն",
+      "guest_fullname": "Արմեն",
+      "has_spouse": false,
+      "second_guest": null
+    },
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "женский",
+      "guest_name": "Սիլվիկ",
+      "guest_fullname": "Սիլվիկ",
+      "has_spouse": false,
+      "second_guest": null
+    },
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "женский",
+      "guest_name": "Ալինա 1",
+      "guest_fullname": "Ալինա 1",
+      "has_spouse": false,
+      "second_guest": null
+    },
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "мужской",
+      "guest_name": "Ավիկ Սեր",
+      "guest_fullname": "Ավիկ Սեր",
+      "has_spouse": false,
+      "second_guest": null
+    },
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "женский",
+      "guest_name": "Արմինե",
+      "guest_fullname": "Արմինե",
+      "has_spouse": false,
+      "second_guest": null
+    },
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "женский",
+      "guest_name": "Ավիկ Պապա",
+      "guest_fullname": "Ավիկ Պապա",
+      "has_spouse": false,
+      "second_guest": null
+    },
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "женский",
+      "guest_name": "Ավիկ Մամա",
+      "guest_fullname": "Ավիկ Մամա",
+      "has_spouse": false,
+      "second_guest": null
+    },
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "мужской",
+      "guest_name": "Հակոբ Բասկովչյան",
+      "guest_fullname": "Հակոբ Բասկովչյան",
+      "has_spouse": false,
+      "second_guest": null
+    },
+    {
+      "group_description": "2 человека",
+      "group_size": 2,
+      "guest_gender": "мужской",
+      "guest_name": "Ընկ Արշակ",
+      "guest_fullname": "Ընկ Արշակ",
+      "has_spouse": true,
+      "second_guest": "Ընկ Արշակ Կին"
+    },
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "женский",
+      "guest_name": "Ալինա 2",
+      "guest_fullname": "Ալինա 2",
+      "has_spouse": false,
+      "second_guest": null
+    },
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "мужской",
+      "guest_name": "Մարդ",
+      "guest_fullname": "Մարդ",
+      "has_spouse": false,
+      "second_guest": null
+    },
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "женский",
+      "guest_name": "Աննա",
+      "guest_fullname": "Աննա",
+      "has_spouse": false,
+      "second_guest": null
+    },
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "мужской",
+      "guest_name": "Արեգ",
+      "guest_fullname": "Արեգ",
+      "has_spouse": false,
+      "second_guest": null
+    },
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "женский",
+      "guest_name": "Լիլիթ",
+      "guest_fullname": "Լիլիթ",
+      "has_spouse": false,
+      "second_guest": null
+    },
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "женский",
+      "guest_name": "Հասմիկ",
+      "guest_fullname": "Հասմիկ",
+      "has_spouse": false,
+      "second_guest": null
+    },
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "мужской",
+      "guest_name": "Գեորգի",
+      "guest_fullname": "Գեորգի",
+      "has_spouse": false,
+      "second_guest": null
+    },
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "мужской",
+      "guest_name": "Անդո",
+      "guest_fullname": "Անդո",
+      "has_spouse": false,
+      "second_guest": null
+    },
+    {
+      "group_description": "2 человека",
+      "group_size": 2,
+      "guest_gender": "мужской",
+      "guest_name": "Սուրո 2",
+      "guest_fullname": "Սուրո 2",
+      "has_spouse": true,
+      "second_guest": "Սուրո Նշանած"
+    },
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "мужской",
+      "guest_name": "Ծյուշ թե թուշ",
+      "guest_fullname": "Ծյուշ թե թուշ",
+      "has_spouse": false,
+      "second_guest": null
+    },
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "мужской",
+      "guest_name": "Գև 1",
+      "guest_fullname": "Գև 1",
+      "has_spouse": false,
+      "second_guest": null
+    },
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "женский",
+      "guest_name": "Էսթեր",
+      "guest_fullname": "Էսթեր",
+      "has_spouse": false,
+      "second_guest": null
+    },
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "мужской",
+      "guest_name": "Արսեն",
+      "guest_fullname": "Արսեն",
+      "has_spouse": false,
+      "second_guest": null
+    },
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "мужской",
+      "guest_name": "Ռոման",
+      "guest_fullname": "Ռոման",
+      "has_spouse": false,
+      "second_guest": null
+    },
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "женский",
+      "guest_name": "Անի",
+      "guest_fullname": "Անի",
+      "has_spouse": false,
+      "second_guest": null
+    },
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "мужской",
+      "guest_name": "Հովո",
+      "guest_fullname": "Հովո",
+      "has_spouse": false,
+      "second_guest": null
+    },
+    {
+      "group_description": "2 человека",
+      "group_size": 2,
+      "guest_gender": "мужской",
+      "guest_name": "Աշոտ",
+      "guest_fullname": "Աշոտ",
+      "has_spouse": true,
+      "second_guest": "Աշոտի կին"
+    },
+    {
+      "group_description": "2 человека",
+      "group_size": 2,
+      "guest_gender": "мужской",
+      "guest_name": "Աղաս",
+      "guest_fullname": "Աղաս",
+      "has_spouse": true,
+      "second_guest": "Աղաս Կին"
+    },
+    {
+      "group_description": "2 человека",
+      "group_size": 2,
+      "guest_gender": "мужской",
+      "guest_name": "Սիփան",
+      "guest_fullname": "Սիփան",
+      "has_spouse": true,
+      "second_guest": "Սիփան Կին"
+    },
+    {
+      "group_description": "2 человека",
+      "group_size": 2,
+      "guest_gender": "мужской",
+      "guest_name": "Աբուլ",
+      "guest_fullname": "Աբուլ",
+      "has_spouse": true,
+      "second_guest": "Աբուլ Կին"
+    },
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "мужской",
+      "guest_name": "Գարո ԴիջԵյ",
+      "guest_fullname": "Գարո ԴիջԵյ",
+      "has_spouse": false,
+      "second_guest": null
+    },
+    {
+      "group_description": "2 человека",
+      "group_size": 2,
+      "guest_gender": "мужской",
+      "guest_name": "Գեղամ",
+      "guest_fullname": "Գեղամ",
+      "has_spouse": true,
+      "second_guest": "Գեղամ Կին"
+    },
+    {
+      "group_description": "2 человека",
+      "group_size": 2,
+      "guest_gender": "мужской",
+      "guest_name": "Աբգար",
+      "guest_fullname": "Աբգար",
+      "has_spouse": true,
+      "second_guest": "Աբգար Կին"
+    },
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "мужской",
+      "guest_name": "Բգո Հարևան",
+      "guest_fullname": "Բգո Հարևան",
+      "has_spouse": false,
+      "second_guest": null
+    },
+    {
+      "group_description": "2 человека",
+      "group_size": 2,
+      "guest_gender": "мужской",
+      "guest_name": "Գրիշ",
+      "guest_fullname": "Գրիշ",
+      "has_spouse": true,
+      "second_guest": "Գրիշ Կնիկ"
+    },
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "женский",
+      "guest_name": "Տիկո",
+      "guest_fullname": "Տիկո",
+      "has_spouse": false,
+      "second_guest": null
+    },
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "женский",
+      "guest_name": "Էլեն",
+      "guest_fullname": "Էլեն",
+      "has_spouse": false,
+      "second_guest": null
+    },
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "мужской",
+      "guest_name": "Դավո մեծ",
+      "guest_fullname": "Դավո մեծ",
+      "has_spouse": false,
+      "second_guest": null
+    },
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "женский",
+      "guest_name": "Նարե",
+      "guest_fullname": "Նարե",
+      "has_spouse": false,
+      "second_guest": null
+    },
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "мужской",
+      "guest_name": "Արթուր 2",
+      "guest_fullname": "Արթուր 2",
+      "has_spouse": false,
+      "second_guest": null
+    },
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "мужской",
+      "guest_name": "Գև 2",
+      "guest_fullname": "Գև 2",
+      "has_spouse": false,
+      "second_guest": null
+    },
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "мужской",
+      "guest_name": "Արամ Գիժ",
+      "guest_fullname": "Արամ Գիժ",
+      "has_spouse": false,
+      "second_guest": null
+    },
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "мужской",
+      "guest_name": "Դեյզի Արամ",
+      "guest_fullname": "Դեյզի Արամ",
+      "has_spouse": false,
+      "second_guest": null
+    },
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "мужской",
+      "guest_name": "Դավիթ",
+      "guest_fullname": "Դավիթ",
+      "has_spouse": false,
+      "second_guest": null
+    },
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "мужской",
+      "guest_name": "Վահրամ",
+      "guest_fullname": "Վահրամ",
+      "has_spouse": false,
+      "second_guest": null
+    },
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "женский",
+      "guest_name": "Տաթև",
+      "guest_fullname": "Տաթև",
+      "has_spouse": false,
+      "second_guest": null
+    },
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "мужской",
+      "guest_name": "Սերոժ",
+      "guest_fullname": "Սերոժ",
+      "has_spouse": false,
+      "second_guest": null
+    },
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "женский",
+      "guest_name": "Սաթիկ",
+      "guest_fullname": "Սաթիկ",
+      "has_spouse": false,
+      "second_guest": null
+    },
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "мужской",
+      "guest_name": "Լևոն",
+      "guest_fullname": "Լևոն",
+      "has_spouse": false,
+      "second_guest": null
+    },
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "мужской",
+      "guest_name": "Դաջի",
+      "guest_fullname": "Դաջի",
+      "has_spouse": false,
+      "second_guest": null
+    },
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "женский",
+      "guest_name": "Ալլա",
+      "guest_fullname": "Ալլա",
+      "has_spouse": false,
+      "second_guest": null
+    },
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "мужской",
+      "guest_name": "Միշա",
+      "guest_fullname": "Միշա",
+      "has_spouse": false,
+      "second_guest": null
+    },
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "мужской",
+      "guest_name": "Միքո",
+      "guest_fullname": "Միքո",
+      "has_spouse": false,
+      "second_guest": null
+    },
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "женский",
+      "guest_name": "Քրիստինե",
+      "guest_fullname": "Քրիստինե",
+      "has_spouse": false,
+      "second_guest": null
+    },
+    {
+      "group_description": "2 человека",
+      "group_size": 2,
+      "guest_gender": "женский",
+      "guest_name": "Ռիփսիմե",
+      "guest_fullname": "Ռիփսիմե",
+      "has_spouse": true,
+      "second_guest": "Ամուսին (Ռիփսիմե)"
+    },
+    {
+      "group_description": "2 человека",
+      "group_size": 2,
+      "guest_gender": "женский",
+      "guest_name": "Աստղիկ",
+      "guest_fullname": "Աստղիկ",
+      "has_spouse": true,
+      "second_guest": "Ամուսին (Աստղիկ)"
+    },
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "женский",
+      "guest_name": "Մարինա",
+      "guest_fullname": "Մարինա",
+      "has_spouse": false,
+      "second_guest": null
+    },
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "мужской",
+      "guest_name": "Անդո Ռեալ Ռիսկ",
+      "guest_fullname": "Անդո Ռեալ Ռիսկ",
+      "has_spouse": false,
+      "second_guest": null
+    },
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "мужской",
+      "guest_name": "Դավո Վիրտուալ Ռիսկ",
+      "guest_fullname": "Դավո Վիրտուալ Ռիսկ",
+      "has_spouse": false,
+      "second_guest": null
+    },
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "мужской",
+      "guest_name": "Արև bugBounty",
+      "guest_fullname": "Արև bugBounty",
+      "has_spouse": false,
+      "second_guest": null
+    },
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "мужской",
+      "guest_name": "Արթուր Text",
+      "guest_fullname": "Արթուր Text",
+      "has_spouse": false,
+      "second_guest": null
+    }
+  ],
+  "total_accepted": 77,
+  "total_attendees": 94
+}

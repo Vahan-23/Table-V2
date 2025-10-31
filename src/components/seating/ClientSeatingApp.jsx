@@ -124,8 +124,9 @@ const TableComponent = ({
               }}
               style={{
                 position: 'absolute',
-                left: `${x - chairSize * 0.7}px`,
-                top: `${y + chairSize * 0.6}px`,
+                left: `${x}px`,
+                top: `${y}px`,
+                transform: 'translate(-50%, -50%)',
                 width: `${chairSize * 1.4}px`,
                 fontSize: `${labelFontSize}px`,
                 fontFamily: 'Arial',
@@ -143,12 +144,12 @@ const TableComponent = ({
               }}
               onMouseEnter={(e) => {
                 e.target.style.backgroundColor = 'rgba(255, 255, 255, 1)';
-                e.target.style.transform = 'scale(1.05)';
+                e.target.style.transform = 'translate(-50%, -50%) scale(1.05)';
                 e.target.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
               }}
               onMouseLeave={(e) => {
                 e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.95)';
-                e.target.style.transform = 'scale(1)';
+                e.target.style.transform = 'translate(-50%, -50%)';
                 e.target.style.boxShadow = '0 1px 2px rgba(0,0,0,0.2)';
               }}
             >
@@ -220,8 +221,9 @@ const TableComponent = ({
               }}
               style={{
                 position: 'absolute',
-                left: `${x - chairSize * 0.7}px`,
-                top: `${y + chairSize * 0.6}px`,
+                left: `${x}px`,
+                top: `${y}px`,
+                transform: 'translate(-50%, -50%)',
                 width: `${chairSize * 1.4}px`,
                 fontSize: `${labelFontSize}px`,
                 fontFamily: 'Arial',
@@ -239,12 +241,12 @@ const TableComponent = ({
               }}
               onMouseEnter={(e) => {
                 e.target.style.backgroundColor = 'rgba(255, 255, 255, 1)';
-                e.target.style.transform = 'scale(1.05)';
+                e.target.style.transform = 'translate(-50%, -50%) scale(1.05)';
                 e.target.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
               }}
               onMouseLeave={(e) => {
                 e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.95)';
-                e.target.style.transform = 'scale(1)';
+                e.target.style.transform = 'translate(-50%, -50%)';
                 e.target.style.boxShadow = '0 1px 2px rgba(0,0,0,0.2)';
               }}
             >
@@ -303,8 +305,9 @@ const TableComponent = ({
               }}
               style={{
                 position: 'absolute',
-                left: `${x - chairSize * 0.7}px`,
-                top: `${y + chairSize * 0.6}px`,
+                left: `${x}px`,
+                top: `${y}px`,
+                transform: 'translate(-50%, -50%)',
                 width: `${chairSize * 1.4}px`,
                 fontSize: `${labelFontSize}px`,
                 fontFamily: 'Arial',
@@ -322,12 +325,12 @@ const TableComponent = ({
               }}
               onMouseEnter={(e) => {
                 e.target.style.backgroundColor = 'rgba(255, 255, 255, 1)';
-                e.target.style.transform = 'scale(1.05)';
+                e.target.style.transform = 'translate(-50%, -50%) scale(1.05)';
                 e.target.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
               }}
               onMouseLeave={(e) => {
                 e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.95)';
-                e.target.style.transform = 'scale(1)';
+                e.target.style.transform = 'translate(-50%, -50%)';
                 e.target.style.boxShadow = '0 1px 2px rgba(0,0,0,0.2)';
               }}
             >

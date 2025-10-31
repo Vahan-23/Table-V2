@@ -75,19 +75,30 @@ const ImportJsonModal = () => {
           ? guest.guest_fullname.trim() 
           : guest.guest_name?.trim() || `Гость ${index + 1}`;
         
-        // Определяем пол гостя
+        // Определяем пол основного гостя
         const guestGender = guest.guest_gender === 'արական' ? 'мужской' : 
                            guest.guest_gender === 'женский' ? 'женский' : 
                            guest.guest_gender === 'смешанный' ? 'мужской' : 'мужской';
 
-        // Создаем группу с одним гостем
+        // Создаем группу с основным гостем
         const members = [{
           name: guest.guest_name?.trim() || guest.guest_fullname?.trim() || `Гость ${index + 1}`,
           fullName: guest.guest_fullname?.trim() || guest.guest_name?.trim() || `Гость ${index + 1}`,
           gender: guestGender
         }];
 
-        console.log(`Создаем группу "${groupName}" с участником:`, members[0]);
+        // Добавляем второго гостя, если есть супруг/супруга
+        if (guest.has_spouse && guest.second_guest && typeof guest.second_guest === 'string' && guest.second_guest.trim()) {
+          // Определяем пол второго гостя (противоположный основному)
+          const secondGuestGender = guestGender === 'мужской' ? 'женский' : 'мужской';
+          members.push({
+            name: guest.second_guest.trim(),
+            fullName: guest.second_guest.trim(),
+            gender: secondGuestGender
+          });
+        }
+
+        console.log(`Создаем группу "${groupName}" с участниками:`, members);
         addGroup(groupName, members);
         groupsCreated++;
         totalGuests += members.length;
@@ -286,7 +297,7 @@ const ImportJsonModal = () => {
                     let count = 0;
                     if (guest.guest_fullname && guest.guest_fullname.trim()) count++;
                     else if (guest.guest_name && guest.guest_name.trim()) count++;
-                    if (guest.second_guest && guest.has_spouse && guest.second_guest.trim()) count++;
+                    if (guest.second_guest && guest.has_spouse && typeof guest.second_guest === 'string' && guest.second_guest.trim()) count++;
                     return total + count;
                   }, 0) || 0
                 }
@@ -307,7 +318,7 @@ const ImportJsonModal = () => {
                     } else if (guest.guest_name && guest.guest_name.trim()) {
                       members.push(guest.guest_name.trim());
                     }
-                    if (guest.second_guest && guest.has_spouse && guest.second_guest.trim()) {
+                    if (guest.second_guest && guest.has_spouse && typeof guest.second_guest === 'string' && guest.second_guest.trim()) {
                       members.push(guest.second_guest.trim());
                     }
                     

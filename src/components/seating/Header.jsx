@@ -17,6 +17,7 @@ const Header = () => {
   const { hallData, windowWidth, showMobileMenu, isBurgerOpen, showTableControls } = state;
   const [showExportModal, setShowExportModal] = useState(false);
   const [showHDExportModal, setShowHDExportModal] = useState(false);
+  const [showTemplatesModal, setShowTemplatesModal] = useState(false);
   
   // Добавляем хуки для экспорта
   const { exportToTableDesignV2, exportToPDFTableDesignV2 } = useExportToA5();
@@ -283,218 +284,40 @@ const Header = () => {
                 </button>
               )}
 
-              {/* Export buttons group */}
+              {/* Templates Modal Button */}
               {hallData && (
-                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                  <button
-                    onClick={() => setShowExportModal(true)}
-                    style={{
-                      backgroundColor: '#648767',
-                      color: 'white',
-                      border: '2px solid white',
-                      borderRadius: '6px',
-                      padding: '6px 12px',
-                      cursor: 'pointer',
-                      fontSize: '13px',
-                      fontWeight: 'bold',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
-                      transition: 'all 0.2s'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.target.style.transform = 'scale(1.05)';
-                      e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.4)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.transform = 'scale(1)';
-                      e.target.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
-                    }}
-                    title="Экспорт в A5"
-                  >
-                    📄 A5
-                  </button>
-                  
-                  <button
-                    onClick={() => setShowHDExportModal(true)}
-                    style={{
-                      backgroundColor: '#9b59b6',
-                      color: 'white',
-                      border: '2px solid white',
-                      borderRadius: '6px',
-                      padding: '6px 12px',
-                      cursor: 'pointer',
-                      fontSize: '13px',
-                      fontWeight: 'bold',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
-                      transition: 'all 0.2s'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.target.style.transform = 'scale(1.05)';
-                      e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.4)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.transform = 'scale(1)';
-                      e.target.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
-                    }}
-                    title="Экспорт HD шаблона"
-                  >
-                    🌸 HD
-                  </button>
-                  
-                  <button
-                    onClick={handleQuickExportTableDesignV2}
-                    disabled={!hallData?.tables?.some(table => table.people?.some(person => person))}
-                    style={{
-                      backgroundColor: hallData?.tables?.some(table => table.people?.some(person => person)) ? '#e67e22' : '#95a5a6',
-                      color: 'white',
-                      border: '2px solid white',
-                      borderRadius: '6px',
-                      padding: '6px 10px',
-                      cursor: hallData?.tables?.some(table => table.people?.some(person => person)) ? 'pointer' : 'not-allowed',
-                      fontSize: '12px',
-                      fontWeight: 'bold',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
-                      transition: 'all 0.2s',
-                      opacity: hallData?.tables?.some(table => table.people?.some(person => person)) ? 1 : 0.5
-                    }}
-                    onMouseEnter={(e) => {
-                      if (hallData?.tables?.some(table => table.people?.some(person => person))) {
-                        e.target.style.transform = 'scale(1.05)';
-                        e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.4)';
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.transform = 'scale(1)';
-                      e.target.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
-                    }}
-                    title={hallData?.tables?.some(table => table.people?.some(person => person)) 
-                      ? "Быстрый экспорт по шаблону A5" 
-                      : "Нет данных для экспорта"
-                    }
-                  >
-                    🎨 A5
-                  </button>
-
-                  <button
-                    onClick={handleQuickExportPDFTableDesignV2}
-                    disabled={!hallData?.tables?.some(table => table.people?.some(person => person))}
-                    style={{
-                      backgroundColor: hallData?.tables?.some(table => table.people?.some(person => person)) ? '#e74c3c' : '#95a5a6',
-                      color: 'white',
-                      border: '2px solid white',
-                      borderRadius: '6px',
-                      padding: '6px 10px',
-                      cursor: hallData?.tables?.some(table => table.people?.some(person => person)) ? 'pointer' : 'not-allowed',
-                      fontSize: '12px',
-                      fontWeight: 'bold',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
-                      transition: 'all 0.2s',
-                      opacity: hallData?.tables?.some(table => table.people?.some(person => person)) ? 1 : 0.5
-                    }}
-                    onMouseEnter={(e) => {
-                      if (hallData?.tables?.some(table => table.people?.some(person => person))) {
-                        e.target.style.transform = 'scale(1.05)';
-                        e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.4)';
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.transform = 'scale(1)';
-                      e.target.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
-                    }}
-                    title={hallData?.tables?.some(table => table.people?.some(person => person)) 
-                      ? "Быстрый экспорт PDF по шаблону A5" 
-                      : "Нет данных для экспорта"
-                    }
-                  >
-                    📄 PDF
-                  </button>
-
-                  <button
-                    onClick={handleQuickExportHDTemplate}
-                    disabled={!hallData?.tables?.some(table => table.people?.some(person => person))}
-                    style={{
-                      backgroundColor: hallData?.tables?.some(table => table.people?.some(person => person)) ? '#9b59b6' : '#95a5a6',
-                      color: 'white',
-                      border: '2px solid white',
-                      borderRadius: '6px',
-                      padding: '6px 10px',
-                      cursor: hallData?.tables?.some(table => table.people?.some(person => person)) ? 'pointer' : 'not-allowed',
-                      fontSize: '12px',
-                      fontWeight: 'bold',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
-                      transition: 'all 0.2s',
-                      opacity: hallData?.tables?.some(table => table.people?.some(person => person)) ? 1 : 0.5
-                    }}
-                    onMouseEnter={(e) => {
-                      if (hallData?.tables?.some(table => table.people?.some(person => person))) {
-                        e.target.style.transform = 'scale(1.05)';
-                        e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.4)';
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.transform = 'scale(1)';
-                      e.target.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
-                    }}
-                    title={hallData?.tables?.some(table => table.people?.some(person => person)) 
-                      ? "Быстрый экспорт HD шаблона" 
-                      : "Нет данных для экспорта"
-                    }
-                  >
-                    🌸 HD
-                  </button>
-
-                  <button
-                    onClick={handleQuickExportPDFHDTemplate}
-                    disabled={!hallData?.tables?.some(table => table.people?.some(person => person))}
-                    style={{
-                      backgroundColor: hallData?.tables?.some(table => table.people?.some(person => person)) ? '#8e44ad' : '#95a5a6',
-                      color: 'white',
-                      border: '2px solid white',
-                      borderRadius: '6px',
-                      padding: '6px 10px',
-                      cursor: hallData?.tables?.some(table => table.people?.some(person => person)) ? 'pointer' : 'not-allowed',
-                      fontSize: '12px',
-                      fontWeight: 'bold',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
-                      transition: 'all 0.2s',
-                      opacity: hallData?.tables?.some(table => table.people?.some(person => person)) ? 1 : 0.5
-                    }}
-                    onMouseEnter={(e) => {
-                      if (hallData?.tables?.some(table => table.people?.some(person => person))) {
-                        e.target.style.transform = 'scale(1.05)';
-                        e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.4)';
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.transform = 'scale(1)';
-                      e.target.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
-                    }}
-                    title={hallData?.tables?.some(table => table.people?.some(person => person)) 
-                      ? "Быстрый экспорт PDF HD шаблона" 
-                      : "Нет данных для экспорта"
-                    }
-                  >
-                    📄 PDF
-                  </button>
-                </div>
+                <button
+                  onClick={() => setShowTemplatesModal(true)}
+                  style={{
+                    backgroundColor: '#16a085',
+                    color: 'white',
+                    border: '2px solid white',
+                    borderRadius: '6px',
+                    padding: '6px 12px',
+                    cursor: 'pointer',
+                    fontSize: '13px',
+                    fontWeight: 'bold',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+                    transition: 'all 0.2s',
+                    marginRight: '6px'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.transform = 'scale(1.05)';
+                    e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.4)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.transform = 'scale(1)';
+                    e.target.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
+                  }}
+                  title="Шаблоны экспорта"
+                >
+                  📋 Шаблоны
+                </button>
               )}
+
 
               {/* Statistics */}
               {state.groups && state.groups.length > 0 && (
@@ -1463,6 +1286,310 @@ const Header = () => {
         isOpen={showHDExportModal} 
         onClose={() => setShowHDExportModal(false)} 
       />
+
+      {/* Templates Modal */}
+      {showTemplatesModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 1000
+        }} onClick={() => setShowTemplatesModal(false)}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            padding: '24px',
+            maxWidth: '600px',
+            width: '90%',
+            maxHeight: '90vh',
+            overflow: 'auto',
+            boxShadow: '0 10px 40px rgba(0, 0, 0, 0.3)'
+          }} onClick={(e) => e.stopPropagation()}>
+            {/* Header */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '20px',
+              borderBottom: '1px solid #e9ecef',
+              paddingBottom: '15px'
+            }}>
+              <h2 style={{ margin: 0, color: '#2c3e50', fontSize: '20px' }}>
+                📋 Шаблоны экспорта
+              </h2>
+              <button
+                onClick={() => setShowTemplatesModal(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '24px',
+                  cursor: 'pointer',
+                  color: '#95a5a6',
+                  padding: '0',
+                  width: '32px',
+                  height: '32px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Templates Grid */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(2, 1fr)',
+              gap: '12px'
+            }}>
+              {/* 📄 A5 - Open A5 Modal */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowExportModal(true);
+                  setShowTemplatesModal(false);
+                }}
+                style={{
+                  backgroundColor: '#648767',
+                  color: 'white',
+                  border: '2px solid #5a7a5d',
+                  borderRadius: '8px',
+                  padding: '16px',
+                  cursor: 'pointer',
+                  fontSize: '16px',
+                  fontWeight: 'bold',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '8px',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.transform = 'translateY(-2px)';
+                  e.target.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.transform = 'translateY(0)';
+                  e.target.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)';
+                }}
+                title="Экспорт в A5"
+              >
+                <span style={{ fontSize: '32px' }}>📄</span>
+                <span>A5</span>
+              </button>
+
+              {/* 🌸 HD - Open HD Modal */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowHDExportModal(true);
+                  setShowTemplatesModal(false);
+                }}
+                style={{
+                  backgroundColor: '#9b59b6',
+                  color: 'white',
+                  border: '2px solid #8e44ad',
+                  borderRadius: '8px',
+                  padding: '16px',
+                  cursor: 'pointer',
+                  fontSize: '16px',
+                  fontWeight: 'bold',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '8px',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.transform = 'translateY(-2px)';
+                  e.target.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.transform = 'translateY(0)';
+                  e.target.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)';
+                }}
+                title="Экспорт HD шаблона"
+              >
+                <span style={{ fontSize: '32px' }}>🌸</span>
+                <span>HD</span>
+              </button>
+
+              {/* 🎨 A5 - Quick Export TableDesignV2 HTML */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleQuickExportTableDesignV2();
+                  setShowTemplatesModal(false);
+                }}
+                disabled={!hallData?.tables?.some(table => table.people?.some(person => person))}
+                style={{
+                  backgroundColor: '#e67e22',
+                  color: 'white',
+                  border: '2px solid #d35400',
+                  borderRadius: '8px',
+                  padding: '16px',
+                  cursor: hallData?.tables?.some(table => table.people?.some(person => person)) ? 'pointer' : 'not-allowed',
+                  fontSize: '16px',
+                  fontWeight: 'bold',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '8px',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                  transition: 'all 0.2s',
+                  opacity: hallData?.tables?.some(table => table.people?.some(person => person)) ? 1 : 0.5
+                }}
+                onMouseEnter={(e) => {
+                  if (hallData?.tables?.some(table => table.people?.some(person => person))) {
+                    e.target.style.transform = 'translateY(-2px)';
+                    e.target.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.transform = 'translateY(0)';
+                  e.target.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)';
+                }}
+                title="Быстрый экспорт по шаблону A5 (HTML)"
+              >
+                <span style={{ fontSize: '32px' }}>🎨</span>
+                <span>A5</span>
+              </button>
+
+              {/* 📄 PDF - Quick Export TableDesignV2 PDF */}
+              <button
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  await handleQuickExportPDFTableDesignV2();
+                  setShowTemplatesModal(false);
+                }}
+                disabled={!hallData?.tables?.some(table => table.people?.some(person => person))}
+                style={{
+                  backgroundColor: '#e74c3c',
+                  color: 'white',
+                  border: '2px solid #c0392b',
+                  borderRadius: '8px',
+                  padding: '16px',
+                  cursor: hallData?.tables?.some(table => table.people?.some(person => person)) ? 'pointer' : 'not-allowed',
+                  fontSize: '16px',
+                  fontWeight: 'bold',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '8px',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                  transition: 'all 0.2s',
+                  opacity: hallData?.tables?.some(table => table.people?.some(person => person)) ? 1 : 0.5
+                }}
+                onMouseEnter={(e) => {
+                  if (hallData?.tables?.some(table => table.people?.some(person => person))) {
+                    e.target.style.transform = 'translateY(-2px)';
+                    e.target.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.transform = 'translateY(0)';
+                  e.target.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)';
+                }}
+                title="Быстрый экспорт PDF по шаблону A5"
+              >
+                <span style={{ fontSize: '32px' }}>📄</span>
+                <span>PDF</span>
+              </button>
+
+              {/* 🌸 HD - Quick Export HD HTML */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleQuickExportHDTemplate();
+                  setShowTemplatesModal(false);
+                }}
+                disabled={!hallData?.tables?.some(table => table.people?.some(person => person))}
+                style={{
+                  backgroundColor: '#9b59b6',
+                  color: 'white',
+                  border: '2px solid #8e44ad',
+                  borderRadius: '8px',
+                  padding: '16px',
+                  cursor: hallData?.tables?.some(table => table.people?.some(person => person)) ? 'pointer' : 'not-allowed',
+                  fontSize: '16px',
+                  fontWeight: 'bold',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '8px',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                  transition: 'all 0.2s',
+                  opacity: hallData?.tables?.some(table => table.people?.some(person => person)) ? 1 : 0.5
+                }}
+                onMouseEnter={(e) => {
+                  if (hallData?.tables?.some(table => table.people?.some(person => person))) {
+                    e.target.style.transform = 'translateY(-2px)';
+                    e.target.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.transform = 'translateY(0)';
+                  e.target.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)';
+                }}
+                title="Быстрый экспорт HD шаблона (HTML)"
+              >
+                <span style={{ fontSize: '32px' }}>🌸</span>
+                <span>HD</span>
+              </button>
+
+              {/* 📄 PDF - Quick Export HD PDF */}
+              <button
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  await handleQuickExportPDFHDTemplate();
+                  setShowTemplatesModal(false);
+                }}
+                disabled={!hallData?.tables?.some(table => table.people?.some(person => person))}
+                style={{
+                  backgroundColor: '#8e44ad',
+                  color: 'white',
+                  border: '2px solid #7d3c98',
+                  borderRadius: '8px',
+                  padding: '16px',
+                  cursor: hallData?.tables?.some(table => table.people?.some(person => person)) ? 'pointer' : 'not-allowed',
+                  fontSize: '16px',
+                  fontWeight: 'bold',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '8px',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                  transition: 'all 0.2s',
+                  opacity: hallData?.tables?.some(table => table.people?.some(person => person)) ? 1 : 0.5
+                }}
+                onMouseEnter={(e) => {
+                  if (hallData?.tables?.some(table => table.people?.some(person => person))) {
+                    e.target.style.transform = 'translateY(-2px)';
+                    e.target.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.transform = 'translateY(0)';
+                  e.target.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)';
+                }}
+                title="Быстрый экспорт PDF HD шаблона"
+              >
+                <span style={{ fontSize: '32px' }}>📄</span>
+                <span>PDF</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };
