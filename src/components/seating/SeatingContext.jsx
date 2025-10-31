@@ -165,7 +165,7 @@ const initialState = {
   showStatistics: false,
   
   // Показ панели групп
-  showGroupsPanel: false,
+  showGroupsPanel: true,
   
   // Мобильная рассадка
   showMobileSeatingCanvas: false,
