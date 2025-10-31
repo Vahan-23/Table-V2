@@ -1,0 +1,24 @@
+{
+  "guests": [
+    {
+      "guest_name": "Анна",
+      "has_spouse": true,
+      "second_guest": "Супруг Анны"
+    },
+    {
+      "guest_name": "Борис",
+      "has_spouse": false,
+      "second_guest": null
+    },
+    {
+      "guest_name": "Виктория",
+      "has_spouse": true,
+      "second_guest": "Супруга Виктории"
+    },
+    {
+      "guest_name": "",
+      "has_spouse": false,
+      "second_guest": null
+    }
+  ]
+}

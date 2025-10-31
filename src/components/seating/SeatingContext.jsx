@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
+import persistentStorage from './persistentStorage';
 
 // Типы действий
 const ACTIONS = {
@@ -26,6 +27,8 @@ const ACTIONS = {
   SET_SELECTED_GROUP_FOR_SEATING: 'SET_SELECTED_GROUP_FOR_SEATING',
   SET_EDITING_GROUP: 'SET_EDITING_GROUP',
   SET_PERSON_NAME: 'SET_PERSON_NAME',
+  SET_PERSON_FULL_NAME: 'SET_PERSON_FULL_NAME',
+  SET_PERSON_GENDER: 'SET_PERSON_GENDER',
   SET_SELECTED_GROUP: 'SET_SELECTED_GROUP',
   SET_NEW_GROUP_NAME: 'SET_NEW_GROUP_NAME',
   SET_GROUP_MEMBERS: 'SET_GROUP_MEMBERS',
@@ -79,8 +82,11 @@ const ACTIONS = {
   SET_SHOW_GROUPS_PANEL: 'SET_SHOW_GROUPS_PANEL',
   SET_SHOW_MOBILE_SEATING_CANVAS: 'SET_SHOW_MOBILE_SEATING_CANVAS',
   SET_TABLE_SELECTION_MODE: 'SET_TABLE_SELECTION_MODE',
+  SET_SHOW_IMPORT_JSON_MODAL: 'SET_SHOW_IMPORT_JSON_MODAL',
   SET_NOTIFICATION: 'SET_NOTIFICATION',
-  CLEAR_NOTIFICATION: 'CLEAR_NOTIFICATION'
+  CLEAR_NOTIFICATION: 'CLEAR_NOTIFICATION',
+  CREATE_TEST_GROUPS: 'CREATE_TEST_GROUPS',
+  CLEAR_ALL_GROUPS: 'CLEAR_ALL_GROUPS'
 };
 
 // Начальное состояние
@@ -118,6 +124,8 @@ const initialState = {
   
   // Формы
   personName: '',
+  personFullName: '',
+  personGender: '',
   selectedGroup: '',
   newGroupName: '',
   groupMembers: [],
@@ -154,16 +162,19 @@ const initialState = {
   availableSeatsForSeating: 0,
   
   // Показ статистики
-  showStatistics: true,
+  showStatistics: false,
   
   // Показ панели групп
-  showGroupsPanel: true,
+  showGroupsPanel: false,
   
   // Мобильная рассадка
   showMobileSeatingCanvas: false,
   
   // Режим выбора стола для рассадки группы
   isTableSelectionMode: false,
+  
+  // Модальное окно импорта JSON
+  showImportJsonModal: false,
   
   // Уведомления
   notification: null
@@ -200,7 +211,7 @@ function generateDefaultGroupsAndPeople() {
       indices.splice(idx, 1);
     }
     groups.push({
-      id: `group_${g + 1}`,
+      id: `group_${Date.now()}_${g + 1}_${Math.random().toString(36).substr(2, 9)}`,
       name: `Group ${g + 1}`,
       color: GROUP_COLORS[g % GROUP_COLORS.length],
       members: groupIndices.map(i => people[i])
@@ -215,9 +226,9 @@ let DEFAULT_GROUPS = [];
 let TEST_PEOPLE = [];
 if (!localStorage.getItem('seatingGroups')) {
   const generated = generateDefaultGroupsAndPeople();
-  DEFAULT_GROUPS = generated.groups;
   TEST_PEOPLE = generated.people;
-  initialState.groups = DEFAULT_GROUPS;
+  // Не создаем группы по умолчанию
+  initialState.groups = [];
 }
 // --- Default groups/people logic end ---
 
@@ -295,6 +306,12 @@ function seatingReducer(state, action) {
       
     case ACTIONS.SET_PERSON_NAME:
       return { ...state, personName: action.payload };
+      
+    case ACTIONS.SET_PERSON_FULL_NAME:
+      return { ...state, personFullName: action.payload };
+      
+    case ACTIONS.SET_PERSON_GENDER:
+      return { ...state, personGender: action.payload };
       
     case ACTIONS.SET_SELECTED_GROUP:
       return { ...state, selectedGroup: action.payload };
@@ -472,7 +489,7 @@ function seatingReducer(state, action) {
         tables: updatedTables
       };
       
-      localStorage.setItem('hallData', JSON.stringify(updatedHallData));
+      persistentStorage.save('hallData', updatedHallData);
       return { ...state, hallData: updatedHallData };
       
     case ACTIONS.SET_TABLE_ENABLED:
@@ -493,7 +510,7 @@ function seatingReducer(state, action) {
         tables: tablesWithEnabled
       };
       
-      localStorage.setItem('hallData', JSON.stringify(hallDataWithEnabled));
+      persistentStorage.save('hallData', hallDataWithEnabled);
       return { ...state, hallData: hallDataWithEnabled };
       
     case ACTIONS.SET_SHOW_TABLE_CONTROLS:
@@ -510,6 +527,9 @@ function seatingReducer(state, action) {
       
     case ACTIONS.SET_SHOW_GROUPS_PANEL:
       return { ...state, showGroupsPanel: action.payload };
+      
+    case ACTIONS.SET_SHOW_IMPORT_JSON_MODAL:
+      return { ...state, showImportJsonModal: action.payload };
       
     case ACTIONS.SET_SHOW_MOBILE_SEATING_CANVAS:
       return { ...state, showMobileSeatingCanvas: action.payload };
@@ -534,6 +554,7 @@ function seatingReducer(state, action) {
         showMemberSelectionModal: false,
         showSeatingModal: false,
         showPeopleSelector: false,
+        showImportJsonModal: false,
         selectedChair: null,
         selectedTable: null,
         selectedGroupForDetails: null,
@@ -542,6 +563,8 @@ function seatingReducer(state, action) {
         pendingSeating: null,
         selectedMembers: [],
         personName: '',
+        personFullName: '',
+        personGender: '',
         selectedGroup: '',
         newGroupName: '',
         groupMembers: [],
@@ -552,6 +575,29 @@ function seatingReducer(state, action) {
         personSearchTerm: '',
         showPersonSearch: true,
         selectedPersonFromGroup: null
+      };
+      
+    case ACTIONS.CREATE_TEST_GROUPS:
+      const generated = generateDefaultGroupsAndPeople();
+      persistentStorage.save('seatingGroups', generated.groups);
+      return { 
+        ...state, 
+        groups: generated.groups,
+        notification: {
+          type: 'success',
+          message: `Создано ${generated.groups.length} тестовых групп с ${generated.people.length} участниками`
+        }
+      };
+      
+    case ACTIONS.CLEAR_ALL_GROUPS:
+      persistentStorage.remove('seatingGroups');
+      return { 
+        ...state, 
+        groups: [],
+        notification: {
+          type: 'success',
+          message: 'Все группы удалены'
+        }
       };
       
     default:
@@ -566,43 +612,54 @@ const SeatingContext = createContext();
 export const SeatingProvider = ({ children }) => {
   const [state, dispatch] = useReducer(seatingReducer, initialState);
 
-  // Загрузка данных из localStorage при инициализации
+  // Загрузка данных из backend/localStorage при инициализации
   useEffect(() => {
-    const savedHallData = localStorage.getItem('hallData');
-    const savedGroups = localStorage.getItem('seatingGroups');
-    const savedLanguage = localStorage.getItem('seatingLanguage');
-
-    if (savedLanguage && (savedLanguage === 'ru' || savedLanguage === 'hy')) {
-      dispatch({ type: ACTIONS.SET_LANGUAGE, payload: savedLanguage });
-    }
-
-    if (savedHallData) {
+    const loadInitialData = async () => {
       try {
-        const parsedData = JSON.parse(savedHallData);
-        dispatch({ type: ACTIONS.SET_HALL_DATA, payload: parsedData });
-        
-        if (parsedData.shapes && Array.isArray(parsedData.shapes)) {
-          dispatch({ type: ACTIONS.SET_SHAPES, payload: parsedData.shapes });
+        // Load language
+        const savedLanguage = await persistentStorage.load('seatingLanguage', 'ru');
+        if (savedLanguage && (savedLanguage === 'ru' || savedLanguage === 'hy')) {
+          dispatch({ type: ACTIONS.SET_LANGUAGE, payload: savedLanguage });
         }
-      } catch (e) {
-        console.error("Error loading saved hall data:", e);
-      }
-    }
 
-    if (savedGroups) {
-      try {
-        const parsedGroups = JSON.parse(savedGroups);
-        dispatch({ type: ACTIONS.SET_GROUPS, payload: parsedGroups });
-      } catch (e) {
-        console.error("Error loading groups:", e);
+        // Load hall data
+        const savedHallData = await persistentStorage.load('hallData', null);
+        if (savedHallData) {
+          dispatch({ type: ACTIONS.SET_HALL_DATA, payload: savedHallData });
+          
+          if (savedHallData.shapes && Array.isArray(savedHallData.shapes)) {
+            dispatch({ type: ACTIONS.SET_SHAPES, payload: savedHallData.shapes });
+          }
+        }
+
+        // Load groups
+        const savedGroups = await persistentStorage.load('seatingGroups', []);
+        if (savedGroups && Array.isArray(savedGroups)) {
+          dispatch({ type: ACTIONS.SET_GROUPS, payload: savedGroups });
+        }
+      } catch (error) {
+        console.error("Error loading initial seating data:", error);
       }
-    }
+    };
+
+    loadInitialData();
   }, []);
 
-  // Сохранение языка в localStorage
+  // Сохранение языка в backend/localStorage
   useEffect(() => {
-    localStorage.setItem('seatingLanguage', state.language);
+    persistentStorage.save('seatingLanguage', state.language);
   }, [state.language]);
+
+  // Автоматическое очищение уведомлений
+  useEffect(() => {
+    if (state.notification) {
+      const timer = setTimeout(() => {
+        dispatch({ type: ACTIONS.CLEAR_NOTIFICATION });
+      }, 3000); // Уведомление исчезает через 3 секунды
+      
+      return () => clearTimeout(timer);
+    }
+  }, [state.notification, dispatch]);
 
   // Обработчик изменения размера окна
   useEffect(() => {
@@ -625,6 +682,11 @@ export const SeatingProvider = ({ children }) => {
       {children}
     </SeatingContext.Provider>
   );
+};
+
+// Вспомогательная функция для определения пола
+export const isFemaleGender = (gender) => {
+  return gender === 'женский';
 };
 
 // Хук для использования контекста

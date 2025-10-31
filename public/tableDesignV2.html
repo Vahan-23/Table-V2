@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Дизайн таблиц A5 - Альтернативный стиль</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;500;600;700&family=Great+Vibes&family=Playfair+Display:wght@400;500;600;700&family=Caveat:wght@400;500;600;700&family=Marck+Script&display=swap" rel="stylesheet">
+    <style>
+        /* CSS переменные для настройки поворота изображений */
+        :root {
+            --top-left-rotate: 0deg;      /* Поворот верхнего левого изображения */
+            --bottom-right-rotate: 180deg; /* Поворот нижнего правого изображения */
+        }
+
+        /* Базовые стили для A5 страницы */
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Dancing Script', cursive;
+            background: linear-gradient(to bottom, #cfcbb0, #e8e2d2, #ddd9c2);
+            min-height: 100vh;
+        }
+
+        /* Контейнер для предварительного просмотра */
+        .preview-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+            padding: 30px;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        /* A5 страница */
+        .a5-page {
+            width: 148mm;
+            height: 210mm;
+            /* background: #e9e3d7; */
+            background-image: url('fonta.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            margin: 0;
+            padding: 25mm;
+            box-sizing: border-box;
+            box-shadow: 
+                0 8px 32px rgba(139, 69, 19, 0.15),
+                0 4px 16px rgba(139, 69, 19, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.9);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            border-radius: 8px;
+            border: 1px solid rgba(139, 69, 19, 0.1);
+        }
+
+        /* Наложение для уменьшения прозрачности фонового изображения */
+        .a5-page::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgb(233 227 215 / 36%);
+            z-index: 2;
+        }
+
+
+
+        /* Декоративные изображения в углах */
+        .corner-decoration {
+            position: absolute;
+            width: 500px;
+            height: 500px;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            opacity: 0.7;
+        }
+
+        .corner-decoration.top-left {
+            top: -94px;
+            left: -109px;
+            background-image: url('cveta.PNG');
+            transform: rotate(188deg);
+        }
+
+        .corner-decoration.bottom-right {
+            bottom: -102px;
+            right: -120px;
+            background-image: url('cveta.PNG');
+            transform: rotate(11deg);
+        }
+
+
+
+        /* Заголовок стола */
+        .table-title {
+            font-size: 42px;
+            font-weight: 600;
+            color: #5f4f3c;
+            margin-top: 30px;
+            margin-bottom: 50px;
+            font-family: 'Dancing Script', cursive;
+            text-shadow: 0 2px 4px rgba(139, 69, 19, 0.301);
+            position: relative;
+            z-index: 3;
+        }
+
+        .table-title::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 2px;
+            background: linear-gradient(90deg, #5f4f3c, #a0522d);
+            border-radius: 1px;
+        }
+
+        /* Список гостей */
+        .guests-list {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 25px;
+            margin-bottom: 30px;
+            width: 100%;
+            max-width: 90mm;
+            position: relative;
+            z-index: 3;
+        }
+
+        /* Имя гостя */
+        .guest-name {
+            font-size: 32px;
+            color: #5f4f3c;
+            font-weight: 500;
+            font-family: 'Caveat', 'Marck Script', cursive;
+            padding: 0;
+            margin: 0;
+            text-align: center;
+        }
+
+
+
+
+
+        /* Стили для печати */
+        @media print {
+            body { 
+                background: white; 
+                margin: 0; 
+                padding: 0;
+            }
+            
+            .preview-container {
+                display: none;
+            }
+            
+            .a5-page {
+                box-shadow: none;
+                margin: 0;
+                padding: 25mm;
+                width: 148mm;
+                height: 210mm;
+                page-break-after: always;
+                page-break-inside: avoid;
+                border-radius: 0;
+            }
+            
+            .a5-page:last-child {
+                page-break-after: avoid;
+            }
+
+
+        }
+    </style>
+</head>
+<body>
+    <div class="preview-container">
+        <!-- Пример страницы стола 1 -->
+        <div class="a5-page">
+            <div class="corner-decoration top-left"></div>
+            <div class="corner-decoration bottom-right"></div>
+            <div class="table-title">СТОЛ №1</div>
+            <div class="guests-list">
+                <div class="guest-name">Иван Петров</div>
+                <div class="guest-name">Мария Сидорова</div>
+                <div class="guest-name">Алексей Козлов</div>
+                <div class="guest-name">Елена Волкова</div>
+                <div class="guest-name">Дмитрий Соколов</div>
+            </div>
+        </div>
+
+        <!-- Пример страницы стола 2 -->
+        <div class="a5-page">
+            <div class="corner-decoration top-left"></div>
+            <div class="corner-decoration bottom-right"></div>
+            <div class="table-title">СТОЛ №2</div>
+            <div class="guests-list">
+                <div class="guest-name">Анна Морозова</div>
+                <div class="guest-name">Сергей Николаев</div>
+                <div class="guest-name">Ольга Ковалева</div>
+                <div class="guest-name">Павел Смирнов</div>
+            </div>
+        </div>
+
+        <!-- Пример страницы стола 3 -->
+        <div class="a5-page">
+            <div class="corner-decoration top-left"></div>
+            <div class="corner-decoration bottom-right"></div>
+            <div class="table-title">СТОЛ №3</div>
+            <div class="guests-list">
+                <div class="guest-name">Наталья Иванова</div>
+                <div class="guest-name">Михаил Петров</div>
+                <div class="guest-name">Татьяна Сидорова</div>
+                <div class="guest-name">Андрей Козлов</div>
+                <div class="guest-name">Екатерина Волкова</div>
+                <div class="guest-name">Владимир Соколов</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // JavaScript для интерактивности
+        console.log('Альтернативный дизайн tableDesign загружен!');
+        
+        // Глобальные переменные для поворота
+        let topLeftRotation = 188;
+        let bottomRightRotation = 11;
+        
+        // Функция для применения поворота к верхнему левому изображению
+        function setTopLeftRotation(degrees) {
+            topLeftRotation = degrees;
+            const images = document.querySelectorAll('.corner-decoration.top-left');
+            images.forEach(img => {
+                img.style.transform = `rotate(${degrees}deg)`;
+            });
+            console.log(`Верхнее левое изображение повернуто на ${degrees}°`);
+        }
+        
+        // Функция для применения поворота к нижнему правому изображению
+        function setBottomRightRotation(degrees) {
+            bottomRightRotation = degrees;
+            const images = document.querySelectorAll('.corner-decoration.bottom-right');
+            images.forEach(img => {
+                img.style.transform = `rotate(${degrees}deg)`;
+            });
+            console.log(`Нижнее правое изображение повернуто на ${degrees}°`);
+        }
+        
+        // Функция для сброса всех поворотов
+        function resetRotations() {
+            setTopLeftRotation(188);
+            setBottomRightRotation(11);
+            console.log('Все повороты сброшены к настроенным значениям');
+        }
+        
+        // Функция для получения текущих углов
+        function getRotations() {
+            console.log(`Текущие углы поворота:`);
+            console.log(`Верхнее левое: ${topLeftRotation}°`);
+            console.log(`Нижнее правое: ${bottomRightRotation}°`);
+            return { topLeft: topLeftRotation, bottomRight: bottomRightRotation };
+        }
+        
+        // Добавляем анимацию при загрузке
+        document.addEventListener('DOMContentLoaded', function() {
+            const pages = document.querySelectorAll('.a5-page');
+            pages.forEach((page, index) => {
+                page.style.opacity = '0';
+                page.style.transform = 'translateY(20px)';
+                
+                setTimeout(() => {
+                    page.style.transition = 'all 0.6s ease';
+                    page.style.opacity = '1';
+                    page.style.transform = 'translateY(0)';
+                }, index * 200);
+            });
+            
+            // Применяем начальные повороты
+            setTopLeftRotation(topLeftRotation);
+            setBottomRightRotation(bottomRightRotation);
+            
+            // Выводим инструкции в консоль
+            console.log('=== ИНСТРУКЦИИ ПО ИСПОЛЬЗОВАНИЮ ===');
+            console.log('Для поворота изображений используйте следующие функции:');
+            console.log('setTopLeftRotation(45) - повернуть верхнее левое изображение на 45°');
+            console.log('setBottomRightRotation(90) - повернуть нижнее правое изображение на 90°');
+            console.log('resetRotations() - сбросить все повороты');
+            console.log('getRotations() - получить текущие углы поворота');
+            console.log('==========================================');
+        });
+    </script>
+</body>
+</html>

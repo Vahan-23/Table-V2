@@ -14,11 +14,24 @@ const PersonModal = () => {
     showPersonModal,
     selectedChair,
     personName,
+    personFullName,
+    personGender,
     selectedGroup,
     selectedPersonFromGroup,
     personSearchTerm,
     showPersonSearch
   } = state;
+
+  // Заполняем поля при редактировании существующего гостя
+  React.useEffect(() => {
+    if (selectedChair && state.hallData?.tables?.find(t => t.id === selectedChair.tableId)?.people?.[selectedChair.chairIndex]) {
+      const currentPerson = state.hallData.tables.find(t => t.id === selectedChair.tableId)?.people?.[selectedChair.chairIndex];
+      if (currentPerson) {
+        dispatch({ type: actions.SET_PERSON_NAME, payload: currentPerson.name || '' });
+        dispatch({ type: actions.SET_PERSON_FULL_NAME, payload: currentPerson.fullName || currentPerson.name || '' });
+      }
+    }
+  }, [selectedChair, state.hallData, dispatch, actions]);
 
   if (!showPersonModal || !selectedChair) return null;
 
@@ -28,6 +41,14 @@ const PersonModal = () => {
 
   const handlePersonNameChange = (e) => {
     dispatch({ type: actions.SET_PERSON_NAME, payload: e.target.value });
+  };
+
+  const handlePersonFullNameChange = (e) => {
+    dispatch({ type: actions.SET_PERSON_FULL_NAME, payload: e.target.value });
+  };
+
+  const handlePersonGenderChange = (e) => {
+    dispatch({ type: actions.SET_PERSON_GENDER, payload: e.target.value });
   };
 
   const handleGroupChange = (e) => {
@@ -41,6 +62,8 @@ const PersonModal = () => {
   const handlePersonFromGroupSelect = (personData) => {
     dispatch({ type: actions.SET_SELECTED_PERSON_FROM_GROUP, payload: personData });
     dispatch({ type: actions.SET_PERSON_NAME, payload: personData.name });
+    dispatch({ type: actions.SET_PERSON_FULL_NAME, payload: personData.fullName || personData.name });
+    dispatch({ type: actions.SET_PERSON_GENDER, payload: personData.gender || 'мужской' });
     dispatch({ type: actions.SET_SELECTED_GROUP, payload: personData.groupId });
     dispatch({ type: actions.SET_SHOW_PERSON_SEARCH, payload: false });
   };
@@ -86,7 +109,12 @@ const PersonModal = () => {
            borderBottom: '1px solid #eee',
            paddingBottom: '10px'
          }}>
-           <h3 style={{ margin: 0, color: '#333' }}>{t('guestName')}</h3>
+           <h3 style={{ margin: 0, color: '#333' }}>
+             {selectedChair && state.hallData?.tables?.find(t => t.id === selectedChair.tableId)?.people?.[selectedChair.chairIndex] 
+               ? '✏️ Редактирование гостя' 
+               : '➕ Добавление гостя'
+             }
+           </h3>
            <button
              onClick={handleClose}
              style={{
@@ -199,7 +227,7 @@ const PersonModal = () => {
            </div>
          </div> */}
 
-        {/* Секция для ввода имени и выбора группы - ОТКЛЮЧЕНА
+        {/* Секция для ввода имени и выбора группы */}
         <div style={{ 
           marginBottom: '15px',
           border: '2px solid #3498db',
@@ -214,13 +242,16 @@ const PersonModal = () => {
             color: '#2c3e50',
             fontSize: '16px'
           }}>
-            ✏️ {t('enterName')}
+            ✏️ {t('enterName')} {selectedChair && state.hallData?.tables?.find(t => t.id === selectedChair.tableId)?.people?.[selectedChair.chairIndex] ? '(редактирование)' : '(новый гость)'}
           </label>
           <input
             type="text"
             value={personName}
             onChange={handlePersonNameChange}
-            placeholder={t('enterName')}
+            placeholder={selectedChair && state.hallData?.tables?.find(t => t.id === selectedChair.tableId)?.people?.[selectedChair.chairIndex] 
+              ? 'Введите новое имя гостя...' 
+              : t('enterName')
+            }
             autoFocus
             style={{
               width: '100%',
@@ -241,6 +272,93 @@ const PersonModal = () => {
               e.target.style.boxShadow = 'none';
             }}
           />
+        </div>
+
+        {/* Поле для полного имени */}
+        <div style={{ 
+          marginBottom: '15px',
+          border: '2px solid #e67e22',
+          borderRadius: '8px',
+          padding: '15px',
+          backgroundColor: '#fef9e7'
+        }}>
+          <label style={{
+            display: 'block',
+            marginBottom: '8px',
+            fontWeight: 'bold',
+            color: '#d68910',
+            fontSize: '16px'
+          }}>
+            📝 Полное имя (для PDF экспорта)
+          </label>
+          <input
+            type="text"
+            value={personFullName}
+            onChange={handlePersonFullNameChange}
+            placeholder="Введите полное имя гостя (например, Иван Петрович Сидоров)..."
+            style={{
+              width: '100%',
+              padding: '12px',
+              border: '2px solid #e67e22',
+              borderRadius: '6px',
+              fontSize: '16px',
+              boxSizing: 'border-box',
+              backgroundColor: 'white',
+              transition: 'all 0.2s ease'
+            }}
+            onFocus={(e) => {
+              e.target.style.borderColor = '#d68910';
+              e.target.style.boxShadow = '0 0 8px rgba(230, 126, 34, 0.3)';
+            }}
+            onBlur={(e) => {
+              e.target.style.borderColor = '#e67e22';
+              e.target.style.boxShadow = 'none';
+            }}
+          />
+        </div>
+
+        {/* Поле для выбора пола */}
+        <div style={{ 
+          marginBottom: '15px',
+          border: '2px solid #9b59b6',
+          borderRadius: '8px',
+          padding: '15px',
+          backgroundColor: '#f4f0f7'
+        }}>
+          <label style={{
+            display: 'block',
+            marginBottom: '8px',
+            fontWeight: 'bold',
+            color: '#8e44ad',
+            fontSize: '16px'
+          }}>
+            👤 Пол гостя
+          </label>
+          <select
+            value={personGender || 'мужской'}
+            onChange={handlePersonGenderChange}
+            style={{
+              width: '100%',
+              padding: '12px',
+              border: '2px solid #9b59b6',
+              borderRadius: '6px',
+              fontSize: '16px',
+              boxSizing: 'border-box',
+              backgroundColor: 'white',
+              transition: 'all 0.2s ease'
+            }}
+            onFocus={(e) => {
+              e.target.style.borderColor = '#8e44ad';
+              e.target.style.boxShadow = '0 0 8px rgba(155, 89, 182, 0.3)';
+            }}
+            onBlur={(e) => {
+              e.target.style.borderColor = '#9b59b6';
+              e.target.style.boxShadow = 'none';
+            }}
+          >
+            <option value="мужской">👨 Мужской</option>
+            <option value="женский">👩 Женский</option>
+          </select>
         </div>
 
         <div style={{ marginBottom: '15px' }}>
@@ -272,10 +390,30 @@ const PersonModal = () => {
             ))}
           </select>
         </div>
-        */}
 
         <div style={{ marginBottom: '20px' }}>
-          {/* Кнопка "Выбрать из групп" - ОТКЛЮЧЕНА
+          {/* Информация о текущем госте */}
+          {selectedChair && state.hallData?.tables?.find(t => t.id === selectedChair.tableId)?.people?.[selectedChair.chairIndex] && (
+            <div style={{
+              marginBottom: '15px',
+              padding: '12px',
+              backgroundColor: '#e8f5e8',
+              borderRadius: '6px',
+              border: '1px solid #4caf50'
+            }}>
+              <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#2e7d32', marginBottom: '5px' }}>
+                📍 Текущий гость на этом месте:
+              </div>
+              <div style={{ fontSize: '13px', color: '#388e3c' }}>
+                {(() => {
+                  const currentPerson = state.hallData.tables.find(t => t.id === selectedChair.tableId)?.people?.[selectedChair.chairIndex];
+                  return currentPerson ? `${currentPerson.name}${currentPerson.fullName && currentPerson.fullName !== currentPerson.name ? ` (${currentPerson.fullName})` : ''}` : '';
+                })()}
+              </div>
+            </div>
+          )}
+
+          {/* Кнопка "Выбрать из групп" */}
           <button
             onClick={() => dispatch({ type: actions.SET_SHOW_PERSON_SEARCH, payload: !showPersonSearch })}
             style={{
@@ -291,7 +429,6 @@ const PersonModal = () => {
           >
             {t('selectFromGroups')}
           </button>
-          */}
 
           {/* Список людей всегда видим */}
           <div style={{
@@ -348,7 +485,7 @@ const PersonModal = () => {
                       backgroundColor: person.groupColor || '#95a5a6'
                     }} />
                     <span style={{ fontSize: '12px', fontWeight: 'bold' }}>
-                      {person.name}
+                      {person.name}{person.fullName && person.fullName !== person.name ? ` (${person.fullName})` : ''}
                     </span>
                     <span style={{ fontSize: '10px', color: '#666' }}>
                       ({person.groupName})
@@ -421,7 +558,7 @@ const PersonModal = () => {
               fontSize: '14px'
             }}
           >
-            {t('save')}
+            {selectedChair && state.hallData?.tables?.find(t => t.id === selectedChair.tableId)?.people?.[selectedChair.chairIndex] ? 'Обновить' : t('save')}
           </button>
         </div>
       </div>

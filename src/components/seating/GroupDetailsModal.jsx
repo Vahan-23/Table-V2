@@ -226,20 +226,25 @@ const GroupDetailsModal = () => {
                 gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(150px, 1fr))',
                 gap: '8px'
               }}>
-                {selectedGroupForDetails.members.map((member, index) => (
-                  <div
-                    key={index}
-                    style={{
-                      backgroundColor: '#f5f5f5',
-                      padding: '8px 12px',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      border: '1px solid #e0e0e0'
-                    }}
-                  >
-                    {member}
-                  </div>
-                ))}
+                {selectedGroupForDetails.members.map((member, index) => {
+                  const memberName = typeof member === 'string' ? member : member.name;
+                  const memberFullName = typeof member === 'string' ? member : (member.fullName || member.name);
+                  
+                  return (
+                    <div
+                      key={index}
+                      style={{
+                        backgroundColor: '#f5f5f5',
+                        padding: '8px 12px',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        border: '1px solid #e0e0e0'
+                      }}
+                    >
+                      {memberName}{memberFullName && memberFullName !== memberName ? ` (${memberFullName})` : ''}
+                    </div>
+                  );
+                })}
               </div>
             </div>
 

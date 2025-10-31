@@ -1,5 +1,6 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useEffect } from 'react';
 import { useSeating, TEST_PEOPLE } from './SeatingContext';
+import persistentStorage from './persistentStorage';
 
 export const useGroups = () => {
   const { state, dispatch, actions } = useSeating();
@@ -89,9 +90,10 @@ export const useGroups = () => {
       if (group.members && group.members.length > 0) {
         group.members.forEach(member => {
           // Проверяем, не рассажен ли уже этот человек
-          if (!seatedPeople.includes(member)) {
+          const memberName = typeof member === 'string' ? member : member.name;
+          if (!seatedPeople.includes(memberName)) {
             peopleFromGroups.push({
-              name: member,
+              name: memberName,
               groupId: group.id,
               groupName: group.name,
               groupColor: group.color
@@ -108,6 +110,12 @@ export const useGroups = () => {
     );
   }, [groups, state.personSearchTerm, hallData]);
 
+  useEffect(() => {
+    if (groups.length > 0) {
+      persistentStorage.save('seatingGroups', groups);
+    }
+  }, [groups]); 
+  
   // Добавление группы
   const addGroup = useCallback((groupName, groupMembers) => {
     const colors = [
@@ -120,18 +128,28 @@ export const useGroups = () => {
     const usedColors = groups.map(g => g.color);
     const availableColor = colors.find(color => !usedColors.includes(color)) || '#95a5a6';
 
+    // Обрабатываем как старые строки, так и новые объекты
+    const processedMembers = groupMembers.map(member => {
+      if (typeof member === 'string') {
+        return { name: member, fullName: member, gender: 'мужской' }; // Конвертируем строки в объекты
+      } else if (member && typeof member === 'object' && member.name) {
+        return { 
+          name: member.name, 
+          fullName: member.fullName || member.name,
+          gender: member.gender || 'мужской'
+        };
+      }
+      return member;
+    });
+
     const newGroup = {
-      id: 'group_' + Date.now(),
+      id: 'group_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
       name: groupName.trim(),
       color: availableColor,
-      members: [...groupMembers]
+      members: processedMembers
     };
 
     dispatch({ type: actions.ADD_GROUP, payload: newGroup });
-    
-    // Сохранение в localStorage
-    const updatedGroups = [...groups, newGroup];
-    localStorage.setItem('seatingGroups', JSON.stringify(updatedGroups));
   }, [groups, dispatch, actions]);
 
   // Обновление группы
@@ -144,11 +162,11 @@ export const useGroups = () => {
     
     dispatch({ type: actions.UPDATE_GROUP, payload: updatedGroup });
     
-    // Сохранение в localStorage
+    // Сохранение в backend/localStorage
     const updatedGroups = groups.map(group =>
       group.id === groupId ? { ...group, name: groupName, members: groupMembers } : group
     );
-    localStorage.setItem('seatingGroups', JSON.stringify(updatedGroups));
+    persistentStorage.save('seatingGroups', updatedGroups);
   }, [groups, dispatch, actions]);
 
   // Удаление группы
@@ -156,9 +174,10 @@ export const useGroups = () => {
     const groupToRemove = groups.find(g => g.id === groupId);
 
     if (groupToRemove && groupToRemove.members) {
-      const peopleToFree = groupToRemove.members.filter(member =>
-        TEST_PEOPLE.includes(member)
-      );
+      const peopleToFree = groupToRemove.members.filter(member => {
+        const memberName = typeof member === 'string' ? member : member.name;
+        return TEST_PEOPLE.includes(memberName);
+      });
       dispatch({ 
         type: actions.SET_USED_PEOPLE, 
         payload: usedPeople.filter(person => !peopleToFree.includes(person))
@@ -186,12 +205,12 @@ export const useGroups = () => {
       };
 
       dispatch({ type: actions.SET_HALL_DATA, payload: updatedHallData });
-      localStorage.setItem('hallData', JSON.stringify(updatedHallData));
+      persistentStorage.save('hallData', updatedHallData);
     }
 
-    // Сохранение в localStorage
+    // Сохранение в backend/localStorage
     const updatedGroups = groups.filter(g => g.id !== groupId);
-    localStorage.setItem('seatingGroups', JSON.stringify(updatedGroups));
+    persistentStorage.save('seatingGroups', updatedGroups);
   }, [groups, hallData, usedPeople, dispatch, actions]);
 
   // Освобождение группы
@@ -229,12 +248,16 @@ export const useGroups = () => {
     };
 
     dispatch({ type: actions.SET_HALL_DATA, payload: updatedHallData });
-    localStorage.setItem('hallData', JSON.stringify(updatedHallData));
+    persistentStorage.save('hallData', updatedHallData);
 
     // Возврат участников в группу
     const updatedGroups = groups.map(g => {
       if (g.id === groupId) {
-        const allMembers = [...(g.members || []), ...groupMembers];
+        // Конвертируем существующих участников в строки для совместимости
+        const existingMembers = (g.members || []).map(member => 
+          typeof member === 'string' ? member : member.name
+        );
+        const allMembers = [...existingMembers, ...groupMembers];
         const uniqueMembers = [...new Set(allMembers)];
 
         return {
@@ -246,7 +269,7 @@ export const useGroups = () => {
     });
 
     dispatch({ type: actions.SET_GROUPS, payload: updatedGroups });
-    localStorage.setItem('seatingGroups', JSON.stringify(updatedGroups));
+    persistentStorage.save('seatingGroups', updatedGroups);
   }, [groups, hallData, dispatch, actions]);
 
   // Функции для работы с модальными окнами

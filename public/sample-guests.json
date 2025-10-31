@@ -1,0 +1,57 @@
+{
+  "event_id": "28",
+  "export_date": "2025-08-16T22:28:48.535492",
+  "export_language": "ru",
+  "guests": [
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "женский",
+      "guest_name": "Наташа",
+      "has_spouse": false,
+      "second_guest": null
+    },
+    {
+      "group_description": "2 человека",
+      "group_size": 2,
+      "guest_gender": "женский",
+      "guest_name": "Таня",
+      "has_spouse": true,
+      "second_guest": "Супруг (Таня)"
+    },
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "мужской",
+      "guest_name": "Дмитрий",
+      "has_spouse": false,
+      "second_guest": null
+    },
+    {
+      "group_description": "2 человека",
+      "group_size": 2,
+      "guest_gender": "мужской",
+      "guest_name": "Александр",
+      "has_spouse": true,
+      "second_guest": "Супруга (Александр)"
+    },
+    {
+      "group_description": "3 человека",
+      "group_size": 3,
+      "guest_gender": "смешанный",
+      "guest_name": "Мария",
+      "has_spouse": true,
+      "second_guest": "Супруг (Мария)"
+    },
+    {
+      "group_description": "1 человек",
+      "group_size": 1,
+      "guest_gender": "женский",
+      "guest_name": "Елена",
+      "has_spouse": false,
+      "second_guest": null
+    }
+  ],
+  "total_accepted": 6,
+  "total_attendees": 10
+}

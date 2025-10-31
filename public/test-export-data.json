@@ -1,0 +1,200 @@
+{
+  "id": 1747311343926,
+  "name": "Тестовое мероприятие",
+  "tables": [
+    {
+      "id": 1,
+      "tableNumber": 1,
+      "people": [
+        {
+          "name": "Иван Петров",
+          "groupId": "group1",
+          "isMainGuest": true
+        },
+        {
+          "name": "Мария Сидорова",
+          "groupId": "group1",
+          "isMainGuest": false
+        },
+        {
+          "name": "Петр Иванов",
+          "groupId": "group1",
+          "isMainGuest": false
+        },
+        null,
+        null,
+        null
+      ],
+      "chairCount": 6,
+      "x": 100,
+      "y": 100,
+      "width": 300,
+      "height": 300,
+      "enabled": true
+    },
+    {
+      "id": 2,
+      "tableNumber": 2,
+      "people": [
+        {
+          "name": "Анна Козлова",
+          "groupId": "group2",
+          "isMainGuest": true
+        },
+        {
+          "name": "Сергей Козлов",
+          "groupId": "group2",
+          "isMainGuest": false
+        },
+        {
+          "name": "Елена Козлова",
+          "groupId": "group2",
+          "isMainGuest": false
+        },
+        {
+          "name": "Дмитрий Козлов",
+          "groupId": "group2",
+          "isMainGuest": false
+        },
+        null,
+        null,
+        null,
+        null
+      ],
+      "chairCount": 8,
+      "x": 500,
+      "y": 100,
+      "width": 300,
+      "height": 300,
+      "enabled": true
+    },
+    {
+      "id": 3,
+      "tableNumber": 3,
+      "people": [
+        {
+          "name": "Ольга Морозова",
+          "groupId": "group3",
+          "isMainGuest": true
+        },
+        {
+          "name": "Александр Морозов",
+          "groupId": "group3",
+          "isMainGuest": false
+        },
+        null,
+        null
+      ],
+      "chairCount": 4,
+      "x": 900,
+      "y": 100,
+      "width": 300,
+      "height": 300,
+      "enabled": true
+    },
+    {
+      "id": 4,
+      "tableNumber": 4,
+      "people": [
+        {
+          "name": "Наталья Волкова",
+          "groupId": "group4",
+          "isMainGuest": true
+        },
+        {
+          "name": "Михаил Волков",
+          "groupId": "group4",
+          "isMainGuest": false
+        },
+        {
+          "name": "Татьяна Волкова",
+          "groupId": "group4",
+          "isMainGuest": false
+        },
+        {
+          "name": "Андрей Волков",
+          "groupId": "group4",
+          "isMainGuest": false
+        },
+        {
+          "name": "Екатерина Волкова",
+          "groupId": "group4",
+          "isMainGuest": false
+        },
+        {
+          "name": "Владимир Волков",
+          "groupId": "group4",
+          "isMainGuest": false
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "chairCount": 12,
+      "x": 100,
+      "y": 500,
+      "width": 300,
+      "height": 300,
+      "enabled": true
+    },
+    {
+      "id": 5,
+      "tableNumber": 5,
+      "people": [
+        {
+          "name": "Виктор Соколов",
+          "groupId": "group5",
+          "isMainGuest": true
+        },
+        {
+          "name": "Людмила Соколова",
+          "groupId": "group5",
+          "isMainGuest": false
+        },
+        {
+          "name": "Игорь Соколов",
+          "groupId": "group5",
+          "isMainGuest": false
+        },
+        {
+          "name": "Елена Соколова",
+          "groupId": "group5",
+          "isMainGuest": false
+        },
+        {
+          "name": "Денис Соколов",
+          "groupId": "group5",
+          "isMainGuest": false
+        },
+        {
+          "name": "Анна Соколова",
+          "groupId": "group5",
+          "isMainGuest": false
+        },
+        {
+          "name": "Павел Соколов",
+          "groupId": "group5",
+          "isMainGuest": false
+        },
+        {
+          "name": "Марина Соколова",
+          "groupId": "group5",
+          "isMainGuest": false
+        },
+        null,
+        null,
+        null,
+        null
+      ],
+      "chairCount": 12,
+      "x": 500,
+      "y": 500,
+      "width": 300,
+      "height": 300,
+      "enabled": true
+    }
+  ]
+}

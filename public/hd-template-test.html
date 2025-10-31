@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Тест HD Шаблона - Рассадка гостей</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;500;600;700&family=Great+Vibes&family=Playfair+Display:wght@400;500;600;700&family=Caveat:wght@400;500;600;700&family=Marck+Script&display=swap" rel="stylesheet">
+  <style>
+    /* CSS переменные для настройки поворота изображений */
+    :root {
+      --top-left-rotate: 45deg;      /* Поворот верхнего левого цветка */
+      --bottom-right-rotate: 225deg;  /* Поворот нижнего правого цветка */
+    }
+
+    /* Базовые стили для A5 страницы */
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Dancing Script', cursive;
+      background: linear-gradient(to bottom, #e8e2d2, #f5f0e8, #ddd9c2);
+      min-height: 100vh;
+    }
+
+    /* Контейнер для предварительного просмотра */
+    .hd-preview-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 30px;
+      padding: 30px;
+      justify-content: center;
+      align-items: flex-start;
+    }
+
+    /* A5 страница для HD шаблона */
+    .hd-a5-page {
+      width: 148mm;
+      height: 210mm;
+      margin: 0;
+      padding: 25mm;
+      box-sizing: border-box;
+      box-shadow: 
+          0 8px 32px rgba(139, 69, 19, 0.15),
+          0 4px 16px rgba(139, 69, 19, 0.1),
+          inset 0 1px 0 rgba(255, 255, 255, 0.9);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+      border-radius: 8px;
+      border: 1px solid rgba(139, 69, 19, 0.1);
+    }
+
+    /* Фоновое изображение HD */
+    .hd-background-image {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0.3;
+      z-index: 1;
+    }
+
+    /* Fallback для фонового изображения */
+    .hd-a5-page:has(.hd-background-image:not([src])) {
+      background: linear-gradient(135deg, #e9e3d7 0%, #f5f0e8 50%, #e9e3d7 100%);
+    }
+
+    /* Наложение для уменьшения прозрачности фонового изображения */
+    .hd-a5-page::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(233, 227, 215, 0.7);
+      z-index: 2;
+    }
+
+    /* Декоративные цветы */
+    .hd-flower-decoration {
+      position: absolute;
+      width: 700px;
+      height: 700px;
+      object-fit: contain;
+      opacity: 0.8;
+      z-index: 3;
+    }
+
+    .hd-flower-decoration.top-left {
+      top: -190px;
+      left: -170px;
+      /* transform: rotate(45deg); Базовый поворот, можно изменить через F12 */
+      /* Альтернативные варианты поворота для тестирования: */
+      /* transform: rotate(0deg); */
+      /* transform: rotate(90deg); */
+      /* transform: rotate(180deg); */
+      /* transform: rotate(270deg); */
+      /* transform: rotate(360deg); */
+    }
+
+    .hd-flower-decoration.bottom-right {
+      bottom: 20px;
+      right: 20px;
+      transform: rotate(225deg); /* Базовый поворот, можно изменить через F12 */
+    }
+
+    /* Отдельный класс для нижнего цветка */
+    .hd-bottom-flower {
+      position: absolute;
+      width: 800px;
+      height: 800px;
+      object-fit: contain;
+      opacity: 0.8;
+      z-index: 3;
+      bottom: -223px;
+      /* right: 0px; */
+      left: -35px;
+      transform: rotate(183deg);
+    }
+
+    /* Дополнительные CSS классы для быстрого изменения поворота нижнего цветка через F12 */
+    .hd-bottom-flower.rotate-0 { transform: rotate(0deg); }
+    .hd-bottom-flower.rotate-45 { transform: rotate(45deg); }
+    .hd-bottom-flower.rotate-90 { transform: rotate(90deg); }
+    .hd-bottom-flower.rotate-135 { transform: rotate(135deg); }
+    .hd-bottom-flower.rotate-180 { transform: rotate(180deg); }
+    .hd-bottom-flower.rotate-225 { transform: rotate(225deg); }
+    .hd-bottom-flower.rotate-270 { transform: rotate(270deg); }
+    .hd-bottom-flower.rotate-315 { transform: rotate(315deg); }
+    .hd-bottom-flower.rotate-360 { transform: rotate(360deg); }
+
+    /* Дополнительные CSS классы для быстрого изменения поворота через F12 */
+    .hd-flower-decoration.top-left.rotate-0 { transform: rotate(0deg); }
+    .hd-flower-decoration.top-left.rotate-45 { transform: rotate(45deg); }
+    .hd-flower-decoration.top-left.rotate-90 { transform: rotate(90deg); }
+    .hd-flower-decoration.top-left.rotate-135 { transform: rotate(135deg); }
+    .hd-flower-decoration.top-left.rotate-180 { transform: rotate(180deg); }
+    .hd-flower-decoration.top-left.rotate-225 { transform: rotate(225deg); }
+    .hd-flower-decoration.top-left.rotate-270 { transform: rotate(270deg); }
+    .hd-flower-decoration.top-left.rotate-315 { transform: rotate(315deg); }
+    .hd-flower-decoration.top-left.rotate-360 { transform: rotate(360deg); }
+
+    /* Классы для нижнего правого цветка */
+    .hd-flower-decoration.bottom-right.rotate-0 { transform: rotate(0deg); }
+    .hd-flower-decoration.bottom-right.rotate-45 { transform: rotate(45deg); }
+    .hd-flower-decoration.bottom-right.rotate-90 { transform: rotate(90deg); }
+    .hd-flower-decoration.bottom-right.rotate-135 { transform: rotate(135deg); }
+    .hd-flower-decoration.bottom-right.rotate-180 { transform: rotate(180deg); }
+    .hd-flower-decoration.bottom-right.rotate-225 { transform: rotate(225deg); }
+    .hd-flower-decoration.bottom-right.rotate-270 { transform: rotate(270deg); }
+    .hd-flower-decoration.bottom-right.rotate-315 { transform: rotate(315deg); }
+    .hd-flower-decoration.bottom-right.rotate-360 { transform: rotate(360deg); }
+
+    /* Заголовок стола */
+    .hd-table-title {
+      font-size: 42px;
+      font-weight: 600;
+      color: #5f4f3c;
+      margin-top: 20px;
+      margin-bottom: 40px;
+      font-family: 'Dancing Script', cursive;
+      text-shadow: 0 2px 4px rgba(139, 69, 19, 0.3);
+      position: relative;
+      z-index: 4;
+    }
+
+    .hd-table-title::after {
+      content: '';
+      position: absolute;
+      bottom: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 80px;
+      height: 2px;
+      background: linear-gradient(90deg, #5f4f3c, #a0522d);
+      border-radius: 1px;
+    }
+
+    /* Список гостей */
+    .hd-guests-list {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      gap: 0px;
+      margin-bottom: 0;
+      margin-top: 0;
+      width: 100%;
+      max-width: 90mm;
+      position: relative;
+      z-index: 4;
+    }
+
+    /* Имя гостя */
+    .hd-guest-name {
+      font-size: 32px;
+      color: #5f4f3c;
+      font-weight: 500;
+      font-family: 'Caveat', 'Marck Script', cursive;
+      padding: 0;
+      margin: 0;
+      text-align: center;
+      background: transparent;
+      border-radius: 0;
+      backdrop-filter: none;
+      box-shadow: none;
+    }
+
+    /* Стили для печати */
+    @media print {
+      body { 
+        background: white; 
+        margin: 0; 
+        padding: 0;
+      }
+      
+      .hd-preview-container {
+        display: none;
+      }
+      
+      .hd-a5-page {
+        box-shadow: none;
+        margin: 0;
+        padding: 25mm;
+        width: 148mm;
+        height: 210mm;
+        page-break-after: always;
+        page-break-inside: avoid;
+        border-radius: 0;
+      }
+      
+      .hd-a5-page:last-child {
+        page-break-after: avoid;
+      }
+    }
+
+    /* Адаптивность для мобильных устройств */
+    @media (max-width: 768px) {
+      .hd-preview-container {
+        padding: 15px;
+        gap: 20px;
+      }
+      
+      .hd-a5-page {
+        width: 100%;
+        height: auto;
+        min-height: 200mm;
+        padding: 15mm;
+      }
+      
+      .hd-table-title {
+        font-size: 32px;
+        margin-top: 15px;
+        margin-bottom: 30px;
+      }
+      
+      .hd-guest-name {
+        font-size: 24px;
+      }
+      
+      .hd-flower-decoration {
+        width: 400px;
+        height: 400px;
+      }
+    }
+
+    /* Информационная панель */
+    .info-panel {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 10px;
+      padding: 20px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      max-width: 300px;
+      z-index: 1000;
+      backdrop-filter: blur(10px);
+    }
+
+    .info-panel h3 {
+      margin: 0 0 15px 0;
+      color: #5f4f3c;
+      font-size: 18px;
+      font-family: 'Dancing Script', cursive;
+    }
+
+    .info-panel p {
+      margin: 8px 0;
+      font-size: 14px;
+      color: #666;
+      line-height: 1.4;
+    }
+
+    .info-panel .highlight {
+      color: #5f4f3c;
+      font-weight: 600;
+    }
+
+    /* Кнопки управления */
+    .controls {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 15px;
+      z-index: 1000;
+    }
+
+    .control-btn {
+      padding: 12px 24px;
+      background: linear-gradient(135deg, #5f4f3c 0%, #7a6b5a 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      box-shadow: 0 4px 12px rgba(95, 79, 60, 0.3);
+      transition: all 0.2s ease;
+    }
+
+    .control-btn:hover {
+      background: linear-gradient(135deg, #4a3d2f 0%, #6a5b4a 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(95, 79, 60, 0.4);
+    }
+
+    .control-btn:active {
+      transform: translateY(0);
+    }
+  </style>
+</head>
+<body>
+  <!-- Информационная панель -->
+  <div class="info-panel">
+    <h3>🌸 HD Шаблон</h3>
+    <p><span class="highlight">Формат:</span> A5 (148mm × 210mm)</p>
+    <p><span class="highlight">Фон:</span> HDfon.jpg</p>
+    <p><span class="highlight">Декорации:</span> HDtsaxik.png</p>
+    <p><span class="highlight">Шрифты:</span> Dancing Script, Caveat</p>
+    <p><span class="highlight">Цвета:</span> Коричневая палитра</p>
+    <hr style="margin: 15px 0; border: 1px solid #ddd;">
+         <p><span class="highlight">🎯 F12 - Поворот цветов:</span></p>
+     <p>• Верхний цветок: .hd-flower-decoration.top-left</p>
+     <p>• Нижний цветок: .hd-bottom-flower</p>
+     <p>• Измените transform: rotate(45deg)</p>
+     <p>• Или добавьте класс: rotate-90, rotate-180 и т.д.</p>
+  </div>
+
+  <!-- Контейнер с примерами страниц -->
+  <div class="hd-preview-container">
+         <!-- Пример 1: Стол с 4 гостями -->
+     <div class="hd-a5-page">
+       <!-- Фоновое изображение -->
+       <img src="HDfon.jpg" class="hd-background-image" alt="HD фон" />
+       <!-- Декоративные цветы -->
+       <img src="HDtsaxik.png" class="hd-flower-decoration top-left" alt="цветок" />
+       <img src="HDtsaxik.png" class="hd-bottom-flower" alt="цветок" />
+       <div class="hd-table-title">СТОЛ №1</div>
+             <div class="hd-guests-list">
+         <div class="hd-guest-name">Иван Иванов</div>
+         <div class="hd-guest-name">Мария Петрова</div>
+         <div class="hd-guest-name">Алексей Сидоров</div>
+         <div class="hd-guest-name">Елена Козлова</div>
+         <div class="hd-guest-name">Дмитрий Волков</div>
+         <div class="hd-guest-name">Анна Смирнова</div>
+         <div class="hd-guest-name">Сергей Новиков</div>
+         <div class="hd-guest-name">Ольга Морозова</div>
+         <div class="hd-guest-name">Николай Соколов</div>
+         <div class="hd-guest-name">Татьяна Лебедева</div>
+         <div class="hd-guest-name">Владимир Козлов</div>
+         <div class="hd-guest-name">Наталья Морозова</div>
+       </div>
+    </div>
+
+         <!-- Пример 2: Стол с 3 гостями -->
+     <div class="hd-a5-page">
+       <!-- Фоновое изображение -->
+       <img src="HDfon.jpg" class="hd-background-image" alt="HD фон" />
+       <!-- Декоративные цветы -->
+       <img src="HDtsaxik.png" class="hd-flower-decoration top-left" alt="цветок" />
+       <img src="HDtsaxik.png" class="hd-bottom-flower" alt="цветок" />
+       <div class="hd-table-title">СТОЛ №2</div>
+      <div class="hd-guests-list">
+        <div class="hd-guest-name">Дмитрий Волков</div>
+        <div class="hd-guest-name">Анна Смирнова</div>
+        <div class="hd-guest-name">Сергей Новиков</div>
+      </div>
+    </div>
+
+         <!-- Пример 3: Стол с 5 гостями -->
+     <div class="hd-a5-page">
+       <!-- Фоновое изображение -->
+       <img src="HDfon.jpg" class="hd-background-image" alt="HD фон" />
+       <!-- Декоративные цветы -->
+       <img src="HDtsaxik.png" class="hd-flower-decoration top-left" alt="цветок" />
+       <img src="HDtsaxik.png" class="hd-bottom-flower" alt="цветок" />
+       <div class="hd-table-title">СТОЛ №3</div>
+      <div class="hd-guests-list">
+        <div class="hd-guest-name">Ольга Морозова</div>
+        <div class="hd-guest-name">Николай Соколов</div>
+        <div class="hd-guest-name">Татьяна Лебедева</div>
+        <div class="hd-guest-name">Владимир Козлов</div>
+        <div class="hd-guest-name">Наталья Морозова</div>
+      </div>
+    </div>
+
+         <!-- Пример 4: Стол с 2 гостями -->
+     <div class="hd-a5-page">
+       <!-- Фоновое изображение -->
+       <img src="HDfon.jpg" class="hd-background-image" alt="HD фон" />
+       <!-- Декоративные цветы -->
+       <img src="HDtsaxik.png" class="hd-flower-decoration top-left" alt="цветок" />
+       <img src="HDtsaxik.png" class="hd-bottom-flower" alt="цветок" />
+       <div class="hd-table-title">СТОЛ №4</div>
+      <div class="hd-guests-list">
+        <div class="hd-guest-name">Андрей Соловьев</div>
+        <div class="hd-guest-name">Ирина Воробьева</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Кнопки управления -->
+  <div class="controls">
+    <button class="control-btn" onclick="window.print()">🖨️ Печать</button>
+    <button class="control-btn" onclick="toggleBackground()">🖼️ Фон</button>
+    <button class="control-btn" onclick="toggleFlowers()">🌸 Цветы</button>
+    <button class="control-btn" onclick="resetAll()">🔄 Сброс</button>
+  </div>
+
+  <script>
+    // Функции для тестирования
+    let backgroundVisible = true;
+    let flowersVisible = true;
+
+    function toggleBackground() {
+      const backgrounds = document.querySelectorAll('.hd-background-image');
+      backgroundVisible = !backgroundVisible;
+      
+      backgrounds.forEach(bg => {
+        bg.style.display = backgroundVisible ? 'block' : 'none';
+      });
+      
+      console.log(`Фон ${backgroundVisible ? 'показан' : 'скрыт'}`);
+    }
+
+    function toggleFlowers() {
+      const flowers = document.querySelectorAll('.hd-flower-decoration');
+      flowersVisible = !flowersVisible;
+      
+      flowers.forEach(flower => {
+        flower.style.display = flowersVisible ? 'block' : 'none';
+      });
+      
+      console.log(`Цветы ${flowersVisible ? 'показаны' : 'скрыты'}`);
+    }
+
+    function resetAll() {
+      const backgrounds = document.querySelectorAll('.hd-background-image');
+      const flowers = document.querySelectorAll('.hd-flower-decoration');
+      
+      backgrounds.forEach(bg => {
+        bg.style.display = 'block';
+      });
+      
+      flowers.forEach(flower => {
+        flower.style.display = 'block';
+      });
+      
+      backgroundVisible = true;
+      flowersVisible = true;
+      
+      console.log('Все элементы восстановлены');
+    }
+
+    // Проверка загрузки изображений
+    window.addEventListener('load', function() {
+      const images = document.querySelectorAll('img');
+      let loadedCount = 0;
+      
+      images.forEach(img => {
+        if (img.complete && img.naturalHeight !== 0) {
+          loadedCount++;
+        } else {
+          img.addEventListener('load', () => {
+            loadedCount++;
+            console.log(`Изображение загружено: ${img.src}`);
+          });
+          
+          img.addEventListener('error', () => {
+            console.error(`Ошибка загрузки изображения: ${img.src}`);
+          });
+        }
+      });
+      
+      console.log(`Всего изображений: ${images.length}`);
+      console.log(`Загружено: ${loadedCount}`);
+    });
+
+    // Информация о шаблоне
+    console.log('🌸 HD Шаблон загружен');
+    console.log('Используйте кнопки внизу для тестирования');
+    console.log('Ctrl+P для печати');
+  </script>
+</body>
+</html>

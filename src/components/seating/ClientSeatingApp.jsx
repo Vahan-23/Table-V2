@@ -1,6 +1,6 @@
 import React from 'react';
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
-import { SeatingProvider } from './SeatingContext';
+import { SeatingProvider, isFemaleGender } from './SeatingContext';
 import { useSeating } from './SeatingContext';
 import { useTranslations } from './useTranslations';
 import { useGroups } from './useGroups';
@@ -32,7 +32,10 @@ const TableComponent = ({
   dragOverTable, 
   getGroupColor,
   onToggleEnabled,
-  showTableControls = false
+  onClearTable,
+  showTableControls = false,
+  isFlipped = false,
+  onFlip
 }) => {
   const { t } = useTranslations();
   const chairCount = table.chairCount || 12;
@@ -115,10 +118,15 @@ const TableComponent = ({
 
           {isOccupied && person && person.name && (
             <div
+              onClick={(e) => {
+                e.stopPropagation();
+                onChairClick(table.id, i);
+              }}
               style={{
                 position: 'absolute',
-                left: `${x - chairSize * 0.7}px`,
-                top: `${y + chairSize * 0.6}px`,
+                left: `${x}px`,
+                top: `${y}px`,
+                transform: 'translate(-50%, -50%)',
                 width: `${chairSize * 1.4}px`,
                 fontSize: `${labelFontSize}px`,
                 fontFamily: 'Arial',
@@ -128,12 +136,24 @@ const TableComponent = ({
                 borderRadius: '3px',
                 padding: '2px',
                 zIndex: 2,
-                pointerEvents: 'none',
+                pointerEvents: 'auto',
                 border: '1px solid #ccc',
-                boxShadow: '0 1px 2px rgba(0,0,0,0.2)'
+                boxShadow: '0 1px 2px rgba(0,0,0,0.2)',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.backgroundColor = 'rgba(255, 255, 255, 1)';
+                e.target.style.transform = 'translate(-50%, -50%) scale(1.05)';
+                e.target.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.95)';
+                e.target.style.transform = 'translate(-50%, -50%)';
+                e.target.style.boxShadow = '0 1px 2px rgba(0,0,0,0.2)';
               }}
             >
-              {person.name}
+              ✏️ {isFemaleGender(person.gender) ? '👩' : '👨'} {person.name}{person.fullName && person.fullName !== person.name ? ` (${person.fullName})` : ''}
             </div>
           )}
         </div>
@@ -195,10 +215,15 @@ const TableComponent = ({
 
           {isOccupied && person && person.name && (
             <div
+              onClick={(e) => {
+                e.stopPropagation();
+                onChairClick(table.id, currentChairIndex);
+              }}
               style={{
                 position: 'absolute',
-                left: `${x - chairSize * 0.7}px`,
-                top: `${y + chairSize * 0.6}px`,
+                left: `${x}px`,
+                top: `${y}px`,
+                transform: 'translate(-50%, -50%)',
                 width: `${chairSize * 1.4}px`,
                 fontSize: `${labelFontSize}px`,
                 fontFamily: 'Arial',
@@ -208,12 +233,24 @@ const TableComponent = ({
                 borderRadius: '3px',
                 padding: '2px',
                 zIndex: 2,
-                pointerEvents: 'none',
+                pointerEvents: 'auto',
                 border: '1px solid #ccc',
-                boxShadow: '0 1px 2px rgba(0,0,0,0.2)'
+                boxShadow: '0 1px 2px rgba(0,0,0,0.2)',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.backgroundColor = 'rgba(255, 255, 255, 1)';
+                e.target.style.transform = 'translate(-50%, -50%) scale(1.05)';
+                e.target.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.95)';
+                e.target.style.transform = 'translate(-50%, -50%)';
+                e.target.style.boxShadow = '0 1px 2px rgba(0,0,0,0.2)';
               }}
             >
-              {person.name}
+              ✏️ {isFemaleGender(person.gender) ? '👩' : '👨'} {person.name}{person.fullName && person.fullName !== person.name ? ` (${person.fullName})` : ''}
             </div>
           )}
         </div>
@@ -262,10 +299,15 @@ const TableComponent = ({
 
           {isOccupied && person && person.name && (
             <div
+              onClick={(e) => {
+                e.stopPropagation();
+                onChairClick(table.id, currentChairIndex);
+              }}
               style={{
                 position: 'absolute',
-                left: `${x - chairSize * 0.7}px`,
-                top: `${y + chairSize * 0.6}px`,
+                left: `${x}px`,
+                top: `${y}px`,
+                transform: 'translate(-50%, -50%)',
                 width: `${chairSize * 1.4}px`,
                 fontSize: `${labelFontSize}px`,
                 fontFamily: 'Arial',
@@ -275,12 +317,24 @@ const TableComponent = ({
                 borderRadius: '3px',
                 padding: '2px',
                 zIndex: 2,
-                pointerEvents: 'none',
+                pointerEvents: 'auto',
                 border: '1px solid #ccc',
-                boxShadow: '0 1px 2px rgba(0,0,0,0.2)'
+                boxShadow: '0 1px 2px rgba(0,0,0,0.2)',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.backgroundColor = 'rgba(255, 255, 255, 1)';
+                e.target.style.transform = 'translate(-50%, -50%) scale(1.05)';
+                e.target.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.95)';
+                e.target.style.transform = 'translate(-50%, -50%)';
+                e.target.style.boxShadow = '0 1px 2px rgba(0,0,0,0.2)';
               }}
             >
-              {person.name}
+              ✏️ {isFemaleGender(person.gender) ? '👩' : '👨'} {person.name}{person.fullName && person.fullName !== person.name ? ` (${person.fullName})` : ''}
             </div>
           )}
         </div>
@@ -307,30 +361,53 @@ const TableComponent = ({
           width: `${tableWidth}px`,
           height: `${tableHeight}px`,
           opacity: isEnabled ? 1 : 0.4,
-          filter: isEnabled ? 'none' : 'grayscale(100%)'
+          filter: isEnabled ? 'none' : 'grayscale(100%)',
+          perspective: '1000px'
         }}
         onDragOver={isEnabled ? (e) => onDragOver(e, table.id) : undefined}
         onDragLeave={isEnabled ? onDragLeave : undefined}
         onDrop={isEnabled ? (e) => onDrop(e, table.id) : undefined}
-        onClick={(e) => onTableClick(e, table)}
+        onClick={(e) => {
+          if (onFlip) {
+            onFlip(table.id, !isFlipped);
+          }
+          onTableClick(e, table);
+        }}
       >
-        <div style={{ position: 'relative' }}>
-          {isDragOver && (
-            <div style={{
+        <div 
+          style={{ 
+            position: 'relative',
+            transformStyle: 'preserve-3d',
+            transition: 'transform 0.6s ease-in-out',
+            transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)'
+          }}
+        >
+          {/* Передняя сторона стола (обычный вид) */}
+          <div
+            style={{
+              width: '100%',
+              height: '100%',
               position: 'absolute',
-              top: '-10px',
-              left: '-10px',
-              right: '-10px',
-              bottom: '-10px',
-              backgroundColor: 'rgba(52, 152, 219, 0.3)',
-              border: '3px dashed #3498db',
-              borderRadius: isRound ? '50%' : '12px',
-              zIndex: 1,
-              pointerEvents: 'none'
-            }} />
-          )}
+              backfaceVisibility: 'hidden',
+              transform: 'rotateY(0deg)'
+            }}
+          >
+            {isDragOver && (
+              <div style={{
+                position: 'absolute',
+                top: '-10px',
+                left: '-10px',
+                right: '-10px',
+                bottom: '-10px',
+                backgroundColor: 'rgba(52, 152, 219, 0.3)',
+                border: '3px dashed #3498db',
+                borderRadius: isRound ? '50%' : '12px',
+                zIndex: 1,
+                pointerEvents: 'none'
+              }} />
+            )}
 
-          {isRound ? (
+            {isRound ? (
             <div style={{ position: 'relative' }}>
               <div
                 style={{
@@ -473,57 +550,210 @@ const TableComponent = ({
               {renderChairsForRectangleTable()}
             </div>
           )}
+          </div>
+
+          {/* Задняя сторона стола (кнопка очистки) */}
+          <div
+            style={{
+              width: '100%',
+              height: '100%',
+              position: 'absolute',
+              backfaceVisibility: 'hidden',
+              transform: 'rotateY(180deg)'
+            }}
+          >
+            {isDragOver && (
+              <div style={{
+                position: 'absolute',
+                top: '-10px',
+                left: '-10px',
+                right: '-10px',
+                bottom: '-10px',
+                backgroundColor: 'rgba(52, 152, 219, 0.3)',
+                border: '3px dashed #3498db',
+                borderRadius: isRound ? '50%' : '12px',
+                zIndex: 1,
+                pointerEvents: 'none'
+              }} />
+            )}
+
+            {isRound ? (
+              <div style={{ position: 'relative' }}>
+                <div
+                  style={{
+                    width: `${tableWidth}px`,
+                    height: `${tableHeight}px`,
+                    position: 'relative',
+                  }}
+                >
+                   <div
+                     style={{
+                       width: '100%',
+                       height: '100%',
+                       backgroundColor: isDragOver ? '#3498db' : '#8B4513',
+                       border: isDragOver ? '4px solid #2980b9' : '3px solid #654321',
+                       borderRadius: '50%',
+                       position: 'relative',
+                       boxShadow: isDragOver 
+                         ? '0 8px 32px rgba(52, 152, 219, 0.6)' 
+                         : '0 4px 16px rgba(0, 0, 0, 0.3)',
+                       transition: 'all 0.3s ease'
+                     }}
+                   >
+                     <div
+                       style={{
+                         position: 'absolute',
+                         top: '50%',
+                         left: '50%',
+                         transform: 'translate(-50%, -50%)',
+                         color: 'white',
+                         fontSize: '16px',
+                         fontWeight: 'bold',
+                         textShadow: '2px 2px 4px rgba(0,0,0,0.8)',
+                         zIndex: 10,
+                         pointerEvents: 'auto',
+                         transition: 'all 0.3s ease',
+                         cursor: 'pointer',
+                         padding: '8px 16px',
+                         borderRadius: '4px',
+                         backgroundColor: 'rgba(0, 0, 0, 0.2)',
+                         border: '1px solid rgba(255, 255, 255, 0.3)'
+                       }}
+                       onClick={(e) => {
+                         e.stopPropagation();
+                         if (onClearTable) {
+                           const confirmed = window.confirm('Вы уверены, что хотите удалить всех гостей со стола? Они будут возвращены в свои группы.');
+                           if (confirmed) {
+                             onClearTable(table.id);
+                           }
+                         }
+                         if (onFlip) {
+                           onFlip(table.id, false);
+                         }
+                       }}
+                       onMouseEnter={(e) => {
+                         e.target.style.color = '#ffeb3b';
+                         e.target.style.fontSize = '18px';
+                         e.target.style.textShadow = '2px 2px 8px rgba(255, 235, 59, 0.8)';
+                         e.target.style.backgroundColor = 'rgba(0, 0, 0, 0.4)';
+                         e.target.style.border = '1px solid rgba(255, 235, 59, 0.5)';
+                       }}
+                       onMouseLeave={(e) => {
+                         e.target.style.color = 'white';
+                         e.target.style.fontSize = '16px';
+                         e.target.style.textShadow = '2px 2px 4px rgba(0,0,0,0.8)';
+                         e.target.style.backgroundColor = 'rgba(0, 0, 0, 0.2)';
+                         e.target.style.border = '1px solid rgba(255, 255, 255, 0.3)';
+                       }}
+                     >
+                       Очистить стол
+                     </div>
+
+                    {renderChairsForRoundTable()}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div style={{ position: 'relative' }}>
+                <div
+                  style={{
+                    width: `${tableWidth}px`,
+                    height: `${tableHeight}px`,
+                    position: 'relative',
+                  }}
+                >
+                   <div
+                     style={{
+                       width: '100%',
+                       height: '100%',
+                       backgroundColor: isDragOver ? '#3498db' : '#8B4513',
+                       border: isDragOver ? '4px solid #2980b9' : '3px solid #654321',
+                       borderRadius: '8px',
+                       position: 'relative',
+                       boxShadow: isDragOver 
+                         ? '0 8px 32px rgba(52, 152, 219, 0.6)' 
+                         : '0 4px 16px rgba(0, 0, 0, 0.3)',
+                       transition: 'all 0.3s ease'
+                     }}
+                   >
+                     <div
+                       style={{
+                         position: 'absolute',
+                         top: '50%',
+                         left: '50%',
+                         transform: 'translate(-50%, -50%)',
+                         color: 'white',
+                         fontSize: '16px',
+                         fontWeight: 'bold',
+                         textShadow: '2px 2px 4px rgba(0,0,0,0.8)',
+                         zIndex: 10,
+                         pointerEvents: 'auto',
+                         transition: 'all 0.3s ease',
+                         cursor: 'pointer',
+                         padding: '8px 16px',
+                         borderRadius: '4px',
+                         backgroundColor: 'rgba(0, 0, 0, 0.2)',
+                         border: '1px solid rgba(255, 255, 255, 0.3)'
+                       }}
+                       onClick={(e) => {
+                         e.stopPropagation();
+                         if (onClearTable) {
+                           const confirmed = window.confirm('Вы уверены, что хотите удалить всех гостей со стола? Они будут возвращены в свои группы.');
+                           if (confirmed) {
+                             onClearTable(table.id);
+                           }
+                         }
+                         if (onFlip) {
+                           onFlip(table.id, false);
+                         }
+                       }}
+                       onMouseEnter={(e) => {
+                         e.target.style.color = '#ffeb3b';
+                         e.target.style.fontSize = '18px';
+                         e.target.style.textShadow = '2px 2px 8px rgba(255, 235, 59, 0.8)';
+                         e.target.style.backgroundColor = 'rgba(0, 0, 0, 0.4)';
+                         e.target.style.border = '1px solid rgba(255, 235, 59, 0.5)';
+                       }}
+                       onMouseLeave={(e) => {
+                         e.target.style.color = 'white';
+                         e.target.style.fontSize = '16px';
+                         e.target.style.textShadow = '2px 2px 4px rgba(0,0,0,0.8)';
+                         e.target.style.backgroundColor = 'rgba(0, 0, 0, 0.2)';
+                         e.target.style.border = '1px solid rgba(255, 255, 255, 0.3)';
+                       }}
+                     >
+                       Очистить стол
+                     </div>
+
+                    {renderChairsForRectangleTable()}
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    position: 'absolute',
+                    bottom: '-25px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    color: '#666',
+                    fontSize: '12px',
+                    fontWeight: 'bold',
+                    textAlign: 'center',
+                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                    padding: '2px 8px',
+                    borderRadius: '4px',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                    pointerEvents: 'none'
+                  }}
+                >
+                  {chairCount} мест
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Кнопка управления столом - отдельно от контейнера стола */}
-      {showTableControls && (
-        <div
-          style={{
-            position: 'absolute',
-            left: `${position.left + tableWidth / 2}px`,
-            top: `${position.top + tableHeight / 2}px`,
-            transform: 'translate(-50%, -50%)',
-            zIndex: 30
-          }}
-        >
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleEnabled(table.id);
-            }}
-            style={{
-              width: '60px',
-              height: '60px',
-              borderRadius: '50%',
-              backgroundColor: isEnabled ? '#e74c3c' : '#27ae60',
-              color: 'white',
-              border: '4px solid white',
-              cursor: 'pointer',
-              fontSize: '24px',
-              fontWeight: 'bold',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: isEnabled ? '0 4px 16px rgba(0,0,0,0.4)' : '0 4px 16px rgba(39, 174, 96, 0.6)',
-              transition: 'all 0.2s ease',
-              opacity: 1,
-              filter: 'none'
-            }}
-            onMouseEnter={(e) => {
-              e.target.style.transform = 'scale(1.1)';
-              e.target.style.boxShadow = isEnabled ? '0 6px 20px rgba(0,0,0,0.5)' : '0 6px 20px rgba(39, 174, 96, 0.8)';
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.transform = 'scale(1)';
-              e.target.style.boxShadow = isEnabled ? '0 4px 16px rgba(0,0,0,0.4)' : '0 4px 16px rgba(39, 174, 96, 0.6)';
-            }}
-            title={isEnabled ? t('disableTable') : t('enableTable')}
-          >
-            {isEnabled ? '✕' : '✓'}
-          </button>
-        </div>
-      )}
     </>
   );
 };
@@ -543,14 +773,31 @@ const ClientSeatingAppContent = () => {
     dragOverTable,
     toggleTableEnabled,
     getActiveTables,
-    getDisabledTables
+    getDisabledTables,
+    clearTable
   } = useTables();
   const { renderShapes } = useShapes();
 
   const { windowWidth, isMobileGroupsExpanded, showTableControls } = state;
   
+  // Состояние для отслеживания поворота столов
+  const [flippedTables, setFlippedTables] = React.useState(new Set());
+  
   // Ref для хранения функций масштабирования
   const zoomFunctionsRef = React.useRef(null);
+
+  // Функция для поворота стола
+  const handleTableFlip = React.useCallback((tableId, isFlipped) => {
+    setFlippedTables(prev => {
+      const newSet = new Set(prev);
+      if (isFlipped) {
+        newSet.add(tableId);
+      } else {
+        newSet.delete(tableId);
+      }
+      return newSet;
+    });
+  }, []);
 
   return (
     <div className="simple-seating-container" style={{
@@ -715,7 +962,10 @@ const ClientSeatingAppContent = () => {
                           dragOverTable={dragOverTable}
                           getGroupColor={getGroupColor}
                           onToggleEnabled={toggleTableEnabled}
+                          onClearTable={clearTable}
                           showTableControls={showTableControls}
+                          isFlipped={flippedTables.has(table.id)}
+                          onFlip={handleTableFlip}
                         />
                       ))}
                     </div>

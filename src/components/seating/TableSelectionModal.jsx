@@ -1,5 +1,5 @@
 import React from 'react';
-import { useSeating } from './SeatingContext';
+import { useSeating, isFemaleGender } from './SeatingContext';
 import { useTranslations } from './useTranslations';
 import { useTables } from './useTables';
 import { useGroups } from './useGroups';
@@ -122,7 +122,10 @@ const TableSelectionModal = () => {
             <strong>{t('groupMembers')}:</strong> {group.members.length} {t('people')}
           </div>
           <div style={{ fontSize: '14px', color: '#666' }}>
-            {group.members.join(', ')}
+            {group.members.map(member => {
+              const memberName = typeof member === 'string' ? member : member.name;
+              return memberName;
+            }).join(', ')}
           </div>
         </div>
 
@@ -251,7 +254,7 @@ const TableSelectionModal = () => {
                           margin: '2px',
                           fontSize: '11px'
                         }}>
-                          {person.name}
+                          {isFemaleGender(person.gender) ? '👩' : '👨'} {person.name}{person.fullName && person.fullName !== person.name ? ` (${person.fullName})` : ''}
                         </span>
                       ))}
                     </div>

@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { useSeating } from './SeatingContext';
 import { useTranslations } from './useTranslations';
 import { useGroups } from './useGroups';
+import persistentStorage from './persistentStorage';
 
 export const useTables = () => {
   const { state, dispatch, actions } = useSeating();
@@ -25,7 +26,11 @@ export const useTables = () => {
 
   // Рассадка группы за столом
   const seatGroupAtTable = useCallback((groupId, tableId, selectedPeople = null) => {
+    console.log('seatGroupAtTable вызвана с:', { groupId, tableId, selectedPeople });
+    
     const group = state.groups.find(g => g.id === groupId);
+    console.log('Найденная группа:', group);
+    
     if (!group) {
       alert('Группа не найдена');
       return;
@@ -44,7 +49,10 @@ export const useTables = () => {
         }
       });
       
-      return group.members.filter(member => !seatedPeople.includes(member));
+      return group.members.filter(member => {
+        const memberName = typeof member === 'string' ? member : member.name;
+        return !seatedPeople.includes(memberName);
+      });
     };
 
     const peopleToSeat = selectedPeople || getUnseatedPeopleFromGroup(groupId);
@@ -78,15 +86,25 @@ export const useTables = () => {
         const updatedPeople = [...(table.people || [])];
         let seatIndex = 0;
 
-        peopleToSeat.forEach((memberName) => {
+        peopleToSeat.forEach((member) => {
           // Находим свободное место
           while (seatIndex < updatedPeople.length && updatedPeople[seatIndex] !== null && updatedPeople[seatIndex] !== undefined) {
             seatIndex++;
           }
           
           if (seatIndex < updatedPeople.length) {
+            // Обрабатываем как старые строки, так и новые объекты
+            const memberName = typeof member === 'string' ? member : member.name;
+            const memberFullName = typeof member === 'string' ? member : (member.fullName || member.name);
+            const memberGender = typeof member === 'string' ? 'мужской' : (member.gender || 'мужской');
+            
+            
+            
+            
             updatedPeople[seatIndex] = {
               name: memberName,
+              fullName: memberFullName,
+              gender: memberGender,
               groupId: groupId,
               isMainGuest: true
             };
@@ -108,12 +126,18 @@ export const useTables = () => {
     };
 
     dispatch({ type: actions.SET_HALL_DATA, payload: updatedHallData });
-    localStorage.setItem('hallData', JSON.stringify(updatedHallData));
+    persistentStorage.save('hallData', updatedHallData);
 
     // Удаляем рассаженных людей из группы
     const updatedGroups = state.groups.map(g => {
       if (g.id === groupId) {
-        const newMembers = g.members.filter(member => !peopleToSeat.includes(member));
+        const newMembers = g.members.filter(member => {
+          const memberName = typeof member === 'string' ? member : member.name;
+          return !peopleToSeat.some(person => {
+            const personName = typeof person === 'string' ? person : person.name;
+            return personName === memberName;
+          });
+        });
         console.log(`🪑 РАССАЖАЕМ: ${g.name} - было ${g.members.length} людей, стало ${newMembers.length}`);
         return {
           ...g,
@@ -124,8 +148,7 @@ export const useTables = () => {
     });
 
     dispatch({ type: actions.SET_GROUPS, payload: updatedGroups });
-    localStorage.setItem('seatingGroups', JSON.stringify(updatedGroups));
-    // localStorage.setItem('seatingGroups', JSON.stringify(updatedGroups));
+    persistentStorage.save('seatingGroups', updatedGroups);
 
     // Сброс модальных окон
     dispatch({ type: actions.RESET_MODALS });
@@ -146,12 +169,22 @@ export const useTables = () => {
         payload: table.people[chairIndex].name || '' 
       });
       dispatch({ 
+        type: actions.SET_PERSON_FULL_NAME, 
+        payload: table.people[chairIndex].fullName || table.people[chairIndex].name || '' 
+      });
+      dispatch({ 
+        type: actions.SET_PERSON_GENDER, 
+        payload: table.people[chairIndex].gender || 'мужской' 
+      });
+      dispatch({ 
         type: actions.SET_SELECTED_GROUP, 
         payload: table.people[chairIndex].groupId || '' 
       });
     } else {
       // Если стул свободен - готовим для добавления нового гостя
       dispatch({ type: actions.SET_PERSON_NAME, payload: '' });
+      dispatch({ type: actions.SET_PERSON_FULL_NAME, payload: '' });
+      dispatch({ type: actions.SET_PERSON_GENDER, payload: 'мужской' });
       dispatch({ type: actions.SET_SELECTED_GROUP, payload: '' });
     }
 
@@ -277,6 +310,8 @@ export const useTables = () => {
 
         tablePeople[chairIndex] = {
           name: state.personName.trim(),
+          fullName: state.personFullName?.trim() || state.personName.trim(),
+          gender: state.personGender || 'мужской',
           groupId: state.selectedGroup,
           isMainGuest: true
         };
@@ -295,7 +330,7 @@ export const useTables = () => {
     };
 
     dispatch({ type: actions.SET_HALL_DATA, payload: updatedHallData });
-    localStorage.setItem('hallData', JSON.stringify(updatedHallData));
+    persistentStorage.save('hallData', updatedHallData);
 
     // Сброс модального окна
     dispatch({ type: actions.RESET_MODALS });
@@ -310,16 +345,23 @@ export const useTables = () => {
     if (currentPerson && currentPerson.groupId) {
       const updatedGroups = state.groups.map(group => {
         if (group.id === currentPerson.groupId) {
+          // Создаем объект для возврата в группу
+          const memberToReturn = {
+            name: currentPerson.name,
+            fullName: currentPerson.fullName || currentPerson.name,
+            gender: currentPerson.gender || 'мужской'
+          };
+          
           return {
             ...group,
-            members: [...group.members, currentPerson.name]
+            members: [...group.members, memberToReturn]
           };
         }
         return group;
       });
 
       dispatch({ type: actions.SET_GROUPS, payload: updatedGroups });
-      localStorage.setItem('seatingGroups', JSON.stringify(updatedGroups));
+      persistentStorage.save('seatingGroups', updatedGroups);
     }
 
     // Удаление человека со стола
@@ -342,7 +384,7 @@ export const useTables = () => {
     };
 
     dispatch({ type: actions.SET_HALL_DATA, payload: updatedHallData });
-    localStorage.setItem('hallData', JSON.stringify(updatedHallData));
+    persistentStorage.save('hallData', updatedHallData);
 
     // Сброс модального окна
     dispatch({ type: actions.RESET_MODALS });
@@ -365,9 +407,12 @@ export const useTables = () => {
     e.preventDefault();
     dispatch({ type: actions.SET_DRAG_OVER_TABLE, payload: null });
 
+    console.log('handleTableDrop вызвана для стола:', tableId);
+    console.log('draggedGroup:', state.draggedGroup);
+
     if (!state.draggedGroup) return;
 
-    const availableSeats = getAvailableSeats(tableId);
+    const availableSeatsCount = getAvailableSeats(tableId);
 
     if (state.draggedGroup.members.length === 0) {
       dispatch({ 
@@ -380,7 +425,7 @@ export const useTables = () => {
       return;
     }
 
-    if (availableSeats.length === 0) {
+    if (availableSeatsCount === 0) {
       dispatch({ 
         type: actions.SET_NOTIFICATION, 
         payload: {
@@ -391,13 +436,13 @@ export const useTables = () => {
       return;
     }
 
-    if (state.draggedGroup.members.length > availableSeats.length) {
+    if (state.draggedGroup.members.length > availableSeatsCount) {
       dispatch({
         type: actions.SET_PENDING_SEATING,
         payload: {
           groupId: state.draggedGroup.id,
           tableId: tableId,
-          availableSeats: availableSeats.length
+          availableSeats: availableSeatsCount
         }
       });
       dispatch({ type: actions.SET_SELECTED_MEMBERS, payload: [] });
@@ -444,6 +489,8 @@ export const useTables = () => {
           if (person && person.name && person.groupId) {
             peopleToReturn.push({
               name: person.name,
+              fullName: person.fullName || person.name,
+              gender: person.gender || 'мужской',
               groupId: person.groupId
             });
           }
@@ -465,13 +512,24 @@ export const useTables = () => {
     // Обновляем группы - возвращаем людей в их группы
     const updatedGroups = state.groups.map(group => {
       const peopleFromThisGroup = peopleToReturn.filter(p => p.groupId === group.id);
-      const peopleNames = peopleFromThisGroup.map(p => p.name);
       
       // Добавляем людей обратно в группу, избегая дубликатов
       const updatedMembers = [...group.members];
-      peopleNames.forEach(name => {
-        if (!updatedMembers.includes(name)) {
-          updatedMembers.push(name);
+      peopleFromThisGroup.forEach(person => {
+        const memberToAdd = {
+          name: person.name,
+          fullName: person.fullName || person.name,
+          gender: person.gender || 'мужской'
+        };
+        
+        // Проверяем, нет ли уже такого участника
+        const exists = updatedMembers.some(member => {
+          const memberName = typeof member === 'string' ? member : member.name;
+          return memberName === person.name;
+        });
+        
+        if (!exists) {
+          updatedMembers.push(memberToAdd);
         }
       });
 
@@ -485,8 +543,8 @@ export const useTables = () => {
     dispatch({ type: actions.SET_HALL_DATA, payload: updatedHallData });
     dispatch({ type: actions.SET_GROUPS, payload: updatedGroups });
     
-    localStorage.setItem('hallData', JSON.stringify(updatedHallData));
-    localStorage.setItem('seatingGroups', JSON.stringify(updatedGroups));
+    persistentStorage.save('hallData', updatedHallData);
+    persistentStorage.save('seatingGroups', updatedGroups);
 
     // Показываем уведомление о количестве возвращенных людей
     if (peopleToReturn.length > 0) {
@@ -498,6 +556,100 @@ export const useTables = () => {
         }
       });
     }
+  }, [hallData, state.groups, dispatch, actions]);
+
+  // Очистка конкретного стола и возврат гостей в группы
+  const clearTable = useCallback((tableId) => {
+    if (!hallData?.tables) return;
+
+    const table = hallData.tables.find(t => t.id === tableId);
+    if (!table || !table.people) return;
+
+    // Собираем всех людей с этого стола
+    const peopleToReturn = [];
+    table.people.forEach(person => {
+      if (person && person.name && person.groupId) {
+        peopleToReturn.push({
+          name: person.name,
+          fullName: person.fullName || person.name,
+          gender: person.gender || 'мужской',
+          groupId: person.groupId
+        });
+      }
+    });
+
+    if (peopleToReturn.length === 0) {
+      dispatch({ 
+        type: actions.SET_NOTIFICATION, 
+        payload: {
+          type: 'info',
+          message: 'Стол уже пустой'
+        }
+      });
+      return;
+    }
+
+    // Очищаем стол
+    const updatedTables = hallData.tables.map(t => 
+      t.id === tableId 
+        ? { ...t, people: t.people.map(() => null) }
+        : t
+    );
+
+    const updatedHallData = {
+      ...hallData,
+      tables: updatedTables
+    };
+
+    // Обновляем группы - возвращаем людей в их группы
+    const updatedGroups = state.groups.map(group => {
+      const peopleFromThisGroup = peopleToReturn.filter(p => p.groupId === group.id);
+      
+      if (peopleFromThisGroup.length === 0) {
+        return group;
+      }
+
+      // Добавляем людей обратно в группу, избегая дубликатов
+      const updatedMembers = [...group.members];
+      peopleFromThisGroup.forEach(person => {
+        const memberToAdd = {
+          name: person.name,
+          fullName: person.fullName || person.name,
+          gender: person.gender || 'мужской'
+        };
+        
+        // Проверяем, нет ли уже такого участника
+        const exists = updatedMembers.some(member => {
+          const memberName = typeof member === 'string' ? member : member.name;
+          return memberName === person.name;
+        });
+        
+        if (!exists) {
+          updatedMembers.push(memberToAdd);
+        }
+      });
+
+      return {
+        ...group,
+        members: updatedMembers
+      };
+    });
+
+    // Сохраняем обновленные данные
+    dispatch({ type: actions.SET_HALL_DATA, payload: updatedHallData });
+    dispatch({ type: actions.SET_GROUPS, payload: updatedGroups });
+    
+    persistentStorage.save('hallData', updatedHallData);
+    persistentStorage.save('seatingGroups', updatedGroups);
+
+    // Показываем уведомление
+    dispatch({ 
+      type: actions.SET_NOTIFICATION, 
+      payload: {
+        type: 'success',
+        message: `Стол "${table.name || table.id}" очищен. Возвращено гостей: ${peopleToReturn.length}`
+      }
+    });
   }, [hallData, state.groups, dispatch, actions]);
 
   return {
@@ -515,6 +667,7 @@ export const useTables = () => {
     setTableEnabled,
     getActiveTables,
     getDisabledTables,
-    clearAllTables
+    clearAllTables,
+    clearTable
   };
 }; 
