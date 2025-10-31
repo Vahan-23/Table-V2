@@ -127,8 +127,6 @@ const GroupsPanel = () => {
     const isPartiallySeatedStatus = status.isPartiallySeated;
     const isAvailable = status.isReadyToSeat;
     
-
-    
     return (
     <div
       key={group.id}
@@ -138,225 +136,307 @@ const GroupsPanel = () => {
       style={{
         backgroundColor: 'white',
         borderRadius: '8px',
-        padding: isMobile ? '12px' : '15px',
+        padding: isMobile ? '12px' : '12px',
         marginBottom: '10px',
         border: `2px solid ${getGroupColor(group.id)}`,
         cursor: isSeated ? 'default' : 'grab',
-        opacity: isSeated ? 0.7 : 1,
+        opacity: isSeated ? 0.85 : 1,
         transition: 'all 0.2s ease',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+        boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
         position: 'relative'
       }}
       onMouseEnter={(e) => {
         if (!isSeated) {
-          e.target.style.transform = 'scale(1.02)';
-          e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.2)';
+          e.currentTarget.style.transform = 'translateY(-2px)';
+          e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.15)';
         }
       }}
       onMouseLeave={(e) => {
         if (!isSeated) {
-          e.target.style.transform = 'scale(1)';
-          e.target.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+          e.currentTarget.style.transform = 'translateY(0)';
+          e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
         }
       }}
     >
+      {/* Header с названием */}
+      <div style={{
+        marginBottom: '10px'
+      }}>
+        <h4 style={{
+          margin: '0 0 4px 0',
+          fontSize: isMobile ? '14px' : '15px',
+          fontWeight: 'bold',
+          color: getGroupColor(group.id),
+          wordBreak: 'break-word',
+          lineHeight: '1.3'
+        }}>
+          {group.name}
+        </h4>
+        {/* Количество участников */}
+        <div style={{
+          fontSize: '11px',
+          color: '#666',
+          fontWeight: '500'
+        }}>
+          👥 {group.members?.length || 0} {group.members?.length === 1 ? t('person') : t('people')}
+        </div>
+      </div>
+      
+      {/* Список участников */}
+      <div style={{
+        backgroundColor: '#f8f9fa',
+        borderRadius: '6px',
+        padding: '6px',
+        marginBottom: '8px',
+        maxHeight: '80px',
+        overflowY: 'auto'
+      }}>
+        {group.members && group.members.length > 0 ? (
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '6px'
+          }}>
+            {group.members.map((member, idx) => {
+              const memberName = typeof member === 'string' ? member : member.name;
+              const memberFullName = typeof member === 'string' ? member : (member.fullName || member.name);
+              const memberGender = typeof member === 'string' ? 'мужской' : (member.gender || 'мужской');
+              const isFemale = memberGender === 'женский';
+              
+              return (
+                <div key={idx} style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '3px',
+                  fontSize: '11px',
+                  color: '#333',
+                  padding: '2px 5px',
+                  backgroundColor: 'white',
+                  borderRadius: '3px',
+                  border: '1px solid #e0e0e0',
+                  marginBottom: '3px'
+                }}>
+                  <span style={{ fontSize: '11px' }}>{isFemale ? '👩' : '👨'}</span>
+                  <span style={{ fontWeight: '500', flex: 1, fontSize: '11px' }}>{memberName}</span>
+                  {memberFullName && memberFullName !== memberName && (
+                    <span style={{ 
+                      fontSize: '9px', 
+                      color: '#888', 
+                      fontStyle: 'italic' 
+                    }}>
+                      ({memberFullName})
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div style={{
+            textAlign: 'center',
+            color: '#999',
+            fontSize: '12px',
+            fontStyle: 'italic',
+            padding: '10px'
+          }}>
+            {t('noMembers')}
+          </div>
+        )}
+      </div>
+      
+      {/* Статус и кнопки */}
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: '8px'
+        gap: '8px',
+        paddingTop: '8px',
+        borderTop: '1px solid #e9ecef',
+        flexWrap: 'wrap'
       }}>
-        <h4 style={{
-          margin: 0,
-          fontSize: isMobile ? '14px' : '16px',
-          fontWeight: 'bold',
-          color: getGroupColor(group.id),
+        {/* Статус группы */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '4px',
+          flexWrap: 'wrap',
+          fontSize: '9px',
           flex: 1,
-          marginRight: '8px'
+          minWidth: 0
         }}>
-          {group.name}
-        </h4>
-        <div style={{ 
-          display: 'flex', 
-          gap: isMobile ? '6px' : '4px',
+          {isAvailable && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '2px',
+              color: '#27ae60',
+              backgroundColor: '#d5f4e6',
+              padding: '2px 6px',
+              borderRadius: '10px',
+              fontSize: '9px',
+              fontWeight: '600',
+              border: '1px solid #2ecc71'
+            }}>
+              🟢 {status.availableMembers}
+            </div>
+          )}
+          
+          {isPartiallySeatedStatus && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '2px',
+              color: '#d68910',
+              backgroundColor: '#fef5e7',
+              padding: '2px 6px',
+              borderRadius: '10px',
+              fontSize: '9px',
+              fontWeight: '600',
+              border: '1px solid #f39c12'
+            }}>
+              🟡 {status.seatedMembers}/{status.totalMembers}
+            </div>
+          )}
+          
+          {isFullySeated && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '2px',
+              color: '#c0392b',
+              backgroundColor: '#fadbd8',
+              padding: '2px 6px',
+              borderRadius: '10px',
+              fontSize: '9px',
+              fontWeight: '600',
+              border: '1px solid #e74c3c'
+            }}>
+              🔴 {status.seatedMembers}/{status.totalMembers}
+            </div>
+          )}
+        </div>
+        
+        {/* Кнопки действий */}
+        <div style={{
+          display: 'flex',
+          gap: '4px',
           flexShrink: 0
         }}>
-          {!isSeated && (
-            <button
-              onClick={() => {
-                dispatch({ type: actions.SET_EDITING_GROUP, payload: group });
-                dispatch({ type: actions.SET_EDIT_GROUP_NAME, payload: group.name });
-                dispatch({ type: actions.SET_EDIT_GROUP_MEMBERS, payload: [...group.members] });
-                dispatch({ type: actions.SET_SHOW_EDIT_GROUP_MODAL, payload: true });
-              }}
-              style={{
-                backgroundColor: '#3498db',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                padding: isMobile ? '6px 10px' : '4px 8px',
-                cursor: 'pointer',
-                fontSize: isMobile ? '12px' : '10px',
-                fontWeight: 'bold',
-                minWidth: isMobile ? '32px' : 'auto'
-              }}
-              title={t('editGroup')}
-            >
-              {isMobile ? '✏️' : '✏️'}
-            </button>
-          )}
+        {!isSeated && (
           <button
-            onClick={() => {
-              dispatch({ type: actions.SET_SELECTED_GROUP_FOR_DETAILS, payload: group });
-              dispatch({ type: actions.SET_SHOW_GROUP_DETAILS_MODAL, payload: true });
+            onClick={(e) => {
+              e.stopPropagation();
+              const memberNames = group.members.map(member => 
+                typeof member === 'string' ? member : (member.name || member)
+              );
+              dispatch({ type: actions.SET_EDITING_GROUP, payload: group });
+              dispatch({ type: actions.SET_EDIT_GROUP_NAME, payload: group.name });
+              dispatch({ type: actions.SET_EDIT_GROUP_MEMBERS, payload: memberNames });
+              dispatch({ type: actions.SET_SHOW_EDIT_GROUP_MODAL, payload: true });
             }}
             style={{
-              backgroundColor: '#f39c12',
+              backgroundColor: '#3498db',
               color: 'white',
               border: 'none',
               borderRadius: '4px',
-              padding: isMobile ? '6px 10px' : '4px 8px',
+              padding: '5px 8px',
               cursor: 'pointer',
-              fontSize: isMobile ? '12px' : '10px',
+              fontSize: '14px',
               fontWeight: 'bold',
-              minWidth: isMobile ? '32px' : 'auto'
+              boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
+              transition: 'all 0.2s',
+              minWidth: '32px',
+              height: '28px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
             }}
-            title={t('groupDetails')}
-          >
-            {isMobile ? '👁️' : '👁️'}
-          </button>
-          <button
-            onClick={() => removeGroup(group.id)}
-            style={{
-              backgroundColor: '#e74c3c',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              padding: isMobile ? '6px 10px' : '4px 8px',
-              cursor: 'pointer',
-              fontSize: isMobile ? '12px' : '10px',
-              fontWeight: 'bold',
-              minWidth: isMobile ? '32px' : 'auto'
+            onMouseEnter={(e) => {
+              e.target.style.transform = 'scale(1.05)';
+              e.target.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
             }}
-            title={t('deleteGroup')}
+            onMouseLeave={(e) => {
+              e.target.style.transform = 'scale(1)';
+              e.target.style.boxShadow = '0 1px 2px rgba(0,0,0,0.1)';
+            }}
+            title={t('editGroup')}
           >
-            {isMobile ? '🗑️' : '🗑️'}
+            ✏️
           </button>
-        </div>
-      </div>
-      
-      <div style={{
-        fontSize: isMobile ? '12px' : '14px',
-        color: '#666',
-        marginBottom: '8px',
-        lineHeight: '1.3'
-      }}>
-        {isMobile ? (
-          <div>
-            <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
-              {group.members.length} {t('people')}
-            </div>
-            <div style={{ fontSize: '11px', color: '#888' }}>
-              {group.members?.slice(0, 2).map(member => {
-                const memberName = typeof member === 'string' ? member : member.name;
-                return memberName;
-              }).join(', ')}
-              {group.members && group.members.length > 2 && ` +${group.members.length - 2}`}
-            </div>
-          </div>
-        ) : (
-          <>
-            {group.members?.slice(0, 3).map(member => {
-              const memberName = typeof member === 'string' ? member : member.name;
-              return memberName;
-            }).join(', ')}
-            {group.members && group.members.length > 3 && ` +${group.members.length - 3}`}
-          </>
         )}
-      </div>
-      
-      {/* Статус группы */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        marginBottom: '8px',
-        fontSize: '11px',
-        fontWeight: 'bold'
-      }}>
-        {isAvailable && (
-          <div style={{
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            dispatch({ type: actions.SET_SELECTED_GROUP_FOR_DETAILS, payload: group });
+            dispatch({ type: actions.SET_SHOW_GROUP_DETAILS_MODAL, payload: true });
+          }}
+          style={{
+            backgroundColor: '#f39c12',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            padding: '5px 8px',
+            cursor: 'pointer',
+            fontSize: '14px',
+            fontWeight: 'bold',
+            boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
+            transition: 'all 0.2s',
+            minWidth: '32px',
+            height: '28px',
             display: 'flex',
             alignItems: 'center',
-            gap: '4px',
-            color: '#2ecc71',
-            backgroundColor: '#e8f5e8',
-            padding: '4px 8px',
-            borderRadius: '12px',
-            fontSize: '10px'
-          }}>
-            🟢 {t('available')} ({status.availableMembers})
-          </div>
-        )}
-        
-        {isPartiallySeatedStatus && (
-          <div style={{
+            justifyContent: 'center'
+          }}
+          onMouseEnter={(e) => {
+            e.target.style.transform = 'scale(1.05)';
+            e.target.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.transform = 'scale(1)';
+            e.target.style.boxShadow = '0 1px 2px rgba(0,0,0,0.1)';
+          }}
+          title={t('groupDetails')}
+        >
+          👁️
+        </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            if (window.confirm(t('deleteGroupConfirm') + ' "' + group.name + '"?')) {
+              removeGroup(group.id);
+            }
+          }}
+          style={{
+            backgroundColor: '#e74c3c',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            padding: '5px 8px',
+            cursor: 'pointer',
+            fontSize: '14px',
+            fontWeight: 'bold',
+            boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
+            transition: 'all 0.2s',
+            minWidth: '32px',
+            height: '28px',
             display: 'flex',
             alignItems: 'center',
-            gap: '4px',
-            color: '#f39c12',
-            backgroundColor: '#fff3e0',
-            padding: '4px 8px',
-            borderRadius: '12px',
-            fontSize: '10px'
-          }}>
-            🟡 {t('partiallySeated')} ({status.seatedMembers}/{status.totalMembers})
-          </div>
-        )}
-        
-        {isFullySeated && (
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px',
-            color: '#e74c3c',
-            backgroundColor: '#fdf2f2',
-            padding: '4px 8px',
-            borderRadius: '12px',
-            fontSize: '10px'
-          }}>
-            🔴 {t('fullySeated')} ({status.seatedMembers})
-          </div>
-        )}
+            justifyContent: 'center'
+          }}
+          onMouseEnter={(e) => {
+            e.target.style.transform = 'scale(1.05)';
+            e.target.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.transform = 'scale(1)';
+            e.target.style.boxShadow = '0 1px 2px rgba(0,0,0,0.1)';
+          }}
+          title={t('deleteGroup')}
+        >
+          🗑️
+        </button>
+        </div>
       </div>
-      
-      {isSeated && (
-        <div style={{
-          fontSize: isMobile ? '11px' : '10px',
-          color: '#e74c3c',
-          fontWeight: 'bold',
-          textAlign: 'center',
-          padding: isMobile ? '6px' : '4px',
-          backgroundColor: '#fdf2f2',
-          borderRadius: '4px'
-        }}>
-          {t('seated')}
-        </div>
-      )}
-      
-      {isPartiallySeated && (
-        <div style={{
-          fontSize: isMobile ? '11px' : '10px',
-          color: '#f39c12',
-          fontWeight: 'bold',
-          textAlign: 'center',
-          padding: '4px',
-          backgroundColor: '#fef9e7',
-          borderRadius: '4px'
-        }}>
-          {t('partiallySeated')}
-        </div>
-      )}
     </div>
   );
 };
@@ -370,14 +450,15 @@ const GroupsPanel = () => {
           left: '20px',
           top: '50%',
           transform: 'translateY(-50%)',
-          width: '600px',
-          maxHeight: '80vh',
+          width: windowWidth > 1200 ? '800px' : '700px',
+          maxHeight: '85vh',
           backgroundColor: 'white',
           borderRadius: '12px',
           boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
           border: '1px solid #e9ecef',
           display: windowWidth > 768 ? 'block' : 'none',
-          overflow: 'hidden'
+          overflow: 'hidden',
+          zIndex: 1000
         }}>
           {/* Header */}
           <div style={{
@@ -584,32 +665,39 @@ const GroupsPanel = () => {
 
           {/* Content */}
           <div style={{
-            padding: '25px',
-            maxHeight: 'calc(80vh - 150px)',
-            overflow: 'auto'
+            padding: '20px',
+            maxHeight: 'calc(85vh - 180px)',
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column'
           }}>
             <div style={{
               display: 'grid',
-              gridTemplateColumns: '1fr 1fr 1fr',
+              gridTemplateColumns: windowWidth > 1200 ? 'repeat(3, 1fr)' : 'repeat(2, 1fr)',
               gap: '15px',
-              height: '100%'
+              height: '100%',
+              overflow: 'hidden'
             }}>
               {/* Available Groups */}
-              <div>
+              <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                 <h4 style={{
-                  margin: '0 0 15px 0',
+                  margin: '0 0 12px 0',
                   color: '#2ecc71',
-                  fontSize: '16px',
+                  fontSize: '15px',
                   fontWeight: 'bold',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '8px'
+                  gap: '6px',
+                  paddingBottom: '8px',
+                  borderBottom: '2px solid #2ecc71'
                 }}>
                   🟢 {t('availableGroups')} ({filteredAvailableGroups.length})
                 </h4>
                 <div style={{
-                  maxHeight: 'calc(80vh - 200px)',
-                  overflow: 'auto'
+                  flex: 1,
+                  overflowY: 'auto',
+                  overflowX: 'hidden',
+                  paddingRight: '5px'
                 }}>
                   {filteredAvailableGroups.length === 0 ? (
                     <div style={{
@@ -630,21 +718,25 @@ const GroupsPanel = () => {
               </div>
 
               {/* Partially Seated Groups */}
-              <div>
+              <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                 <h4 style={{
-                  margin: '0 0 15px 0',
+                  margin: '0 0 12px 0',
                   color: '#f39c12',
-                  fontSize: '16px',
+                  fontSize: '15px',
                   fontWeight: 'bold',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '8px'
+                  gap: '6px',
+                  paddingBottom: '8px',
+                  borderBottom: '2px solid #f39c12'
                 }}>
                   🟡 {t('partiallySeatedGroups')} ({filteredPartiallySeatedGroups.length})
                 </h4>
                 <div style={{
-                  maxHeight: 'calc(80vh - 200px)',
-                  overflow: 'auto'
+                  flex: 1,
+                  overflowY: 'auto',
+                  overflowX: 'hidden',
+                  paddingRight: '5px'
                 }}>
                   {filteredPartiallySeatedGroups.length === 0 ? (
                     <div style={{
@@ -665,21 +757,25 @@ const GroupsPanel = () => {
               </div>
 
               {/* Fully Seated Groups */}
-              <div>
+              <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                 <h4 style={{
-                  margin: '0 0 15px 0',
+                  margin: '0 0 12px 0',
                   color: '#e74c3c',
-                  fontSize: '16px',
+                  fontSize: '15px',
                   fontWeight: 'bold',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '8px'
+                  gap: '6px',
+                  paddingBottom: '8px',
+                  borderBottom: '2px solid #e74c3c'
                 }}>
                   🔴 {t('fullySeatedGroups')} ({filteredSeatedGroups.length})
                 </h4>
                 <div style={{
-                  maxHeight: 'calc(80vh - 200px)',
-                  overflow: 'auto'
+                  flex: 1,
+                  overflowY: 'auto',
+                  overflowX: 'hidden',
+                  paddingRight: '5px'
                 }}>
                   {filteredSeatedGroups.length === 0 ? (
                     <div style={{

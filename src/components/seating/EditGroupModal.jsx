@@ -71,8 +71,10 @@ const EditGroupModal = () => {
   };
 
   const handleStartEditMember = (index, memberName) => {
+    // Если memberName - объект, извлекаем строку имени
+    const nameToEdit = typeof memberName === 'string' ? memberName : (memberName.name || memberName);
     setEditingMemberIndex(index);
-    setEditingMemberName(memberName);
+    setEditingMemberName(nameToEdit);
   };
 
   const handleSaveMemberEdit = (index) => {

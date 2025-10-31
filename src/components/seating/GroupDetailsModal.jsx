@@ -38,9 +38,13 @@ const GroupDetailsModal = () => {
   };
 
   const handleEditGroup = () => {
+    // Конвертируем members в строки для редактирования
+    const memberNames = selectedGroupForDetails.members.map(member => 
+      typeof member === 'string' ? member : (member.name || member)
+    );
     dispatch({ type: actions.SET_EDITING_GROUP, payload: selectedGroupForDetails });
     dispatch({ type: actions.SET_EDIT_GROUP_NAME, payload: selectedGroupForDetails.name });
-    dispatch({ type: actions.SET_EDIT_GROUP_MEMBERS, payload: [...selectedGroupForDetails.members] });
+    dispatch({ type: actions.SET_EDIT_GROUP_MEMBERS, payload: memberNames });
     dispatch({ type: actions.SET_SHOW_EDIT_GROUP_MODAL, payload: true });
     handleClose();
   };
