@@ -18,10 +18,19 @@ const Header = () => {
   const [showExportModal, setShowExportModal] = useState(false);
   const [showHDExportModal, setShowHDExportModal] = useState(false);
   const [showTemplatesModal, setShowTemplatesModal] = useState(false);
+  const [showBagratModal, setShowBagratModal] = useState(false);
+  const [showExportProgress, setShowExportProgress] = useState(false);
+  const [exportProgress, setExportProgress] = useState(0);
+  const [exportStatus, setExportStatus] = useState('');
   
   // Добавляем хуки для экспорта
   const { exportToTableDesignV2, exportToPDFTableDesignV2 } = useExportToA5();
-  const { exportToPDF: exportToHDTemplatePDF, exportToHTML: exportToHDTemplateHTML } = useExportToHDTemplate();
+  const { 
+    exportToPDF: exportToHDTemplatePDF, 
+    exportToHTML: exportToHDTemplateHTML,
+    exportGuestCardsToHD,
+    hasGuests
+  } = useExportToHDTemplate();
 
   const handleLanguageChange = () => {
     const newLanguage = language === 'ru' ? 'hy' : 'ru';
@@ -315,6 +324,40 @@ const Header = () => {
                   title="Шаблоны экспорта"
                 >
                   📋 Шаблоны
+                </button>
+              )}
+
+              {/* Bagrat Button */}
+              {hallData && (
+                <button
+                  onClick={() => setShowBagratModal(true)}
+                  style={{
+                    backgroundColor: '#e67e22',
+                    color: 'white',
+                    border: '2px solid white',
+                    borderRadius: '6px',
+                    padding: '6px 12px',
+                    cursor: 'pointer',
+                    fontSize: '13px',
+                    fontWeight: 'bold',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+                    transition: 'all 0.2s',
+                    marginRight: '6px'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.transform = 'scale(1.05)';
+                    e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.4)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.transform = 'scale(1)';
+                    e.target.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
+                  }}
+                  title="Bagrat Export"
+                >
+                  👤 Bagrat
                 </button>
               )}
 
@@ -1286,6 +1329,326 @@ const Header = () => {
         isOpen={showHDExportModal} 
         onClose={() => setShowHDExportModal(false)} 
       />
+
+      {/* Bagrat Export Modal */}
+      {showBagratModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 10000
+        }} onClick={() => setShowBagratModal(false)}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            padding: '30px',
+            minWidth: '400px',
+            maxWidth: '500px',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+            position: 'relative'
+          }} onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => setShowBagratModal(false)}
+              style={{
+                position: 'absolute',
+                top: '10px',
+                right: '10px',
+                backgroundColor: 'transparent',
+                border: 'none',
+                fontSize: '28px',
+                cursor: 'pointer',
+                color: '#666',
+                width: '32px',
+                height: '32px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: '50%',
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.backgroundColor = '#f0f0f0';
+                e.target.style.color = '#333';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.backgroundColor = 'transparent';
+                e.target.style.color = '#666';
+              }}
+            >
+              ×
+            </button>
+            
+            <h2 style={{ 
+              marginTop: 0, 
+              marginBottom: '25px', 
+              color: '#333',
+              textAlign: 'center',
+              fontSize: '24px'
+            }}>
+              👤 Bagrat - Экспорт
+            </h2>
+            
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '15px'
+            }}>
+              <button
+                onClick={async () => {
+                  let progressInterval = null;
+                  try {
+                    setShowBagratModal(false);
+                    setShowExportProgress(true);
+                    setExportProgress(0);
+                    setExportStatus('Подготовка к экспорту карточек...');
+                    
+                    // Симуляция прогресса
+                    progressInterval = setInterval(() => {
+                      setExportProgress(prev => {
+                        if (prev < 90) {
+                          return prev + 10;
+                        }
+                        return prev;
+                      });
+                    }, 200);
+                    
+                    await new Promise(resolve => setTimeout(resolve, 300));
+                    setExportStatus('Загрузка данных гостей...');
+                    
+                    await new Promise(resolve => setTimeout(resolve, 300));
+                    setExportStatus('Создание PDF карточек гостей...');
+                    
+                    await exportGuestCardsToHD();
+                    
+                    if (progressInterval) clearInterval(progressInterval);
+                    setExportProgress(100);
+                    setExportStatus('Экспорт завершен!');
+                    
+                    setTimeout(() => {
+                      setShowExportProgress(false);
+                      setExportProgress(0);
+                      setExportStatus('');
+                    }, 1500);
+                  } catch (error) {
+                    if (progressInterval) clearInterval(progressInterval);
+                    console.error('Ошибка при экспорте карточек:', error);
+                    setExportStatus('Ошибка при экспорте!');
+                    setTimeout(() => {
+                      setShowExportProgress(false);
+                      setExportProgress(0);
+                      setExportStatus('');
+                    }, 2000);
+                    alert('Ошибка при экспорте карточек');
+                  }
+                }}
+                disabled={!hasGuests}
+                style={{
+                  width: '100%',
+                  backgroundColor: '#27ae60',
+                  color: 'white',
+                  border: '2px solid #229954',
+                  borderRadius: '8px',
+                  padding: '15px 20px',
+                  cursor: hasGuests ? 'pointer' : 'not-allowed',
+                  fontSize: '16px',
+                  fontWeight: 'bold',
+                  opacity: hasGuests ? 1 : 0.6,
+                  transition: 'all 0.2s',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '10px',
+                  boxShadow: hasGuests ? '0 4px 12px rgba(39, 174, 96, 0.3)' : 'none'
+                }}
+                onMouseEnter={(e) => {
+                  if (hasGuests) {
+                    e.target.style.backgroundColor = '#229954';
+                    e.target.style.transform = 'translateY(-2px)';
+                    e.target.style.boxShadow = '0 6px 16px rgba(39, 174, 96, 0.4)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.backgroundColor = '#27ae60';
+                  e.target.style.transform = 'translateY(0)';
+                  e.target.style.boxShadow = '0 4px 12px rgba(39, 174, 96, 0.3)';
+                }}
+                title="PDF карточки гостей"
+              >
+                <span style={{ fontSize: '20px' }}>📄</span>
+                <span>PDF карточки</span>
+              </button>
+              
+              <button
+                onClick={async () => {
+                  let progressInterval = null;
+                  try {
+                    setShowBagratModal(false);
+                    setShowExportProgress(true);
+                    setExportProgress(0);
+                    setExportStatus('Подготовка к экспорту столов...');
+                    
+                    // Симуляция прогресса
+                    progressInterval = setInterval(() => {
+                      setExportProgress(prev => {
+                        if (prev < 90) {
+                          return prev + 10;
+                        }
+                        return prev;
+                      });
+                    }, 200);
+                    
+                    await new Promise(resolve => setTimeout(resolve, 300));
+                    setExportStatus('Загрузка данных столов...');
+                    
+                    await new Promise(resolve => setTimeout(resolve, 300));
+                    setExportStatus('Создание PDF столов с гостями...');
+                    
+                    await exportToHDTemplatePDF();
+                    
+                    if (progressInterval) clearInterval(progressInterval);
+                    setExportProgress(100);
+                    setExportStatus('Экспорт завершен!');
+                    
+                    setTimeout(() => {
+                      setShowExportProgress(false);
+                      setExportProgress(0);
+                      setExportStatus('');
+                    }, 1500);
+                  } catch (error) {
+                    if (progressInterval) clearInterval(progressInterval);
+                    console.error('Ошибка при экспорте столов:', error);
+                    setExportStatus('Ошибка при экспорте!');
+                    setTimeout(() => {
+                      setShowExportProgress(false);
+                      setExportProgress(0);
+                      setExportStatus('');
+                    }, 2000);
+                    alert('Ошибка при экспорте столов');
+                  }
+                }}
+                disabled={!hallData?.tables?.some(table => table.people?.some(person => person))}
+                style={{
+                  width: '100%',
+                  backgroundColor: '#3498db',
+                  color: 'white',
+                  border: '2px solid #2980b9',
+                  borderRadius: '8px',
+                  padding: '15px 20px',
+                  cursor: hallData?.tables?.some(table => table.people?.some(person => person)) ? 'pointer' : 'not-allowed',
+                  fontSize: '16px',
+                  fontWeight: 'bold',
+                  opacity: hallData?.tables?.some(table => table.people?.some(person => person)) ? 1 : 0.6,
+                  transition: 'all 0.2s',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '10px',
+                  boxShadow: hallData?.tables?.some(table => table.people?.some(person => person)) ? '0 4px 12px rgba(52, 152, 219, 0.3)' : 'none'
+                }}
+                onMouseEnter={(e) => {
+                  if (hallData?.tables?.some(table => table.people?.some(person => person))) {
+                    e.target.style.backgroundColor = '#2980b9';
+                    e.target.style.transform = 'translateY(-2px)';
+                    e.target.style.boxShadow = '0 6px 16px rgba(52, 152, 219, 0.4)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.backgroundColor = '#3498db';
+                  e.target.style.transform = 'translateY(0)';
+                  e.target.style.boxShadow = '0 4px 12px rgba(52, 152, 219, 0.3)';
+                }}
+                title="PDF Столы+Гости"
+              >
+                <span style={{ fontSize: '20px' }}>📄</span>
+                <span>PDF Столы+Гости</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Export Progress Modal */}
+      {showExportProgress && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 10000
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            padding: '30px',
+            minWidth: '350px',
+            maxWidth: '500px',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+            textAlign: 'center'
+          }}>
+            <h2 style={{ marginTop: 0, marginBottom: '20px', color: '#333' }}>
+              Экспорт PDF
+            </h2>
+            
+            <div style={{
+              width: '100%',
+              height: '30px',
+              backgroundColor: '#e9ecef',
+              borderRadius: '15px',
+              overflow: 'hidden',
+              marginBottom: '15px',
+              position: 'relative'
+            }}>
+              <div style={{
+                width: `${exportProgress}%`,
+                height: '100%',
+                backgroundColor: exportProgress === 100 ? '#27ae60' : '#3498db',
+                borderRadius: '15px',
+                transition: 'width 0.3s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'white',
+                fontWeight: 'bold',
+                fontSize: '14px'
+              }}>
+                {exportProgress > 0 && exportProgress < 100 && `${Math.round(exportProgress)}%`}
+                {exportProgress === 100 && '✓'}
+              </div>
+            </div>
+            
+            <p style={{
+              margin: '10px 0',
+              color: '#666',
+              fontSize: '14px',
+              minHeight: '20px'
+            }}>
+              {exportStatus || 'Обработка...'}
+            </p>
+            
+            {exportProgress === 100 && (
+              <p style={{
+                margin: '10px 0 0 0',
+                color: '#27ae60',
+                fontSize: '12px',
+                fontWeight: 'bold'
+              }}>
+                Файл готов к скачиванию!
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Templates Modal */}
       {showTemplatesModal && (
