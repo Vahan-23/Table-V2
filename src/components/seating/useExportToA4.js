@@ -89,11 +89,11 @@ export const useExportToA5 = () => {
     // Рисуем рамку с веточками
     drawDecoratedFrame(pdf, cardX, startY, cardWidth, cardHeight);
     
-    // Заголовок "Стол №X"
+    // Заголовок "Սեղան X"
     pdf.setFontSize(18);
     pdf.setFont('helvetica', 'bold');
     pdf.setTextColor(0, 0, 0);
-    pdf.text(`Стол №${table.tableNumber}`, pageWidth / 2, startY + 15, { align: 'center' });
+    pdf.text(`Սեղան ${table.tableNumber}`, pageWidth / 2, startY + 15, { align: 'center' });
     
     // Имена гостей
     pdf.setFontSize(12);
@@ -180,7 +180,7 @@ export const useExportToA5 = () => {
   const generateHTMLContent = (tables) => {
     const tableCards = tables.map(table => `
       <div class="table-card">
-        <div class="table-header">Стол №${table.tableNumber}</div>
+        <div class="table-header">Սեղան ${table.tableNumber}</div>
         <div class="guests-list">
           ${table.people.map(guest => `<div class="guest-name">${guest}</div>`).join('')}
         </div>

@@ -210,12 +210,15 @@ export const useExportGuestCards = () => {
 
   // Генерация HTML контента для номеров столов
   const generateTableNumbersContent = (tables) => {
-         const tableNumbers = tables.map(table => `
-       <div class="table-number">
-         <div class="corner-decoration top-left"></div>
-         <div class="table-title">${table.tableNumber}</div>
-       </div>
-     `).join('');
+         const tableNumbers = tables.map(table => {
+      const tableText = table.tableNumber ? `Սեղան ${table.tableNumber}` : `Սեղան ${table.id}`;
+      return `
+      <div class="table-number">
+        <div class="corner-decoration top-left"></div>
+        <div class="table-title">${tableText}</div>
+      </div>
+    `;
+    }).join('');
 
     return `
       <!DOCTYPE html>

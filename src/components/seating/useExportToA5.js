@@ -268,7 +268,7 @@ export const useExportToA5 = () => {
     const tablePages = tables.map(table => `
       <div class="page">
         <div class="table-page">
-          <div class="table-title">СТОЛ N${table.tableNumber}</div>
+          <div class="table-title">Սեղան ${table.tableNumber}</div>
           <div class="guests-list">
             ${table.people.map(guest => `<div class="guest-name">${guest}</div>`).join('')}
           </div>
@@ -437,7 +437,7 @@ export const useExportToA5 = () => {
         <img src="${getAssetUrl('/fonTa.jpg')}" class="background-image" alt="фон" />
         <img src="${getAssetUrl('/cveta.PNG')}" class="corner-decoration top-left" alt="декорация" />
         <img src="${getAssetUrl('/cveta.PNG')}" class="corner-decoration bottom-right" alt="декорация" />
-        <div class="table-title">СТОЛ №${table.tableNumber}</div>
+        <div class="table-title">Սեղան ${table.tableNumber}</div>
         <div class="guests-list">
           ${table.people.map(guest => `<div class="guest-name">${guest}</div>`).join('')}
         </div>

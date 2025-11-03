@@ -57,7 +57,7 @@ export const useExportToHDTemplate = () => {
         <!-- Декоративные цветы -->
         <img src="${getAssetUrl('/HDtsaxik.png')}" class="hd-flower-decoration top-left" alt="цветок" />
         <img src="${getAssetUrl('/HDtsaxik.png')}" class="hd-bottom-flower" alt="цветок" />
-        <div class="hd-table-title">СТОЛ №${table.tableNumber}</div>
+        <div class="hd-table-title">Սեղան ${table.tableNumber}</div>
         <div class="hd-guests-list">
           ${table.people.map(guest => `<div class="hd-guest-name">${guest}</div>`).join('')}
         </div>
@@ -748,16 +748,19 @@ export const useExportToHDTemplate = () => {
 
   // Генерация HTML контента для номеров столов в HD-стиле
   const generateHDTableNumbersContent = useCallback((tables) => {
-    const tableNumbers = tables.map(table => `
+    const tableNumbers = tables.map(table => {
+      const tableText = table.tableNumber ? `Սեղան ${table.tableNumber}` : `Սեղան ${table.id}`;
+      return `
       <div class="hd-table-number">
         <!-- Фоновое изображение -->
         <img src="${getAssetUrl('/HDfon.jpg')}" class="hd-number-background-image" alt="HD фон" />
         <!-- Декоративные цветы -->
         <img src="${getAssetUrl('/HDtsaxik.png')}" class="hd-number-flower-decoration top-left" alt="цветок" />
         <img src="${getAssetUrl('/HDtsaxik.png')}" class="hd-number-bottom-flower" alt="цветок" />
-        <div class="hd-table-title">${table.tableNumber}</div>
+        <div class="hd-table-title">${tableText}</div>
       </div>
-    `).join('');
+    `;
+    }).join('');
 
     return `
       <!DOCTYPE html>
