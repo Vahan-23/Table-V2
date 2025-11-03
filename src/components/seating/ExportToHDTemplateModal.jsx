@@ -160,7 +160,7 @@ const ExportToHDTemplateModal = ({ isOpen, onClose }) => {
               onClick={handleExport}
               disabled={!hasData || isExporting}
             >
-              {isExporting ? 'Экспорт...' : `Экспорт в ${exportFormat.toUpperCase()}`}
+              {isExporting ? 'Экспорт...' : `PDF Столы+Гости`}
             </button>
             
             <button
@@ -190,7 +190,7 @@ const ExportToHDTemplateModal = ({ isOpen, onClose }) => {
                 disabled={!hasGuests}
                 title="Экспорт карточек гостей в PDF"
               >
-                📄 PDF Карточки
+                📄 PDF карточки
               </button>
             </div>
           </div>

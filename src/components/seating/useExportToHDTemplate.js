@@ -57,7 +57,7 @@ export const useExportToHDTemplate = () => {
         <!-- Декоративные цветы -->
         <img src="${getAssetUrl('/HDtsaxik.png')}" class="hd-flower-decoration top-left" alt="цветок" />
         <img src="${getAssetUrl('/HDtsaxik.png')}" class="hd-bottom-flower" alt="цветок" />
-        <div class="hd-table-title">СТОЛ №${table.tableNumber}</div>
+        <div class="hd-table-title">Սեղան ${table.tableNumber}</div>
         <div class="hd-guests-list">
           ${table.people.map(guest => `<div class="hd-guest-name">${guest}</div>`).join('')}
         </div>
@@ -546,7 +546,6 @@ export const useExportToHDTemplate = () => {
   // Генерация HTML контента для карточек гостей в HD-стиле
   const generateHDGuestCardsContent = useCallback((guests) => {
     const guestCards = guests.map(guest => {
-      const greeting = isFemaleGender(guest.gender) ? 'Дорогая' : 'Дорогой';
       return `
       <div class="hd-guest-card">
         <!-- Фоновое изображение -->
@@ -554,9 +553,9 @@ export const useExportToHDTemplate = () => {
         <!-- Декоративные цветы -->
         <img src="${getAssetUrl('/HDtsaxik.png')}" class="hd-card-flower-decoration top-left" alt="цветок" />
         <img src="${getAssetUrl('/HDtsaxik.png')}" class="hd-card-bottom-flower" alt="цветок" />
-        <div class="hd-guest-name">${greeting} ${guest.name}</div>
-        <div class="hd-guest-thanks">Спасибо, что разделили с нами этот день</div>
-        <div class="hd-guest-signature">С любовью,<br>Василий и София</div>
+        <div class="hd-guest-name">Սիրելի ${guest.name}</div>
+        <div class="hd-guest-thanks">Շնորհակալություն այս օրը մեզ հետ կիսելու համար։</div>
+        <div class="hd-guest-signature">Սիրով՝ Բագրատ և Անի</div>
       </div>
     `;
     }).join('');
@@ -679,8 +678,9 @@ export const useExportToHDTemplate = () => {
           .hd-guest-name {
             font-size: 42px;
             color: #5f4f3c;
-            font-weight: bold;
-            font-family: 'Caveat', 'Marck Script', cursive;
+            /* font-weight: bold; */
+            font-family: initial;
+            font-style: italic;
             margin-bottom: 15mm;
             text-align: center;
             z-index: 4;
@@ -691,8 +691,9 @@ export const useExportToHDTemplate = () => {
           .hd-guest-thanks {
             font-size: 28px;
             color: #5f4f3c;
-            font-weight: 600;
-            font-family: 'Caveat', 'Marck Script', cursive;
+            /* font-weight: 600; */
+            font-family: initial;
+            font-style: italic;
             margin-bottom: 18mm;
             text-align: center;
             max-width: 85mm;
@@ -705,8 +706,9 @@ export const useExportToHDTemplate = () => {
           .hd-guest-signature {
             font-size: 28px;
             color: #5f4f3c;
-            font-weight: 600;
-            font-family: 'Caveat', 'Marck Script', cursive;
+            /* font-weight: 600; */
+            font-family: initial;
+            font-style: italic;
             text-align: center;
             z-index: 4;
             position: relative;
@@ -748,16 +750,19 @@ export const useExportToHDTemplate = () => {
 
   // Генерация HTML контента для номеров столов в HD-стиле
   const generateHDTableNumbersContent = useCallback((tables) => {
-    const tableNumbers = tables.map(table => `
+    const tableNumbers = tables.map(table => {
+      const tableText = table.tableNumber ? `Սեղան ${table.tableNumber}` : `Սեղան ${table.id}`;
+      return `
       <div class="hd-table-number">
         <!-- Фоновое изображение -->
         <img src="${getAssetUrl('/HDfon.jpg')}" class="hd-number-background-image" alt="HD фон" />
         <!-- Декоративные цветы -->
         <img src="${getAssetUrl('/HDtsaxik.png')}" class="hd-number-flower-decoration top-left" alt="цветок" />
         <img src="${getAssetUrl('/HDtsaxik.png')}" class="hd-number-bottom-flower" alt="цветок" />
-        <div class="hd-table-title">${table.tableNumber}</div>
+        <div class="hd-table-title">${tableText}</div>
       </div>
-    `).join('');
+    `;
+    }).join('');
 
     return `
       <!DOCTYPE html>
